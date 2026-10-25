@@ -1,0 +1,13 @@
+{
+  "name": "flaptap-ai",
+  "version": "1.0.0",
+  "description": "Flaptap AI - Autonomous AI-Driven American Accent, Prosody & Verbatim Shadowing Studio",
+  "author": "abdallahaladl",
+  "private": true,
+  "scripts": {
+    "dev": "cd backend && npm run start",
+    "build": "cd backend && npm run build",
+    "start": "cd backend && npm run start:prod",
+    "test:e2e": "NODE_PATH=./node_modules node scripts/test_production_e2e.js"
+  }
+}

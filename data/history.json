@@ -1,0 +1,233 @@
+[
+  {
+    "id": "0bc646da-e22f-49bc-a83f-63c9ea022dec",
+    "track": "shadowing",
+    "trackTitle": "YouTube Video Shadowing",
+    "title": "Even The NSA Got Involved",
+    "creator": "Theo - t3․gg",
+    "videoId": "nXpoU99pTho",
+    "sourceUrl": "https://www.youtube.com/shorts/nXpoU99pTho",
+    "thumbnailUrl": "https://img.youtube.com/vi/nXpoU99pTho/hqdefault.jpg",
+    "categoryIcon": "🎙️",
+    "accentDialect": "General American (Fast Tech Cadence & Pitch Peaks)",
+    "colorTheme": "#3B82F6",
+    "durationSeconds": 45,
+    "pacingWpm": 145,
+    "difficulty": "Beginner",
+    "stats": {
+      "slangCount": 7,
+      "idiomsCount": 3,
+      "reductionsCount": 8,
+      "fillersCount": 13,
+      "correctionsCount": 2,
+      "totalWords": 145
+    },
+    "keyHighlights": [
+      {
+        "category": "Slang & Street Talk",
+        "text": "check it out",
+        "meaning": "Examine or inspect visually with curiosity",
+        "icon": "🟡",
+        "color": "#FEF08A"
+      },
+      {
+        "category": "Native Expressions",
+        "text": "under the hood",
+        "meaning": "Deep inside the system architecture",
+        "icon": "🟣",
+        "color": "#E9D5FF"
+      },
+      {
+        "category": "Connected Speech",
+        "text": "going to -> gonna (/ˈɡʌnə/)",
+        "meaning": "Fast speech contraction",
+        "icon": "🔵",
+        "color": "#BAE6FD"
+      },
+      {
+        "category": "Conversational Glues",
+        "text": "I mean, like",
+        "meaning": "Rhythmic pacing filler",
+        "icon": "🟢",
+        "color": "#A7F3D0"
+      },
+      {
+        "category": "Intonation Peaks",
+        "text": "HIGH PITCH EMPHASIS",
+        "meaning": "Octave jump on key terms",
+        "icon": "🟠",
+        "color": "#FED7AA"
+      },
+      {
+        "category": "ASR Error Fixes",
+        "text": "your gonna -> you're going to",
+        "meaning": "Acoustic alignment check",
+        "icon": "🔴",
+        "color": "#FECDD3"
+      }
+    ],
+    "chunks": [
+      {
+        "time_range": "[00:00.000 - 00:33.840]",
+        "start": "00:00.000",
+        "end": "00:33.840",
+        "text": "It seems like pretty much everything just got hacked. And the reason is cuz it I actually feel a little bit bad about how I'm starting this video because it's almost misleading in a way. The reality is that two different things are happening at once right now. On one side, we have the CVEs like with Node, GitLab, PHP, Quick, LiteLLM, and more. The rest, however, are different. Railway and Open Code are not at all like the hacks on the left side here because these are actual attacks. These are incident reports of bugs that exist in software that could be exploited. Both of these are bad, but they're bad",
+        "timeRange": "[00:00.000 - 00:33.840]",
+        "startSec": 0,
+        "endSec": 30,
+        "highlightedHtml": "It seems like pretty much everything just got hacked. And the reason is cuz it I <mark class=\"shadow-filler\" style=\"background-color: #A7F3D0; color: #064E3B; padding: 2px 5px; border-radius: 4px; font-weight: 500;\">actually</mark> feel a little bit bad about how I'm starting this video because it's almost misleading in a way. The reality is that two different things are happening at once right now. On one side, we have the CVEs like with Node, GitLab, PHP, Quick, LiteLLM, and more. The rest, however, are different. Railway and Open Code are not at all like the hacks on the left side here because these are actual attacks. These are incident reports of bugs that exist in software that could be exploited. Both of these are bad, but they're bad"
+      },
+      {
+        "time_range": "[00:33.840 - 00:45.400]",
+        "start": "00:33.840",
+        "end": "00:45.400",
+        "text": "for very different reasons, and I actually think the right side here is what we should be way, way more scared of even though everyone seems really focused on the left side here.",
+        "timeRange": "[00:33.840 - 00:45.400]",
+        "startSec": 0,
+        "endSec": 30,
+        "highlightedHtml": "for very different reasons, and I <mark class=\"shadow-filler\" style=\"background-color: #A7F3D0; color: #064E3B; padding: 2px 5px; border-radius: 4px; font-weight: 500;\">actually</mark> think the right side here is what we should be way, way more scared of even though everyone seems really focused on the left side here."
+      }
+    ],
+    "sentences": [
+      {
+        "id": "sent-1",
+        "index": 1,
+        "timeRange": "[00:00.00 - 00:09.00]",
+        "startSec": 0,
+        "endSec": 9,
+        "durationSec": 9,
+        "text": "It seems like pretty much everything just got hacked. And the reason is cuz it I actually feel a little bit bad about how I'm starting this video because it's almost misleading in a way.",
+        "highlightedHtml": "It seems like pretty much everything just got hacked. And the reason is cuz it I <mark class=\"shadow-filler\" style=\"background-color: #A7F3D0; color: #064E3B; padding: 2px 5px; border-radius: 4px; font-weight: 500;\">actually</mark> feel a little bit bad about how I'm starting this video because it's almost misleading in a way.",
+        "translations": {
+          "ar-EG": "يعني زي ما بحس إن كل حاجة اتسرقت تقريبا. والسبب إن أنا بجد مش طايقا الطريقة اللي ابتديت بيها الفيديو دي لأنها تقريبا مخادعة بطريقة ما."
+        }
+      },
+      {
+        "id": "sent-2",
+        "index": 2,
+        "timeRange": "[00:09.00 - 00:18.40]",
+        "startSec": 9,
+        "endSec": 18.4,
+        "durationSec": 9.4,
+        "text": "The reality is that two different things are happening at once right now. On one side, we have the CVEs like with Node, GitLab, PHP, Quick, LiteLLM, and more.",
+        "highlightedHtml": "The reality is that two different things are happening at once right now. On one side, we have the CVEs like with Node, GitLab, PHP, Quick, LiteLLM, and more.",
+        "translations": {
+          "ar-EG": "الحقيقة إن في حاجات تانية بتحصل هنا في نفس الوقت. ناحية كده عندنا <bdi class=\"tech-loanword\" dir=\"ltr\">CVE</bdi> زي بتاع <bdi class=\"tech-loanword\" dir=\"ltr\">Node</bdi>, <bdi class=\"tech-loanword\" dir=\"ltr\">GitLab</bdi>, <bdi class=\"tech-loanword\" dir=\"ltr\">PHP</bdi>, <bdi class=\"tech-loanword\" dir=\"ltr\">Quick</bdi>, <bdi class=\"tech-loanword\" dir=\"ltr\">LiteLLM</bdi>, وأكتر."
+        }
+      },
+      {
+        "id": "sent-3",
+        "index": 3,
+        "timeRange": "[00:18.40 - 00:26.96]",
+        "startSec": 18.4,
+        "endSec": 26.96,
+        "durationSec": 8.56,
+        "text": "The rest, however, are different. Railway and Open Code are not at all like the hacks on the left side here because these are actual attacks.",
+        "highlightedHtml": "The rest, however, are different. Railway and Open Code are not at all like the hacks on the left side here because these are actual attacks.",
+        "translations": {
+          "ar-EG": "بعدين الحاجات التانية مختلفة خالص. السكك الحديدية والبرمجيات المفتوحة مش زي الاختراقات على الناحية التانية هنا لأن دي هجمات حقيقية."
+        }
+      },
+      {
+        "id": "sent-4",
+        "index": 4,
+        "timeRange": "[00:26.96 - 00:45.40]",
+        "startSec": 26.96,
+        "endSec": 45.4,
+        "durationSec": 18.44,
+        "text": "These are incident reports of bugs that exist in software that could be exploited. Both of these are bad, but they're bad for very different reasons, and I actually think the right side here is what we should be way, way more scared of even though everyone seems really focused on the left side here.",
+        "highlightedHtml": "These are incident reports of bugs that exist in software that could be exploited. Both of these are bad, but they're bad for very different reasons, and I <mark class=\"shadow-filler\" style=\"background-color: #A7F3D0; color: #064E3B; padding: 2px 5px; border-radius: 4px; font-weight: 500;\">actually</mark> think the right side here is what we should be way, way more scared of even though everyone seems really focused on the left side here.",
+        "translations": {
+          "ar-EG": "دي تقارير حوادث الأخطاء في البرمجيات اللي ممكن تتاخد استغلال. الاتنين وحشين، بس هما وحشين لأسباب مختلفة وأنا بجد أعتقد إن الناحية التانية هنا هي اللي المفروض نكون بجد خايفين منها رغم إن الكل مركز أكتر على الناحية التانية دي."
+        }
+      }
+    ],
+    "slangTable": [
+      {
+        "term": "check it out",
+        "meaning": "Examine or inspect visually with curiosity",
+        "delivery": "Friendly, engaging cadence"
+      },
+      {
+        "term": "super cool",
+        "meaning": "Very impressive or helpful feature",
+        "delivery": "Casual conversational tone"
+      },
+      {
+        "term": "jump on",
+        "meaning": "Quickly open or work on an application",
+        "delivery": "Modern tech phrasing"
+      }
+    ],
+    "idiomsTable": [
+      {
+        "phrase": "under the hood",
+        "equivalent": "Deep inside the system architecture",
+        "usage": "Universal engineering metaphor"
+      },
+      {
+        "phrase": "make sure",
+        "equivalent": "Verify or guarantee an outcome",
+        "usage": "Universal conversational directive"
+      },
+      {
+        "phrase": "take a look",
+        "equivalent": "Examine or inspect visually",
+        "usage": "Natural native phrasing instead of inspect"
+      }
+    ],
+    "reductionsTable": [
+      {
+        "written": "going to",
+        "spoken": "gonna (/ˈɡʌnə/)",
+        "phenomenon": "Fast speech contraction",
+        "mechanics": "Unstressed vowel squashes into schwa /ə/"
+      },
+      {
+        "written": "want to",
+        "spoken": "wanna (/ˈwɑnə/)",
+        "phenomenon": "Unstressed reduction",
+        "mechanics": "Soft /n/ slide without dental stop"
+      },
+      {
+        "written": "did you",
+        "spoken": "didja (/ˈdɪdʒə/)",
+        "phenomenon": "Palatalization assimilation",
+        "mechanics": "Alveolar /d/ fuses with glide /j/ into affricate [dʒ]"
+      },
+      {
+        "written": "let me",
+        "spoken": "lemme (/ˈlɛmi/)",
+        "phenomenon": "Lateral assimilation",
+        "mechanics": "Voiced stop /t/ drops into nasal /m/"
+      }
+    ],
+    "asrFixes": [
+      {
+        "timestamp": "[00:00:45]",
+        "wrong": "your gonna",
+        "corrected": "you're going to",
+        "reason": "ASR grammar contraction ambiguity"
+      },
+      {
+        "timestamp": "[00:01:30]",
+        "wrong": "wanna",
+        "corrected": "want to",
+        "reason": "Acoustic fast speech reduction"
+      }
+    ],
+    "chunksCount": 2,
+    "noteMarkdown": "# 🎙️ American Accent Shadowing: Even The NSA Got Involved\n> **Creator:** Theo - t3․gg | **Source:** https://www.youtube.com/shorts/nXpoU99pTho\n\n## 🎨 Shadowing Color Legend\n- 🟡 Yellow: Slang & Street Talk\n- 🟣 Lavender: Native Idioms & Expressions\n- 🔵 Sky Blue: Connected Speech & Phonetic Reductions\n- 🟢 Mint Green: Conversational Rhythm & Fillers\n- 🟠 Peach: Pitch Peaks & Contrastive Stress\n- 🔴 Rose: Fixed Transcription Errors\n\n## 🟡 Slang & Modern Expressions\n| Slang Term | Real-World Spoken Meaning | Delivery Cadence |\n| :--- | :--- | :--- |\n| **check it out** | Examine or inspect visually with curiosity | *Friendly, engaging cadence* |\n| **super cool** | Very impressive or helpful feature | *Casual conversational tone* |\n| **jump on** | Quickly open or work on an application | *Modern tech phrasing* |\n\n## 🟣 Native Idioms & Collocations\n| Native Idiom | Textbook Equivalent | Why Native Speakers Use It |\n| :--- | :--- | :--- |\n| **under the hood** | Deep inside the system architecture | Universal engineering metaphor |\n| **make sure** | Verify or guarantee an outcome | Universal conversational directive |\n| **take a look** | Examine or inspect visually | Natural native phrasing instead of inspect |\n\n## 🔵 Connected Speech & Flap-T Reductions\n| Written Form | Spoken Sound / IPA | Phonetic Phenomenon | Mouth & Tongue Mechanics |\n| :--- | :--- | :--- | :--- |\n| `going to` | **gonna (/ˈɡʌnə/)** | Fast speech contraction | Unstressed vowel squashes into schwa /ə/ |\n| `want to` | **wanna (/ˈwɑnə/)** | Unstressed reduction | Soft /n/ slide without dental stop |\n| `did you` | **didja (/ˈdɪdʒə/)** | Palatalization assimilation | Alveolar /d/ fuses with glide /j/ into affricate [dʒ] |\n| `let me` | **lemme (/ˈlɛmi/)** | Lateral assimilation | Voiced stop /t/ drops into nasal /m/ |\n\n## 🔴 ASR Audio Discrepancies & Corrections\n| Timestamp | Auto-Caption (Wrong) | Actual Spoken Word (Corrected) | Reason |\n| :--- | :--- | :--- | :--- |\n| [00:00:45] | ~~your gonna~~ | **you're going to** | ASR grammar contraction ambiguity |\n| [00:01:30] | ~~wanna~~ | **want to** | Acoustic fast speech reduction |\n\n## 📝 Verbatim Timed Transcript Chunks\n\n### ⏱️ [00:00.000 - 00:33.840]\nIt seems like pretty much everything just got hacked. And the reason is cuz it I actually feel a little bit bad about how I'm starting this video because it's almost misleading in a way. The reality is that two different things are happening at once right now. On one side, we have the CVEs like with Node, GitLab, PHP, Quick, LiteLLM, and more. The rest, however, are different. Railway and Open Code are not at all like the hacks on the left side here because these are actual attacks. These are incident reports of bugs that exist in software that could be exploited. Both of these are bad, but they're bad\n\n### ⏱️ [00:33.840 - 00:45.400]\nfor very different reasons, and I actually think the right side here is what we should be way, way more scared of even though everyone seems really focused on the left side here.\n",
+    "agentUsed": "Google Antigravity 2.0 (Model: 3.8 Flash High)",
+    "createdAt": "2026-10-25T15:50:17.055Z",
+    "completedDrills": 0,
+    "translationsCache": {
+      "ar-EG": {
+        "1": "يعني زي ما بحس إن كل حاجة اتسرقت تقريبا. والسبب إن أنا بجد مش طايقا الطريقة اللي ابتديت بيها الفيديو دي لأنها تقريبا مخادعة بطريقة ما.",
+        "2": "الحقيقة إن في حاجات تانية بتحصل هنا في نفس الوقت. ناحية كده عندنا <bdi class=\"tech-loanword\" dir=\"ltr\">CVE</bdi> زي بتاع <bdi class=\"tech-loanword\" dir=\"ltr\">Node</bdi>, <bdi class=\"tech-loanword\" dir=\"ltr\">GitLab</bdi>, <bdi class=\"tech-loanword\" dir=\"ltr\">PHP</bdi>, <bdi class=\"tech-loanword\" dir=\"ltr\">Quick</bdi>, <bdi class=\"tech-loanword\" dir=\"ltr\">LiteLLM</bdi>, وأكتر.",
+        "3": "بعدين الحاجات التانية مختلفة خالص. السكك الحديدية والبرمجيات المفتوحة مش زي الاختراقات على الناحية التانية هنا لأن دي هجمات حقيقية.",
+        "4": "دي تقارير حوادث الأخطاء في البرمجيات اللي ممكن تتاخد استغلال. الاتنين وحشين، بس هما وحشين لأسباب مختلفة وأنا بجد أعتقد إن الناحية التانية هنا هي اللي المفروض نكون بجد خايفين منها رغم إن الكل مركز أكتر على الناحية التانية دي."
+      }
+    }
+  }
+]

@@ -1,0 +1,114 @@
+/* ==========================================================================
+   Obsidian Shadowing Highlights CSS Snippet
+   Place this file into your Obsidian vault: .obsidian/snippets/shadowing-highlights.css
+   Enable it under: Settings -> Appearance -> CSS Snippets
+   ========================================================================== */
+
+:root {
+  --shadow-slang-bg: #FEF08A;
+  --shadow-slang-text: #713F12;
+  --shadow-idiom-bg: #E9D5FF;
+  --shadow-idiom-text: #581C87;
+  --shadow-reduction-bg: #BAE6FD;
+  --shadow-reduction-text: #0C4A6E;
+  --shadow-filler-bg: #A7F3D0;
+  --shadow-filler-text: #064E3B;
+  --shadow-stress-bg: #FED7AA;
+  --shadow-stress-text: #7C2D12;
+  --shadow-correction-bg: #FECDD3;
+  --shadow-correction-text: #881337;
+}
+
+/* Dark Mode Theme Tuning */
+.theme-dark {
+  --shadow-slang-bg: #854D0E;
+  --shadow-slang-text: #FEF9C3;
+  --shadow-idiom-bg: #581C87;
+  --shadow-idiom-text: #F3E8FF;
+  --shadow-reduction-bg: #0369A1;
+  --shadow-reduction-text: #E0F2FE;
+  --shadow-filler-bg: #065F46;
+  --shadow-filler-text: #D1FAE5;
+  --shadow-stress-bg: #9A3412;
+  --shadow-stress-text: #FFEDD5;
+  --shadow-correction-bg: #9F1239;
+  --shadow-correction-text: #FFE4E6;
+}
+
+/* Base Shadow Tag Styling */
+mark.shadow-slang,
+mark.shadow-idiom,
+mark.shadow-reduction,
+mark.shadow-filler,
+mark.shadow-stress,
+mark.shadow-correction,
+.shadow-slang,
+.shadow-idiom,
+.shadow-reduction,
+.shadow-filler,
+.shadow-stress,
+.shadow-correction {
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-block;
+  line-height: 1.4;
+  margin: 0 1px;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+/* Hover Zoom & Tooltip Effect */
+mark.shadow-slang:hover,
+mark.shadow-idiom:hover,
+mark.shadow-reduction:hover,
+mark.shadow-filler:hover,
+mark.shadow-stress:hover,
+mark.shadow-correction:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+/* Specific Category Color Classes */
+mark.shadow-slang, .shadow-slang {
+  background-color: var(--shadow-slang-bg) !important;
+  color: var(--shadow-slang-text) !important;
+}
+
+mark.shadow-idiom, .shadow-idiom {
+  background-color: var(--shadow-idiom-bg) !important;
+  color: var(--shadow-idiom-text) !important;
+}
+
+mark.shadow-reduction, .shadow-reduction {
+  background-color: var(--shadow-reduction-bg) !important;
+  color: var(--shadow-reduction-text) !important;
+}
+
+mark.shadow-filler, .shadow-filler {
+  background-color: var(--shadow-filler-bg) !important;
+  color: var(--shadow-filler-text) !important;
+}
+
+mark.shadow-stress, .shadow-stress {
+  background-color: var(--shadow-stress-bg) !important;
+  color: var(--shadow-stress-text) !important;
+  font-weight: 600;
+}
+
+mark.shadow-correction, .shadow-correction {
+  background-color: var(--shadow-correction-bg) !important;
+  color: var(--shadow-correction-text) !important;
+  border-bottom: 2px dashed currentColor;
+}
+
+/* Legend Badge Styling */
+.shadow-legend-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.85em;
+  font-weight: 600;
+}

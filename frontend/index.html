@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AccentForge AI - Professional American Accent & Shadowing Studio</title>
+  <link rel="stylesheet" href="styles.css?v=2.4">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>">
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="navbar">
+    <div class="brand">
+      <span style="font-size: 1.6rem;">🎙️</span>
+      <div>
+        <div id="brand-title" style="line-height: 1.2;">AccentForge AI</div>
+        <div id="brand-subtitle" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">American Accent & Cadence Studio</div>
+      </div>
+      <span class="brand-badge">Agentic OS</span>
+    </div>
+
+    <div class="nav-controls">
+      <!-- Agent Selector Pill -->
+      <div class="agent-select-wrapper">
+        <div class="status-dot"></div>
+        <select id="agent-select" style="background: transparent; border: none; color: inherit; font-family: inherit; font-size: inherit; font-weight: 600; outline: none; cursor: pointer;">
+          <option value="antigravity">Google Antigravity 2.0 (Model: 3.8 Flash High)</option>
+          <option value="claude_code">Anthropic Claude Code</option>
+          <option value="codex">OpenAI Codex / GPT-4o</option>
+          <option value="opencode">OpenCode / Local Llama</option>
+        </select>
+      </div>
+
+      <!-- Theme Switcher -->
+      <button class="btn-icon" id="theme-toggle-btn" title="Toggle Dark/Light Mode">
+        <span id="theme-toggle-icon">☀️</span>
+      </button>
+
+      <!-- Language Switcher (EN / AR) -->
+      <button class="btn-sm" id="lang-toggle-btn" style="font-weight: 700; border-radius: var(--radius-md);">
+        العربية
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- Modular Tracks (Isolation Architecture) -->
+    <nav class="track-tabs">
+      <button class="tab-btn active" id="tab-shadowing" data-track="shadowing">🎙️ YouTube Shadowing</button>
+      <button class="tab-btn" id="tab-street-talk" data-track="street_talk">🔥 Street Talk & Slang</button>
+      <button class="tab-btn" id="tab-phonetics" data-track="phonetics">⚡ Flap-T & Phonetic Lab</button>
+      <button class="tab-btn" id="tab-history" data-track="all">📜 Practice History</button>
+    </nav>
+
+    <!-- Hero Card & YouTube Link Input -->
+    <section class="hero-card">
+      <h1 class="hero-title" id="hero-title">Shadow Authentic American Cadence</h1>
+      <p class="hero-subtitle" id="hero-subtitle">Paste any YouTube video link. The AI agent extracts verbatim speech, fixes transcription errors, and highlights slang, idioms, and connected speech.</p>
+
+      <div class="input-group">
+        <input type="url" id="url-input" class="input-field" placeholder="Enter YouTube video URL (e.g. https://www.youtube.com/watch?v=...)" value="" autocomplete="off" />
+        <button id="process-btn" class="btn-primary">
+          <span>⚡</span>
+          <span id="process-btn-text">Process Video with Agent</span>
+        </button>
+      </div>
+
+      <!-- Preset Quick Chips (Rendered dynamically per active track) -->
+      <div class="presets-container" style="display: none;"></div>
+    </section>
+
+    <!-- User Activity History (Pro Website Grid) -->
+    <section>
+      <div class="section-header">
+        <h2 class="section-title">
+          <span>📜</span>
+          <span id="history-section-title">Your Practice History & Shadowing Sessions</span>
+        </h2>
+        <button id="reset-history-btn" class="btn-sm" style="color: #EF4444; border-color: rgba(239, 68, 68, 0.4); display: flex; align-items: center; gap: 6px; font-weight: 700;">
+          <span>🗑️</span>
+          <span id="reset-history-text">Clear History</span>
+        </button>
+      </div>
+
+      <!-- Cards Grid -->
+      <div id="history-container" class="history-grid">
+        <!-- Rendered dynamically by app.js -->
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js?v=2.4"></script>
+</body>
+</html>

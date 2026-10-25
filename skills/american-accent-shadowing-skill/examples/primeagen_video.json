@@ -1,0 +1,107 @@
+{
+  "title": "This Is Bad",
+  "creator": "The PrimeTime",
+  "url": "https://www.youtube.com/watch?v=O905JwSgoi4",
+  "video_id": "O905JwSgoi4",
+  "duration_seconds": 511,
+  "total_cues": 126,
+  "chunks": [
+    {
+      "time_range": "[00:00:00 - 00:00:33]",
+      "start": "00:00:00",
+      "end": "00:00:33",
+      "text": "Hey, so what is your favorite number between the number one and two to the 382nd? Oh, did you just say four? Nice. So, did eMudhra, a certificate authority, and now the internet is completely broken. Super cool. Do you see this right here? I just got man-in-the-middle attacked and I didn't even know it. Curl had no idea. Also, fun little side quest, you can root your home speaker system. I just love the fact that even when someone talks about rooting their home speaker system, someone always comes at this question never fails. Hey, what font is that? Hey, what font are you doing? I know you just"
+    },
+    {
+      "time_range": "[00:00:32 - 00:01:04]",
+      "start": "00:00:32",
+      "end": "00:01:04",
+      "text": "really I know you're rooting and all that. It's like who cares, man? What font is that? Love it. All right, so before we get started, a quick thank you from the sponsor. I have to say one of my favorite parts of this AI revolution is Grokbot and that is because so many little tedious tasks are now me just going, \"Hey, can you update my calendar with all my kids' upcoming soccer games for this tournament?\" Or, \"Hey, put milk on my list for things to pick up.\" And with the ability to add custom MCPs, you could actually add any of your applications and be able to sync with it. Grokbot allows me to effectively"
+    },
+    {
+      "time_range": "[00:01:02 - 00:01:35]",
+      "start": "00:01:02",
+      "end": "00:01:35",
+      "text": "control my life and just take out all the tedium. Honestly, kind of feels like the promise of AI that we kept on hearing that it's going to make our life better because this actually makes life better and my wife is much happier now that I'm a little bit more organized. So, if you'd like to support the channel, go check out Grokbot, which is available on the web, desktop applications, and on mobile, Android included. I feel like they were thinking of me when they made that. I'm very, very, very happy. All right, to understand this attack, you need to understand some basics about the internet. See, when the internet got started, you used to jump on your"
+    },
+    {
+      "time_range": "[00:01:33 - 00:02:08]",
+      "start": "00:01:33",
+      "end": "00:02:08",
+      "text": "computer and you would send these nice messages off to a server and that server would be able to deliver you back all the cat videos and snowboardingvideos.com or rotten.com, whatever you were going to back in the day. You did all of this on HTTP. That's right, completely in the clear. If anybody could somehow intercept your communication in between you and the server, they'd be be to see exactly what you are doing. And this wasn't a problem until we started to want to send personal information. If you want to log on to your bank, you don't want anyone being able to see what you're typing in,"
+    },
+    {
+      "time_range": "[00:02:05 - 00:02:40]",
+      "start": "00:02:05",
+      "end": "00:02:40",
+      "text": "right? Well, that's where HTTPS comes in. HTTPS actually takes this little hello like here and encrypts it. And that way only the server or only you can unencrypt these packets so that nobody in between can actually see what you're sending because this hello it becomes garbage unless if you have the private key to be able to see or decrypt the data. But there's another problem because when you connect to a server, you don't just like connect to a server. There isn't a cord that somehow you just put in and bada bing bada boom you are now talking to that server. Instead, a message will go to one server and then"
+    },
+    {
+      "time_range": "[00:02:39 - 00:03:14]",
+      "start": "00:02:39",
+      "end": "00:03:14",
+      "text": "that server will forward it on potentially to another server and then that server will forward it on potentially to the actual server you're trying to get to. And so your message actually passes through a bunch of servers. Now, what happened if this server decided to do something a little bit evil? It said, \"Hey, I'm google.com. Don't worry, send me your information.\" So you send your information to google.com. Underneath the hood it actually sends it to the true google.com, gets that information back, and then sends it back to you. But what they get is all of your actual information. They could get your passwords, they could get whatever. This"
+    },
+    {
+      "time_range": "[00:03:12 - 00:03:46]",
+      "start": "00:03:12",
+      "end": "00:03:46",
+      "text": "is known as a man-in-the-middle attack. Some people call it a mitm. Mitm. Mitm. Mitm. Mitm. So even though you were encrypting the data, you're technically only encrypting it to this machine and then this machine is redoing the same process back to Google. Now, to prevent this, we created something called certificate authorities. Now, what these certificate authorities effectively do is they can look at communications or you can use their information say, \"Okay, yes, who I'm connected to is actually the real"
+    },
+    {
+      "time_range": "[00:03:43 - 00:04:18]",
+      "start": "00:03:43",
+      "end": "00:04:18",
+      "text": "google.com.\" Now, all of this just kind of works. You don't even think about it. When you go on to your command line you type in curl, it kind of looks up these trusted CAs and then goes, \"Okay, we are really truly connected.\" Now, the problem is is when one of these CAs becomes compromised. If one of these CAs become compromised, someone can legitimately say, \"Hey, I'm totally google.com. Look, I've been signed by one of these certificate authorities.\" Like, yep, this is me. This is who I am. And your computer will just simply trust it. That is literally what is happening right here. You can see it. It even says"
+    },
+    {
+      "time_range": "[00:04:17 - 00:04:50]",
+      "start": "00:04:17",
+      "end": "00:04:50",
+      "text": "right there, \"Your client successfully connected to the site.\" That's bad. Because when I go into the browser and I paste that in and I send it, you can see right here, Chrome on the other hand goes, \"No, no, no, no, no. This one was compromised. You should not be here.\" Now that you have a vague idea of how certificate authorities keep you safe, did you know that there's only about 50 to 85 of these publicly trusted certificate authority companies? At least that's what Google's telling me. And one of those companies turns out had some sort of bug during generation in which caused them to generate completely"
+    },
+    {
+      "time_range": "[00:04:48 - 00:05:23]",
+      "start": "00:04:48",
+      "end": "00:05:23",
+      "text": "insecure keys. That company is called eMudhra. It's out of India. And apparently on April 30th, 2025, they had like a big key signing ceremony. I don't even know what that means. Maybe there's bottle of champagnes, people high-fiving. Who knows what happened? Well, anyways, eight of the keys they generated were part of the NIST P-384 specification. And of those eight keys, all eight of them were broken. All eight of them had these as private keys. Now, they're meant to be really, really long numbers. Like 100 length long numbers."
+    },
+    {
+      "time_range": "[00:05:19 - 00:05:53]",
+      "start": "00:05:19",
+      "end": "00:05:53",
+      "text": "Instead, it's four. Actually, four. It is 47 bytes of zeros, then four. The actual timeline is starting on October 17th at around 4:30 in the afternoon. A researcher who goes by the name Wayne. By the way, every time I hear the name Wayne, I think of Mistborn era two. Big fan. Hopefully, Wayne's also a big fan. Ran a new key checking tool over certificates disclosed in the CCADB and found that eight EC keys broke. EC again, elliptical curves. That is the P-384 I described up here. By 6:00, he sent off an email to Apple, Chrome,"
+    },
+    {
+      "time_range": "[00:05:52 - 00:06:23]",
+      "start": "00:05:52",
+      "end": "00:06:23",
+      "text": "Microsoft, Mozilla, and eMudhra, the company in which has this huge problem, showing he broke all eight of them. And the email said, \"We have a problem here, Wayne.\" Also, I feel like he even kept in character of Wayne, so I'm even bigger fan of this Wayne character. Within almost no time, Chrome both confirmed it and updated Chrome so that you didn't have this problem. eMudhra acknowledged it the same day. Most things were updated within 24 hours. But, here's the problem. That's the browser. The browser goes quick. But,"
+    },
+    {
+      "time_range": "[00:06:21 - 00:06:53]",
+      "start": "00:06:21",
+      "end": "00:06:53",
+      "text": "you know what hasn't been updated? Your Mac cert.pem file, okay? This file right here, which is what Git uses, which curl uses, Python 3, Pearl, Ruby, OpenSSL, all of those use that. Which means that if they use this and they don't check for the revocation of the eMudhra P-384 elliptical curve hashing signing certificates, well, guess what? You're going to get man in the middle. Curl could get man in the middle. That is why when I go here and I type in curl and curl this website, which is blocked by"
+    },
+    {
+      "time_range": "[00:06:52 - 00:07:27]",
+      "start": "00:06:52",
+      "end": "00:07:27",
+      "text": "my browser, it says, \"Hey, guess what? You're totally cool. I just got you the contents.\" Which means that if I go out and say do a little bash install script via curl, that could be bringing back code that isn't what I'm looking for. But, curl on the other hand is like, \"Hey, totally cool what you're doing. Totally good.\" And that is because my system is not up to date yet. My node version, also not up to date. That means if I npm installed, theoretically, I could be getting code that might not be that good for my system to run, and I would accidentally run it, and accidentally there goes all my sweet"
+    },
+    {
+      "time_range": "[00:07:25 - 00:08:00]",
+      "start": "00:07:25",
+      "end": "00:08:00",
+      "text": "sweet API keys, and then a distilling attack, and I get banned. But, hey, it's not all bad news because you yourself, you, yeah, you, you could become your own man in the middle attack, and you could root your smart home speaker using these certs. So, hey, there's a lot of fun you You have. Look at this person. They're having a great time. You could be out there just I don't know exploring all sorts of fun stuff. So I hope for you the next few weeks end up going smoothly. Everything is fantastic. The CI at your work doesn't get hacked. You don't lose all your tokens. Everything goes grand and hopefully you're able to"
+    },
+    {
+      "time_range": "[00:07:57 - 00:08:32]",
+      "start": "00:07:57",
+      "end": "00:08:32",
+      "text": "like you know go sniffing around in some devices. Good luck. Have fun. Make sure you update by the way. Like you really really really really really should go updating. The name is the primogen. Look at me. I'm the Google now. You get to do this. Also a little bit terrifying that our entire internet was held up for over a year by just the number four. Like that. This had to be abused somewhere. Like there's just no way that people were not abusing this. Again. A- again."
+    }
+  ],
+  "full_raw_transcript": "Hey, so what is your favorite number between the number one and two to the 382nd? Oh, did you just say four? Nice. So, did eMudhra, a certificate authority, and now the internet is completely broken. Super cool. Do you see this right here? I just got man-in-the-middle attacked and I didn't even know it. Curl had no idea. Also, fun little side quest, you can root your home speaker system. I just love the fact that even when someone talks about rooting their home speaker system, someone always comes at this question never fails. Hey, what font is that? Hey, what font are you doing? I know you just really I know you're rooting and all that. It's like who cares, man? What font is that? Love it. All right, so before we get started, a quick thank you from the sponsor. I have to say one of my favorite parts of this AI revolution is Grokbot and that is because so many little tedious tasks are now me just going, \"Hey, can you update my calendar with all my kids' upcoming soccer games for this tournament?\" Or, \"Hey, put milk on my list for things to pick up.\" And with the ability to add custom MCPs, you could actually add any of your applications and be able to sync with it. Grokbot allows me to effectively control my life and just take out all the tedium. Honestly, kind of feels like the promise of AI that we kept on hearing that it's going to make our life better because this actually makes life better and my wife is much happier now that I'm a little bit more organized. So, if you'd like to support the channel, go check out Grokbot, which is available on the web, desktop applications, and on mobile, Android included. I feel like they were thinking of me when they made that. I'm very, very, very happy. All right, to understand this attack, you need to understand some basics about the internet. See, when the internet got started, you used to jump on your computer and you would send these nice messages off to a server and that server would be able to deliver you back all the cat videos and snowboardingvideos.com or rotten.com, whatever you were going to back in the day. You did all of this on HTTP. That's right, completely in the clear. If anybody could somehow intercept your communication in between you and the server, they'd be be to see exactly what you are doing. And this wasn't a problem until we started to want to send personal information. If you want to log on to your bank, you don't want anyone being able to see what you're typing in, right? Well, that's where HTTPS comes in. HTTPS actually takes this little hello like here and encrypts it. And that way only the server or only you can unencrypt these packets so that nobody in between can actually see what you're sending because this hello it becomes garbage unless if you have the private key to be able to see or decrypt the data. But there's another problem because when you connect to a server, you don't just like connect to a server. There isn't a cord that somehow you just put in and bada bing bada boom you are now talking to that server. Instead, a message will go to one server and then that server will forward it on potentially to another server and then that server will forward it on potentially to the actual server you're trying to get to. And so your message actually passes through a bunch of servers. Now, what happened if this server decided to do something a little bit evil? It said, \"Hey, I'm google.com. Don't worry, send me your information.\" So you send your information to google.com. Underneath the hood it actually sends it to the true google.com, gets that information back, and then sends it back to you. But what they get is all of your actual information. They could get your passwords, they could get whatever. This is known as a man-in-the-middle attack. Some people call it a mitm. Mitm. Mitm. Mitm. Mitm. So even though you were encrypting the data, you're technically only encrypting it to this machine and then this machine is redoing the same process back to Google. Now, to prevent this, we created something called certificate authorities. Now, what these certificate authorities effectively do is they can look at communications or you can use their information say, \"Okay, yes, who I'm connected to is actually the real google.com.\" Now, all of this just kind of works. You don't even think about it. When you go on to your command line you type in curl, it kind of looks up these trusted CAs and then goes, \"Okay, we are really truly connected.\" Now, the problem is is when one of these CAs becomes compromised. If one of these CAs become compromised, someone can legitimately say, \"Hey, I'm totally google.com. Look, I've been signed by one of these certificate authorities.\" Like, yep, this is me. This is who I am. And your computer will just simply trust it. That is literally what is happening right here. You can see it. It even says right there, \"Your client successfully connected to the site.\" That's bad. Because when I go into the browser and I paste that in and I send it, you can see right here, Chrome on the other hand goes, \"No, no, no, no, no. This one was compromised. You should not be here.\" Now that you have a vague idea of how certificate authorities keep you safe, did you know that there's only about 50 to 85 of these publicly trusted certificate authority companies? At least that's what Google's telling me. And one of those companies turns out had some sort of bug during generation in which caused them to generate completely insecure keys. That company is called eMudhra. It's out of India. And apparently on April 30th, 2025, they had like a big key signing ceremony. I don't even know what that means. Maybe there's bottle of champagnes, people high-fiving. Who knows what happened? Well, anyways, eight of the keys they generated were part of the NIST P-384 specification. And of those eight keys, all eight of them were broken. All eight of them had these as private keys. Now, they're meant to be really, really long numbers. Like 100 length long numbers. Instead, it's four. Actually, four. It is 47 bytes of zeros, then four. The actual timeline is starting on October 17th at around 4:30 in the afternoon. A researcher who goes by the name Wayne. By the way, every time I hear the name Wayne, I think of Mistborn era two. Big fan. Hopefully, Wayne's also a big fan. Ran a new key checking tool over certificates disclosed in the CCADB and found that eight EC keys broke. EC again, elliptical curves. That is the P-384 I described up here. By 6:00, he sent off an email to Apple, Chrome, Microsoft, Mozilla, and eMudhra, the company in which has this huge problem, showing he broke all eight of them. And the email said, \"We have a problem here, Wayne.\" Also, I feel like he even kept in character of Wayne, so I'm even bigger fan of this Wayne character. Within almost no time, Chrome both confirmed it and updated Chrome so that you didn't have this problem. eMudhra acknowledged it the same day. Most things were updated within 24 hours. But, here's the problem. That's the browser. The browser goes quick. But, you know what hasn't been updated? Your Mac cert.pem file, okay? This file right here, which is what Git uses, which curl uses, Python 3, Pearl, Ruby, OpenSSL, all of those use that. Which means that if they use this and they don't check for the revocation of the eMudhra P-384 elliptical curve hashing signing certificates, well, guess what? You're going to get man in the middle. Curl could get man in the middle. That is why when I go here and I type in curl and curl this website, which is blocked by my browser, it says, \"Hey, guess what? You're totally cool. I just got you the contents.\" Which means that if I go out and say do a little bash install script via curl, that could be bringing back code that isn't what I'm looking for. But, curl on the other hand is like, \"Hey, totally cool what you're doing. Totally good.\" And that is because my system is not up to date yet. My node version, also not up to date. That means if I npm installed, theoretically, I could be getting code that might not be that good for my system to run, and I would accidentally run it, and accidentally there goes all my sweet sweet API keys, and then a distilling attack, and I get banned. But, hey, it's not all bad news because you yourself, you, yeah, you, you could become your own man in the middle attack, and you could root your smart home speaker using these certs. So, hey, there's a lot of fun you You have. Look at this person. They're having a great time. You could be out there just I don't know exploring all sorts of fun stuff. So I hope for you the next few weeks end up going smoothly. Everything is fantastic. The CI at your work doesn't get hacked. You don't lose all your tokens. Everything goes grand and hopefully you're able to like you know go sniffing around in some devices. Good luck. Have fun. Make sure you update by the way. Like you really really really really really should go updating. The name is the primogen. Look at me. I'm the Google now. You get to do this. Also a little bit terrifying that our entire internet was held up for over a year by just the number four. Like that. This had to be abused somewhere. Like there's just no way that people were not abusing this. Again. A- again."
+}

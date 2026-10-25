@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dedicated Shadowing Studio - AccentForge AI</title>
+  <link rel="stylesheet" href="styles.css?v=2.4">
+  <link rel="stylesheet" href="studio.css?v=2.4">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>">
+</head>
+<body>
+
+  <!-- Full-Page Ambient Agent Live-Progress Loader -->
+  <div class="studio-loader-overlay" id="loader-overlay">
+    
+    <!-- Pulsing Glow Orb with Percentage -->
+    <div class="loader-glow-orb">
+      <svg class="loader-svg-circle" viewBox="0 0 140 140">
+        <circle class="circle-bg" cx="70" cy="70" r="60"></circle>
+        <circle class="circle-progress" id="circle-progress-bar" cx="70" cy="70" r="60"></circle>
+      </svg>
+      <span class="loader-percentage" id="loader-percentage-num">0%</span>
+    </div>
+
+    <h2 class="loader-headline" id="loader-headline">Agent Launching Speech Engine...</h2>
+    <p class="loader-subheadline" id="loader-subheadline">The AI agent is analyzing audio cues, auditing transcription homophones, and categorizing American slang.</p>
+
+    <!-- 6-Stage Progress Checklist -->
+    <div class="loader-stages-card">
+      <div class="stage-item active" id="stage-1">
+        <div class="stage-icon-badge">1</div>
+        <div class="stage-title">Bootstrap Agent & Skill Registry (american-accent-shadowing)</div>
+      </div>
+      <div class="stage-item" id="stage-2">
+        <div class="stage-icon-badge">2</div>
+        <div class="stage-title">Extract Audio Captions & Deduplicate Karaoke Lines (yt-dlp)</div>
+      </div>
+      <div class="stage-item" id="stage-3">
+        <div class="stage-icon-badge">3</div>
+        <div class="stage-title">ASR Intelligence Audit (Correcting Speech Homophones)</div>
+      </div>
+      <div class="stage-item" id="stage-4">
+        <div class="stage-icon-badge">4</div>
+        <div class="stage-title">Classify 6-Color Accent Taxonomy (Slang, Idioms, Flap-T, Fillers)</div>
+      </div>
+      <div class="stage-item" id="stage-5">
+        <div class="stage-icon-badge">5</div>
+        <div class="stage-title">Synthesize Prosody, Intonation Peaks & Drill Matrices</div>
+      </div>
+      <div class="stage-item" id="stage-6">
+        <div class="stage-icon-badge">6</div>
+        <div class="stage-title">Compile Interactive Studio & Notetaker Workspace</div>
+      </div>
+    </div>
+
+    <!-- Live Agent Terminal Thought Stream -->
+    <div class="loader-terminal-stream" id="terminal-stream">
+      <div class="terminal-line">🤖 [Agent Dispatcher] Initializing session handshake...</div>
+    </div>
+
+    <!-- Error Recovery Actions (Visible when job fails or times out) -->
+    <div id="loader-error-actions" style="display: none; margin-top: 1.5rem; gap: 0.75rem; align-items: center;">
+      <button class="btn-sm" onclick="goToDashboard()" style="background: var(--bg-secondary); border: 1.5px solid var(--border-color); color: var(--text-primary); font-weight: 700; padding: 0.5rem 1.25rem; border-radius: var(--radius-md); cursor: pointer;">
+        ← Back to Dashboard
+      </button>
+    </div>
+  </div>
+
+  <!-- Dedicated Studio Page Navbar -->
+  <header class="studio-navbar">
+    <div class="nav-left">
+      <button class="back-btn" onclick="goToDashboard()">
+        <span>←</span>
+        <span id="nav-back-text">Dashboard</span>
+      </button>
+
+      <div class="video-heading-info">
+        <h1 class="studio-title" id="studio-title">Loading Session...</h1>
+        <div class="studio-meta">
+          <span id="studio-creator">Content Creator</span> • 
+          <span id="studio-dialect" style="color: var(--primary);">General American</span> •
+          <span id="studio-pacing">155 WPM</span> •
+          <span id="studio-drills-badge" style="color: #10B981; font-weight: 700;">0 drills completed</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <!-- Mark Drill Completed Button -->
+      <button class="btn-sm" id="complete-drill-btn" style="background: #10B981; color: white; border: none; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+        <span>✓</span>
+        <span id="complete-drill-text">Mark Drill Completed</span>
+      </button>
+
+      <!-- Download Obsidian Note (.md) Button -->
+      <button class="btn-sm" id="download-obsidian-btn" style="background: linear-gradient(135deg, #7C3AED, #6D28D9); color: white; border: none; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+        <span>📥</span>
+        <span id="download-btn-text">Export Obsidian Note</span>
+      </button>
+
+      <!-- Theme Switcher -->
+      <button class="btn-icon" id="studio-theme-btn" title="Toggle Dark/Light Mode">
+        <span id="studio-theme-icon">☀️</span>
+      </button>
+
+      <!-- Language Switcher -->
+      <button class="btn-sm" id="studio-lang-btn" style="font-weight: 700;">
+        العربية
+      </button>
+    </div>
+  </header>
+
+  <!-- Two-Column Dedicated Studio Workspace -->
+  <main class="studio-workspace-container" id="studio-main-content">
+
+    <!-- Left Column: Media & Shadowing Deck -->
+    <aside class="studio-deck">
+      
+      <!-- Video Player Card -->
+      <div class="deck-card">
+        <div class="video-player-box">
+          <div id="studio-youtube-player" class="video-frame"></div>
+          <iframe id="studio-video-frame" class="video-frame" style="display: none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        </div>
+
+        <div class="speed-deck-panel">
+          <div class="speed-header-row">
+            <div class="speed-label-group">
+              <span class="speed-icon">⚡</span>
+              <span id="speed-title-label">Playback Speed</span>
+            </div>
+            <div class="speed-badge" id="current-speed-badge">1.00x</div>
+          </div>
+
+          <!-- Single Master Playback Speed Slider (0.25 to 2.0 in 0.25 steps) -->
+          <div class="speed-slider-card">
+            <div class="speed-slider-track-wrap">
+              <input type="range" id="speed-slider" class="speed-slider" min="0.25" max="2.00" step="0.25" value="1.00" aria-label="Playback Speed">
+            </div>
+            <div class="speed-ticks" id="speed-ticks-row">
+              <span class="speed-tick" data-speed="0.25">0.25x</span>
+              <span class="speed-tick" data-speed="0.5">0.5x</span>
+              <span class="speed-tick" data-speed="0.75">0.75x</span>
+              <span class="speed-tick active" data-speed="1.0">1.0x</span>
+              <span class="speed-tick" data-speed="1.25">1.25x</span>
+              <span class="speed-tick" data-speed="1.5">1.5x</span>
+              <span class="speed-tick" data-speed="1.75">1.75x</span>
+              <span class="speed-tick" data-speed="2.0">2.0x</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real Microphone Audio Shadowing Laboratory -->
+      <div class="deck-card studio-recorder">
+        <div class="recorder-header">
+          <div class="rec-title-group">
+            <span style="font-size: 1.15rem;">🎙️</span>
+            <span id="rec-lab-title" style="font-weight: 800; font-size: 0.95rem;">Voice Shadowing Lab</span>
+          </div>
+          <span class="rec-badge-ready" id="rec-status-indicator">Ready</span>
+        </div>
+
+        <button class="studio-record-btn" id="studio-mic-btn">
+          <span style="font-size: 1.25rem;">🎙️</span>
+          <span id="record-btn-text">Start Shadowing Take</span>
+        </button>
+        <p class="rec-instructions" id="record-instructions">Speak out loud simultaneously with the creator to match cadence and flap-T tapping.</p>
+
+        <!-- Player Audio Take Preview -->
+        <div class="studio-audio-preview" id="studio-audio-preview" style="display: none; flex-direction: column; gap: 0.5rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);" id="your-take-label">Your Recorded Take:</span>
+            <button class="btn-sm" id="discard-take-btn" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.75rem; padding: 0.2rem 0.5rem; cursor: pointer;">✕ Discard Take</button>
+          </div>
+          <audio id="studio-audio-player" controls style="width: 100%; height: 36px;"></audio>
+        </div>
+      </div>
+
+      <!-- Highlighting Color Legend Card -->
+      <div class="deck-card legend-deck-card">
+        <div class="legend-card-header" id="legend-card-title">Shadowing Color Legend</div>
+        <div class="legend-items-list">
+          <div class="legend-row">
+            <mark class="shadow-slang" style="background-color: var(--badge-slang-bg); color: var(--badge-slang-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🟡 Yellow</mark>
+            <span>Slang & Street Talk</span>
+          </div>
+          <div class="legend-row">
+            <mark class="shadow-idiom" style="background-color: var(--badge-idiom-bg); color: var(--badge-idiom-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🟣 Lavender</mark>
+            <span>Native Expressions & Idioms</span>
+          </div>
+          <div class="legend-row">
+            <mark class="shadow-reduction" style="background-color: var(--badge-reduction-bg); color: var(--badge-reduction-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🔵 Sky Blue</mark>
+            <span>Connected Speech & Reductions</span>
+          </div>
+          <div class="legend-row">
+            <mark class="shadow-filler" style="background-color: var(--badge-filler-bg); color: var(--badge-filler-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🟢 Mint Green</mark>
+            <span>Conversational Rhythm & Fillers</span>
+          </div>
+          <div class="legend-row">
+            <mark class="shadow-stress" style="background-color: var(--badge-stress-bg); color: var(--badge-stress-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🟠 Peach</mark>
+            <span>Intonation Peaks & Stress</span>
+          </div>
+          <div class="legend-row">
+            <mark class="shadow-correction" style="background-color: var(--badge-correction-bg); color: var(--badge-correction-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🔴 Rose</mark>
+            <span>Fixed Transcription Errors</span>
+          </div>
+        </div>
+      </div>
+
+    </aside>
+
+    <!-- Right Column: Interactive Canvas & Drills -->
+    <section class="studio-canvas">
+
+      <!-- Canvas Navigation Tabs -->
+      <nav class="canvas-navbar">
+        <button class="canvas-tab-btn active" data-tab="transcript" id="tab-btn-transcript">
+          <span>📝</span>
+          <span id="tab-label-transcript">Verbatim Transcript</span>
+          <span class="tab-count-badge" id="studio-chunk-count">0</span>
+        </button>
+        <button class="canvas-tab-btn" data-tab="slang" id="tab-btn-slang">
+          <span>🟡</span>
+          <span id="tab-label-slang">Slang Glossary</span>
+          <span class="tab-count-badge" id="studio-slang-count">0</span>
+        </button>
+        <button class="canvas-tab-btn" data-tab="idioms" id="tab-btn-idioms">
+          <span>🟣</span>
+          <span id="tab-label-idioms">Native Idioms</span>
+          <span class="tab-count-badge" id="studio-idioms-count">0</span>
+        </button>
+        <button class="canvas-tab-btn" data-tab="reductions" id="tab-btn-reductions">
+          <span>🔵</span>
+          <span id="tab-label-reductions">Connected Speech & Flap-T</span>
+          <span class="tab-count-badge" id="studio-reductions-count">0</span>
+        </button>
+        <button class="canvas-tab-btn" data-tab="asr" id="tab-btn-asr">
+          <span>🔴</span>
+          <span id="tab-label-asr">ASR Fixes Log</span>
+          <span class="tab-count-badge" id="studio-asr-count">0</span>
+        </button>
+        <button class="canvas-tab-btn" data-tab="notes" id="tab-btn-notes">
+          <span>📓</span>
+          <span id="tab-label-notes">My Study Notetaker</span>
+        </button>
+      </nav>
+
+      <!-- Tab View 1: Verbatim Transcript Chunks & Sentence Driller -->
+      <div id="view-transcript" class="canvas-view-panel">
+        
+        <!-- Mode Switcher Pill: Chunks vs Sentences -->
+        <div class="mode-switcher-bar">
+          <div class="mode-pill-container">
+            <button class="mode-pill-btn active" id="mode-btn-chunks" onclick="switchTranscriptMode('chunks')">
+              <span>📜</span>
+              <span id="label-mode-chunks">Paragraph Mode</span>
+              <span class="sub-badge" id="count-chunks-badge">0</span>
+            </button>
+            <button class="mode-pill-btn" id="mode-btn-sentences" onclick="switchTranscriptMode('sentences')">
+              <span>🎯</span>
+              <span id="label-mode-sentences">Sentence Driller Mode</span>
+              <span class="sub-badge" id="count-sentences-badge">0</span>
+            </button>
+          </div>
+
+          <!-- Sentence Completion Action Bar -->
+          <div class="driller-action-deck" id="driller-action-deck" style="display: none;">
+            <span class="action-deck-title" id="end-action-title">Sentence Completion:</span>
+            <div class="action-pills-row">
+              <button class="action-pill-btn active" data-action="loop" id="label-action-loop">🔁 Auto-Repeat Loop</button>
+              <button class="action-pill-btn" data-action="pause" id="label-action-pause">⏸️ Stop & Shadow</button>
+              <button class="action-pill-btn" data-action="continuous" id="label-action-continuous">⏩ Continuous Play</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Real-World Vernacular Translation Control Deck -->
+        <div class="translation-control-deck" id="translation-control-deck" style="display: none;">
+          <div class="translation-toggle-group">
+            <label class="switch-toggle" for="translation-toggle-checkbox" title="Toggle Real-World Vernacular Translation">
+              <input type="checkbox" id="translation-toggle-checkbox">
+              <span class="switch-slider"></span>
+            </label>
+            <span class="toggle-text" id="label-trans-toggle">🌐 Real-World Meaning</span>
+          </div>
+
+          <!-- Two-Layer Hierarchical Selector (Reveals when toggle is ON) -->
+          <div class="translation-selectors-group" id="translation-selectors-group" style="display: none;">
+            <div class="selector-field">
+              <span class="selector-icon">🗣️</span>
+              <label for="trans-lang-select" class="selector-label" id="label-trans-lang">Language:</label>
+              <select id="trans-lang-select" class="studio-select-input" aria-label="Translation Language">
+                <option value="ar" selected>العربية (Arabic)</option>
+                <option value="en">English (US/UK/AU)</option>
+              </select>
+            </div>
+
+            <div class="selector-field">
+              <span class="selector-icon">📍</span>
+              <label for="trans-dialect-select" class="selector-label" id="label-trans-dialect">Dialect / Country:</label>
+              <select id="trans-dialect-select" class="studio-select-input" aria-label="Translation Dialect">
+                <!-- Dynamically populated -->
+              </select>
+            </div>
+
+            <div class="translation-status-pill" id="translation-status-pill">
+              <span class="status-dot"></span>
+              <span id="translation-status-text">AI Vernacular (Egypt 🇪🇬)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chunks Subview -->
+        <div class="studio-chunks-list" id="subview-chunks-list">
+          <!-- Rendered dynamically -->
+        </div>
+
+        <!-- Sentences Subview -->
+        <div class="studio-sentences-list" id="subview-sentences-list" style="display: none;">
+          <!-- Rendered dynamically -->
+        </div>
+      </div>
+
+      <!-- Tab View 2: Slang Glossary -->
+      <div id="view-slang" class="canvas-view-panel" style="display: none;"></div>
+
+      <!-- Tab View 3: Native Idioms -->
+      <div id="view-idioms" class="canvas-view-panel" style="display: none;"></div>
+
+      <!-- Tab View 4: Connected Speech & Phonetics -->
+      <div id="view-reductions" class="canvas-view-panel" style="display: none;"></div>
+
+      <!-- Tab View 5: ASR Error Correction Log -->
+      <div id="view-asr" class="canvas-view-panel" style="display: none;"></div>
+
+      <!-- Tab View 6: Obsidian Notetaker Canvas -->
+      <div id="view-notes" class="canvas-view-panel" style="display: none;">
+        <div class="notetaker-card">
+          <div class="notetaker-header">
+            <div>
+              <h3 style="font-size: 1.15rem; font-weight: 800;" id="notes-title">Personal Shadowing Notes & Phonetics Log</h3>
+              <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;" id="notes-autosave">Auto-saved to your browser</p>
+            </div>
+          </div>
+          <textarea id="study-notes-textarea" class="study-notes-textarea" placeholder="Type your personal observations, phonetic reminders, flap-T notes, and vocabulary lists here..."></textarea>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="studio.js?v=2.4"></script>
+</body>
+</html>
