@@ -5,7 +5,7 @@ const fs = require('fs');
 const ARTIFACT_DIR = '/Users/abdallah/.gemini/antigravity/brain/ac750bde-3258-44c1-99e0-3b306623d50c';
 
 async function runProductionE2ETest() {
-  console.log('🚀 Starting AccentForge AI Production End-to-End Verification Suite...');
+  console.log('🚀 Starting Flaptap AI Production End-to-End Verification Suite...');
   const browser = await puppeteer.launch({
     headless: 'new',
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1400,950']

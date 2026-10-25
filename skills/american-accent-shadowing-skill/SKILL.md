@@ -52,7 +52,7 @@ When given a YouTube video link:
 ### Step 1: Extract Raw Verbatim Subtitles
 Execute the local helper script:
 ```bash
-/Users/abdallah/workspace/american-accent-shadowing-skill/scripts/extract_transcript.py "<YOUTUBE_URL>" --interval 35 --output-json transcript.json --output-txt transcript.txt
+/Users/abdallah/workspace/flaptap/skills/american-accent-shadowing-skill/scripts/extract_transcript.py "<YOUTUBE_URL>" --interval 35 --output-json transcript.json --output-txt transcript.txt
 ```
 This downloads the official or auto-generated English captions via `yt-dlp`, strips karaoke duplicate lines, and packages speech into timed 30–45 second intervals.
 

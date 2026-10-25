@@ -1,5 +1,5 @@
 /**
- * AccentForge AI - Client Application Logic (Full Production)
+ * Flaptap AI - Client Application Logic (Full Production)
  * Multi-Agent Integration | Full Transcript Chunks | Multi-Track Sparring | Audio Recording
  */
 
@@ -7,7 +7,7 @@ const API_BASE = '/api';
 
 const I18N = {
   en: {
-    brand: 'AccentForge AI',
+    brand: 'Flaptap AI',
     tagline: 'American Accent & Cadence Studio',
     themeToggle: 'Toggle Theme',
     langToggle: 'العربية',
@@ -77,7 +77,7 @@ const I18N = {
     }
   },
   ar: {
-    brand: 'أكسنت فورج AI',
+    brand: 'فلاب تاب AI',
     tagline: 'منصة التدريب على اللكنة الأمريكية ولغة الشارع',
     themeToggle: 'تغيير المظهر',
     langToggle: 'English',

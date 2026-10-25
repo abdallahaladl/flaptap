@@ -30,7 +30,7 @@ A universal AI agent skill and phonetic framework to help non-native speakers ma
 ## 📁 Repository Structure
 
 ```text
-/Users/abdallah/workspace/american-accent-shadowing-skill/
+/Users/abdallah/workspace/flaptap/skills/american-accent-shadowing-skill/
 ├── SKILL.md                              # Main agent skill definition (Antigravity / Cursor / Claude Code)
 ├── SYSTEM_PROMPT.md                      # Copy-paste system prompt for web LLMs (ChatGPT, Claude.ai, Gemini)
 ├── README.md                             # Documentation and setup guide

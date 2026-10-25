@@ -1,5 +1,5 @@
 /**
- * AccentForge AI - Dedicated Studio Controller
+ * Flaptap AI - Dedicated Studio Controller
  * Live Agent Progress Engine (0% - 100%) | Multi-Stage Visual Handshake | Obsidian Notetaker
  * Interactive Sentence Driller Mode | Millisecond Seeking | Dual Speed Sliders | Deduplication Memory
  */

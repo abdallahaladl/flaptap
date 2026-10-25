@@ -33,7 +33,7 @@ Traditional pronunciation tools force users through robotic textbook scripts and
 ## 🏗️ Architecture & Core Components
 
 ```
-flaptap-ai/
+flaptap/
 ├── backend/                     # High-performance NestJS production API
 │   ├── src/
 │   │   ├── core/

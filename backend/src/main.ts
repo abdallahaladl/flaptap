@@ -5,7 +5,7 @@ import * as express from 'express';
 import * as path from 'path';
 
 async function bootstrap() {
-  const logger = new Logger('AccentForge-Production');
+  const logger = new Logger('Flaptap-Production');
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
@@ -45,7 +45,7 @@ async function bootstrap() {
   const host = process.env.HOST || '0.0.0.0';
 
   await app.listen(port, host);
-  logger.log(`🚀 AccentForge AI [Production Mode] online on http://${host}:${port}`);
+  logger.log(`🚀 Flaptap AI [Production Mode] online on http://${host}:${port}`);
 }
 
 bootstrap();
