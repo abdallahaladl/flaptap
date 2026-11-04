@@ -1,356 +1,428 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="dark">
+<html lang="en" dir="ltr" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dedicated Shadowing Studio - Flaptap AI</title>
-  <link rel="stylesheet" href="styles.css?v=2.4">
-  <link rel="stylesheet" href="studio.css?v=2.4">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flaptap Studio — Spoken English Lesson</title>
+  <meta name="description" content="Interactive spoken English shadowing studio with millisecond-precision sentence loops, AI prosody coaching, and contextual vocabulary." />
+  <meta name="theme-color" content="#141413" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="manifest" href="/manifest.json" />
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('flaptap_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var lang = localStorage.getItem('flaptap_ui_lang') || 'en';
+        document.documentElement.setAttribute('lang', lang);
+        document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+        if (!localStorage.getItem('flaptap_guest_token')) {
+          var rand = 'guest_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+          localStorage.setItem('flaptap_guest_token', rand);
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="studio.css" />
 </head>
-<body>
-
-  <!-- Full-Page Ambient Agent Live-Progress Loader -->
-  <div class="studio-loader-overlay" id="loader-overlay">
-    
-    <!-- Pulsing Glow Orb with Percentage -->
-    <div class="loader-glow-orb">
-      <svg class="loader-svg-circle" viewBox="0 0 140 140">
-        <circle class="circle-bg" cx="70" cy="70" r="60"></circle>
-        <circle class="circle-progress" id="circle-progress-bar" cx="70" cy="70" r="60"></circle>
-      </svg>
-      <span class="loader-percentage" id="loader-percentage-num">0%</span>
-    </div>
-
-    <h2 class="loader-headline" id="loader-headline">Agent Launching Speech Engine...</h2>
-    <p class="loader-subheadline" id="loader-subheadline">The AI agent is analyzing audio cues, auditing transcription homophones, and categorizing American slang.</p>
-
-    <!-- 6-Stage Progress Checklist -->
-    <div class="loader-stages-card">
-      <div class="stage-item active" id="stage-1">
-        <div class="stage-icon-badge">1</div>
-        <div class="stage-title">Bootstrap Agent & Skill Registry (american-accent-shadowing)</div>
+<body class="studio-body">
+  <!-- Compositor-Only Loading & Error Overlay -->
+  <div id="loader-overlay" class="loader-overlay" role="alert" aria-live="polite">
+    <div class="loader-sheet">
+      <div class="loader-spinner" aria-hidden="true"></div>
+      <h2 id="loader-headline" class="loader-headline" data-i18n="preparingLesson">Preparing your lesson...</h2>
+      <p id="loader-subheadline" class="loader-subheadline" data-i18n="extractingTimings">Extracting verbatim speech and exact word timings.</p>
+      <div id="loader-error-actions" class="loader-error-actions" style="display: none;">
+        <a href="/" class="btn-secondary" data-i18n="backToLibrary">Back to Library</a>
+        <button type="button" id="loader-retry-btn" class="btn-vox" style="height: 36px; padding: 0 14px;" data-i18n="tryAgain">Try Again</button>
       </div>
-      <div class="stage-item" id="stage-2">
-        <div class="stage-icon-badge">2</div>
-        <div class="stage-title">Extract Audio Captions & Deduplicate Karaoke Lines (yt-dlp)</div>
-      </div>
-      <div class="stage-item" id="stage-3">
-        <div class="stage-icon-badge">3</div>
-        <div class="stage-title">ASR Intelligence Audit (Correcting Speech Homophones)</div>
-      </div>
-      <div class="stage-item" id="stage-4">
-        <div class="stage-icon-badge">4</div>
-        <div class="stage-title">Classify 6-Color Accent Taxonomy (Slang, Idioms, Flap-T, Fillers)</div>
-      </div>
-      <div class="stage-item" id="stage-5">
-        <div class="stage-icon-badge">5</div>
-        <div class="stage-title">Synthesize Prosody, Intonation Peaks & Drill Matrices</div>
-      </div>
-      <div class="stage-item" id="stage-6">
-        <div class="stage-icon-badge">6</div>
-        <div class="stage-title">Compile Interactive Studio & Notetaker Workspace</div>
-      </div>
-    </div>
-
-    <!-- Live Agent Terminal Thought Stream -->
-    <div class="loader-terminal-stream" id="terminal-stream">
-      <div class="terminal-line">🤖 [Agent Dispatcher] Initializing session handshake...</div>
-    </div>
-
-    <!-- Error Recovery Actions (Visible when job fails or times out) -->
-    <div id="loader-error-actions" style="display: none; margin-top: 1.5rem; gap: 0.75rem; align-items: center;">
-      <button class="btn-sm" onclick="goToDashboard()" style="background: var(--bg-secondary); border: 1.5px solid var(--border-color); color: var(--text-primary); font-weight: 700; padding: 0.5rem 1.25rem; border-radius: var(--radius-md); cursor: pointer;">
-        ← Back to Dashboard
-      </button>
     </div>
   </div>
 
-  <!-- Dedicated Studio Page Navbar -->
-  <header class="studio-navbar">
-    <div class="nav-left">
-      <button class="back-btn" onclick="goToDashboard()">
-        <span>←</span>
-        <span id="nav-back-text">Dashboard</span>
-      </button>
+  <!-- Studio Header Bar -->
+  <header class="studio-topbar">
+    <div class="studio-topbar-inner">
+      <div class="studio-lead">
+        <a href="/" class="back-library-link" id="back-to-library-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="19" y1="12" x2="5" y2="12"></line>
+            <polyline points="12 19 5 12 12 5"></polyline>
+          </svg>
+          <span data-i18n="libraryBack">Library</span>
+        </a>
 
-      <div class="video-heading-info">
-        <h1 class="studio-title" id="studio-title">Loading Session...</h1>
-        <div class="studio-meta">
-          <span id="studio-creator">Content Creator</span> • 
-          <span id="studio-dialect" style="color: var(--primary);">General American</span> •
-          <span id="studio-pacing">155 WPM</span> •
-          <span id="studio-drills-badge" style="color: #10B981; font-weight: 700;">0 drills completed</span>
+        <div class="studio-title-block">
+          <h1 id="studio-title" class="studio-title">Loading lesson...</h1>
+          <div class="studio-meta-line">
+            <span id="studio-creator">—</span>
+            <span>·</span>
+            <span id="studio-wpm" class="ltr-num">150 WPM</span>
+            <span>·</span>
+            <span id="studio-sentence-total" class="ltr-num">0 sentences</span>
+            <span id="studio-cefr-badge" class="cefr-pill ltr-num" hidden>B2</span>
+          </div>
         </div>
       </div>
-    </div>
 
-    <div class="nav-actions">
-      <!-- Mark Drill Completed Button -->
-      <button class="btn-sm" id="complete-drill-btn" style="background: #10B981; color: white; border: none; font-weight: 700; display: flex; align-items: center; gap: 6px; cursor: pointer;">
-        <span>✓</span>
-        <span id="complete-drill-text">Mark Drill Completed</span>
-      </button>
+      <div class="studio-toolbar">
+        <!-- Flexible Video Layout Switcher (Side | Top | Focus) — Zero Remount -->
+        <div class="layout-switcher" role="group" aria-label="Video docking layout">
+          <button type="button" class="layout-btn active" data-layout-choice="side" aria-pressed="true" title="Dock video on the side">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="10" y1="4" x2="10" y2="20"></line></svg>
+            <span data-i18n="layoutSide">Side</span>
+          </button>
+          <button type="button" class="layout-btn" data-layout-choice="top" aria-pressed="false" title="Dock video at the top">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="11" x2="21" y2="11"></line></svg>
+            <span data-i18n="layoutTop">Top</span>
+          </button>
+          <button type="button" class="layout-btn" id="video-mode-toggle" data-layout-choice="focus" aria-pressed="false" title="Expand cinema video stage">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+            <span data-i18n="layoutFocus">Focus</span>
+          </button>
+        </div>
 
-      <!-- Download Obsidian Note (.md) Button -->
-      <button class="btn-sm" id="download-obsidian-btn" style="background: linear-gradient(135deg, #7C3AED, #6D28D9); color: white; border: none; font-weight: 700; display: flex; align-items: center; gap: 6px;">
-        <span>📥</span>
-        <span id="download-btn-text">Export Obsidian Note</span>
-      </button>
+        <button type="button" class="btn-secondary" id="download-obsidian-btn" title="Export Markdown study sheet">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span data-i18n="exportMd">Export .md</span>
+        </button>
 
-      <!-- Theme Switcher -->
-      <button class="btn-icon" id="studio-theme-btn" title="Toggle Dark/Light Mode">
-        <span id="studio-theme-icon">☀️</span>
-      </button>
+        <button type="button" class="btn-vox" style="height: 36px; padding: 0 13px; font-size: 0.82rem;" id="complete-drill-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span data-i18n="completeSession">Complete</span>
+          <span id="drill-counter-badge" class="ltr-num" style="padding: 0 5px; border-radius: 99px; background: rgba(20,20,19,0.12); font-size: 0.74rem;">0</span>
+        </button>
 
-      <!-- Language Switcher -->
-      <button class="btn-sm" id="studio-lang-btn" style="font-weight: 700;">
-        العربية
-      </button>
+        <select id="studio-ui-lang-select" class="ui-lang-select" aria-label="Interface language">
+          <option value="en">EN</option>
+          <option value="ar">AR</option>
+          <option value="es">ES</option>
+          <option value="fr">FR</option>
+          <option value="de">DE</option>
+          <option value="tr">TR</option>
+        </select>
+
+        <button type="button" class="icon-btn" id="studio-theme-toggle" aria-label="Toggle color theme">
+          <svg id="studio-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" hidden>
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+          <svg id="studio-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+          </svg>
+        </button>
+      </div>
     </div>
   </header>
 
-  <!-- Two-Column Dedicated Studio Workspace -->
-  <main class="studio-workspace-container" id="studio-main-content">
-
-    <!-- Left Column: Media & Shadowing Deck -->
-    <aside class="studio-deck">
-      
-      <!-- Video Player Card -->
-      <div class="deck-card">
-        <div class="video-player-box">
-          <div id="studio-youtube-player" class="video-frame"></div>
-          <iframe id="studio-video-frame" class="video-frame" style="display: none;" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        </div>
-
-        <div class="speed-deck-panel">
-          <div class="speed-header-row">
-            <div class="speed-label-group">
-              <span class="speed-icon">⚡</span>
-              <span id="speed-title-label">Playback Speed</span>
-            </div>
-            <div class="speed-badge" id="current-speed-badge">1.00x</div>
-          </div>
-
-          <!-- Single Master Playback Speed Slider (0.25 to 2.0 in 0.25 steps) -->
-          <div class="speed-slider-card">
-            <div class="speed-slider-track-wrap">
-              <input type="range" id="speed-slider" class="speed-slider" min="0.25" max="2.00" step="0.25" value="1.00" aria-label="Playback Speed">
-            </div>
-            <div class="speed-ticks" id="speed-ticks-row">
-              <span class="speed-tick" data-speed="0.25">0.25x</span>
-              <span class="speed-tick" data-speed="0.5">0.5x</span>
-              <span class="speed-tick" data-speed="0.75">0.75x</span>
-              <span class="speed-tick active" data-speed="1.0">1.0x</span>
-              <span class="speed-tick" data-speed="1.25">1.25x</span>
-              <span class="speed-tick" data-speed="1.5">1.5x</span>
-              <span class="speed-tick" data-speed="1.75">1.75x</span>
-              <span class="speed-tick" data-speed="2.0">2.0x</span>
-            </div>
+  <!-- Flexible Studio Grid (Never Remounted Across Mode or Layout Switches) -->
+  <main id="studio-main-content" class="studio-workspace" data-layout="side">
+    <!-- Media & Voice Deck -->
+    <aside class="studio-deck" aria-label="Media and voice controls">
+      <div class="player-frame-card">
+        <div class="video-aspect-box" id="video-stage-container">
+          <div id="studio-youtube-player"></div>
+          <div id="tts-audio-stage" class="tts-audio-stage" hidden>
+            <span class="tts-stage-tag" id="tts-stage-tag">Spoken Audio Deck</span>
+            <p class="tts-active-quote" id="tts-active-quote">Select any sentence to play spoken American English audio.</p>
+            <span class="tts-stage-hint" data-i18n="ttsHint">Powered by browser speech synthesis synced to your speed setting.</span>
           </div>
         </div>
       </div>
 
-      <!-- Real Microphone Audio Shadowing Laboratory -->
-      <div class="deck-card studio-recorder">
-        <div class="recorder-header">
-          <div class="rec-title-group">
-            <span style="font-size: 1.15rem;">🎙️</span>
-            <span id="rec-lab-title" style="font-weight: 800; font-size: 0.95rem;">Voice Shadowing Lab</span>
+      <div class="deck-controls-stack">
+        <!-- Sentence Playback Flow -->
+        <div class="deck-panel">
+          <div class="deck-panel-head">
+            <span class="deck-panel-label" data-i18n="playbackFlowLabel">Sentence Flow</span>
           </div>
-          <span class="rec-badge-ready" id="rec-status-indicator">Ready</span>
+          <div class="flow-segmented" role="group" aria-label="End of sentence action">
+            <button type="button" class="flow-btn active" data-end-action="pause" aria-pressed="true" data-i18n="flowPause">Auto-Pause</button>
+            <button type="button" class="flow-btn" data-end-action="loop" aria-pressed="false" data-i18n="flowLoop">Loop</button>
+            <button type="button" class="flow-btn" data-end-action="continue" aria-pressed="false" data-i18n="flowContinue">Continuous</button>
+          </div>
         </div>
 
-        <button class="studio-record-btn" id="studio-mic-btn">
-          <span style="font-size: 1.25rem;">🎙️</span>
-          <span id="record-btn-text">Start Shadowing Take</span>
-        </button>
-        <p class="rec-instructions" id="record-instructions">Speak out loud simultaneously with the creator to match cadence and flap-T tapping.</p>
-
-        <!-- Player Audio Take Preview -->
-        <div class="studio-audio-preview" id="studio-audio-preview" style="display: none; flex-direction: column; gap: 0.5rem;">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <span style="font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);" id="your-take-label">Your Recorded Take:</span>
-            <button class="btn-sm" id="discard-take-btn" style="background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.75rem; padding: 0.2rem 0.5rem; cursor: pointer;">✕ Discard Take</button>
+        <!-- Precision Speed Control -->
+        <div class="deck-panel">
+          <div class="deck-panel-head">
+            <span class="deck-panel-label" data-i18n="playbackSpeedLabel">Playback Speed</span>
+            <span id="current-speed-badge" class="speed-badge ltr-num">1.00x</span>
           </div>
-          <audio id="studio-audio-player" controls style="width: 100%; height: 36px;"></audio>
+          <input
+            type="range"
+            id="speed-slider"
+            class="speed-slider"
+            min="0.25"
+            max="2"
+            step="0.05"
+            value="1"
+            aria-label="Playback speed"
+          />
+          <div id="speed-ticks-row" class="speed-ticks-row">
+            <button type="button" class="speed-tick" data-speed="0.25">0.25x</button>
+            <button type="button" class="speed-tick" data-speed="0.5">0.50x</button>
+            <button type="button" class="speed-tick" data-speed="0.75">0.75x</button>
+            <button type="button" class="speed-tick active" data-speed="1">1.00x</button>
+            <button type="button" class="speed-tick" data-speed="1.25">1.25x</button>
+            <button type="button" class="speed-tick" data-speed="1.5">1.50x</button>
+            <button type="button" class="speed-tick" data-speed="1.75">1.75x</button>
+            <button type="button" class="speed-tick" data-speed="2">2.00x</button>
+          </div>
+        </div>
+
+        <!-- Voice Comparison Recorder -->
+        <div class="deck-panel">
+          <div class="deck-panel-head">
+            <span class="deck-panel-label" data-i18n="voiceRecorderLabel">Voice Comparison</span>
+            <span id="rec-status-label" style="font-size: 0.74rem; color: var(--ink-muted);" data-i18n="recReady">Ready</span>
+          </div>
+          <div class="recorder-row">
+            <button type="button" class="rec-btn" id="record-toggle-btn">
+              <span class="rec-dot"></span>
+              <span id="record-btn-text" data-i18n="recordVoice">Record Voice</span>
+            </button>
+            <button type="button" class="btn-secondary" id="replay-original-btn" title="Replay current sentence">
+              <span data-i18n="hearSpeaker">Speaker</span>
+            </button>
+          </div>
+          <audio id="recorded-audio-player" class="rec-audio-player" controls hidden></audio>
+        </div>
+
+        <div class="shortcuts-strip" aria-label="Keyboard shortcuts">
+          <span><kbd class="kbd-chip">Space</kbd> <span data-i18n="keyPlay">Play/Pause</span></span>
+          <span><kbd class="kbd-chip">←</kbd> <kbd class="kbd-chip">→</kbd> <span data-i18n="keyPrevNext">Prev/Next</span></span>
+          <span><kbd class="kbd-chip">L</kbd> <span data-i18n="keyLoop">Loop</span></span>
+          <span><kbd class="kbd-chip">T</kbd> <span data-i18n="keyTrans">Translate</span></span>
         </div>
       </div>
-
-      <!-- Highlighting Color Legend Card -->
-      <div class="deck-card legend-deck-card">
-        <div class="legend-card-header" id="legend-card-title">Shadowing Color Legend</div>
-        <div class="legend-items-list">
-          <div class="legend-row">
-            <mark class="shadow-slang" style="background-color: var(--badge-slang-bg); color: var(--badge-slang-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🟡 Yellow</mark>
-            <span>Slang & Street Talk</span>
-          </div>
-          <div class="legend-row">
-            <mark class="shadow-idiom" style="background-color: var(--badge-idiom-bg); color: var(--badge-idiom-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🟣 Lavender</mark>
-            <span>Native Expressions & Idioms</span>
-          </div>
-          <div class="legend-row">
-            <mark class="shadow-reduction" style="background-color: var(--badge-reduction-bg); color: var(--badge-reduction-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🔵 Sky Blue</mark>
-            <span>Connected Speech & Reductions</span>
-          </div>
-          <div class="legend-row">
-            <mark class="shadow-filler" style="background-color: var(--badge-filler-bg); color: var(--badge-filler-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🟢 Mint Green</mark>
-            <span>Conversational Rhythm & Fillers</span>
-          </div>
-          <div class="legend-row">
-            <mark class="shadow-stress" style="background-color: var(--badge-stress-bg); color: var(--badge-stress-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🟠 Peach</mark>
-            <span>Intonation Peaks & Stress</span>
-          </div>
-          <div class="legend-row">
-            <mark class="shadow-correction" style="background-color: var(--badge-correction-bg); color: var(--badge-correction-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🔴 Rose</mark>
-            <span>Fixed Transcription Errors</span>
-          </div>
-        </div>
-      </div>
-
     </aside>
 
-    <!-- Right Column: Interactive Canvas & Drills -->
-    <section class="studio-canvas">
+    <!-- Primary Scalable Learning Workspace -->
+    <section class="studio-canvas" aria-label="Learning modes">
+      <!-- Primary Learning Modes Rail (0ms switching, zero reload) -->
+      <nav class="primary-modes-bar" role="tablist" aria-label="Learning modes">
+        <button type="button" class="mode-tab-btn active" data-mode="shadow" role="tab" aria-selected="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+          <span data-i18n="modeShadow">Shadow</span>
+          <span class="mode-badge ltr-num" id="badge-sentences-count">0</span>
+        </button>
 
-      <!-- Canvas Navigation Tabs -->
-      <nav class="canvas-navbar">
-        <button class="canvas-tab-btn active" data-tab="transcript" id="tab-btn-transcript">
-          <span>📝</span>
-          <span id="tab-label-transcript">Verbatim Transcript</span>
-          <span class="tab-count-badge" id="studio-chunk-count">0</span>
+        <button type="button" class="mode-tab-btn" data-mode="read" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
+          <span data-i18n="modeRead">Read</span>
+          <span class="mode-badge ltr-num" id="badge-paragraphs-count">0</span>
         </button>
-        <button class="canvas-tab-btn" data-tab="slang" id="tab-btn-slang">
-          <span>🟡</span>
-          <span id="tab-label-slang">Slang Glossary</span>
-          <span class="tab-count-badge" id="studio-slang-count">0</span>
+
+        <button type="button" class="mode-tab-btn" data-mode="listen" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
+          <span data-i18n="modeListen">Listen</span>
         </button>
-        <button class="canvas-tab-btn" data-tab="idioms" id="tab-btn-idioms">
-          <span>🟣</span>
-          <span id="tab-label-idioms">Native Idioms</span>
-          <span class="tab-count-badge" id="studio-idioms-count">0</span>
+
+        <button type="button" class="mode-tab-btn" data-mode="coach" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+          <span data-i18n="modeCoach">Coach</span>
+          <span class="mode-badge ltr-num" id="badge-coach-count" hidden>0</span>
         </button>
-        <button class="canvas-tab-btn" data-tab="reductions" id="tab-btn-reductions">
-          <span>🔵</span>
-          <span id="tab-label-reductions">Connected Speech & Flap-T</span>
-          <span class="tab-count-badge" id="studio-reductions-count">0</span>
-        </button>
-        <button class="canvas-tab-btn" data-tab="asr" id="tab-btn-asr">
-          <span>🔴</span>
-          <span id="tab-label-asr">ASR Fixes Log</span>
-          <span class="tab-count-badge" id="studio-asr-count">0</span>
-        </button>
-        <button class="canvas-tab-btn" data-tab="notes" id="tab-btn-notes">
-          <span>📓</span>
-          <span id="tab-label-notes">My Study Notetaker</span>
+
+        <button type="button" class="mode-tab-btn" data-mode="notes" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+          <span data-i18n="modeNotes">Notes</span>
         </button>
       </nav>
 
-      <!-- Tab View 1: Verbatim Transcript Chunks & Sentence Driller -->
-      <div id="view-transcript" class="canvas-view-panel">
-        
-        <!-- Mode Switcher Pill: Chunks vs Sentences -->
-        <div class="mode-switcher-bar">
-          <div class="mode-pill-container">
-            <button class="mode-pill-btn active" id="mode-btn-chunks" onclick="switchTranscriptMode('chunks')">
-              <span>📜</span>
-              <span id="label-mode-chunks">Paragraph Mode</span>
-              <span class="sub-badge" id="count-chunks-badge">0</span>
-            </button>
-            <button class="mode-pill-btn" id="mode-btn-sentences" onclick="switchTranscriptMode('sentences')">
-              <span>🎯</span>
-              <span id="label-mode-sentences">Sentence Driller Mode</span>
-              <span class="sub-badge" id="count-sentences-badge">0</span>
-            </button>
-          </div>
+      <!-- Translation Control Deck (Only visible in Shadow Mode) -->
+      <div id="translation-control-deck" class="translation-deck">
+        <label class="trans-toggle-label">
+          <input type="checkbox" id="translation-toggle-checkbox" />
+          <span data-i18n="showTranslation">Show Translation</span>
+        </label>
 
-          <!-- Sentence Completion Action Bar -->
-          <div class="driller-action-deck" id="driller-action-deck" style="display: none;">
-            <span class="action-deck-title" id="end-action-title">Sentence Completion:</span>
-            <div class="action-pills-row">
-              <button class="action-pill-btn active" data-action="loop" id="label-action-loop">🔁 Auto-Repeat Loop</button>
-              <button class="action-pill-btn" data-action="pause" id="label-action-pause">⏸️ Stop & Shadow</button>
-              <button class="action-pill-btn" data-action="continuous" id="label-action-continuous">⏩ Continuous Play</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Real-World Vernacular Translation Control Deck -->
-        <div class="translation-control-deck" id="translation-control-deck" style="display: none;">
-          <div class="translation-toggle-group">
-            <label class="switch-toggle" for="translation-toggle-checkbox" title="Toggle Real-World Vernacular Translation">
-              <input type="checkbox" id="translation-toggle-checkbox">
-              <span class="switch-slider"></span>
-            </label>
-            <span class="toggle-text" id="label-trans-toggle">🌐 Real-World Meaning</span>
-          </div>
-
-          <!-- Two-Layer Hierarchical Selector (Reveals when toggle is ON) -->
-          <div class="translation-selectors-group" id="translation-selectors-group" style="display: none;">
-            <div class="selector-field">
-              <span class="selector-icon">🗣️</span>
-              <label for="trans-lang-select" class="selector-label" id="label-trans-lang">Language:</label>
-              <select id="trans-lang-select" class="studio-select-input" aria-label="Translation Language">
-                <option value="ar" selected>العربية (Arabic)</option>
-                <option value="en">English (US/UK/AU)</option>
-              </select>
-            </div>
-
-            <div class="selector-field">
-              <span class="selector-icon">📍</span>
-              <label for="trans-dialect-select" class="selector-label" id="label-trans-dialect">Dialect / Country:</label>
-              <select id="trans-dialect-select" class="studio-select-input" aria-label="Translation Dialect">
-                <!-- Dynamically populated -->
-              </select>
-            </div>
-
-            <div class="translation-status-pill" id="translation-status-pill">
-              <span class="status-dot"></span>
-              <span id="translation-status-text">AI Vernacular (Egypt 🇪🇬)</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Chunks Subview -->
-        <div class="studio-chunks-list" id="subview-chunks-list">
-          <!-- Rendered dynamically -->
-        </div>
-
-        <!-- Sentences Subview -->
-        <div class="studio-sentences-list" id="subview-sentences-list" style="display: none;">
-          <!-- Rendered dynamically -->
+        <div class="trans-controls-right">
+          <span id="translation-status-text" class="trans-status"></span>
+          <select id="trans-lang-select" class="trans-lang-select" aria-label="Translation language"></select>
+          <button type="button" class="icon-btn" style="width: 32px; height: 32px;" id="trans-refresh-btn" title="Bypass cache and re-translate" aria-label="Re-translate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+              <path d="M16 16h5v5"></path>
+            </svg>
+          </button>
         </div>
       </div>
 
-      <!-- Tab View 2: Slang Glossary -->
-      <div id="view-slang" class="canvas-view-panel" style="display: none;"></div>
+      <!-- Verbatim Highlight Legend & Word Click Hint -->
+      <div id="transcript-legend-strip" class="legend-strip">
+        <div class="legend-items">
+          <span class="legend-swatch">
+            <span class="swatch-box" style="background: var(--hl-connected-bg); border-bottom: 2px solid var(--hl-connected-line);"></span>
+            <span data-i18n="legendConnected">Connected Speech</span>
+          </span>
+          <span class="legend-swatch">
+            <span class="swatch-box" style="background: var(--hl-expression-bg); border-bottom: 2px solid var(--hl-expression-line);"></span>
+            <span data-i18n="legendExpressions">Expressions</span>
+          </span>
+          <span class="legend-swatch">
+            <span class="swatch-box" style="background: var(--hl-vocab-bg); border-bottom: 2px dashed var(--hl-vocab-line);"></span>
+            <span data-i18n="legendVocab">Key Vocabulary</span>
+          </span>
+        </div>
+        <span data-i18n="clickWordTip">Tip: Click any word for contextual definition</span>
+      </div>
 
-      <!-- Tab View 3: Native Idioms -->
-      <div id="view-idioms" class="canvas-view-panel" style="display: none;"></div>
+      <!-- MODE PANEL 1: SHADOW (Sentence Drill) -->
+      <div id="mode-panel-shadow">
+        <div id="subview-sentences-list" class="sentences-list"></div>
+      </div>
 
-      <!-- Tab View 4: Connected Speech & Phonetics -->
-      <div id="view-reductions" class="canvas-view-panel" style="display: none;"></div>
+      <!-- MODE PANEL 2: READ (Cohesive Editorial Paragraphs) -->
+      <div id="mode-panel-read" style="display: none;">
+        <div id="subview-chunks-list" class="editorial-article-view"></div>
+      </div>
 
-      <!-- Tab View 5: ASR Error Correction Log -->
-      <div id="view-asr" class="canvas-view-panel" style="display: none;"></div>
-
-      <!-- Tab View 6: Obsidian Notetaker Canvas -->
-      <div id="view-notes" class="canvas-view-panel" style="display: none;">
-        <div class="notetaker-card">
-          <div class="notetaker-header">
-            <div>
-              <h3 style="font-size: 1.15rem; font-weight: 800;" id="notes-title">Personal Shadowing Notes & Phonetics Log</h3>
-              <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 2px;" id="notes-autosave">Auto-saved to your browser</p>
-            </div>
+      <!-- MODE PANEL 3: LISTEN (Active Cloze Dictation) -->
+      <div id="mode-panel-listen" class="dictation-view" style="display: none;">
+        <div class="dictation-toolbar">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button type="button" class="btn-secondary" id="dict-prev-btn">← <span data-i18n="prevBtn">Prev</span></button>
+            <span id="dict-progress-label" class="ltr-num" style="font-family: var(--font-mono); font-size: 0.82rem; padding: 0 6px;">1 / 1</span>
+            <button type="button" class="btn-secondary" id="dict-next-btn"><span data-i18n="nextBtn">Next</span> →</button>
           </div>
-          <textarea id="study-notes-textarea" class="study-notes-textarea" placeholder="Type your personal observations, phonetic reminders, flap-T notes, and vocabulary lists here..."></textarea>
+
+          <div class="filter-pills">
+            <button type="button" class="filter-pill" data-dict-level="easy" data-i18n="dictEasy">Easy</button>
+            <button type="button" class="filter-pill active" data-dict-level="medium" data-i18n="dictMedium">Medium</button>
+            <button type="button" class="filter-pill" data-dict-level="hard" data-i18n="dictHard">Hard</button>
+          </div>
+        </div>
+
+        <div class="dictation-card">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+            <span id="dict-time-badge" class="sent-time-badge">00:00.000</span>
+            <button type="button" class="btn-vox" style="height: 34px; padding: 0 14px; font-size: 0.81rem;" id="dict-play-btn">
+              <span data-i18n="playClipBtn">Play Sentence</span>
+            </button>
+          </div>
+
+          <div id="dictation-sentence-area" class="dictation-sentence-Area"></div>
+
+          <div class="dictation-controls-row">
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn-primary" style="height: 36px; padding: 0 16px; font-size: 0.84rem;" id="dict-check-btn" data-i18n="checkAnswerBtn">Check Answer</button>
+              <button type="button" class="btn-secondary" id="dict-reveal-btn" data-i18n="revealBtn">Reveal</button>
+            </div>
+            <span id="dict-feedback-text" style="font-size: 0.85rem; font-weight: 600;"></span>
+          </div>
         </div>
       </div>
 
+      <!-- MODE PANEL 4: COACH (Dynamic OpenCode Go AI Analysis) -->
+      <div id="mode-panel-coach" class="coach-view" style="display: none;">
+        <div id="coach-loading-box" class="empty-ledger">
+          <div class="loader-spinner" style="margin-bottom: 12px;"></div>
+          <h3 data-i18n="coachAnalyzingTitle">Analyzing speaker prosody &amp; connected speech...</h3>
+          <p data-i18n="coachAnalyzingDesc">Extracting verbatim reductions, expressions, and contextual vocabulary for this lesson.</p>
+        </div>
+
+        <div id="coach-error-box" class="empty-ledger" hidden>
+          <h3 id="coach-error-title">Analysis unavailable</h3>
+          <p id="coach-error-msg" style="margin-bottom: 14px;"></p>
+          <button type="button" class="btn-vox" style="height: 36px; padding: 0 16px;" id="coach-retry-btn" data-i18n="tryAgain">Try Again</button>
+        </div>
+
+        <div id="coach-content-box" hidden>
+          <div class="coach-brief-card" style="margin-bottom: 24px;">
+            <div class="coach-brief-top">
+              <div>
+                <span class="desk-kicker" style="margin-bottom: 4px;" data-i18n="prosodyBriefKicker">Speaker &amp; Prosody Brief</span>
+                <h2 id="coach-style-heading" class="coach-style-title">Natural American Cadence</h2>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span id="coach-cefr-stamp" class="cefr-pill ltr-num" style="font-size: 0.78rem; padding: 2px 8px;">B2</span>
+                <button type="button" class="btn-secondary" style="height: 30px; padding: 0 10px; font-size: 0.76rem;" id="coach-refresh-btn" data-i18n="refreshAnalysis">Refresh</button>
+              </div>
+            </div>
+            <p id="coach-summary-text" class="coach-summary-text"></p>
+            <ul id="coach-tips-list" class="coach-tips-list"></ul>
+          </div>
+
+          <div style="margin-bottom: 26px;">
+            <h3 class="coach-section-title">
+              <span data-i18n="coachConnectedHeading">Connected Speech &amp; Mouth Mechanics</span>
+              <span id="coach-connected-count" class="section-count ltr-num">0</span>
+            </h3>
+            <div id="coach-connected-grid" class="coach-cards-grid"></div>
+          </div>
+
+          <div style="margin-bottom: 26px;">
+            <h3 class="coach-section-title">
+              <span data-i18n="coachExpressionsHeading">Expressions, Phrasal Verbs &amp; Idioms</span>
+              <span id="coach-expressions-count" class="section-count ltr-num">0</span>
+            </h3>
+            <div id="coach-expressions-grid" class="coach-cards-grid"></div>
+          </div>
+
+          <div>
+            <h3 class="coach-section-title">
+              <span data-i18n="coachVocabHeading">Key Contextual Vocabulary</span>
+              <span id="coach-vocab-count" class="section-count ltr-num">0</span>
+            </h3>
+            <div id="coach-vocab-grid" class="coach-cards-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODE PANEL 5: NOTES (SQLite-Persisted Study Notebook) -->
+      <div id="mode-panel-notes" class="notes-view" style="display: none;">
+        <div class="notes-header">
+          <div>
+            <h2 class="section-heading" style="font-size: 1.18rem;" data-i18n="notebookHeading">Study Notebook</h2>
+            <p style="font-size: 0.81rem; color: var(--ink-muted);" data-i18n="notebookSub">Saved automatically to your library and included in Markdown exports.</p>
+          </div>
+          <span id="notes-save-indicator" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-muted);" data-i18n="savedStatus">Saved</span>
+        </div>
+        <textarea
+          id="study-notes-textarea"
+          class="study-notes-textarea"
+          placeholder="Write pronunciation cues, takeaways, or personal example sentences..."
+          data-i18n-placeholder="notesPlaceholder"
+        ></textarea>
+      </div>
     </section>
-
   </main>
 
-  <script src="studio.js?v=2.4"></script>
+  <!-- Contextual AI Word Lookup Popover -->
+  <div id="word-lookup-popover" class="word-popover" hidden role="dialog" aria-label="Word definition">
+    <div class="word-popover-head">
+      <div>
+        <span id="wp-term" class="word-popover-term"></span>
+        <span id="wp-ipa" class="vocab-ipa ltr-num" style="margin-inline-start: 8px;"></span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span id="wp-pos" class="vocab-pos"></span>
+        <button type="button" class="icon-btn" style="width: 26px; height: 26px;" id="wp-close-btn" aria-label="Close definition">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+    <p id="wp-def" class="vocab-def" style="margin-bottom: 6px;"></p>
+    <p id="wp-trans" style="font-weight: 700; font-size: 0.94rem; margin-bottom: 6px;"></p>
+    <p id="wp-tip" style="font-size: 0.8rem; color: var(--ink-muted); margin-bottom: 12px;"></p>
+    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+      <button type="button" class="btn-secondary" style="height: 32px; font-size: 0.78rem;" id="wp-play-btn" data-i18n="playClipBtn">Play Sentence</button>
+      <button type="button" class="btn-vox" style="height: 32px; padding: 0 13px; font-size: 0.79rem;" id="wp-save-btn" data-i18n="saveToVocabBtn">+ Save to Vocabulary</button>
+    </div>
+  </div>
+
+  <div id="studio-toast" class="editorial-toast" role="status" aria-live="polite"></div>
+
+  <script src="studio.js"></script>
 </body>
 </html>

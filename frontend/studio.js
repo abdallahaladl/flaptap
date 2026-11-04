@@ -1,1617 +1,2149 @@
-/**
- * Flaptap AI - Dedicated Studio Controller
- * Live Agent Progress Engine (0% - 100%) | Multi-Stage Visual Handshake | Obsidian Notetaker
- * Interactive Sentence Driller Mode | Millisecond Seeking | Dual Speed Sliders | Deduplication Memory
- */
+/* ==========================================================================
+   FLAPTAP STUDIO ENGINE (studio.js)
+   Strict Sign-In Gate · Millisecond Playback Boundaries · 0ms Scalable Modes
+   Atomic Button State Synchronization · Dynamic OpenCode Go AI Coach & Lookup
+   ========================================================================== */
 
-const API_BASE = '/api';
+(function () {
+  'use strict';
 
-const VERNACULAR_DIALECTS = {
-  ar: [
-    { code: 'ar-EG', flag: '🇪🇬', nameEn: 'Egypt (Egyptian Arabic)', nameAr: 'مصر (اللهجة المصرية العامية)' },
-    { code: 'ar-SA', flag: '🇸🇦', nameEn: 'Saudi Arabia', nameAr: 'المملكة العربية السعودية (اللهجة السعودية)' },
-    { code: 'ar-AE', flag: '🇦🇪', nameEn: 'UAE', nameAr: 'الإمارات العربية المتحدة' },
-    { code: 'ar-KW', flag: '🇰🇼', nameEn: 'Kuwait', nameAr: 'الكويت' },
-    { code: 'ar-QA', flag: '🇶🇦', nameEn: 'Qatar', nameAr: 'قطر' },
-    { code: 'ar-BH', flag: '🇧🇭', nameEn: 'Bahrain', nameAr: 'البحرين' },
-    { code: 'ar-OM', flag: '🇴🇲', nameEn: 'Oman', nameAr: 'عُمان' },
-    { code: 'ar-JO', flag: '🇯🇴', nameEn: 'Jordan', nameAr: 'الأردن' },
-    { code: 'ar-PS', flag: '🇵🇸', nameEn: 'Palestine', nameAr: 'فلسطين' },
-    { code: 'ar-LB', flag: '🇱🇧', nameEn: 'Lebanon', nameAr: 'لبنان' },
-    { code: 'ar-SY', flag: '🇸🇾', nameEn: 'Syria', nameAr: 'سوريا' },
-    { code: 'ar-IQ', flag: '🇮🇶', nameEn: 'Iraq', nameAr: 'العراق' },
-    { code: 'ar-MA', flag: '🇲🇦', nameEn: 'Morocco', nameAr: 'المغرب (الدارجة)' },
-    { code: 'ar-DZ', flag: '🇩🇿', nameEn: 'Algeria', nameAr: 'الجزائر (الدارجة)' },
-    { code: 'ar-TN', flag: '🇹🇳', nameEn: 'Tunisia', nameAr: 'تونس (الدارجة)' },
-    { code: 'ar-LY', flag: '🇱🇾', nameEn: 'Libya', nameAr: 'ليبيا' },
-    { code: 'ar-SD', flag: '🇸🇩', nameEn: 'Sudan', nameAr: 'السودان' },
-    { code: 'ar-YE', flag: '🇾🇪', nameEn: 'Yemen', nameAr: 'اليمن' },
-    { code: 'ar-MR', flag: '🇲🇷', nameEn: 'Mauritania', nameAr: 'موريتانيا (الحسانية)' },
-    { code: 'ar-SO', flag: '🇸🇴', nameEn: 'Somalia', nameAr: 'الصومال' },
-    { code: 'ar-DJ', flag: '🇩🇯', nameEn: 'Djibouti', nameAr: 'جيبوتي' },
-    { code: 'ar-KM', flag: '🇰🇲', nameEn: 'Comoros', nameAr: 'جزر القمر' }
-  ],
-  en: [
-    { code: 'en-US', flag: '🇺🇸', nameEn: 'American English (US)', nameAr: 'الإنجليزية الأمريكية (General American)' },
-    { code: 'en-GB', flag: '🇬🇧', nameEn: 'British English (UK)', nameAr: 'الإنجليزية البريطانية (UK Colloquial)' },
-    { code: 'en-AU', flag: '🇦🇺', nameEn: 'Australian English', nameAr: 'الإنجليزية الأسترالية (Aussie Casual)' },
-    { code: 'en-CA', flag: '🇨🇦', nameEn: 'Canadian English', nameAr: 'الإنجليزية الكندية' },
-    { code: 'en-IE', flag: '🇮🇪', nameEn: 'Irish English', nameAr: 'الإنجليزية الأيرلندية' },
-    { code: 'en-NZ', flag: '🇳🇿', nameEn: 'New Zealand English', nameAr: 'إنجليزية نيوزيلندا' },
-    { code: 'en-ZA', flag: '🇿🇦', nameEn: 'South African English', nameAr: 'إنجليزية جنوب إفريقيا' }
-  ]
-};
+  const STUDIO_MODES = ['shadow', 'read', 'listen', 'coach', 'notes'];
+  const EXACT_SPEED_PRESETS = new Set([0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
 
-const STUDIO_I18N = {
-  en: {
-    back: 'Dashboard',
-    exportBtn: 'Export Obsidian Note (.md)',
-    tempoLabel: 'Practice Tempo:',
-    recLabTitle: 'Voice Shadowing Lab',
-    startRecord: 'Start Shadowing Take',
-    stopRecord: 'Stop & Compare Audio',
-    recInstructions: 'Speak out loud simultaneously with the creator to match cadence and flap-T tapping.',
-    yourTake: 'Your Recorded Take:',
-    discardTake: '✕ Discard Take',
-    recStatusReady: 'Ready',
-    recStatusRecording: 'Recording...',
-    recStatusSaved: 'Take Saved',
-    completeDrill: 'Mark Drill Completed',
-    drillCompletedToast: '🎉 Drill completed! Practice count updated.',
-    drillsCompleted: 'drills completed',
-    legendTitle: 'Shadowing Color Legend',
-    speedTitle: 'Playback Speed',
-    speedSliderLabel: 'Playback Speed (0.25x):',
-    modeChunks: 'Paragraph Mode',
-    modeSentences: 'Sentence Driller Mode',
-    endActionTitle: 'Sentence Completion Action:',
-    actionLoop: 'Auto-Repeat Loop',
-    actionPause: 'Stop & Shadow',
-    actionContinuous: 'Continuous Play',
-    transToggle: 'Real-World Meaning',
-    transLangLabel: 'Language:',
-    transDialectLabel: 'Dialect / Country:',
-    transStatusReady: 'AI Vernacular',
-    transStatusLoading: 'Synthesizing dialect...',
-    playDrill: 'Play & Drill',
-    nowPlaying: 'Now Playing (Drill Mode Active)',
-    tabs: {
-      transcript: 'Verbatim Transcript',
-      slang: 'Slang Glossary',
-      idioms: 'Native Idioms',
-      reductions: 'Connected Speech & Flap-T',
-      asr: 'ASR Fixes Log',
-      notes: 'My Study Notetaker',
+  const PLAY_ICON_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+  const PAUSE_ICON_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>';
+
+  const I18N = {
+    en: {
+      preparingLesson: 'Preparing your lesson...',
+      extractingTimings: 'Extracting verbatim speech and exact word timings.',
+      backToLibrary: 'Back to Library',
+      tryAgain: 'Try Again',
+      libraryBack: 'Library',
+      layoutSide: 'Side',
+      layoutTop: 'Top',
+      layoutFocus: 'Focus',
+      exportMd: 'Export .md',
+      completeSession: 'Complete',
+      ttsHint: 'Powered by browser speech synthesis synced to your speed setting.',
+      playbackFlowLabel: 'Sentence Flow',
+      flowPause: 'Auto-Pause',
+      flowLoop: 'Loop',
+      flowContinue: 'Continuous',
+      playbackSpeedLabel: 'Playback Speed',
+      voiceRecorderLabel: 'Voice Comparison',
+      recReady: 'Ready',
+      recRecording: 'Recording...',
+      recSaved: 'Take ready',
+      recordVoice: 'Record Voice',
+      stopRecord: 'Stop',
+      hearSpeaker: 'Speaker',
+      keyPlay: 'Play/Pause',
+      keyPrevNext: 'Prev/Next',
+      keyLoop: 'Loop',
+      keyTrans: 'Translate',
+      modeShadow: 'Shadow',
+      modeRead: 'Read',
+      modeListen: 'Listen',
+      modeCoach: 'Coach',
+      modeNotes: 'Notes',
+      showTranslation: 'Show Translation',
+      legendConnected: 'Connected Speech',
+      legendExpressions: 'Expressions',
+      legendVocab: 'Key Vocabulary',
+      clickWordTip: 'Tip: Click any word for contextual definition',
+      prevBtn: 'Prev',
+      nextBtn: 'Next',
+      dictEasy: 'Easy',
+      dictMedium: 'Medium',
+      dictHard: 'Hard',
+      playClipBtn: 'Play Sentence',
+      pauseClipBtn: 'Pause',
+      checkAnswerBtn: 'Check Answer',
+      revealBtn: 'Reveal',
+      coachAnalyzingTitle: 'Analyzing speaker prosody & connected speech...',
+      coachAnalyzingDesc: 'Extracting verbatim reductions, expressions, and contextual vocabulary for this lesson.',
+      prosodyBriefKicker: 'Speaker & Prosody Brief',
+      refreshAnalysis: 'Refresh',
+      coachConnectedHeading: 'Connected Speech & Mouth Mechanics',
+      coachExpressionsHeading: 'Expressions, Phrasal Verbs & Idioms',
+      coachVocabHeading: 'Key Contextual Vocabulary',
+      notebookHeading: 'Study Notebook',
+      notebookSub: 'Saved automatically to your library and included in Markdown exports.',
+      savedStatus: 'Saved',
+      savingStatus: 'Saving...',
+      notesPlaceholder: 'Write pronunciation cues, takeaways, or personal example sentences...',
+      saveToVocabBtn: '+ Save to Vocabulary',
+      savedInVocabBtn: '✓ Saved in Vault',
+      savedWordToast: 'Saved to Vocabulary Vault',
+      mdExportedToast: 'Study sheet downloaded successfully (.md)',
+      sessionCompletedToast: 'Practice session recorded',
+      sentencesUnit: 'sentences',
+      playBtn: 'Play',
+      pauseBtn: 'Pause',
+      loopBtn: 'Loop',
+      saveBtn: '+ Save',
+      savedShortBtn: '✓ Saved',
+      translatingStatus: 'Translating...',
+      translatedReady: 'Translated',
+      errUnavailableHeadline: 'Video unavailable',
+      errUnavailableDetail: 'This YouTube video is private, removed, or unavailable in this region.',
+      errNoCaptionsHeadline: 'No English captions found',
+      errNoCaptionsDetail: 'This video does not expose an English caption track for verbatim timing.',
+      errRateLimitHeadline: 'YouTube is temporarily limiting requests',
+      errRateLimitDetail: 'YouTube is rate-limiting caption requests right now. Please wait a moment and try again.',
+      errTimeoutHeadline: 'Connection timed out',
+      errTimeoutDetail: 'YouTube took too long to respond. Please try again.',
     },
-    emptySlang: 'No slang terms detected in this session.',
-    emptyIdioms: 'No idioms detected in this session.',
-    emptyReductions: 'No phonetic reductions logged for this session.',
-    emptyAsr: 'No ASR transcription errors detected (100% audio fidelity).',
-    notesTitle: 'Personal Shadowing Notes & Phonetics Log',
-    notesPlaceholder: 'Type your personal observations, phonetic reminders, flap-T notes, and vocabulary lists here...',
-    autosave: 'Auto-saved to your browser',
-    seekBtn: '▶ Play at',
-    copiedAlert: 'Obsidian markdown note downloaded successfully!',
-  },
-  ar: {
-    back: 'الرئيسية',
-    exportBtn: 'تصدير ملاحظة أوبسيديان (.md)',
-    tempoLabel: 'سرعة التمرين:',
-    recLabTitle: 'مختبر تسجيل ومحاكاة الصوت',
-    startRecord: 'بدء تسجيل صوتك',
-    stopRecord: 'إيقاف ومقارنة الصوت',
-    recInstructions: 'تحدث بصوت مسموع بالتزامن مع صانع المحتوى لتقليد النبرة وتقليل الحروف وسرعة النطق.',
-    yourTake: 'تسجيلك الصوتي للمقارنة:',
-    discardTake: '✕ حذف التسجيل',
-    recStatusReady: 'جاهز',
-    recStatusRecording: 'جاري التسجيل...',
-    recStatusSaved: 'تم الحفظ',
-    completeDrill: 'تسجيل إكمال التمرين',
-    drillCompletedToast: '🎉 تم تسجيل إكمال التمرين بنجاح!',
-    drillsCompleted: 'مرات تدريب مكتملة',
-    legendTitle: 'دليل ألوان المحاكاة',
-    speedTitle: 'سرعة التشغيل',
-    speedSliderLabel: 'سرعة التشغيل (0.25x):',
-    modeChunks: 'نمط المقاطع',
-    modeSentences: 'نمط تدريب الجمل المستقلة',
-    endActionTitle: 'خيارات انتهاء الجملة:',
-    actionLoop: 'تكرار تلقائي',
-    actionPause: 'إيقاف للتمرين الصوتي',
-    actionContinuous: 'المتابعة التلقائية',
-    transToggle: 'الترجمة الواقعية الحية',
-    transLangLabel: 'اللغة:',
-    transDialectLabel: 'اللهجة / الدولة:',
-    transStatusReady: 'لهجة حية بالذكاء الاصطناعي',
-    transStatusLoading: 'جاري توليد اللهجة...',
-    playDrill: 'تشغيل وتدريب',
-    nowPlaying: 'جاري التشغيل والتدريب الصوتي',
-    tabs: {
-      transcript: 'النص المفرغ بالكامل',
-      slang: 'معجم لغة الشارع والسلاينج',
-      idioms: 'تعبيرات أصلية ومصطلحات',
-      reductions: 'دمج الحروف والـ Flap-T',
-      asr: 'أخطاء التفريغ المصححة',
-      notes: 'ملاحظاتي الدراسية',
+    ar: {
+      preparingLesson: 'جارٍ تجهيز الدرس...',
+      extractingTimings: 'استخراج النص الحرفي والتوقيت الدقيق لكل كلمة.',
+      backToLibrary: 'العودة للمكتبة',
+      tryAgain: 'إعادة المحاولة',
+      libraryBack: 'المكتبة',
+      layoutSide: 'جانبي',
+      layoutTop: 'علوي',
+      layoutFocus: 'تركيز',
+      exportMd: 'تصدير .md',
+      completeSession: 'إتمام التدريب',
+      ttsHint: 'يعمل عبر النطق الصوتي للمتصفح متزامناً مع السرعة المحددة.',
+      playbackFlowLabel: 'تدفق الجمل',
+      flowPause: 'توقف تلقائي',
+      flowLoop: 'تكرار',
+      flowContinue: 'متواصل',
+      playbackSpeedLabel: 'سرعة التشغيل',
+      voiceRecorderLabel: 'مقارنة صوتك',
+      recReady: 'جاهز',
+      recRecording: 'يسجل...',
+      recSaved: 'التسجيل جاهز',
+      recordVoice: 'سجّل صوتك',
+      stopRecord: 'إيقاف',
+      hearSpeaker: 'المتحدث',
+      keyPlay: 'تشغيل/إيقاف',
+      keyPrevNext: 'السابق/التالي',
+      keyLoop: 'تكرار',
+      keyTrans: 'ترجمة',
+      modeShadow: 'الترديد',
+      modeRead: 'القراءة',
+      modeListen: 'الإملاء',
+      modeCoach: 'المدرب',
+      modeNotes: 'الملاحظات',
+      showTranslation: 'إظهار الترجمة',
+      legendConnected: 'الكلام المتصل',
+      legendExpressions: 'التعبيرات',
+      legendVocab: 'المفردات',
+      clickWordTip: 'اضغط على أي كلمة لمعرفة معناها في السياق',
+      prevBtn: 'السابق',
+      nextBtn: 'التالي',
+      dictEasy: 'سهل',
+      dictMedium: 'متوسط',
+      dictHard: 'متقدم',
+      playClipBtn: 'تشغيل الجملة',
+      pauseClipBtn: 'إيقاف مؤقت',
+      checkAnswerBtn: 'تحقق من الإجابة',
+      revealBtn: 'إظهار الحل',
+      coachAnalyzingTitle: 'جارٍ تحليل إيقاع المتحدث والكلام المتصل...',
+      coachAnalyzingDesc: 'استخراج الاختصارات الصوتية والتعبيرات والمفردات السياقية بالذكاء الاصطناعي.',
+      prosodyBriefKicker: 'ملخص الأداء الصوتي',
+      refreshAnalysis: 'تحديث',
+      coachConnectedHeading: 'الكلام المتصل وميكانيكا النطق',
+      coachExpressionsHeading: 'التعبيرات والأفعال المركبة',
+      coachVocabHeading: 'المفردات السياقية المهمة',
+      notebookHeading: 'دفتر الملاحظات',
+      notebookSub: 'يُحفظ تلقائياً في قاعدة البيانات ويُدرج في ملف التصدير.',
+      savedStatus: 'تم الحفظ',
+      savingStatus: 'يحفظ...',
+      notesPlaceholder: 'دوّن ملاحظات النطق أو الجمل المهمة هنا...',
+      saveToVocabBtn: '+ حفظ في المفردات',
+      savedInVocabBtn: '✓ محفوظ في المفردات',
+      savedWordToast: 'تم الحفظ في خزنة المفردات',
+      mdExportedToast: 'تم تحميل ملخص الدرس بنجاح (.md)',
+      sessionCompletedToast: 'تم تسجيل إتمام الجلسة',
+      sentencesUnit: 'جملة',
+      playBtn: 'تشغيل',
+      pauseBtn: 'إيقاف',
+      loopBtn: 'تكرار',
+      saveBtn: '+ حفظ',
+      savedShortBtn: '✓ محفوظ',
+      translatingStatus: 'جارٍ الترجمة...',
+      translatedReady: 'مترجم',
+      errUnavailableHeadline: 'الفيديو غير متاح',
+      errUnavailableDetail: 'هذا الفيديو غير متاح أو خاص أو تم حذفه من يوتيوب.',
+      errNoCaptionsHeadline: 'لا يتوفر نص إنجليزي',
+      errNoCaptionsDetail: 'لا يحتوي هذا الفيديو على مسار نصي إنجليزي للتوقيت الصوتي.',
+      errRateLimitHeadline: 'يوتيوب يحدّد الطلبات مؤقتًا',
+      errRateLimitDetail: 'يوتيوب يحدّد مؤقتًا طلبات النصوص. يرجى المحاولة بعد قليل.',
+      errTimeoutHeadline: 'انتهت مهلة الاتصال',
+      errTimeoutDetail: 'استغرق يوتيوب وقتاً طويلاً للاستجابة. يرجى المحاولة مرة أخرى.',
     },
-    emptySlang: 'لا توجد مصطلحات سلاينج في هذه الجلسة.',
-    emptyIdioms: 'لا توجد تعبيرات اصطلاحية في هذه الجلسة.',
-    emptyReductions: 'لا توجد اختصارات صوتية مسجلة.',
-    emptyAsr: 'لا توجد أخطاء تفريغ صوتي (دقة التفريغ 100%).',
-    notesTitle: 'ملاحظات النطق والتمرين الشخصية',
-    notesPlaceholder: 'اكتب هنا ملاحظاتك الشخصية، تذكيرات الـ Flap-T، وقوائم الكلمات الجديدة...',
-    autosave: 'يتم الحفظ التلقائي في متصفحك',
-    seekBtn: '▶ تشغيل عند',
-    copiedAlert: 'تم تحميل ملف أوبسيديان (.md) بنجاح!',
-  }
-};
+    es: {
+      libraryBack: 'Biblioteca',
+      modeShadow: 'Sombra',
+      modeRead: 'Lectura',
+      modeListen: 'Dictado',
+      modeCoach: 'Coach',
+      modeNotes: 'Notas',
+      showTranslation: 'Mostrar traducción',
+      completeSession: 'Completar',
+      mdExportedToast: 'Study sheet downloaded successfully (.md)',
+    },
+    fr: {
+      libraryBack: 'Bibliothèque',
+      modeShadow: 'Shadowing',
+      modeRead: 'Lecture',
+      modeListen: 'Dictée',
+      modeCoach: 'Coach',
+      modeNotes: 'Notes',
+      showTranslation: 'Afficher la traduction',
+      completeSession: 'Terminer',
+      mdExportedToast: 'Study sheet downloaded successfully (.md)',
+    },
+    de: {
+      libraryBack: 'Bibliothek',
+      modeShadow: 'Shadowing',
+      modeRead: 'Lesen',
+      modeListen: 'Diktat',
+      modeCoach: 'Coach',
+      modeNotes: 'Notizen',
+      showTranslation: 'Übersetzung anzeigen',
+      completeSession: 'Abschließen',
+      mdExportedToast: 'Study sheet downloaded successfully (.md)',
+    },
+    tr: {
+      libraryBack: 'Kitaplık',
+      modeShadow: 'Gölgeleme',
+      modeRead: 'Okuma',
+      modeListen: 'Dikte',
+      modeCoach: 'Koç',
+      modeNotes: 'Notlar',
+      showTranslation: 'Çeviriyi Göster',
+      completeSession: 'Tamamla',
+      mdExportedToast: 'Study sheet downloaded successfully (.md)',
+    },
+  };
 
-const studioState = {
-  lang: 'ar',
-  theme: 'dark',
-  item: null,
-  activeTab: 'transcript',
-  transcriptMode: 'sentences', // 'chunks' | 'sentences'
-  endAction: 'loop',        // 'loop' | 'pause' | 'continuous'
-  speed: 1.0,
-  activeSentence: null,
-  ytPlayer: null,
-  ytReady: false,
-  pendingVideoId: null,
-  playbackTicker: null,
-  mediaRecorder: null,
-  audioChunks: [],
-  isRecording: false,
-  translationEnabled: false,
-  translationLang: 'ar',
-  translationDialect: 'ar-EG',
-  activeTranslations: {},
-};
-window.studioState = studioState;
+  const studioState = {
+    uiLang: localStorage.getItem('flaptap_ui_lang') || 'en',
+    theme: localStorage.getItem('flaptap_theme') || 'light',
+    guestToken: localStorage.getItem('flaptap_guest_token') || '',
+    authToken: localStorage.getItem('flaptap_auth_token') || '',
+    user: null,
+    item: null,
+    mode: 'shadow',
+    layout: localStorage.getItem('flaptap_studio_layout') || 'side',
+    previousNonFocusLayout: 'side',
+    ytPlayer: null,
+    ytReady: false,
+    pendingPlaySentenceIndex: null,
+    activeSentence: null,
+    isPlaying: false,
+    loopSentenceIndex: null,
+    endAction: 'pause', // 'pause' | 'loop' | 'continue'
+    speed: 1.0,
+    seekTargetStart: 0,
+    awaitingOnsetUnmute: false,
+    lastSeekTime: 0,
+    playbackTicker: null,
+    translationEnabled: false,
+    translationLang: localStorage.getItem('flaptap_trans_lang') || 'ar',
+    translationRtl: true,
+    languages: [],
+    translationsByLang: {},
+    analysisInFlight: false,
+    dictationIndex: 1,
+    dictationLevel: 'medium',
+    activeWordLookup: null,
+    pendingLookupTerm: '',
+    savedTerms: new Set(),
+    mediaRecorder: null,
+    recordedChunks: [],
+    recordedAudioUrl: null,
+  };
 
-// Global YouTube IFrame API Callback
-window.onYouTubeIframeAPIReady = function() {
-  studioState.ytReady = true;
-  if (studioState.pendingVideoId) {
-    initYouTubePlayer(studioState.pendingVideoId);
-  }
-};
+  window.studioState = studioState;
 
-document.addEventListener('DOMContentLoaded', () => {
-  initStudioTheme();
-  initStudioI18n();
-  initStudioSession();
-  setupStudioEvents();
-});
-
-function initStudioTheme() {
-  const saved = localStorage.getItem('theme') || 'dark';
-  setStudioTheme(saved);
-}
-
-function setStudioTheme(theme) {
-  studioState.theme = theme;
-  document.documentElement.setAttribute('data-theme', theme);
-  localStorage.setItem('theme', theme);
-  const icon = document.getElementById('studio-theme-icon');
-  if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-}
-
-function initStudioI18n() {
-  const urlLang = new URLSearchParams(window.location.search).get('lang');
-  const saved = urlLang || localStorage.getItem('lang') || 'ar';
-  setStudioLanguage(saved);
-}
-
-function setStudioLanguage(lang) {
-  studioState.lang = lang;
-  document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
-  document.documentElement.setAttribute('lang', lang);
-  localStorage.setItem('lang', lang);
-
-  const t = STUDIO_I18N[lang];
-  document.getElementById('nav-back-text').textContent = t.back;
-  document.getElementById('download-btn-text').textContent = t.exportBtn;
-  document.getElementById('studio-lang-btn').textContent = lang === 'en' ? 'العربية' : 'English';
-  
-  const speedTitleElem = document.getElementById('speed-title-label');
-  if (speedTitleElem) speedTitleElem.textContent = t.speedTitle;
-  const speedSliderElem = document.getElementById('speed-slider-label');
-  if (speedSliderElem) speedSliderElem.textContent = t.speedSliderLabel;
-
-  const modeChunksElem = document.getElementById('label-mode-chunks');
-  if (modeChunksElem) modeChunksElem.textContent = t.modeChunks;
-  const modeSentElem = document.getElementById('label-mode-sentences');
-  if (modeSentElem) modeSentElem.textContent = t.modeSentences;
-
-  const endActionTitle = document.getElementById('end-action-title');
-  if (endActionTitle) endActionTitle.textContent = t.endActionTitle;
-  const actionLoopElem = document.getElementById('label-action-loop');
-  if (actionLoopElem) actionLoopElem.textContent = t.actionLoop;
-  const actionPauseElem = document.getElementById('label-action-pause');
-  if (actionPauseElem) actionPauseElem.textContent = t.actionPause;
-  const actionContElem = document.getElementById('label-action-continuous');
-  if (actionContElem) actionContElem.textContent = t.actionContinuous;
-
-  const transToggleLabel = document.getElementById('label-trans-toggle');
-  if (transToggleLabel) transToggleLabel.textContent = t.transToggle;
-  const transLangLabel = document.getElementById('label-trans-lang');
-  if (transLangLabel) transLangLabel.textContent = t.transLangLabel;
-  const transDialectLabel = document.getElementById('label-trans-dialect');
-  if (transDialectLabel) transDialectLabel.textContent = t.transDialectLabel;
-  populateDialectDropdown(studioState.translationLang, studioState.translationDialect);
-
-  document.getElementById('rec-lab-title').textContent = t.recLabTitle;
-  document.getElementById('record-btn-text').textContent = studioState.isRecording ? t.stopRecord : t.startRecord;
-  document.getElementById('record-instructions').textContent = t.recInstructions;
-  document.getElementById('your-take-label').textContent = t.yourTake;
-  document.getElementById('legend-card-title').textContent = t.legendTitle;
-
-  const discardBtn = document.getElementById('discard-take-btn');
-  if (discardBtn) discardBtn.textContent = t.discardTake;
-  const completeText = document.getElementById('complete-drill-text');
-  if (completeText) completeText.textContent = t.completeDrill;
-  const drillsBadge = document.getElementById('studio-drills-badge');
-  if (drillsBadge && studioState.item) drillsBadge.textContent = `${studioState.item.completedDrills || 0} ${t.drillsCompleted}`;
-
-  document.getElementById('tab-label-transcript').textContent = t.tabs.transcript;
-  document.getElementById('tab-label-slang').textContent = t.tabs.slang;
-  document.getElementById('tab-label-idioms').textContent = t.tabs.idioms;
-  document.getElementById('tab-label-reductions').textContent = t.tabs.reductions;
-  document.getElementById('tab-label-asr').textContent = t.tabs.asr;
-  document.getElementById('tab-label-notes').textContent = t.tabs.notes;
-
-  document.getElementById('notes-title').textContent = t.notesTitle;
-  document.getElementById('study-notes-textarea').placeholder = t.notesPlaceholder;
-  document.getElementById('notes-autosave').textContent = t.autosave;
-}
-
-// Session Router & Deduplication Memory Handshake
-async function initStudioSession() {
-  const params = new URLSearchParams(window.location.search);
-  const id = params.get('id');
-  const url = params.get('url');
-  const agent = params.get('agent') || 'antigravity';
-  const isNew = params.get('new') === 'true' || params.get('new') === '1';
-
-  // Preserve initial mode & preferences from URL
-  studioState.initialMode = params.get('mode') || 'chunks';
-  studioState.initialSpeed = params.get('speed');
-  studioState.initialAction = params.get('action');
-  studioState.initialDrill = params.get('drill');
-
-  // 1. Direct ID load: load existing session instantly from database
-  if (id) {
-    await loadExistingSession(id);
-    return;
+  function t(key) {
+    const dict = I18N[studioState.uiLang] || I18N.en;
+    return dict[key] !== undefined ? dict[key] : (I18N.en[key] || key);
   }
 
-  // 2. URL provided: ALWAYS check database memory first!
-  if (url) {
+  function escapeHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function normalizeTermKey(term) {
+    return String(term || '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+
+  function redirectToSignInGate() {
+    const nextPath = window.location.pathname + window.location.search;
+    window.location.replace(`/?auth=required&next=${encodeURIComponent(nextPath)}`);
+  }
+
+  function apiHeaders(extra) {
+    const headers = Object.assign({ 'Content-Type': 'application/json' }, extra || {});
+    if (studioState.guestToken) headers['x-guest-token'] = studioState.guestToken;
+    if (studioState.authToken) headers['Authorization'] = `Bearer ${studioState.authToken}`;
+    return headers;
+  }
+
+  async function apiFetch(url, options) {
+    const opts = Object.assign({ credentials: 'same-origin' }, options || {});
+    opts.headers = apiHeaders(opts.headers);
+    const res = await fetch(url, opts);
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      redirectToSignInGate();
+      const authErr = new Error(body?.message || 'Authentication required');
+      authErr.status = 401;
+      authErr.code = 'auth_required';
+      throw authErr;
+    }
+    if (!res.ok) {
+      const err = new Error(body?.message || `HTTP ${res.status}`);
+      err.status = res.status;
+      err.code = body?.code;
+      throw err;
+    }
+    return body;
+  }
+
+  let toastTimer = null;
+  function showToast(msg) {
+    const el = document.getElementById('studio-toast');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('visible'), 3200);
+  }
+
+  /* Theme & UI Language */
+  function applyTheme(theme) {
+    studioState.theme = theme === 'dark' ? 'dark' : 'light';
+    localStorage.setItem('flaptap_theme', studioState.theme);
+    document.documentElement.setAttribute('data-theme', studioState.theme);
+    const sun = document.getElementById('studio-icon-sun');
+    const moon = document.getElementById('studio-icon-moon');
+    if (sun && moon) {
+      sun.hidden = studioState.theme !== 'dark';
+      moon.hidden = studioState.theme === 'dark';
+    }
+  }
+
+  function applyUiLanguage(lang) {
+    studioState.uiLang = I18N[lang] ? lang : 'en';
+    localStorage.setItem('flaptap_ui_lang', studioState.uiLang);
+    document.documentElement.setAttribute('lang', studioState.uiLang);
+    document.documentElement.setAttribute('dir', studioState.uiLang === 'ar' ? 'rtl' : 'ltr');
+
+    const sel = document.getElementById('studio-ui-lang-select');
+    if (sel) sel.value = studioState.uiLang;
+
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+      el.textContent = t(el.getAttribute('data-i18n'));
+    });
+
+    document.querySelectorAll('[data-i18n-placeholder]').forEach((el) => {
+      el.setAttribute('placeholder', t(el.getAttribute('data-i18n-placeholder')));
+    });
+
+    if (studioState.item) {
+      const sentTotalEl = document.getElementById('studio-sentence-total');
+      if (sentTotalEl) {
+        sentTotalEl.textContent = `${(studioState.item.sentences || []).length} ${t('sentencesUnit')}`;
+      }
+    }
+
+    syncPlaybackButtonsDom();
+    syncSavedButtonsDom();
+  }
+
+  /* ========================================================================
+     ATOMIC PLAYBACK & BUTTON STATE SYNCHRONIZATION
+     Prevents stale `.active` / `aria-pressed` across Loop, Play, Flow & Save
+     ======================================================================== */
+
+  function syncPlaybackButtonsDom() {
+    const activeIdx = studioState.activeSentence?.index ?? null;
+    const loopIdx = studioState.loopSentenceIndex;
+    const isPlaying = Boolean(studioState.isPlaying);
+
+    // 1. Per-sentence Loop buttons — strictly at most ONE active
+    document.querySelectorAll('[data-loop-sent]').forEach((btn) => {
+      const idx = Number(btn.dataset.loopSent);
+      const isLooping = loopIdx !== null && idx === loopIdx;
+      btn.classList.toggle('active', isLooping);
+      btn.setAttribute('aria-pressed', isLooping ? 'true' : 'false');
+    });
+
+    // 2. Per-sentence Play/Pause buttons
+    document.querySelectorAll('[data-play-sent]').forEach((btn) => {
+      const idx = Number(btn.dataset.playSent);
+      const isThisPlaying = isPlaying && activeIdx !== null && idx === activeIdx;
+      btn.classList.toggle('active', isThisPlaying);
+      btn.setAttribute('aria-pressed', isThisPlaying ? 'true' : 'false');
+      btn.innerHTML = `${isThisPlaying ? PAUSE_ICON_SVG : PLAY_ICON_SVG}<span>${escapeHtml(
+        isThisPlaying ? t('pauseBtn') : t('playBtn'),
+      )}</span>`;
+    });
+
+    // 3. Coach Mode Play Clip buttons
+    document.querySelectorAll('[data-coach-play]').forEach((btn) => {
+      const idx = Number(btn.dataset.coachPlay);
+      const isCoachPlaying = isPlaying && activeIdx !== null && idx === activeIdx;
+      btn.classList.toggle('active', isCoachPlaying);
+      btn.setAttribute('aria-pressed', isCoachPlaying ? 'true' : 'false');
+    });
+
+    // 4. Listen Mode Dictation Play button
+    const dictPlayBtn = document.getElementById('dict-play-btn');
+    if (dictPlayBtn) {
+      const isDictPlaying = isPlaying && activeIdx === studioState.dictationIndex;
+      dictPlayBtn.classList.toggle('active', isDictPlaying);
+      dictPlayBtn.setAttribute('aria-pressed', isDictPlaying ? 'true' : 'false');
+      const span = dictPlayBtn.querySelector('span') || dictPlayBtn;
+      span.textContent = isDictPlaying ? t('pauseClipBtn') : t('playClipBtn');
+    }
+
+    // 5. Voice Deck Speaker Replay button
+    const replayBtn = document.getElementById('replay-original-btn');
+    if (replayBtn) {
+      replayBtn.classList.toggle('active', isPlaying);
+      replayBtn.setAttribute('aria-pressed', isPlaying ? 'true' : 'false');
+    }
+
+    // 6. Sentence Flow Segmented Control (Auto-Pause | Loop | Continuous)
+    document.querySelectorAll('.flow-btn[data-end-action]').forEach((btn) => {
+      const isSelected = btn.dataset.endAction === studioState.endAction;
+      btn.classList.toggle('active', isSelected);
+      btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+    });
+  }
+
+  function setSentenceLoop(indexOrNull) {
+    studioState.loopSentenceIndex =
+      indexOrNull !== null && indexOrNull !== undefined ? Number(indexOrNull) : null;
+    syncPlaybackButtonsDom();
+  }
+
+  window.setSentenceLoop = setSentenceLoop;
+
+  function syncSavedButtonsDom() {
+    const analysis = studioState.item?.aiAnalysis;
+    if (analysis) {
+      document.querySelectorAll('[data-save-expr]').forEach((btn) => {
+        const entry = analysis.expressions?.[Number(btn.dataset.saveExpr)];
+        const saved = Boolean(entry && studioState.savedTerms.has(normalizeTermKey(entry.phrase)));
+        btn.classList.toggle('is-saved', saved);
+        btn.setAttribute('aria-pressed', saved ? 'true' : 'false');
+        btn.innerHTML = `<span>${escapeHtml(saved ? t('savedShortBtn') : t('saveBtn'))}</span>`;
+      });
+
+      document.querySelectorAll('[data-save-vocab]').forEach((btn) => {
+        const entry = analysis.vocabulary?.[Number(btn.dataset.saveVocab)];
+        const saved = Boolean(entry && studioState.savedTerms.has(normalizeTermKey(entry.term)));
+        btn.classList.toggle('is-saved', saved);
+        btn.setAttribute('aria-pressed', saved ? 'true' : 'false');
+        btn.innerHTML = `<span>${escapeHtml(saved ? t('savedShortBtn') : t('saveBtn'))}</span>`;
+      });
+    }
+
+    const wpSaveBtn = document.getElementById('wp-save-btn');
+    if (wpSaveBtn) {
+      const currentTerm =
+        studioState.activeWordLookup?.term || studioState.pendingLookupTerm || '';
+      const saved = Boolean(currentTerm && studioState.savedTerms.has(normalizeTermKey(currentTerm)));
+      wpSaveBtn.classList.toggle('active', saved);
+      wpSaveBtn.setAttribute('aria-pressed', saved ? 'true' : 'false');
+      wpSaveBtn.textContent = saved ? t('savedInVocabBtn') : t('saveToVocabBtn');
+    }
+  }
+
+  function closeWordLookupPopover() {
+    const popover = document.getElementById('word-lookup-popover');
+    if (popover) popover.hidden = true;
+    studioState.activeWordLookup = null;
+    studioState.pendingLookupTerm = '';
+    document.querySelectorAll('.clickable-word.selected-word').forEach((el) => {
+      el.classList.remove('selected-word');
+    });
+  }
+
+  /* ========================================================================
+     FLEXIBLE VIDEO DOCKING (Side | Top | Focus — Zero Remount!)
+     ======================================================================== */
+
+  function setStudioLayout(layoutChoice) {
+    const workspace = document.getElementById('studio-main-content');
+    if (!workspace) return;
+
+    let target = layoutChoice;
+    if (layoutChoice === 'focus' && studioState.layout === 'focus') {
+      target = studioState.previousNonFocusLayout || 'side';
+    } else if (layoutChoice !== 'focus') {
+      studioState.previousNonFocusLayout = layoutChoice;
+    }
+
+    if (!['side', 'top', 'focus'].includes(target)) target = 'side';
+    studioState.layout = target;
+    if (target !== 'focus') {
+      localStorage.setItem('flaptap_studio_layout', target);
+    }
+
+    workspace.setAttribute('data-layout', target);
+    workspace.classList.toggle('video-expanded', target === 'focus');
+
+    document.querySelectorAll('.layout-btn[data-layout-choice]').forEach((btn) => {
+      const isActive = btn.dataset.layoutChoice === target;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+  }
+
+  window.setStudioLayout = setStudioLayout;
+
+  /* ========================================================================
+     SCALABLE PRIMARY LEARNING MODES (0ms Switch, Zero Page Reload)
+     ======================================================================== */
+
+  function switchStudioMode(modeName) {
+    let target = modeName;
+    if (target === 'sentences' || target === 'transcript') target = 'shadow';
+    if (target === 'chunks') target = 'read';
+    if (!STUDIO_MODES.includes(target)) target = 'shadow';
+
+    studioState.mode = target;
+    closeWordLookupPopover();
+
+    document.querySelectorAll('.mode-tab-btn[data-mode]').forEach((btn) => {
+      const isActive = btn.dataset.mode === target;
+      btn.classList.toggle('active', isActive);
+      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    });
+
+    STUDIO_MODES.forEach((m) => {
+      const panel = document.getElementById(`mode-panel-${m}`);
+      if (panel) {
+        panel.style.display = m === target ? '' : 'none';
+      }
+    });
+
+    const sentList = document.getElementById('subview-sentences-list');
+    const chunkList = document.getElementById('subview-chunks-list');
+    if (sentList) sentList.style.display = target === 'shadow' ? '' : 'none';
+    if (chunkList) chunkList.style.display = target === 'read' ? '' : 'none';
+
+    const transDeck = document.getElementById('translation-control-deck');
+    if (transDeck) {
+      transDeck.style.display = target === 'shadow' ? '' : 'none';
+    }
+
+    const legendStrip = document.getElementById('transcript-legend-strip');
+    if (legendStrip) {
+      legendStrip.style.display = target === 'shadow' || target === 'read' ? '' : 'none';
+    }
+
+    if (target === 'listen') {
+      renderDictationCard();
+    } else if (target === 'coach' && studioState.item && !studioState.item.aiAnalysis && !studioState.analysisInFlight) {
+      triggerDynamicCoachAnalysis(false);
+    }
+
+    syncPlaybackButtonsDom();
+
     try {
-      const checkRes = await fetch(`${API_BASE}/tracks/shadowing/check-existing?url=${encodeURIComponent(url)}`);
-      if (checkRes.ok) {
-        const checkData = await checkRes.json();
-        if (checkData.exists && checkData.item) {
-          // Video was processed previously: update address bar to ?id=xxx and bypass loader completely!
-          window.history.replaceState({}, '', `studio.html?id=${encodeURIComponent(checkData.item.id)}`);
-          studioState.item = checkData.item;
-          revealStudio(checkData.item);
+      const url = new URL(window.location.href);
+      url.searchParams.set('mode', target);
+      window.history.replaceState({}, '', url.toString());
+    } catch {}
+  }
+
+  window.switchStudioMode = switchStudioMode;
+  window.switchTranscriptMode = function (legacy) {
+    switchStudioMode(legacy === 'chunks' ? 'read' : 'shadow');
+  };
+
+  /* ========================================================================
+     VERBATIM WORD TOKENIZER FOR CLICK-ANY-WORD CONTEXTUAL AI LOOKUP
+     Preserves `<mark class="hl-...">` AND exact `textContent === sentence.text`
+     ======================================================================== */
+
+  function decorateClickableWords(verbatimHtml, sentenceIndex) {
+    const container = document.createElement('div');
+    container.innerHTML = verbatimHtml || '';
+
+    function walk(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const text = node.nodeValue || '';
+        if (!text.trim()) return;
+        const frag = document.createDocumentFragment();
+        const parts = text.split(/([\p{L}\p{N}''-]+)/gu);
+        for (const part of parts) {
+          if (!part) continue;
+          if (/^[\p{L}\p{N}]/u.test(part) && part.length >= 2) {
+            const span = document.createElement('span');
+            span.className = 'clickable-word';
+            span.dataset.word = part;
+            span.dataset.sentIndex = String(sentenceIndex);
+            span.textContent = part;
+            frag.appendChild(span);
+          } else {
+            frag.appendChild(document.createTextNode(part));
+          }
+        }
+        node.parentNode.replaceChild(frag, node);
+      } else if (node.nodeType === Node.ELEMENT_NODE) {
+        Array.from(node.childNodes).forEach(walk);
+      }
+    }
+
+    Array.from(container.childNodes).forEach(walk);
+    return container.innerHTML;
+  }
+
+  /* ========================================================================
+     RENDER SENTENCES (SHADOW MODE) & COHESIVE PARAGRAPHS (READ MODE)
+     ======================================================================== */
+
+  function renderSentencesAndParagraphs() {
+    const item = studioState.item;
+    if (!item) return;
+
+    const sentences = Array.isArray(item.sentences) ? item.sentences : [];
+    const chunks = Array.isArray(item.chunks) ? item.chunks : [];
+
+    document.getElementById('badge-sentences-count').textContent = String(sentences.length);
+    document.getElementById('badge-paragraphs-count').textContent = String(chunks.length);
+
+    const activeIdx = studioState.activeSentence?.index || null;
+    const langCache =
+      studioState.translationsByLang[studioState.translationLang] ||
+      item.translationsCache?.[studioState.translationLang] ||
+      null;
+
+    // 1. Render Shadow Mode Sentence Cards
+    const sentContainer = document.getElementById('subview-sentences-list');
+    if (sentContainer) {
+      sentContainer.innerHTML = sentences
+        .map((s) => {
+          const isActive = activeIdx === s.index;
+          const isLooping = studioState.loopSentenceIndex === s.index;
+          const isThisPlaying = studioState.isPlaying && isActive;
+          const baseHtml = s.highlightedHtml || escapeHtml(s.text);
+          const interactiveHtml = decorateClickableWords(baseHtml, s.index);
+
+          const transHtml =
+            langCache && langCache[s.index]
+              ? langCache[s.index]
+              : (s.translations?.[studioState.translationLang] || '—');
+
+          return `
+            <article
+              id="sent-card-${s.index}"
+              class="sentence-driller-card ${isActive ? 'active-drilling' : ''}"
+              data-sentence-index="${s.index}"
+            >
+              <div class="sent-card-top">
+                <div class="sent-meta-left">
+                  <span class="sent-index-num">#${String(s.index).padStart(2, '0')}</span>
+                  <span class="sent-time-badge">${escapeHtml(s.timeRange || '')}</span>
+                </div>
+                <div class="sent-actions-right">
+                  <button
+                    type="button"
+                    class="sent-action-btn ${isLooping ? 'active' : ''}"
+                    data-loop-sent="${s.index}"
+                    aria-pressed="${isLooping ? 'true' : 'false'}"
+                    title="Loop this sentence"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                    <span>${escapeHtml(t('loopBtn'))}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="sent-action-btn ${isThisPlaying ? 'active' : ''}"
+                    data-play-sent="${s.index}"
+                    aria-pressed="${isThisPlaying ? 'true' : 'false'}"
+                    title="Play or pause sentence"
+                  >
+                    ${isThisPlaying ? PAUSE_ICON_SVG : PLAY_ICON_SVG}
+                    <span>${escapeHtml(isThisPlaying ? t('pauseBtn') : t('playBtn'))}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="sent-english-line" data-line-sent="${s.index}">${interactiveHtml}</div>
+
+              <div class="sentence-translation-box" ${studioState.translationEnabled ? '' : 'hidden'}>
+                <div
+                  class="sentence-translation-text"
+                  dir="${studioState.translationRtl ? 'rtl' : 'ltr'}"
+                  data-trans-sent="${s.index}"
+                >${transHtml}</div>
+              </div>
+            </article>
+          `;
+        })
+        .join('');
+    }
+
+    // 2. Render Read Mode Cohesive Editorial Paragraphs
+    const chunkContainer = document.getElementById('subview-chunks-list');
+    if (chunkContainer) {
+      const sentenceMap = new Map(sentences.map((s) => [s.index, s]));
+      chunkContainer.innerHTML = chunks
+        .map((chunk, idx) => {
+          let proseHtml = '';
+          if (Array.isArray(chunk.sentenceIndices) && chunk.sentenceIndices.length > 0) {
+            proseHtml = chunk.sentenceIndices
+              .map((sIdx) => {
+                const s = sentenceMap.get(sIdx);
+                if (!s) return '';
+                const sHtml = decorateClickableWords(s.highlightedHtml || escapeHtml(s.text), s.index);
+                const readingCls = activeIdx === s.index ? 'active-reading' : '';
+                return `<span class="read-sentence ${readingCls}" data-read-sent="${s.index}">${sHtml}</span>`;
+              })
+              .filter(Boolean)
+              .join(' ');
+          } else {
+            proseHtml = chunk.highlightedHtml || escapeHtml(chunk.text);
+          }
+
+          return `
+            <section class="editorial-paragraph-block" data-paragraph-index="${idx + 1}">
+              <span class="paragraph-time-margin">${escapeHtml(chunk.timeRange || '')}</span>
+              <p class="paragraph-prose">${proseHtml}</p>
+            </section>
+          `;
+        })
+        .join('');
+    }
+  }
+
+  /* ========================================================================
+     YOUTUBE PLAYER & EXACT MILLISECOND PLAYBACK BOUNDARIES
+     ======================================================================== */
+
+  function mountMediaDeck(item) {
+    const ytDiv = document.getElementById('studio-youtube-player');
+    const ttsStage = document.getElementById('tts-audio-stage');
+
+    if (item.videoId) {
+      if (ttsStage) ttsStage.hidden = true;
+      if (ytDiv) ytDiv.hidden = false;
+      loadYouTubeIframeApi(item.videoId);
+    } else {
+      if (ytDiv) ytDiv.hidden = true;
+      if (ttsStage) {
+        ttsStage.hidden = false;
+        document.getElementById('tts-stage-tag').textContent = item.trackTitle || 'Spoken Audio Deck';
+        if (item.sentences?.[0]) {
+          document.getElementById('tts-active-quote').textContent = `“${item.sentences[0].text}”`;
+        }
+      }
+    }
+  }
+
+  function loadYouTubeIframeApi(videoId) {
+    if (window.YT && window.YT.Player) {
+      createYtPlayer(videoId);
+      return;
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      createYtPlayer(videoId);
+    };
+
+    if (!document.getElementById('yt-iframe-api-script')) {
+      const tag = document.createElement('script');
+      tag.id = 'yt-iframe-api-script';
+      tag.src = 'https://www.youtube.com/iframe_api';
+      document.head.appendChild(tag);
+    }
+  }
+
+  function createYtPlayer(videoId) {
+    if (studioState.ytPlayer) return; // Never remount!
+    studioState.ytPlayer = new window.YT.Player('studio-youtube-player', {
+      videoId,
+      playerVars: {
+        autoplay: 0,
+        controls: 1,
+        rel: 0,
+        modestbranding: 1,
+        playsinline: 1,
+      },
+      events: {
+        onReady: () => {
+          studioState.ytReady = true;
+          try {
+            studioState.ytPlayer.setPlaybackRate(studioState.speed);
+          } catch {}
+          if (studioState.pendingPlaySentenceIndex !== null) {
+            const idx = studioState.pendingPlaySentenceIndex;
+            studioState.pendingPlaySentenceIndex = null;
+            playSentence(idx, { preserveLoop: studioState.loopSentenceIndex === idx });
+          }
+        },
+        onStateChange: (ev) => {
+          if (ev?.data === 1) {
+            studioState.isPlaying = true;
+            syncPlaybackButtonsDom();
+          } else if (ev?.data === 2 || ev?.data === 0) {
+            studioState.isPlaying = false;
+            syncPlaybackButtonsDom();
+          }
+        },
+      },
+    });
+  }
+
+  function updateActiveSentenceDom(index) {
+    document.querySelectorAll('.sentence-driller-card.active-drilling').forEach((el) =>
+      el.classList.remove('active-drilling'),
+    );
+    document.querySelectorAll('.read-sentence.active-reading').forEach((el) =>
+      el.classList.remove('active-reading'),
+    );
+
+    const card = document.getElementById(`sent-card-${index}`);
+    if (card) {
+      card.classList.add('active-drilling');
+    }
+    document.querySelectorAll(`.read-sentence[data-read-sent="${index}"]`).forEach((el) => {
+      el.classList.add('active-reading');
+    });
+  }
+
+  function pauseCurrentPlayback() {
+    if (studioState.playbackTicker) {
+      clearInterval(studioState.playbackTicker);
+      studioState.playbackTicker = null;
+    }
+    if (studioState.ytPlayer && typeof studioState.ytPlayer.pauseVideo === 'function') {
+      try {
+        studioState.ytPlayer.pauseVideo();
+      } catch {}
+    }
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch {}
+    }
+    studioState.isPlaying = false;
+    syncPlaybackButtonsDom();
+  }
+
+  window.pauseCurrentPlayback = pauseCurrentPlayback;
+
+  function playSentence(index, opts) {
+    const options = opts || {};
+    const targetIdx = Number(index);
+    const sentences = studioState.item?.sentences || [];
+    const sentence = sentences.find((s) => Number(s.index) === targetIdx);
+    if (!sentence) return;
+
+    // Reset per-item Loop automatically whenever moving to a different sentence
+    if (
+      !options.preserveLoop &&
+      studioState.loopSentenceIndex !== null &&
+      studioState.loopSentenceIndex !== sentence.index
+    ) {
+      studioState.loopSentenceIndex = null;
+    }
+
+    studioState.activeSentence = sentence;
+    studioState.seekTargetStart = sentence.startSec;
+    studioState.isPlaying = true;
+    updateActiveSentenceDom(sentence.index);
+    syncPlaybackButtonsDom();
+
+    // Fallback Web Speech TTS for video-less Dialogue / Pronunciation workouts
+    if (!studioState.item?.videoId && !studioState.ytPlayer) {
+      const quoteEl = document.getElementById('tts-active-quote');
+      if (quoteEl) quoteEl.textContent = `“${sentence.text}”`;
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(sentence.text);
+          utter.lang = 'en-US';
+          utter.rate = Math.max(0.5, Math.min(2.0, studioState.speed));
+          utter.onstart = () => {
+            studioState.isPlaying = true;
+            syncPlaybackButtonsDom();
+          };
+          utter.onend = () => {
+            const shouldRepeat =
+              studioState.loopSentenceIndex === sentence.index || studioState.endAction === 'loop';
+            if (shouldRepeat && studioState.activeSentence?.index === sentence.index) {
+              playSentence(sentence.index, { preserveLoop: true });
+              return;
+            }
+            studioState.isPlaying = false;
+            syncPlaybackButtonsDom();
+          };
+          utter.onerror = () => {
+            studioState.isPlaying = false;
+            syncPlaybackButtonsDom();
+          };
+          window.speechSynthesis.speak(utter);
+        } catch {
+          studioState.isPlaying = false;
+          syncPlaybackButtonsDom();
+        }
+      } else {
+        studioState.isPlaying = false;
+        syncPlaybackButtonsDom();
+      }
+      return;
+    }
+
+    const player = studioState.ytPlayer;
+    if (!player || typeof player.seekTo !== 'function') {
+      studioState.pendingPlaySentenceIndex = sentence.index;
+      return;
+    }
+
+    // Playback Boundary Law:
+    // 1. Seek to exact `startSec` (zero fixed -50ms lead-in)
+    // 2. Mute during asynchronous seek, unmute at word onset
+    // 3. Stop at `endSec - 12ms` before next word's onset
+    studioState.awaitingOnsetUnmute = true;
+    studioState.lastSeekTime = Date.now();
+
+    try {
+      if (typeof player.mute === 'function') player.mute();
+      if (typeof player.setPlaybackRate === 'function') player.setPlaybackRate(studioState.speed);
+      player.seekTo(sentence.startSec, true);
+      if (typeof player.playVideo === 'function') player.playVideo();
+    } catch {}
+
+    startPlaybackTicker();
+  }
+
+  window.playSentence = playSentence;
+
+  function startPlaybackTicker() {
+    if (studioState.playbackTicker) {
+      clearInterval(studioState.playbackTicker);
+    }
+    studioState.playbackTicker = setInterval(checkSentenceDrillProgress, 15);
+  }
+
+  function checkSentenceDrillProgress() {
+    const player = studioState.ytPlayer;
+    const active = studioState.activeSentence;
+    if (!player || !active || typeof player.getCurrentTime !== 'function') return;
+
+    const current = Number(player.getCurrentTime() || 0);
+
+    if (studioState.awaitingOnsetUnmute && current >= active.startSec - 0.001) {
+      if (typeof player.unMute === 'function') player.unMute();
+      studioState.awaitingOnsetUnmute = false;
+    }
+
+    // Ignore stale pre-seek playhead values for 90ms after issuing an async seek
+    if (studioState.lastSeekTime > 0 && Date.now() - studioState.lastSeekTime < 90) {
+      return;
+    }
+
+    const endCutoff = Math.max(
+      active.startSec + 0.05,
+      Number((active.endSec - 0.012).toFixed(3)),
+    );
+
+    if (current >= endCutoff) {
+      const shouldLoop =
+        studioState.loopSentenceIndex === active.index || studioState.endAction === 'loop';
+
+      if (shouldLoop) {
+        studioState.awaitingOnsetUnmute = true;
+        studioState.lastSeekTime = Date.now();
+        if (typeof player.mute === 'function') player.mute();
+        player.seekTo(active.startSec, true);
+        if (typeof player.playVideo === 'function') player.playVideo();
+        return;
+      }
+
+      if (studioState.endAction === 'pause') {
+        if (typeof player.pauseVideo === 'function') player.pauseVideo();
+        if (studioState.playbackTicker) {
+          clearInterval(studioState.playbackTicker);
+          studioState.playbackTicker = null;
+        }
+        studioState.isPlaying = false;
+        syncPlaybackButtonsDom();
+        return;
+      }
+
+      // Continuous flow: advance active sentence highlight without seeking/stuttering
+      const sentences = studioState.item?.sentences || [];
+      const nextSentence = sentences.find((s) => s.index === active.index + 1);
+      if (nextSentence) {
+        if (studioState.loopSentenceIndex !== null && studioState.loopSentenceIndex !== nextSentence.index) {
+          studioState.loopSentenceIndex = null;
+        }
+        studioState.activeSentence = nextSentence;
+        updateActiveSentenceDom(nextSentence.index);
+        syncPlaybackButtonsDom();
+      } else {
+        if (typeof player.pauseVideo === 'function') player.pauseVideo();
+        if (studioState.playbackTicker) {
+          clearInterval(studioState.playbackTicker);
+          studioState.playbackTicker = null;
+        }
+        studioState.isPlaying = false;
+        syncPlaybackButtonsDom();
+      }
+    }
+  }
+
+  window.checkSentenceDrillProgress = checkSentenceDrillProgress;
+
+  /* ========================================================================
+     SPEED CONTROL (0.10x Snap + Exact Presets)
+     ======================================================================== */
+
+  function setStudioSpeed(rawVal) {
+    let num = Number(rawVal);
+    if (!Number.isFinite(num)) num = 1.0;
+    num = Math.max(0.25, Math.min(2.0, num));
+
+    const roundedQuarter = Math.round(num * 100) / 100;
+    const speed = EXACT_SPEED_PRESETS.has(roundedQuarter)
+      ? roundedQuarter
+      : Math.round(num * 10) / 10;
+
+    studioState.speed = speed;
+
+    const badge = document.getElementById('current-speed-badge');
+    if (badge) badge.textContent = `${speed.toFixed(2)}x`;
+
+    const slider = document.getElementById('speed-slider');
+    if (slider) slider.value = String(speed);
+
+    document.querySelectorAll('#speed-ticks-row .speed-tick').forEach((tick) => {
+      const tickVal = Number(tick.dataset.speed);
+      const isMatch = Math.abs(tickVal - speed) < 0.001;
+      tick.classList.toggle('active', isMatch);
+      tick.setAttribute('aria-pressed', isMatch ? 'true' : 'false');
+    });
+
+    if (studioState.ytPlayer && typeof studioState.ytPlayer.setPlaybackRate === 'function') {
+      try {
+        studioState.ytPlayer.setPlaybackRate(speed);
+      } catch {}
+    }
+  }
+
+  window.setStudioSpeed = setStudioSpeed;
+
+  /* ========================================================================
+     170+ WORLD LANGUAGE TRANSLATION DECK (With Cache Bypass Control)
+     ======================================================================== */
+
+  async function loadLanguagesCatalog() {
+    try {
+      const data = await apiFetch('/api/languages', { method: 'GET' });
+      studioState.languages = Array.isArray(data.languages) ? data.languages : [];
+      const select = document.getElementById('trans-lang-select');
+      if (!select) return;
+
+      select.innerHTML = studioState.languages
+        .map((l) => `<option value="${escapeHtml(l.code)}">${escapeHtml(l.name)} — ${escapeHtml(l.native)}</option>`)
+        .join('');
+
+      const preferred = studioState.translationLang || data.defaultLanguage || 'ar';
+      if (studioState.languages.some((l) => l.code === preferred)) {
+        select.value = preferred;
+        studioState.translationLang = preferred;
+      } else if (studioState.languages[0]) {
+        select.value = studioState.languages[0].code;
+        studioState.translationLang = studioState.languages[0].code;
+      }
+
+      const langMeta = studioState.languages.find((l) => l.code === studioState.translationLang);
+      studioState.translationRtl = Boolean(langMeta?.rtl);
+    } catch {}
+  }
+
+  async function requestTranslations(forceRefresh) {
+    if (!studioState.item) return;
+    const force = Boolean(forceRefresh);
+    const langCode = studioState.translationLang || 'ar';
+    const statusEl = document.getElementById('translation-status-text');
+    const refreshBtn = document.getElementById('trans-refresh-btn');
+
+    const langMeta = studioState.languages.find((l) => l.code === langCode);
+    studioState.translationRtl = Boolean(langMeta?.rtl ?? (langCode === 'ar'));
+
+    document.querySelectorAll('.sentence-translation-box').forEach((box) => {
+      box.hidden = !studioState.translationEnabled;
+    });
+
+    if (!studioState.translationEnabled) {
+      if (statusEl) statusEl.textContent = '';
+      return;
+    }
+
+    const existing = !force ? studioState.translationsByLang[langCode] : null;
+    const totalSentences = (studioState.item.sentences || []).length;
+    if (existing && Object.keys(existing).length >= totalSentences) {
+      applyTranslationsToDom(existing, studioState.translationRtl);
+      if (statusEl) statusEl.textContent = t('translatedReady');
+      return;
+    }
+
+    if (statusEl) statusEl.textContent = t('translatingStatus');
+    if (refreshBtn) refreshBtn.disabled = true;
+    document.querySelectorAll('.sentence-translation-text').forEach((el) => {
+      el.setAttribute('dir', studioState.translationRtl ? 'rtl' : 'ltr');
+      if (force || !el.textContent || el.textContent === '—') el.textContent = '...';
+    });
+
+    try {
+      const res = await apiFetch('/api/tracks/shadowing/translate-sentences', {
+        method: 'POST',
+        body: JSON.stringify({
+          historyId: studioState.item.id,
+          language: langCode,
+          force,
+        }),
+      });
+
+      studioState.translationRtl = Boolean(res.rtl);
+      studioState.translationsByLang[langCode] = res.translations || {};
+      applyTranslationsToDom(res.translations || {}, Boolean(res.rtl));
+      if (statusEl) statusEl.textContent = `${res.languageName} · ${t('translatedReady')}`;
+    } catch (error) {
+      if (statusEl) statusEl.textContent = error.message;
+      showToast(error.message);
+    } finally {
+      if (refreshBtn) refreshBtn.disabled = false;
+    }
+  }
+
+  function applyTranslationsToDom(translations, rtl) {
+    document.querySelectorAll('.sentence-translation-text[data-trans-sent]').forEach((el) => {
+      const idx = Number(el.dataset.transSent);
+      const html = translations[idx] ?? translations[String(idx)];
+      el.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+      if (html) {
+        el.innerHTML = html;
+      }
+    });
+  }
+
+  /* ========================================================================
+     MODE 3: LISTEN (ACTIVE CLOZE DICTATION)
+     ======================================================================== */
+
+  function renderDictationCard() {
+    const sentences = studioState.item?.sentences || [];
+    if (sentences.length === 0) return;
+
+    const idx = Math.max(1, Math.min(sentences.length, studioState.dictationIndex));
+    studioState.dictationIndex = idx;
+    const sentence = sentences.find((s) => s.index === idx) || sentences[0];
+
+    document.getElementById('dict-progress-label').textContent = `${idx} / ${sentences.length}`;
+    document.getElementById('dict-time-badge').textContent = sentence.timeRange || '';
+    document.getElementById('dict-feedback-text').textContent = '';
+
+    const prevBtn = document.getElementById('dict-prev-btn');
+    const nextBtn = document.getElementById('dict-next-btn');
+    if (prevBtn) prevBtn.disabled = idx <= 1;
+    if (nextBtn) nextBtn.disabled = idx >= sentences.length;
+
+    document.querySelectorAll('[data-dict-level]').forEach((pill) => {
+      const isAct = pill.dataset.dictLevel === studioState.dictationLevel;
+      pill.classList.toggle('active', isAct);
+      pill.setAttribute('aria-pressed', isAct ? 'true' : 'false');
+    });
+
+    const tokens = sentence.text.split(/\s+/).filter(Boolean);
+    const ratio =
+      studioState.dictationLevel === 'easy'
+        ? 0.22
+        : studioState.dictationLevel === 'hard'
+          ? 0.52
+          : 0.35;
+
+    const DICTATION_STOP_WORDS = new Set([
+      'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'any', 'can',
+      'had', 'her', 'was', 'one', 'our', 'out', 'has', 'his', 'how', 'its',
+      'may', 'now', 'see', 'who', 'did', 'him', 'she', 'too', 'that', 'this',
+      'with', 'from', 'they', 'will', 'have', 'been', 'were', 'what', 'when',
+      'your', 'into', 'than', 'then', 'them', 'some', 'there', 'their', 'about',
+    ]);
+
+    const contentIndices = [];
+    const fallbackIndices = [];
+    tokens.forEach((tok, i) => {
+      const clean = tok.replace(/^[^\p{L}\p{N}']+|[^\p{L}\p{N}']+$/gu, '');
+      if (clean.length < 3) return;
+      if (clean.length >= 4 && !DICTATION_STOP_WORDS.has(clean.toLowerCase())) {
+        contentIndices.push(i);
+      } else {
+        fallbackIndices.push(i);
+      }
+    });
+
+    const targetBlanks = Math.max(1, Math.round(tokens.length * ratio));
+    const eligibleIndices =
+      contentIndices.length >= targetBlanks
+        ? contentIndices
+        : [...contentIndices, ...fallbackIndices];
+    const blankSet = new Set();
+    if (eligibleIndices.length > 0) {
+      const step = Math.max(1, eligibleIndices.length / targetBlanks);
+      for (let k = 0; k < targetBlanks && k < eligibleIndices.length; k++) {
+        const pick = eligibleIndices[Math.min(eligibleIndices.length - 1, Math.floor(k * step))];
+        blankSet.add(pick);
+      }
+    }
+
+    const htmlParts = tokens.map((tok, i) => {
+      if (!blankSet.has(i)) return escapeHtml(tok);
+      const match = /^([^\p{L}\p{N}']*)([\p{L}\p{N}''-]+)([^\p{L}\p{N}']*)$/u.exec(tok);
+      if (!match) return escapeHtml(tok);
+      const [, leading, answer, trailing] = match;
+      const widthCh = Math.max(5, answer.length + 2);
+      return `${escapeHtml(leading)}<input type="text" class="cloze-input" style="width:${widthCh}ch" data-answer="${escapeHtml(answer)}" autocomplete="off" spellcheck="false" aria-label="Missing word" />${escapeHtml(trailing)}`;
+    });
+
+    const area = document.getElementById('dictation-sentence-area');
+    if (area) {
+      area.innerHTML = htmlParts.join(' ');
+      const firstInput = area.querySelector('.cloze-input');
+      firstInput?.focus();
+    }
+
+    syncPlaybackButtonsDom();
+  }
+
+  function checkDictationAnswers(revealAll) {
+    const inputs = Array.from(document.querySelectorAll('#dictation-sentence-area .cloze-input'));
+    if (inputs.length === 0) return;
+
+    let correctCount = 0;
+    const norm = (s) =>
+      String(s || '')
+        .trim()
+        .toLowerCase()
+        .replace(/[\u2018\u2019]/g, "'");
+
+    for (const inp of inputs) {
+      const expected = inp.dataset.answer || '';
+      if (revealAll) {
+        inp.value = expected;
+        inp.classList.remove('incorrect');
+        inp.classList.add('correct');
+        correctCount++;
+      } else if (norm(inp.value) === norm(expected)) {
+        inp.classList.remove('incorrect');
+        inp.classList.add('correct');
+        correctCount++;
+      } else {
+        inp.classList.remove('correct');
+        inp.classList.add('incorrect');
+      }
+    }
+
+    const feedback = document.getElementById('dict-feedback-text');
+    if (feedback) {
+      feedback.textContent = revealAll
+        ? `Revealed (${inputs.length} words)`
+        : `${correctCount} / ${inputs.length} correct`;
+      feedback.style.color =
+        correctCount === inputs.length ? 'var(--accent-forest)' : 'var(--accent-vermilion)';
+    }
+  }
+
+  /* ========================================================================
+     MODE 4: DYNAMIC AI COACH (OpenCode Go — Zero Static Regexes!)
+     ======================================================================== */
+
+  async function triggerDynamicCoachAnalysis(force) {
+    if (!studioState.item || studioState.analysisInFlight) return;
+
+    if (!force && studioState.item.aiAnalysis) {
+      renderCoachAnalysis(studioState.item.aiAnalysis);
+      return;
+    }
+
+    studioState.analysisInFlight = true;
+    const loadingBox = document.getElementById('coach-loading-box');
+    const errorBox = document.getElementById('coach-error-box');
+    const contentBox = document.getElementById('coach-content-box');
+    const refreshBtn = document.getElementById('coach-refresh-btn');
+    if (loadingBox) loadingBox.hidden = false;
+    if (errorBox) errorBox.hidden = true;
+    if (contentBox) contentBox.hidden = true;
+    if (refreshBtn) refreshBtn.disabled = true;
+
+    try {
+      const res = await apiFetch('/api/tracks/shadowing/analyze', {
+        method: 'POST',
+        body: JSON.stringify({
+          historyId: studioState.item.id,
+          force: Boolean(force),
+        }),
+      });
+
+      if (res.analysis) {
+        studioState.item.aiAnalysis = res.analysis;
+        if (Array.isArray(res.sentences) && res.sentences.length > 0) {
+          const oldSentences = studioState.item.sentences || [];
+          studioState.item.sentences = res.sentences.map((s, idx) => ({
+            ...s,
+            translations: s.translations || oldSentences[idx]?.translations,
+          }));
+          renderSentencesAndParagraphs();
+          syncPlaybackButtonsDom();
+        }
+        renderCoachAnalysis(res.analysis);
+      }
+    } catch (error) {
+      if (loadingBox) loadingBox.hidden = true;
+      if (errorBox) {
+        errorBox.hidden = false;
+        document.getElementById('coach-error-msg').textContent = error.message;
+      }
+    } finally {
+      studioState.analysisInFlight = false;
+      if (refreshBtn) refreshBtn.disabled = false;
+    }
+  }
+
+  function renderCoachAnalysis(analysis) {
+    if (!analysis) return;
+
+    const loadingBox = document.getElementById('coach-loading-box');
+    const errorBox = document.getElementById('coach-error-box');
+    const contentBox = document.getElementById('coach-content-box');
+    if (loadingBox) loadingBox.hidden = true;
+    if (errorBox) errorBox.hidden = true;
+    if (contentBox) contentBox.hidden = false;
+
+    const cefr = analysis.overview?.cefrLevel || 'B2';
+    const headerCefr = document.getElementById('studio-cefr-badge');
+    if (headerCefr) {
+      headerCefr.textContent = cefr;
+      headerCefr.hidden = false;
+    }
+
+    document.getElementById('coach-cefr-stamp').textContent = cefr;
+    document.getElementById('coach-style-heading').textContent =
+      analysis.overview?.speakerStyle || 'Natural American Cadence';
+    document.getElementById('coach-summary-text').textContent = analysis.overview?.summary || '';
+
+    const tipsList = document.getElementById('coach-tips-list');
+    if (tipsList) {
+      tipsList.innerHTML = (analysis.overview?.focusTips || [])
+        .map((tip) => `<li>${escapeHtml(tip)}</li>`)
+        .join('');
+    }
+
+    const connected = analysis.connectedSpeech || [];
+    const expressions = analysis.expressions || [];
+    const vocab = analysis.vocabulary || [];
+
+    const totalInsights = connected.length + expressions.length + vocab.length;
+    const badgeCoach = document.getElementById('badge-coach-count');
+    if (badgeCoach) {
+      badgeCoach.textContent = String(totalInsights);
+      badgeCoach.hidden = totalInsights === 0;
+    }
+
+    document.getElementById('coach-connected-count').textContent = String(connected.length);
+    document.getElementById('coach-expressions-count').textContent = String(expressions.length);
+    document.getElementById('coach-vocab-count').textContent = String(vocab.length);
+
+    document.getElementById('coach-connected-grid').innerHTML = connected
+      .map(
+        (c) => `
+        <article class="coach-item-card">
+          <div class="coach-item-head">
+            <span class="coach-phrase">“${escapeHtml(c.exactPhrase)}”</span>
+            <span class="coach-tag">${escapeHtml(c.phenomenon)}</span>
+          </div>
+          ${c.spokenIpa ? `<div class="coach-ipa">${escapeHtml(c.spokenIpa)}</div>` : ''}
+          <p class="coach-desc">${escapeHtml(c.mechanics)}</p>
+          <div class="coach-item-actions">
+            <span class="sent-index-num">#${String(c.sentenceIndex || 1).padStart(2, '0')}</span>
+            <button type="button" class="sent-action-btn" data-coach-play="${Number(c.sentenceIndex) || 1}" aria-pressed="false">
+              ${PLAY_ICON_SVG}
+              <span>${escapeHtml(t('playBtn'))}</span>
+            </button>
+          </div>
+        </article>
+      `,
+      )
+      .join('');
+
+    document.getElementById('coach-expressions-grid').innerHTML = expressions
+      .map((e, i) => {
+        const isSaved = studioState.savedTerms.has(normalizeTermKey(e.phrase));
+        return `
+        <article class="coach-item-card">
+          <div class="coach-item-head">
+            <span class="coach-phrase">${escapeHtml(e.phrase)}</span>
+            <span class="coach-tag">${escapeHtml(e.register || 'Expression')}</span>
+          </div>
+          <p class="coach-desc" style="color: var(--ink); font-weight: 500;">${escapeHtml(e.meaning)}</p>
+          ${e.usageNote ? `<p class="coach-desc">${escapeHtml(e.usageNote)}</p>` : ''}
+          <div class="coach-item-actions">
+            <button type="button" class="sent-action-btn" data-coach-play="${Number(e.sentenceIndex) || 1}" aria-pressed="false">
+              ${PLAY_ICON_SVG}
+              <span>#${String(e.sentenceIndex || 1).padStart(2, '0')}</span>
+            </button>
+            <button type="button" class="sent-action-btn ${isSaved ? 'is-saved' : ''}" data-save-expr="${i}" aria-pressed="${isSaved ? 'true' : 'false'}">
+              <span>${escapeHtml(isSaved ? t('savedShortBtn') : t('saveBtn'))}</span>
+            </button>
+          </div>
+        </article>
+      `;
+      })
+      .join('');
+
+    document.getElementById('coach-vocab-grid').innerHTML = vocab
+      .map((v, i) => {
+        const isSaved = studioState.savedTerms.has(normalizeTermKey(v.term));
+        return `
+        <article class="coach-item-card">
+          <div class="coach-item-head">
+            <span class="coach-phrase">${escapeHtml(v.term)}</span>
+            <span class="coach-tag">${escapeHtml(v.partOfSpeech || 'word')}</span>
+          </div>
+          ${v.ipa ? `<div class="coach-ipa">${escapeHtml(v.ipa)}</div>` : ''}
+          <p class="coach-desc">${escapeHtml(v.definition)}</p>
+          <div class="coach-item-actions">
+            <button type="button" class="sent-action-btn" data-coach-play="${Number(v.sentenceIndex) || 1}" aria-pressed="false">
+              ${PLAY_ICON_SVG}
+              <span>#${String(v.sentenceIndex || 1).padStart(2, '0')}</span>
+            </button>
+            <button type="button" class="sent-action-btn ${isSaved ? 'is-saved' : ''}" data-save-vocab="${i}" aria-pressed="${isSaved ? 'true' : 'false'}">
+              <span>${escapeHtml(isSaved ? t('savedShortBtn') : t('saveBtn'))}</span>
+            </button>
+          </div>
+        </article>
+      `;
+      })
+      .join('');
+
+    syncPlaybackButtonsDom();
+  }
+
+  /* ========================================================================
+     CONTEXTUAL AI WORD POPOVER & VOCABULARY SAVE
+     ======================================================================== */
+
+  async function loadSavedVocabularyTerms() {
+    try {
+      const items = await apiFetch('/api/vocabulary', { method: 'GET' });
+      if (Array.isArray(items)) {
+        studioState.savedTerms = new Set(items.map((v) => normalizeTermKey(v.term)));
+        syncSavedButtonsDom();
+      }
+    } catch {}
+  }
+
+  async function openWordLookup(word, sentenceIndex, sourceSpan) {
+    if (!studioState.item || !word) return;
+    const popover = document.getElementById('word-lookup-popover');
+    if (!popover) return;
+
+    document.querySelectorAll('.clickable-word.selected-word').forEach((el) => {
+      el.classList.remove('selected-word');
+    });
+    if (sourceSpan) {
+      sourceSpan.classList.add('selected-word');
+    }
+
+    studioState.activeWordLookup = null;
+    studioState.pendingLookupTerm = word;
+    syncSavedButtonsDom();
+
+    popover.hidden = false;
+    document.getElementById('wp-term').textContent = word;
+    document.getElementById('wp-ipa').textContent = '...';
+    document.getElementById('wp-pos').textContent = '';
+    document.getElementById('wp-def').textContent = 'Looking up contextual meaning...';
+    document.getElementById('wp-trans').textContent = '';
+    document.getElementById('wp-tip').textContent = '';
+
+    try {
+      const data = await apiFetch('/api/tracks/shadowing/define-word', {
+        method: 'POST',
+        body: JSON.stringify({
+          historyId: studioState.item.id,
+          word,
+          sentenceIndex: Number(sentenceIndex) || 1,
+          language: studioState.translationLang || 'ar',
+        }),
+      });
+
+      if (studioState.pendingLookupTerm !== word) return;
+      studioState.activeWordLookup = data;
+      document.getElementById('wp-term').textContent = data.term || word;
+      document.getElementById('wp-ipa').textContent = data.ipa || '';
+      document.getElementById('wp-pos').textContent = data.partOfSpeech || '';
+      document.getElementById('wp-def').textContent = data.definition || '';
+      const transEl = document.getElementById('wp-trans');
+      transEl.textContent = data.translation || '';
+      transEl.setAttribute('dir', data.rtl ? 'rtl' : 'ltr');
+      document.getElementById('wp-tip').textContent = data.spokenTip || '';
+      syncSavedButtonsDom();
+    } catch (error) {
+      document.getElementById('wp-def').textContent = error.message;
+    }
+  }
+
+  async function saveWordToVault(entry) {
+    if (!entry || !studioState.item) return;
+    const termValue = entry.term || entry.phrase;
+    if (!termValue) return;
+    const sentences = studioState.item.sentences || [];
+    const sent = sentences.find((s) => s.index === Number(entry.sentenceIndex)) || sentences[0];
+
+    try {
+      await apiFetch('/api/vocabulary', {
+        method: 'POST',
+        body: JSON.stringify({
+          term: termValue,
+          ipa: entry.ipa || '',
+          partOfSpeech: entry.partOfSpeech || entry.register || '',
+          definition: entry.definition || entry.meaning || '',
+          translation: entry.translation || '',
+          contextSentence: entry.contextSentence || sent?.text || '',
+          lessonId: studioState.item.id,
+          videoId: studioState.item.videoId || '',
+          lessonTitle: studioState.item.title || '',
+          timestampSec: entry.timestampSec ?? sent?.startSec ?? 0,
+        }),
+      });
+      studioState.savedTerms.add(normalizeTermKey(termValue));
+      syncSavedButtonsDom();
+      showToast(t('savedWordToast'));
+    } catch (error) {
+      showToast(error.message);
+    }
+  }
+
+  /* ========================================================================
+     VOICE RECORDER
+     ======================================================================== */
+
+  async function toggleVoiceRecording() {
+    const btn = document.getElementById('record-toggle-btn');
+    const txt = document.getElementById('record-btn-text');
+    const status = document.getElementById('rec-status-label');
+    const audioEl = document.getElementById('recorded-audio-player');
+
+    if (studioState.mediaRecorder && studioState.mediaRecorder.state === 'recording') {
+      studioState.mediaRecorder.stop();
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      showToast('Microphone access is not available in this browser.');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      studioState.recordedChunks = [];
+      const recorder = new MediaRecorder(stream);
+      studioState.mediaRecorder = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) studioState.recordedChunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach((tr) => tr.stop());
+        const blob = new Blob(studioState.recordedChunks, { type: 'audio/webm' });
+        if (studioState.recordedAudioUrl) {
+          URL.revokeObjectURL(studioState.recordedAudioUrl);
+        }
+        studioState.recordedAudioUrl = URL.createObjectURL(blob);
+        if (audioEl) {
+          audioEl.src = studioState.recordedAudioUrl;
+          audioEl.hidden = false;
+        }
+        btn?.classList.remove('recording');
+        btn?.setAttribute('aria-pressed', 'false');
+        if (txt) txt.textContent = t('recordVoice');
+        if (status) status.textContent = t('recSaved');
+      };
+
+      recorder.start();
+      btn?.classList.add('recording');
+      btn?.setAttribute('aria-pressed', 'true');
+      if (txt) txt.textContent = t('stopRecord');
+      if (status) status.textContent = t('recRecording');
+    } catch {
+      showToast('Microphone permission was denied.');
+    }
+  }
+
+  /* ========================================================================
+     LOADER & ACCURATE FAILURE CLASSIFICATION
+     ======================================================================== */
+
+  function showFatalLoaderError(error) {
+    if (Number(error?.status) === 401 || error?.code === 'auth_required') {
+      redirectToSignInGate();
+      return;
+    }
+
+    const overlay = document.getElementById('loader-overlay');
+    const headline = document.getElementById('loader-headline');
+    const sub = document.getElementById('loader-subheadline');
+    const actions = document.getElementById('loader-error-actions');
+    const retryBtn = document.getElementById('loader-retry-btn');
+
+    if (!overlay) return;
+    overlay.hidden = false;
+    overlay.classList.add('loader-error');
+    if (actions) actions.style.display = 'flex';
+
+    const code = error?.code || '';
+    const status = Number(error?.status) || 0;
+
+    let isRetryable = false;
+    if (code === 'video_unavailable' || status === 404) {
+      headline.textContent = t('errUnavailableHeadline');
+      sub.textContent = error?.message || t('errUnavailableDetail');
+      isRetryable = false;
+    } else if (code === 'no_captions' || code === 'invalid_url' || status === 422 || status === 400) {
+      headline.textContent = t('errNoCaptionsHeadline');
+      sub.textContent = error?.message || t('errNoCaptionsDetail');
+      isRetryable = false;
+    } else if (code === 'rate_limited') {
+      headline.textContent = t('errRateLimitHeadline');
+      sub.textContent = t('errRateLimitDetail');
+      isRetryable = true;
+    } else if (code === 'timeout') {
+      headline.textContent = t('errTimeoutHeadline');
+      sub.textContent = t('errTimeoutDetail');
+      isRetryable = true;
+    } else {
+      headline.textContent = t('errRateLimitHeadline');
+      sub.textContent = error?.message || t('errTimeoutDetail');
+      isRetryable = status >= 500 || status === 0;
+    }
+
+    if (retryBtn) {
+      retryBtn.style.display = isRetryable ? 'inline-flex' : 'none';
+    }
+  }
+
+  /* ========================================================================
+     SINGLE-PASS STUDIO HYDRATION (Strictly Authenticated)
+     ======================================================================== */
+
+  function hydrateStudioItem(item) {
+    studioState.item = item;
+    studioState.translationsByLang = Object.assign({}, item.translationsCache || {});
+
+    document.title = `${item.title || 'Lesson'} — Flaptap Studio`;
+    document.getElementById('studio-title').textContent = item.title || 'English Lesson';
+    document.getElementById('studio-creator').textContent = item.creator || 'Speaker';
+    document.getElementById('studio-wpm').textContent = `${Number(item.pacingWpm || 145)} WPM`;
+    document.getElementById('studio-sentence-total').textContent = `${(item.sentences || []).length} ${t('sentencesUnit')}`;
+    document.getElementById('drill-counter-badge').textContent = String(item.completedDrills || 0);
+
+    if (item.cefrLevel || item.aiAnalysis?.overview?.cefrLevel) {
+      const cefrEl = document.getElementById('studio-cefr-badge');
+      cefrEl.textContent = item.cefrLevel || item.aiAnalysis.overview.cefrLevel;
+      cefrEl.hidden = false;
+    }
+
+    const notesArea = document.getElementById('study-notes-textarea');
+    const localNote = localStorage.getItem(`notes_${item.id}`);
+    if (notesArea) {
+      notesArea.value = item.studyNotes || localNote || '';
+    }
+
+    renderSentencesAndParagraphs();
+    mountMediaDeck(item);
+    syncPlaybackButtonsDom();
+
+    if (item.aiAnalysis) {
+      renderCoachAnalysis(item.aiAnalysis);
+    } else {
+      setTimeout(() => triggerDynamicCoachAnalysis(false), 120);
+    }
+
+    const overlay = document.getElementById('loader-overlay');
+    if (overlay) {
+      overlay.classList.remove('loader-error');
+      overlay.hidden = true;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const jumpTime = Number(params.get('t'));
+    if (Number.isFinite(jumpTime) && jumpTime > 0 && Array.isArray(item.sentences)) {
+      const target =
+        item.sentences.find((s) => Math.abs(s.startSec - jumpTime) < 0.5) ||
+        item.sentences.find((s) => jumpTime >= s.startSec && jumpTime <= s.endSec);
+      if (target) {
+        studioState.activeSentence = target;
+        updateActiveSentenceDom(target.index);
+        syncPlaybackButtonsDom();
+        document.getElementById(`sent-card-${target.index}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }
+
+  async function loadStudioSession() {
+    // Hard Auth Gate BEFORE processing or opening any lesson
+    try {
+      const me = await apiFetch('/api/auth/me', { method: 'GET' });
+      if (!me?.authenticated || !me?.user) {
+        redirectToSignInGate();
+        return;
+      }
+      studioState.user = me.user;
+    } catch {
+      redirectToSignInGate();
+      return;
+    }
+
+    loadSavedVocabularyTerms();
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+    const rawUrl = params.get('url');
+    const forceExtract = params.get('force') === '1';
+    const initialMode = params.get('mode') || 'shadow';
+
+    switchStudioMode(initialMode);
+
+    if (id) {
+      try {
+        const item = await apiFetch(`/api/history/${encodeURIComponent(id)}`, { method: 'GET' });
+        hydrateStudioItem(item);
+      } catch (error) {
+        showFatalLoaderError(error);
+      }
+      return;
+    }
+
+    if (rawUrl) {
+      try {
+        const item = await apiFetch('/api/tracks/shadowing/process', {
+          method: 'POST',
+          body: JSON.stringify({ url: rawUrl, force: forceExtract }),
+        });
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete('url');
+        nextUrl.searchParams.delete('force');
+        nextUrl.searchParams.set('id', item.id);
+        nextUrl.searchParams.set('mode', studioState.mode);
+        window.history.replaceState({}, '', nextUrl.toString());
+
+        hydrateStudioItem(item);
+      } catch (error) {
+        showFatalLoaderError(error);
+      }
+      return;
+    }
+
+    window.location.href = '/';
+  }
+
+  /* ========================================================================
+     EVENT LISTENERS & KEYBOARD SHORTCUTS
+     ======================================================================== */
+
+  function bindEvents() {
+    document.getElementById('studio-theme-toggle')?.addEventListener('click', () => {
+      applyTheme(studioState.theme === 'dark' ? 'light' : 'dark');
+    });
+
+    document.getElementById('studio-ui-lang-select')?.addEventListener('change', (e) => {
+      applyUiLanguage(e.target.value);
+    });
+
+    document.getElementById('loader-retry-btn')?.addEventListener('click', () => {
+      const overlay = document.getElementById('loader-overlay');
+      overlay?.classList.remove('loader-error');
+      document.getElementById('loader-error-actions').style.display = 'none';
+      document.getElementById('loader-headline').textContent = t('preparingLesson');
+      document.getElementById('loader-subheadline').textContent = t('extractingTimings');
+      loadStudioSession();
+    });
+
+    document.querySelectorAll('.layout-btn[data-layout-choice]').forEach((btn) => {
+      btn.addEventListener('click', () => setStudioLayout(btn.dataset.layoutChoice));
+    });
+
+    document.querySelectorAll('.mode-tab-btn[data-mode]').forEach((btn) => {
+      btn.addEventListener('click', () => switchStudioMode(btn.dataset.mode));
+    });
+
+    // Flow segmented buttons (Auto-Pause | Loop | Continuous)
+    document.querySelectorAll('.flow-btn[data-end-action]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        studioState.endAction = btn.dataset.endAction;
+        if (studioState.endAction !== 'loop') {
+          studioState.loopSentenceIndex = null;
+        }
+        syncPlaybackButtonsDom();
+      });
+    });
+
+    // Speed Slider & Preset Ticks
+    document.getElementById('speed-slider')?.addEventListener('input', (e) => {
+      setStudioSpeed(e.target.value);
+    });
+
+    document.querySelectorAll('#speed-ticks-row .speed-tick').forEach((tick) => {
+      tick.addEventListener('click', () => setStudioSpeed(tick.dataset.speed));
+    });
+
+    // Shadow Mode Sentence Interactions (Play/Pause, Loop, Click Word, Click Line)
+    document.getElementById('subview-sentences-list')?.addEventListener('click', (e) => {
+      const playBtn = e.target.closest('[data-play-sent]');
+      if (playBtn) {
+        const idx = Number(playBtn.dataset.playSent);
+        if (studioState.isPlaying && studioState.activeSentence?.index === idx) {
+          pauseCurrentPlayback();
+        } else {
+          playSentence(idx);
+        }
+        return;
+      }
+
+      const loopBtn = e.target.closest('[data-loop-sent]');
+      if (loopBtn) {
+        const idx = Number(loopBtn.dataset.loopSent);
+        const nextLoop = studioState.loopSentenceIndex === idx ? null : idx;
+        setSentenceLoop(nextLoop);
+        if (nextLoop === idx) {
+          playSentence(idx, { preserveLoop: true });
+        }
+        return;
+      }
+
+      const wordSpan = e.target.closest('.clickable-word');
+      if (wordSpan) {
+        e.stopPropagation();
+        openWordLookup(wordSpan.dataset.word, Number(wordSpan.dataset.sentIndex), wordSpan);
+        return;
+      }
+
+      const line = e.target.closest('[data-line-sent]');
+      if (line) {
+        playSentence(Number(line.dataset.lineSent));
+      }
+    });
+
+    // Read Mode Paragraph Interactions (Click Sentence or Alt+Click Word)
+    document.getElementById('subview-chunks-list')?.addEventListener('click', (e) => {
+      const wordSpan = e.target.closest('.clickable-word');
+      if (wordSpan && e.altKey) {
+        e.stopPropagation();
+        openWordLookup(wordSpan.dataset.word, Number(wordSpan.dataset.sentIndex), wordSpan);
+        return;
+      }
+      const sentSpan = e.target.closest('.read-sentence[data-read-sent]');
+      if (sentSpan) {
+        playSentence(Number(sentSpan.dataset.readSent));
+      }
+    });
+
+    // Outside click dismisses Word Lookup Popover cleanly
+    document.addEventListener('click', (e) => {
+      const popover = document.getElementById('word-lookup-popover');
+      if (!popover || popover.hidden) return;
+      if (popover.contains(e.target) || e.target.closest('.clickable-word')) return;
+      closeWordLookupPopover();
+    });
+
+    // Translation Deck
+    document.getElementById('translation-toggle-checkbox')?.addEventListener('change', (e) => {
+      studioState.translationEnabled = Boolean(e.target.checked);
+      requestTranslations(false);
+    });
+
+    document.getElementById('trans-lang-select')?.addEventListener('change', (e) => {
+      studioState.translationLang = e.target.value;
+      localStorage.setItem('flaptap_trans_lang', studioState.translationLang);
+      if (studioState.translationEnabled) {
+        requestTranslations(false);
+      }
+    });
+
+    document.getElementById('trans-refresh-btn')?.addEventListener('click', () => {
+      if (!studioState.translationEnabled) {
+        const cb = document.getElementById('translation-toggle-checkbox');
+        if (cb) cb.checked = true;
+        studioState.translationEnabled = true;
+      }
+      requestTranslations(true);
+    });
+
+    // Listen Mode (Cloze Dictation)
+    document.getElementById('dict-prev-btn')?.addEventListener('click', () => {
+      if (studioState.dictationIndex > 1) {
+        studioState.dictationIndex--;
+        renderDictationCard();
+        playSentence(studioState.dictationIndex);
+      }
+    });
+
+    document.getElementById('dict-next-btn')?.addEventListener('click', () => {
+      const max = (studioState.item?.sentences || []).length;
+      if (studioState.dictationIndex < max) {
+        studioState.dictationIndex++;
+        renderDictationCard();
+        playSentence(studioState.dictationIndex);
+      }
+    });
+
+    document.querySelectorAll('[data-dict-level]').forEach((pill) => {
+      pill.addEventListener('click', () => {
+        studioState.dictationLevel = pill.dataset.dictLevel;
+        renderDictationCard();
+      });
+    });
+
+    document.getElementById('dict-play-btn')?.addEventListener('click', () => {
+      if (studioState.isPlaying && studioState.activeSentence?.index === studioState.dictationIndex) {
+        pauseCurrentPlayback();
+      } else {
+        playSentence(studioState.dictationIndex);
+      }
+    });
+
+    document.getElementById('dict-check-btn')?.addEventListener('click', () => {
+      checkDictationAnswers(false);
+    });
+
+    document.getElementById('dict-reveal-btn')?.addEventListener('click', () => {
+      checkDictationAnswers(true);
+    });
+
+    document.getElementById('dictation-sentence-area')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        checkDictationAnswers(false);
+      }
+    });
+
+    // Coach Mode Actions
+    document.getElementById('coach-retry-btn')?.addEventListener('click', () => {
+      triggerDynamicCoachAnalysis(true);
+    });
+
+    document.getElementById('coach-refresh-btn')?.addEventListener('click', () => {
+      triggerDynamicCoachAnalysis(true);
+    });
+
+    document.getElementById('mode-panel-coach')?.addEventListener('click', (e) => {
+      const playClip = e.target.closest('[data-coach-play]');
+      if (playClip) {
+        const idx = Number(playClip.dataset.coachPlay) || 1;
+        if (studioState.isPlaying && studioState.activeSentence?.index === idx) {
+          pauseCurrentPlayback();
+        } else {
+          playSentence(idx);
+        }
+        return;
+      }
+
+      const saveExpr = e.target.closest('[data-save-expr]');
+      if (saveExpr && studioState.item?.aiAnalysis) {
+        const entry = studioState.item.aiAnalysis.expressions[Number(saveExpr.dataset.saveExpr)];
+        if (entry) saveWordToVault(entry);
+        return;
+      }
+
+      const saveVocab = e.target.closest('[data-save-vocab]');
+      if (saveVocab && studioState.item?.aiAnalysis) {
+        const entry = studioState.item.aiAnalysis.vocabulary[Number(saveVocab.dataset.saveVocab)];
+        if (entry) saveWordToVault(entry);
+      }
+    });
+
+    // Word Lookup Popover
+    document.getElementById('wp-close-btn')?.addEventListener('click', closeWordLookupPopover);
+
+    document.getElementById('wp-play-btn')?.addEventListener('click', () => {
+      if (studioState.activeWordLookup?.sentenceIndex) {
+        playSentence(studioState.activeWordLookup.sentenceIndex);
+      }
+    });
+
+    document.getElementById('wp-save-btn')?.addEventListener('click', () => {
+      if (studioState.activeWordLookup) {
+        saveWordToVault(studioState.activeWordLookup);
+      }
+    });
+
+    // Study Notes Auto-Save (localStorage + SQLite)
+    let notesDebounce = null;
+    document.getElementById('study-notes-textarea')?.addEventListener('input', (e) => {
+      if (!studioState.item) return;
+      const val = e.target.value;
+      localStorage.setItem(`notes_${studioState.item.id}`, val);
+      const indicator = document.getElementById('notes-save-indicator');
+      if (indicator) indicator.textContent = t('savingStatus');
+
+      clearTimeout(notesDebounce);
+      notesDebounce = setTimeout(async () => {
+        try {
+          const res = await apiFetch(`/api/history/${encodeURIComponent(studioState.item.id)}/notes`, {
+            method: 'PUT',
+            body: JSON.stringify({ studyNotes: val }),
+          });
+          studioState.item.studyNotes = val;
+          if (res.noteMarkdown) studioState.item.noteMarkdown = res.noteMarkdown;
+          if (indicator) indicator.textContent = t('savedStatus');
+        } catch {
+          if (indicator) indicator.textContent = t('savedStatus');
+        }
+      }, 450);
+    });
+
+    // Complete Session (Increment Drill & Streak)
+    document.getElementById('complete-drill-btn')?.addEventListener('click', async () => {
+      if (!studioState.item) return;
+      try {
+        const updated = await apiFetch(`/api/history/${encodeURIComponent(studioState.item.id)}/drill`, {
+          method: 'POST',
+          body: JSON.stringify({ mode: studioState.mode }),
+        });
+        studioState.item.completedDrills = updated.completedDrills;
+        document.getElementById('drill-counter-badge').textContent = String(updated.completedDrills || 0);
+        showToast(t('sessionCompletedToast'));
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+
+    // Export Markdown Study Sheet
+    document.getElementById('download-obsidian-btn')?.addEventListener('click', () => {
+      if (!studioState.item) return;
+      const notesVal = document.getElementById('study-notes-textarea')?.value || '';
+      let md = studioState.item.noteMarkdown || `# ${studioState.item.title}\n`;
+      if (notesVal && !md.includes(notesVal)) {
+        md = `# ${studioState.item.title}\n\n## Personal Study Notes\n\n${notesVal}\n\n---\n\n${md}`;
+      }
+      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
+      const a = document.createElement('a');
+      const slug = (studioState.item.title || 'flaptap-lesson')
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-')
+        .slice(0, 60);
+      a.href = URL.createObjectURL(blob);
+      a.download = `${slug || 'lesson'}.md`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+      showToast(t('mdExportedToast'));
+    });
+
+    // Voice Recorder
+    document.getElementById('record-toggle-btn')?.addEventListener('click', toggleVoiceRecording);
+    document.getElementById('replay-original-btn')?.addEventListener('click', () => {
+      const idx = studioState.activeSentence?.index || 1;
+      if (studioState.isPlaying && studioState.activeSentence?.index === idx) {
+        pauseCurrentPlayback();
+      } else {
+        playSentence(idx);
+      }
+    });
+
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const popover = document.getElementById('word-lookup-popover');
+        if (popover && !popover.hidden) {
+          closeWordLookupPopover();
           return;
         }
       }
-    } catch (e) {
-      console.warn('Memory inspection failed, proceeding with standard job lifecycle:', e);
-    }
 
-    // 3. Brand-new video that is NOT in database: launch the 0-100% Agent Progress Engine
-    if (isNew) {
-      await runLiveAgentJob(url, agent);
-      return;
-    }
-  }
-
-  // 4. Fallback: try opening latest practice session or return to dashboard
-  try {
-    const res = await fetch(`${API_BASE}/history`);
-    if (res.ok) {
-      const items = await res.json();
-      if (items.length > 0) {
-        window.history.replaceState({}, '', `studio.html?id=${encodeURIComponent(items[0].id)}`);
-        await loadExistingSession(items[0].id);
+      const tag = (e.target?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable) {
         return;
       }
-    }
-  } catch (e) {
-    // ignore
-  }
-  window.location.href = 'index.html';
-}
-
-// Live Multi-Stage Agent Execution Loop (0% -> 100%)
-async function runLiveAgentJob(url, agent) {
-  let visualPercent = 12;
-  updateProgress(visualPercent, 1, 'Initializing Agent Engine...', 'Bootstrapping agent environment for skill: american-accent-shadowing');
-
-  // Ambient ticker ensuring the loader immediately moves and NEVER hangs at 0%
-  const ambientTimer = setInterval(() => {
-    if (visualPercent < 85) {
-      visualPercent += 2;
-      const stage = Math.min(Math.floor(visualPercent / 18) + 1, 5);
-      updateProgress(visualPercent, stage, null, null);
-    }
-  }, 250);
-
-  try {
-    const startRes = await fetch(`${API_BASE}/tracks/shadowing/start-job`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, agentType: agent }),
-    });
-
-    if (!startRes.ok) throw new Error('Failed to initiate agent job');
-    const startData = await startRes.json();
-
-    // If backend reports video already existed in database memory:
-    if (startData.alreadyExists && startData.result) {
-      clearInterval(ambientTimer);
-      window.history.replaceState({}, '', `studio.html?id=${encodeURIComponent(startData.result.id)}`);
-      studioState.item = startData.result;
-      revealStudio(startData.result);
-      return;
-    }
-
-    const { jobId } = startData;
-    let completed = false;
-
-    while (!completed) {
-      await new Promise(r => setTimeout(r, 350));
-      const statusRes = await fetch(`${API_BASE}/tracks/shadowing/job-status/${jobId}`);
-      if (!statusRes.ok) continue;
-
-      const job = await statusRes.json();
-      
-      const percent = Math.max(visualPercent, job.progressPercent || 20);
-      visualPercent = percent;
-      const stage = job.currentStage || 1;
-      const headline = job.stageName || 'Processing...';
-      const latestMsg = job.logs.length ? job.logs[job.logs.length - 1].message : 'Agent active...';
-
-      updateProgress(percent, stage, headline, latestMsg);
-
-      if (job.status === 'completed' && job.result) {
-        clearInterval(ambientTimer);
-        completed = true;
-        updateProgress(100, 6, 'Studio Ready!', 'Shadowing Studio compilation complete.');
-        studioState.item = job.result;
-
-        // CRUCIAL: Replace address bar with ?id=xxx so page reloads bypass loader forever!
-        window.history.replaceState({}, '', `studio.html?id=${encodeURIComponent(job.result.id)}`);
-
-        await new Promise(r => setTimeout(r, 500));
-        revealStudio(job.result);
-        break;
-      }
-
-      if (job.status === 'failed') {
-        clearInterval(ambientTimer);
-        throw new Error(job.error || 'Agent execution failed');
-      }
-    }
-  } catch (err) {
-    clearInterval(ambientTimer);
-    document.getElementById('loader-headline').textContent = 'Agent Error';
-    document.getElementById('loader-subheadline').textContent = err.message;
-    const errorActions = document.getElementById('loader-error-actions');
-    if (errorActions) errorActions.style.display = 'flex';
-    showStudioToast(`Agent Error: ${err.message}`, 'error');
-  }
-}
-
-async function loadExistingSession(id) {
-  try {
-    const res = await fetch(`${API_BASE}/history/${id}`);
-    if (!res.ok) throw new Error('Session not found');
-    const item = await res.json();
-    if (!item.sentences || item.sentences.length === 0) {
-      if (item.chunks && item.chunks.length > 0) {
-        item.sentences = synthesizeClientSentences(item.chunks);
-      }
-    }
-    studioState.item = item;
-    revealStudio(item);
-  } catch (err) {
-    showStudioToast('Session load error: ' + err.message, 'error');
-    window.location.href = 'index.html';
-  }
-}
-
-function applyStudioHighlights(text) {
-  let html = text;
-  // Connected speech reductions
-  html = html.replace(/\bgoing to\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">going to [gonna]</mark>');
-  html = html.replace(/\bwant to\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">want to [wanna]</mark>');
-  html = html.replace(/\bgot to\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">got to [gotta]</mark>');
-  html = html.replace(/\blet me\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">let me [lemme]</mark>');
-  html = html.replace(/\bkind of\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">kind of [kinda]</mark>');
-  html = html.replace(/\bout of\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">out of [outta]</mark>');
-  html = html.replace(/\bgive me\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">give me [gimme]</mark>');
-  // Street slang & idioms
-  html = html.replace(/\b(deadass|no cap|my guy|totally down|hit it up|big time|chill out)\b/gi, '<mark class="shadow-slang" style="background-color: #FEF08A; color: #713F12; padding: 2px 5px; border-radius: 4px; font-weight: 600;">$1</mark>');
-  html = html.replace(/\b(under the weather|bite the bullet|on the go|whirlwind|off the charts|just around the corner)\b/gi, '<mark class="shadow-idiom" style="background-color: #E9D5FF; color: #581C87; padding: 2px 5px; border-radius: 4px; font-weight: 600;">$1</mark>');
-  return html;
-}
-
-function synthesizeClientSentences(chunks) {
-  const parseTime = (ts) => {
-    if (typeof ts === 'number') return ts;
-    if (!ts) return 0;
-    const parts = ts.replace(/[\[\]]/g, '').trim().split(':');
-    if (parts.length === 3) return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
-    if (parts.length === 2) return parseFloat(parts[0]) * 60 + parseFloat(parts[1]);
-    const f = parseFloat(ts);
-    return isNaN(f) ? 0 : f;
-  };
-
-  const DANGLING_END_WORDS = new Set([
-    'the', 'a', 'an',
-    'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'upon', 'towards',
-    'and', 'or', 'but', 'so', 'because', 'nor', 'yet',
-    'that', 'which', 'who', 'whom', 'whose', 'where', 'when', 'if',
-    'my', 'your', 'his', 'her', 'its', 'our', 'their',
-    'this', 'these', 'those'
-  ]);
-
-  const BREAK_BEFORE_WORDS = new Set([
-    'and', 'but', 'so', 'or', 'nor', 'yet',
-    'because', 'although', 'though', 'while', 'since', 'if', 'unless',
-    'which', 'where', 'when', 'who', 'why', 'how',
-    'instead', 'before', 'after', 'during', 'without', 'like'
-  ]);
-
-  const BREAK_PHRASES = [
-    'he says', 'she says', 'they say', 'i say',
-    'for example', 'you know', 'i mean', 'i think',
-    'so that', 'might as well', 'instead of', 'throughout the day',
-    'as well as', 'in fact', 'back in', 'meant that', 'what i', "that's how"
-  ];
-
-  const sentences = [];
-  let count = 1;
-
-  for (const chunk of chunks) {
-    let cStart = parseTime(chunk.start);
-    if (!cStart && chunk.time_range) {
-      const match = chunk.time_range.match(/\[([\d:.]+)/);
-      if (match) cStart = parseTime(match[1]);
-    }
-    if (cStart === 0 && chunk.startSec) cStart = chunk.startSec;
-
-    let cEnd = parseTime(chunk.end);
-    if (!cEnd && chunk.time_range) {
-      const match = chunk.time_range.match(/-\s*([\d:.]+)\]/);
-      if (match) cEnd = parseTime(match[1]);
-    }
-    if (!cEnd || cEnd <= cStart) cEnd = (chunk.endSec && chunk.endSec > cStart) ? chunk.endSec : cStart + 30;
-    const cDuration = Math.max(cEnd - cStart, 1);
-
-    const rawText = (chunk.text || '').replace(/\s+/g, ' ').trim();
-    if (!rawText) continue;
-
-    const initialSections = rawText.split(/(?<=[.?!;:])\s+/).filter(s => s.trim().length > 0);
-    const chunkSubUnits = [];
-
-    for (const section of initialSections) {
-      const words = section.trim().split(/\s+/).filter(Boolean);
-      if (words.length <= 16) {
-        chunkSubUnits.push(words.join(' '));
-        continue;
-      }
-
-      let currentUnit = [];
-      let i = 0;
-
-      while (i < words.length) {
-        currentUnit.push(words[i]);
-        const currentCount = currentUnit.length;
-        const remainingWords = words.length - (i + 1);
-
-        if (currentCount >= 10) {
-          const nextWord = (words[i + 1] || '').toLowerCase().replace(/^[^\w]+|[^\w]+$/g, '');
-          const nextTwoWords = ((words[i + 1] || '') + ' ' + (words[i + 2] || '')).toLowerCase();
-          const currWordClean = words[i].toLowerCase().replace(/^[^\w]+|[^\w]+$/g, '');
-          const endsWithPunct = /[,\u2014\u2013:;-]$/.test(words[i]);
-
-          let isBreakPoint = false;
-
-          if (endsWithPunct && currentCount >= 12 && !DANGLING_END_WORDS.has(currWordClean) && remainingWords >= 4) {
-            isBreakPoint = true;
-          } else if (BREAK_BEFORE_WORDS.has(nextWord) && currentCount >= 12 && !DANGLING_END_WORDS.has(currWordClean) && remainingWords >= 4) {
-            isBreakPoint = true;
-          } else if (currentCount >= 16) {
-            if (!DANGLING_END_WORDS.has(currWordClean) && remainingWords > 2) {
-              isBreakPoint = true;
-            } else if (currentCount >= 20) {
-              isBreakPoint = true;
-            }
-          }
-
-          if (isBreakPoint && remainingWords > 0) {
-            chunkSubUnits.push(currentUnit.join(' '));
-            currentUnit = [];
-          }
-        }
-        i++;
-      }
-
-      if (currentUnit.length > 0) {
-        if (currentUnit.length < 5 && chunkSubUnits.length > 0) {
-          const prev = chunkSubUnits.pop();
-          chunkSubUnits.push(prev + ' ' + currentUnit.join(' '));
-        } else {
-          chunkSubUnits.push(currentUnit.join(' '));
-        }
-      }
-    }
-
-    const totalChars = chunkSubUnits.reduce((acc, u) => acc + u.length, 0) || 1;
-    let accumulated = 0;
-
-    for (const unitText of chunkSubUnits) {
-      const uLen = unitText.length;
-      const startSec = Math.round((cStart + (accumulated / totalChars) * cDuration) * 100) / 100;
-      accumulated += uLen;
-      const endSec = Math.round((cStart + (accumulated / totalChars) * cDuration) * 100) / 100;
-      const durationSec = Math.max(Math.round((endSec - startSec) * 100) / 100, 0.8);
-
-      sentences.push({
-        id: `sent-${count}`,
-        index: count,
-        timeRange: `[${formatStudioDuration(startSec)} - ${formatStudioDuration(endSec)}]`,
-        startSec,
-        endSec,
-        durationSec,
-        text: unitText,
-        highlightedHtml: applyStudioHighlights(unitText),
-      });
-      count++;
-    }
-  }
-
-  // Crumb merging pass: ensure no micro-fragment (< 4 words like "Nice.") stands alone
-  const merged = [];
-  for (let i = 0; i < sentences.length; i++) {
-    const s = sentences[i];
-    const wordCount = s.text.trim().split(/\s+/).filter(Boolean).length;
-    if (wordCount < 4 && merged.length > 0) {
-      const prev = merged[merged.length - 1];
-      prev.text = `${prev.text} ${s.text}`;
-      prev.highlightedHtml = `${prev.highlightedHtml} ${s.highlightedHtml}`;
-      prev.endSec = s.endSec;
-      prev.durationSec = Math.max(Math.round((prev.endSec - prev.startSec) * 100) / 100, 0.8);
-      prev.timeRange = `[${formatStudioDuration(prev.startSec)} - ${formatStudioDuration(prev.endSec)}]`;
-    } else if (wordCount < 4 && i + 1 < sentences.length) {
-      const next = sentences[i + 1];
-      next.text = `${s.text} ${next.text}`;
-      next.highlightedHtml = `${s.highlightedHtml} ${next.highlightedHtml}`;
-      next.startSec = s.startSec;
-      next.durationSec = Math.max(Math.round((next.endSec - next.startSec) * 100) / 100, 0.8);
-      next.timeRange = `[${formatStudioDuration(next.startSec)} - ${formatStudioDuration(next.endSec)}]`;
-    } else {
-      merged.push(s);
-    }
-  }
-
-  // Pass 2: Merge non-terminal fragments (e.g. clauses cut mid-sentence where combined length <= 16 words)
-  const finalMerged = [];
-  for (const s of merged) {
-    if (finalMerged.length > 0) {
-      const prev = finalMerged[finalMerged.length - 1];
-      const prevHasTerminal = /[.?!]["']?$/.test(prev.text.trim());
-      const combWords = prev.text.trim().split(/\s+/).length + s.text.trim().split(/\s+/).length;
-      if (!prevHasTerminal && combWords <= 16) {
-        prev.text = `${prev.text} ${s.text}`;
-        prev.highlightedHtml = `${prev.highlightedHtml} ${s.highlightedHtml}`;
-        prev.endSec = Math.max(prev.endSec, s.endSec);
-        prev.durationSec = Math.max(Math.round((prev.endSec - prev.startSec) * 100) / 100, 0.8);
-        prev.timeRange = `[${formatStudioDuration(prev.startSec)} - ${formatStudioDuration(prev.endSec)}]`;
-        continue;
-      }
-    }
-    finalMerged.push(s);
-  }
-
-  return finalMerged.map((s, idx) => ({
-    ...s,
-    id: `sent-${idx + 1}`,
-    index: idx + 1,
-  }));
-}
-
-function updateProgress(percent, stageNum, headline, terminalMsg) {
-  const numElem = document.getElementById('loader-percentage-num');
-  if (numElem) numElem.textContent = `${percent}%`;
-
-  const circle = document.getElementById('circle-progress-bar');
-  if (circle) {
-    const circumference = 377;
-    const offset = circumference - (percent / 100) * circumference;
-    circle.style.strokeDashoffset = offset;
-  }
-
-  if (headline) document.getElementById('loader-headline').textContent = headline;
-
-  for (let s = 1; s <= 6; s++) {
-    const stageElem = document.getElementById(`stage-${s}`);
-    if (!stageElem) continue;
-    if (s < stageNum) {
-      stageElem.className = 'stage-item completed';
-      stageElem.querySelector('.stage-icon-badge').textContent = '✓';
-    } else if (s === stageNum) {
-      stageElem.className = 'stage-item active';
-      stageElem.querySelector('.stage-icon-badge').textContent = s;
-    } else {
-      stageElem.className = 'stage-item';
-      stageElem.querySelector('.stage-icon-badge').textContent = s;
-    }
-  }
-
-  if (terminalMsg) {
-    const stream = document.getElementById('terminal-stream');
-    const line = document.createElement('div');
-    line.className = 'terminal-line';
-    line.textContent = `> ${terminalMsg}`;
-    stream.appendChild(line);
-    stream.scrollTop = stream.scrollHeight;
-  }
-}
-
-function revealStudio(item) {
-  const loader = document.getElementById('loader-overlay');
-  if (loader) {
-    loader.classList.add('fade-out');
-  }
-
-  // Populate Header
-  document.getElementById('studio-title').textContent = item.title;
-  document.getElementById('studio-creator').textContent = item.creator;
-  document.getElementById('studio-dialect').textContent = item.accentDialect || 'General American';
-  document.getElementById('studio-pacing').textContent = `${item.pacingWpm || 155} WPM`;
-
-  // Initialize YouTube Player if videoId exists
-  const videoId = item.videoId;
-  if (videoId) {
-    initYouTubePlayer(videoId);
-  } else {
-    const iframe = document.getElementById('studio-video-frame');
-    if (iframe) iframe.style.display = 'none';
-  }
-
-  // Render All Sub-Views
-  renderStudioViews(item);
-
-  // Initialize Vernacular Dialect Translation Controls
-  initTranslationControls();
-
-  // Restore Personal Study Notes
-  const savedNotes = localStorage.getItem(`notes_${item.id}`);
-  const textarea = document.getElementById('study-notes-textarea');
-  if (savedNotes && textarea) textarea.value = savedNotes;
-
-  // Deep-linking / URL Parameter initializations
-  const initialMode = studioState.initialMode;
-  if (initialMode === 'sentences') {
-    switchTranscriptMode('sentences');
-  }
-  const initialSpeed = studioState.initialSpeed;
-  if (initialSpeed) {
-    setStudioSpeed(parseFloat(initialSpeed));
-  }
-  const initialAction = studioState.initialAction;
-  if (initialAction) {
-    const btn = document.querySelector(`.action-pill-btn[data-action="${initialAction}"]`);
-    if (btn) btn.click();
-  }
-  const initialDrill = parseInt(studioState.initialDrill, 10);
-  if (initialDrill) {
-    setTimeout(() => playSentence(initialDrill), 300);
-  }
-}
-
-// Official YouTube IFrame Player API Handler
-function initYouTubePlayer(videoId) {
-  if (!studioState.ytReady || typeof YT === 'undefined' || !YT.Player) {
-    studioState.pendingVideoId = videoId;
-    if (!document.getElementById('yt-api-script')) {
-      const script = document.createElement('script');
-      script.id = 'yt-api-script';
-      script.src = 'https://www.youtube.com/iframe_api';
-      script.async = true;
-      document.body.appendChild(script);
-    }
-    // Fallback iframe while API loads
-    const iframe = document.getElementById('studio-video-frame');
-    if (iframe) {
-      iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0`;
-      iframe.style.display = 'block';
-    }
-    return;
-  }
-
-  const iframe = document.getElementById('studio-video-frame');
-  if (iframe) iframe.style.display = 'none';
-
-  if (studioState.ytPlayer && studioState.ytPlayer.loadVideoById) {
-    studioState.ytPlayer.loadVideoById(videoId);
-    applySpeedToPlayer(studioState.speed);
-    return;
-  }
-
-  try {
-    studioState.ytPlayer = new YT.Player('studio-youtube-player', {
-      videoId: videoId,
-      playerVars: {
-        autoplay: 0,
-        rel: 0,
-        modestbranding: 1,
-        enablejsapi: 1,
-        origin: window.location.origin
-      },
-      events: {
-        onReady: (event) => {
-          applySpeedToPlayer(studioState.speed);
-        },
-        onStateChange: (event) => {
-          if (event.data === YT.PlayerState.PLAYING) {
-            startPlaybackTicker();
-          } else {
-            stopPlaybackTicker();
-          }
-        }
-      }
-    });
-  } catch (err) {
-    console.warn('YT Player init fallback:', err);
-    if (iframe) {
-      iframe.src = `https://www.youtube.com/embed/${videoId}?enablejsapi=1&rel=0`;
-      iframe.style.display = 'block';
-    }
-  }
-}
-
-function renderStudioViews(item) {
-  const t = STUDIO_I18N[studioState.lang];
-  const chunks = item.chunks || [];
-  const sentences = item.sentences || [];
-
-  document.getElementById('studio-chunk-count').textContent = chunks.length;
-  const chunksBadge = document.getElementById('count-chunks-badge');
-  if (chunksBadge) chunksBadge.textContent = chunks.length;
-  const sentBadge = document.getElementById('count-sentences-badge');
-  if (sentBadge) sentBadge.textContent = sentences.length;
-
-  const slangList = item.slangTable || [];
-  const idiomsList = item.idiomsTable || [];
-  const redList = item.reductionsTable || [];
-  const asrList = item.asrFixes || [];
-
-  const slangBadge = document.getElementById('studio-slang-count');
-  if (slangBadge) slangBadge.textContent = slangList.length;
-  const idiomsBadge = document.getElementById('studio-idioms-count');
-  if (idiomsBadge) idiomsBadge.textContent = idiomsList.length;
-  const redBadge = document.getElementById('studio-reductions-count');
-  if (redBadge) redBadge.textContent = redList.length;
-  const asrBadge = document.getElementById('studio-asr-count');
-  if (asrBadge) asrBadge.textContent = asrList.length;
-
-  // 1. Verbatim Transcript Chunks
-  const chunksContainer = document.getElementById('subview-chunks-list');
-  if (chunksContainer) {
-    if (chunks.length > 0) {
-      chunksContainer.innerHTML = chunks.map((c, idx) => {
-        const startSeconds = c.startSec ?? c.start_sec ?? parseStudioSeconds(c.start);
-        const endSeconds = c.endSec ?? c.end_sec ?? parseStudioSeconds(c.end);
-        const timeStr = c.timeRange || c.time_range || (c.start ? `[${c.start} - ${c.end}]` : `[${formatStudioDuration(startSeconds)} - ${formatStudioDuration(endSeconds)}]`);
-        return `
-          <div class="studio-chunk" id="schunk-${idx}">
-            <div class="chunk-top-row">
-              <span class="chunk-badge-time">${timeStr} — Segment ${idx + 1}</span>
-              <button class="chunk-jump-btn" onclick="seekStudioVideo(${startSeconds})">
-                ${t.seekBtn} ${formatStudioDuration(startSeconds)}
-              </button>
-            </div>
-            <div class="chunk-content-text">
-              ${c.highlightedHtml || c.text}
-            </div>
-          </div>
-        `;
-      }).join('');
-    } else {
-      chunksContainer.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">No transcript segments found.</div>`;
-    }
-  }
-
-  // 2. Interactive Sentence Driller List
-  renderSentenceList(sentences);
-
-  // 3. Slang Glossary
-  const slangView = document.getElementById('view-slang');
-  if (slangList.length > 0) {
-    slangView.innerHTML = `
-      <table class="linguistic-table">
-        <thead>
-          <tr>
-            <th>Slang & Street Expression</th>
-            <th>Spoken Meaning in Real-World Context</th>
-            <th>Delivery Vibe</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${slangList.map(s => `
-            <tr>
-              <td><mark class="shadow-slang" style="background-color: var(--badge-slang-bg); color: var(--badge-slang-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🟡 ${s.term}</mark></td>
-              <td>${s.meaning}</td>
-              <td style="color: var(--text-secondary); font-style: italic;">${s.delivery}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-  } else {
-    slangView.innerHTML = `<div style="padding: 3rem 1.5rem; text-align: center; color: var(--text-muted); background: var(--bg-secondary); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">${t.emptySlang}</div>`;
-  }
-
-  // 4. Native Idioms
-  const idiomsView = document.getElementById('view-idioms');
-  if (idiomsList.length > 0) {
-    idiomsView.innerHTML = `
-      <table class="linguistic-table">
-        <thead>
-          <tr>
-            <th>Native Phrase / Idiom</th>
-            <th>Textbook Literal Equivalent</th>
-            <th>Why Native Speakers Use It</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${idiomsList.map(i => `
-            <tr>
-              <td><mark class="shadow-idiom" style="background-color: var(--badge-idiom-bg); color: var(--badge-idiom-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🟣 ${i.phrase}</mark></td>
-              <td>${i.equivalent}</td>
-              <td>${i.usage}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-  } else {
-    idiomsView.innerHTML = `<div style="padding: 3rem 1.5rem; text-align: center; color: var(--text-muted); background: var(--bg-secondary); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">${t.emptyIdioms}</div>`;
-  }
-
-  // 5. Connected Speech & Phonetics
-  const redView = document.getElementById('view-reductions');
-  if (redList.length > 0) {
-    redView.innerHTML = `
-      <table class="linguistic-table">
-        <thead>
-          <tr>
-            <th>Written Form</th>
-            <th>Spoken Sound / IPA</th>
-            <th>Phonetic Phenomenon</th>
-            <th>Mouth & Tongue Mechanics</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${redList.map(r => `
-            <tr>
-              <td><code>${r.written}</code></td>
-              <td><mark class="shadow-reduction" style="background-color: var(--badge-reduction-bg); color: var(--badge-reduction-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🔵 ${r.spoken}</mark></td>
-              <td>${r.phenomenon}</td>
-              <td style="font-size: 0.85rem;">${r.mechanics}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-  } else {
-    redView.innerHTML = `<div style="padding: 3rem 1.5rem; text-align: center; color: var(--text-muted); background: var(--bg-secondary); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">${t.emptyReductions}</div>`;
-  }
-
-  // 6. ASR Error Fixes Log
-  const asrView = document.getElementById('view-asr');
-  if (asrList.length > 0) {
-    asrView.innerHTML = `
-      <table class="linguistic-table">
-        <thead>
-          <tr>
-            <th>Timestamp</th>
-            <th>YouTube Caption (Wrong)</th>
-            <th>Creator Spoken Word (Corrected)</th>
-            <th>Contextual Reason</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${asrList.map(a => `
-            <tr>
-              <td style="font-family: var(--font-mono); font-weight: 700;">${a.timestamp}</td>
-              <td style="color: #EF4444; text-decoration: line-through;">${a.wrong}</td>
-              <td><mark class="shadow-correction" style="background-color: var(--badge-correction-bg); color: var(--badge-correction-text); padding: 2px 7px; border-radius: 4px; font-weight: 700;">🔴 ${a.corrected}</mark></td>
-              <td>${a.reason}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>
-    `;
-  } else {
-    asrView.innerHTML = `<div style="padding: 3rem 1.5rem; text-align: center; color: var(--text-muted); background: var(--bg-secondary); border-radius: var(--radius-lg); border: 1px dashed var(--border-color);">${t.emptyAsr}</div>`;
-  }
-}
-
-// Render Vertically Stacked Sentence Driller Cards
-function renderSentenceList(sentences) {
-  const container = document.getElementById('subview-sentences-list');
-  if (!container) return;
-  const t = STUDIO_I18N[studioState.lang];
-
-  if (!sentences || sentences.length === 0) {
-    container.innerHTML = `<div style="padding: 2.5rem; text-align: center; color: var(--text-muted);">No parsed sentences available for this video.</div>`;
-    return;
-  }
-
-  const activeDialect = studioState.translationDialect || 'ar-SA';
-  const isRtl = activeDialect.startsWith('ar');
-  const showTrans = studioState.translationEnabled;
-
-  container.innerHTML = sentences.map((sent) => {
-    const dur = typeof sent.durationSec === 'number' ? sent.durationSec.toFixed(2) : '2.00';
-    const transText = (studioState.activeTranslations && studioState.activeTranslations[sent.index]) ||
-                      (sent.translations && sent.translations[activeDialect]) ||
-                      (studioState.item && studioState.item.translationsCache && studioState.item.translationsCache[activeDialect] && studioState.item.translationsCache[activeDialect][sent.index]) || '';
-    const transHtml = transText ? `<bdi>${transText}</bdi>` : '<span class="translation-shimmer">...</span>';
-
-    return `
-      <div class="sentence-driller-card" id="sent-card-${sent.index}" onclick="playSentence(${sent.index})">
-        <div class="sentence-card-meta">
-          <div class="sent-meta-left">
-            <span class="sent-num-pill">#${sent.index}</span>
-            <span class="sent-time-badge">⏱️ ${sent.timeRange}</span>
-            <span class="sent-duration-pill">${dur}s</span>
-          </div>
-          <div class="sent-meta-right">
-            <button class="sent-play-btn" onclick="event.stopPropagation(); playSentence(${sent.index});" title="Play and drill this sentence">
-              <span class="play-icon">▶</span>
-              <span class="play-text">${t.playDrill}</span>
-            </button>
-          </div>
-        </div>
-        <div class="sentence-text-body">
-          ${sent.highlightedHtml || sent.text}
-        </div>
-        <div class="sentence-translation-wrapper" id="sent-trans-wrap-${sent.index}" style="display: ${showTrans ? 'block' : 'none'};">
-          <div class="sentence-translation-text" dir="${isRtl ? 'rtl' : 'ltr'}" id="sent-trans-text-${sent.index}">
-            ${transHtml}
-          </div>
-        </div>
-        <div class="sentence-active-indicator">
-          <div class="equalizer-bars">
-            <div class="equalizer-bar"></div>
-            <div class="equalizer-bar"></div>
-            <div class="equalizer-bar"></div>
-          </div>
-          <span>${t.nowPlaying}</span>
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-// In-Memory Mode Switching (Zero Network Latency)
-function switchTranscriptMode(mode) {
-  studioState.transcriptMode = mode;
-  const chunksBtn = document.getElementById('mode-btn-chunks');
-  const sentBtn = document.getElementById('mode-btn-sentences');
-  const chunksList = document.getElementById('subview-chunks-list');
-  const sentList = document.getElementById('subview-sentences-list');
-  const actionDeck = document.getElementById('driller-action-deck');
-  const transDeck = document.getElementById('translation-control-deck');
-
-  if (mode === 'chunks') {
-    if (chunksBtn) chunksBtn.classList.add('active');
-    if (sentBtn) sentBtn.classList.remove('active');
-    if (chunksList) {
-      chunksList.style.setProperty('display', 'flex', 'important');
-      chunksList.style.flexDirection = 'column';
-    }
-    if (sentList) sentList.style.setProperty('display', 'none', 'important');
-    if (actionDeck) actionDeck.style.setProperty('display', 'none', 'important');
-    if (transDeck) transDeck.style.setProperty('display', 'none', 'important');
-  } else {
-    if (sentBtn) sentBtn.classList.add('active');
-    if (chunksBtn) chunksBtn.classList.remove('active');
-    if (chunksList) chunksList.style.setProperty('display', 'none', 'important');
-    if (sentList) {
-      sentList.style.setProperty('display', 'flex', 'important');
-      sentList.style.flexDirection = 'column';
-    }
-    if (actionDeck) actionDeck.style.setProperty('display', 'flex', 'important');
-    if (transDeck) transDeck.style.setProperty('display', 'flex', 'important');
-  }
-}
-window.switchTranscriptMode = switchTranscriptMode;
-
-// Interactive Sentence Drill Player with Tuned Acoustic Tolerance Buffer (-0.05s lead-in, +0.02s tail)
-function playSentence(index) {
-  if (!studioState.item || !studioState.item.sentences) return;
-  const sent = studioState.item.sentences.find(s => s.index === index);
-  if (!sent) return;
-
-  if (studioState.transcriptMode !== 'sentences') {
-    switchTranscriptMode('sentences');
-  }
-
-  const leadIn = Math.max(0, Math.round((sent.startSec - 0.05) * 100) / 100);
-  studioState.activeSentence = sent;
-  studioState.seekTargetStart = leadIn;
-  studioState.seekTargetEnd = sent.endSec;
-  studioState.isSeeking = true;
-  studioState.hasPlayedFromStart = false;
-  studioState.seekRetried = false;
-  studioState.lastSeekTime = Date.now();
-
-  // Visual Card Glow & Auto-Scroll
-  document.querySelectorAll('.sentence-driller-card').forEach(c => c.classList.remove('active-drilling'));
-  const activeCard = document.getElementById(`sent-card-${index}`);
-  if (activeCard) {
-    activeCard.classList.add('active-drilling');
-    activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  // Millisecond-accurate seek & play with acoustic tolerance buffer
-  if (studioState.ytPlayer && studioState.ytPlayer.seekTo) {
-    studioState.ytPlayer.seekTo(leadIn, true);
-    applySpeedToPlayer(studioState.speed);
-    studioState.ytPlayer.playVideo();
-    startPlaybackTicker();
-  } else {
-    seekStudioVideo(leadIn);
-  }
-}
-window.playSentence = playSentence;
-
-// High-Frequency Sentence Playback Monitor (every 30ms)
-function startPlaybackTicker() {
-  stopPlaybackTicker();
-  studioState.playbackTicker = setInterval(checkSentenceDrillProgress, 30);
-}
-
-function stopPlaybackTicker() {
-  if (studioState.playbackTicker) {
-    clearInterval(studioState.playbackTicker);
-    studioState.playbackTicker = null;
-  }
-}
-
-function checkSentenceDrillProgress() {
-  if (studioState.transcriptMode !== 'sentences' || !studioState.activeSentence) return;
-  if (!studioState.ytPlayer || !studioState.ytPlayer.getCurrentTime) return;
-
-  const current = studioState.ytPlayer.getCurrentTime();
-  const active = studioState.activeSentence;
-  const targetStart = studioState.seekTargetStart ?? active.startSec;
-
-  // 1. Asynchronous seek gate: ensure video has genuinely arrived near targetStart before evaluating boundaries
-  if (studioState.isSeeking || !studioState.hasPlayedFromStart) {
-    const isAtStart = Math.abs(current - targetStart) <= 0.35;
-    const isPlayingFirstHalf = current >= targetStart && current < (targetStart + Math.max(0.6, (active.endSec - targetStart) * 0.45));
-
-    if (isAtStart || isPlayingFirstHalf) {
-      studioState.isSeeking = false;
-      studioState.hasPlayedFromStart = true;
-    } else {
-      // YouTube player has not arrived at targetStart yet. Never evaluate boundary completion!
-      if (Date.now() - (studioState.lastSeekTime || 0) > 1500 && !studioState.seekRetried) {
-        studioState.seekRetried = true;
-        studioState.ytPlayer.seekTo(targetStart, true);
-        studioState.ytPlayer.playVideo();
-      }
-      return;
-    }
-  }
-
-  // Cooldown right after seek lock release (250ms) to prevent boundary collision
-  if (Date.now() - (studioState.lastSeekTime || 0) < 250) return;
-
-  // 2. Safeguard: if hasPlayedFromStart is not true, never evaluate completion
-  if (!studioState.hasPlayedFromStart) return;
-
-  // 3. Audio boundary detection:
-  // Crisp +0.02s tail tolerance: gives full natural decay without ANY bleed into the next sentence
-  const stopThreshold = active.endSec + 0.02;
-  if (current < stopThreshold) {
-    return;
-  }
-
-  // 4. Sentence completion point reached: execute selected completion action
-  if (studioState.endAction === 'loop') {
-    // 🔁 Auto-Repeat Loop: rewind and replay THIS exact sentence with seek lock and lead-in tolerance
-    const leadIn = Math.max(0, Math.round((active.startSec - 0.05) * 100) / 100);
-    studioState.isSeeking = true;
-    studioState.hasPlayedFromStart = false;
-    studioState.seekRetried = false;
-    studioState.lastSeekTime = Date.now();
-    studioState.seekTargetStart = leadIn;
-    studioState.ytPlayer.seekTo(leadIn, true);
-    applySpeedToPlayer(studioState.speed);
-    studioState.ytPlayer.playVideo();
-  } else if (studioState.endAction === 'pause') {
-    // ⏸️ Stop & Shadow: pause cleanly at sentence end!
-    stopPlaybackTicker();
-    studioState.ytPlayer.pauseVideo();
-    studioState.isSeeking = false;
-    studioState.hasPlayedFromStart = false;
-  } else if (studioState.endAction === 'continuous') {
-    // ⏩ Continuous Play: advance to next sentence in sequential order
-    const nextIndex = active.index + 1;
-    const nextSent = (studioState.item.sentences || []).find(s => s.index === nextIndex);
-    if (nextSent) {
-      playSentence(nextIndex);
-    } else {
-      studioState.ytPlayer.pauseVideo();
-      stopPlaybackTicker();
-    }
-  }
-}
-window.checkSentenceDrillProgress = checkSentenceDrillProgress;
-
-// Playback Speed Engine (Single Slider: 0.25x to 2.0x, Step: 0.25x)
-function setStudioSpeed(val) {
-  const rawSpeed = Math.max(0.25, Math.min(2.0, parseFloat(val) || 1.0));
-  const steppedSpeed = Math.round(rawSpeed * 4) / 4;
-  studioState.speed = steppedSpeed;
-
-  const badge = document.getElementById('current-speed-badge');
-  if (badge) badge.textContent = `${steppedSpeed.toFixed(2)}x`;
-
-  const slider = document.getElementById('speed-slider');
-  if (slider) {
-    if (Math.abs(parseFloat(slider.value) - steppedSpeed) > 0.01) {
-      slider.value = steppedSpeed.toFixed(2);
-    }
-    const pct = ((steppedSpeed - 0.25) / (2.0 - 0.25)) * 100;
-    slider.style.background = `linear-gradient(to right, var(--primary) 0%, var(--primary) ${pct}%, var(--border-color) ${pct}%, var(--border-color) 100%)`;
-  }
-
-  // Update Ticks Active State
-  document.querySelectorAll('#speed-ticks-row .speed-tick').forEach(tick => {
-    const tSpeed = parseFloat(tick.dataset.speed);
-    tick.classList.toggle('active', Math.abs(tSpeed - steppedSpeed) < 0.02);
-  });
-
-  applySpeedToPlayer(steppedSpeed);
-}
-window.setStudioSpeed = setStudioSpeed;
-
-function applySpeedToPlayer(speed) {
-  if (studioState.ytPlayer && studioState.ytPlayer.setPlaybackRate) {
-    try {
-      studioState.ytPlayer.setPlaybackRate(speed);
-    } catch (e) {
-      console.warn('Playback rate adjustment notice:', e);
-    }
-  }
-}
-
-function seekStudioVideo(seconds) {
-  if (studioState.ytPlayer && studioState.ytPlayer.seekTo) {
-    studioState.ytPlayer.seekTo(seconds, true);
-    applySpeedToPlayer(studioState.speed);
-    studioState.ytPlayer.playVideo();
-  } else {
-    const iframe = document.getElementById('studio-video-frame');
-    const videoId = studioState.item && studioState.item.videoId;
-    if (iframe && videoId) {
-      if (iframe.contentWindow) {
-        try {
-          iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'seekTo', args: [seconds, true] }), '*');
-          iframe.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*');
-        } catch (e) {}
-      }
-      if (!iframe.src || !iframe.src.includes(videoId)) {
-        iframe.src = `https://www.youtube.com/embed/${videoId}?start=${Math.floor(seconds)}&autoplay=1&enablejsapi=1&rel=0`;
-      }
-      iframe.style.display = 'block';
-    }
-  }
-}
-window.seekStudioVideo = seekStudioVideo;
-
-function parseStudioSeconds(val) {
-  if (typeof val === 'number') return val;
-  if (!val) return 0;
-  if (typeof val === 'string') {
-    const parts = val.trim().split(':');
-    if (parts.length === 3) {
-      return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseFloat(parts[2]);
-    } else if (parts.length === 2) {
-      return parseInt(parts[0], 10) * 60 + parseFloat(parts[1]);
-    }
-    const num = parseFloat(val);
-    return isNaN(num) ? 0 : num;
-  }
-  return 0;
-}
-
-function showStudioToast(msg, type = 'info') {
-  let toast = document.getElementById('studio-toast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'studio-toast';
-    toast.className = 'studio-toast';
-    document.body.appendChild(toast);
-  }
-  toast.textContent = msg;
-  toast.className = `studio-toast visible toast-${type}`;
-  setTimeout(() => {
-    toast.classList.remove('visible');
-  }, 3500);
-}
-
-function formatStudioDuration(sec) {
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m}:${s < 10 ? '0' : ''}${s}`;
-}
-
-function goToDashboard() {
-  window.location.href = 'index.html';
-}
-window.goToDashboard = goToDashboard;
-
-function setupStudioEvents() {
-  // Theme Toggle
-  document.getElementById('studio-theme-btn').addEventListener('click', () => {
-    setStudioTheme(studioState.theme === 'dark' ? 'light' : 'dark');
-  });
-
-  // Lang Toggle
-  document.getElementById('studio-lang-btn').addEventListener('click', () => {
-    setStudioLanguage(studioState.lang === 'en' ? 'ar' : 'en');
-  });
-
-  // Tab Navigation
-  document.querySelectorAll('.canvas-tab-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      document.querySelectorAll('.canvas-tab-btn').forEach(b => b.classList.remove('active'));
-      const target = e.currentTarget;
-      target.classList.add('active');
-      const tab = target.dataset.tab;
-      studioState.activeTab = tab;
-
-      document.querySelectorAll('.canvas-view-panel').forEach(p => p.style.display = 'none');
-      const activePanel = document.getElementById(`view-${tab}`);
-      if (activePanel) activePanel.style.display = 'block';
-    });
-  });
-
-  // Speed Ticks Click Handlers
-  document.querySelectorAll('#speed-ticks-row .speed-tick').forEach(tick => {
-    tick.addEventListener('click', (e) => {
-      const speed = parseFloat(e.currentTarget.dataset.speed);
-      setStudioSpeed(speed);
-    });
-  });
-
-  // Single Speed Slider (0.25x step, 0.25x to 2.0x)
-  const speedSlider = document.getElementById('speed-slider');
-  if (speedSlider) {
-    speedSlider.addEventListener('input', (e) => {
-      const speed = parseFloat(e.target.value);
-      setStudioSpeed(speed);
-    });
-  }
-  setStudioSpeed(1.0);
-
-  // Sentence Driller Completion Action Selector
-  document.querySelectorAll('.action-pill-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      document.querySelectorAll('.action-pill-btn').forEach(b => b.classList.remove('active'));
-      const target = e.currentTarget;
-      target.classList.add('active');
-      studioState.endAction = target.dataset.action;
-    });
-  });
-
-  // Auto-Save Study Notes
-  const notesTextarea = document.getElementById('study-notes-textarea');
-  if (notesTextarea) {
-    notesTextarea.addEventListener('input', (e) => {
-      if (studioState.item) {
-        localStorage.setItem(`notes_${studioState.item.id}`, e.target.value);
-      }
-    });
-  }
-
-  // Export Obsidian Note (.md)
-  document.getElementById('download-obsidian-btn').addEventListener('click', () => {
-    if (!studioState.item) return;
-    const content = studioState.item.noteMarkdown || `# ${studioState.item.title}`;
-    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${studioState.item.title.replace(/[^\w\s-]/g, '').replace(/\s+/g, '_')}_Shadowing.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showStudioToast(STUDIO_I18N[studioState.lang].copiedAlert, 'success');
-  });
-
-  // Mark Drill Completed Button
-  const completeBtn = document.getElementById('complete-drill-btn');
-  if (completeBtn) {
-    completeBtn.addEventListener('click', async () => {
       if (!studioState.item) return;
-      const t = STUDIO_I18N[studioState.lang];
-      try {
-        const res = await fetch(`${API_BASE}/history/${studioState.item.id}/drill`, { method: 'POST' });
-        if (res.ok) {
-          const updated = await res.json();
-          studioState.item.completedDrills = updated.completedDrills;
-          const drillsBadge = document.getElementById('studio-drills-badge');
-          if (drillsBadge) drillsBadge.textContent = `${updated.completedDrills} ${t.drillsCompleted}`;
-          showStudioToast(t.drillCompletedToast, 'success');
+
+      const sentences = studioState.item.sentences || [];
+      const currIdx = studioState.activeSentence?.index || 1;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (studioState.isPlaying) {
+          pauseCurrentPlayback();
+        } else {
+          playSentence(currIdx, { preserveLoop: studioState.loopSentenceIndex === currIdx });
         }
-      } catch (e) {
-        showStudioToast('Could not record drill completion', 'error');
-      }
-    });
-  }
-
-  // Discard Take Button
-  const discardBtn = document.getElementById('discard-take-btn');
-  if (discardBtn) {
-    discardBtn.addEventListener('click', () => {
-      const previewBox = document.getElementById('studio-audio-preview');
-      const player = document.getElementById('studio-audio-player');
-      if (player) {
-        player.pause();
-        player.src = '';
-      }
-      if (previewBox) previewBox.style.display = 'none';
-      studioState.audioChunks = [];
-      const statusIndicator = document.getElementById('rec-status-indicator');
-      const t = STUDIO_I18N[studioState.lang];
-      if (statusIndicator) statusIndicator.textContent = t.recStatusReady;
-    });
-  }
-
-  // Microphone Audio Shadowing Recorder
-  const micBtn = document.getElementById('studio-mic-btn');
-  const previewBox = document.getElementById('studio-audio-preview');
-  const player = document.getElementById('studio-audio-player');
-  const statusIndicator = document.getElementById('rec-status-indicator');
-
-  micBtn.addEventListener('click', async () => {
-    const t = STUDIO_I18N[studioState.lang];
-    if (!studioState.isRecording) {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        studioState.mediaStream = stream;
-        studioState.mediaRecorder = new MediaRecorder(stream);
-        studioState.audioChunks = [];
-
-        studioState.mediaRecorder.ondataavailable = (e) => {
-          if (e.data.size > 0) studioState.audioChunks.push(e.data);
-        };
-
-        studioState.mediaRecorder.onstop = () => {
-          if (studioState.mediaStream) {
-            studioState.mediaStream.getTracks().forEach(track => track.stop());
-            studioState.mediaStream = null;
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (currIdx < sentences.length) playSentence(currIdx + 1);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (currIdx > 1) playSentence(currIdx - 1);
+      } else if (e.key === 'l' || e.key === 'L') {
+        e.preventDefault();
+        const nextLoop = studioState.loopSentenceIndex === currIdx ? null : currIdx;
+        setSentenceLoop(nextLoop);
+        if (nextLoop === currIdx) {
+          playSentence(currIdx, { preserveLoop: true });
+        }
+      } else if (e.key === 't' || e.key === 'T') {
+        if (studioState.mode === 'shadow') {
+          e.preventDefault();
+          const cb = document.getElementById('translation-toggle-checkbox');
+          if (cb) {
+            cb.checked = !cb.checked;
+            studioState.translationEnabled = cb.checked;
+            requestTranslations(false);
           }
-          const blob = new Blob(studioState.audioChunks, { type: 'audio/webm' });
-          player.src = URL.createObjectURL(blob);
-          previewBox.style.display = 'flex';
-          studioState.isRecording = false;
-          micBtn.classList.remove('recording');
-          document.getElementById('record-btn-text').textContent = t.startRecord;
-          if (statusIndicator) statusIndicator.textContent = t.recStatusSaved;
-        };
-
-        studioState.mediaRecorder.start();
-        studioState.isRecording = true;
-        micBtn.classList.add('recording');
-        document.getElementById('record-btn-text').textContent = t.stopRecord;
-        if (statusIndicator) statusIndicator.textContent = t.recStatusRecording;
-      } catch (err) {
-        showStudioToast('Microphone access is needed for recording: ' + err.message, 'error');
+        }
       }
-    } else {
-      if (studioState.mediaRecorder && studioState.mediaRecorder.state !== 'inactive') {
-        studioState.mediaRecorder.stop();
-      }
-    }
-  });
-
-  // Translation Master Switch & Selectors
-  initTranslationControls();
-}
-
-// =========================================================================
-// Real-World Vernacular Dialect Translation Controller
-// =========================================================================
-
-function initTranslationControls() {
-  const toggle = document.getElementById('translation-toggle-checkbox');
-  const selectorsGroup = document.getElementById('translation-selectors-group');
-  const langSelect = document.getElementById('trans-lang-select');
-  const dialectSelect = document.getElementById('trans-dialect-select');
-
-  // Load saved state or defaults: default Arabic is ar-EG, default English is en-US
-  const savedEnabled = localStorage.getItem('translation_enabled') === 'true';
-  const savedLang = localStorage.getItem('translation_lang') || 'ar';
-  const savedDialect = localStorage.getItem('translation_dialect') || (savedLang === 'ar' ? 'ar-EG' : 'en-US');
-
-  studioState.translationEnabled = savedEnabled;
-  studioState.translationLang = savedLang;
-  studioState.translationDialect = savedDialect;
-
-  if (toggle) {
-    toggle.checked = savedEnabled;
-    toggle.onchange = (e) => {
-      const enabled = e.target.checked;
-      studioState.translationEnabled = enabled;
-      localStorage.setItem('translation_enabled', enabled ? 'true' : 'false');
-
-      if (selectorsGroup) {
-        selectorsGroup.style.display = enabled ? 'flex' : 'none';
-      }
-
-      // Show/hide all translation wrappers on cards
-      document.querySelectorAll('.sentence-translation-wrapper').forEach(w => {
-        w.style.display = enabled ? 'block' : 'none';
-      });
-
-      if (enabled) {
-        fetchOrApplyTranslations(studioState.translationDialect);
-      }
-    };
-  }
-
-  if (selectorsGroup) {
-    selectorsGroup.style.display = savedEnabled ? 'flex' : 'none';
-  }
-
-  if (langSelect) {
-    langSelect.value = savedLang;
-    langSelect.onchange = (e) => {
-      const newLang = e.target.value;
-      studioState.translationLang = newLang;
-      localStorage.setItem('translation_lang', newLang);
-
-      // Default for Arabic is ar-EG (Egyptian); default for English is en-US (American)
-      const defaultDialect = newLang === 'ar' ? 'ar-EG' : 'en-US';
-      studioState.translationDialect = defaultDialect;
-      localStorage.setItem('translation_dialect', defaultDialect);
-
-      populateDialectDropdown(newLang, defaultDialect);
-      if (studioState.translationEnabled) {
-        fetchOrApplyTranslations(defaultDialect);
-      }
-    };
-  }
-
-  if (dialectSelect) {
-    populateDialectDropdown(savedLang, savedDialect);
-    dialectSelect.onchange = (e) => {
-      const newDialect = e.target.value;
-      studioState.translationDialect = newDialect;
-      localStorage.setItem('translation_dialect', newDialect);
-
-      if (studioState.translationEnabled) {
-        fetchOrApplyTranslations(newDialect);
-      }
-    };
-  }
-
-  if (savedEnabled) {
-    fetchOrApplyTranslations(savedDialect);
-  }
-}
-
-function populateDialectDropdown(lang, activeDialect) {
-  const dialectSelect = document.getElementById('trans-dialect-select');
-  if (!dialectSelect) return;
-
-  const dialects = VERNACULAR_DIALECTS[lang] || VERNACULAR_DIALECTS['ar'];
-  dialectSelect.innerHTML = dialects.map(d => {
-    const isAr = studioState.lang === 'ar';
-    const label = isAr ? `${d.flag} ${d.nameAr}` : `${d.flag} ${d.nameEn}`;
-    const selected = d.code === activeDialect ? 'selected' : '';
-    return `<option value="${d.code}" ${selected}>${label}</option>`;
-  }).join('');
-}
-
-async function fetchOrApplyTranslations(dialect, forceRefresh = false) {
-  if (!studioState.item) return;
-
-  studioState.translationReqId = (studioState.translationReqId || 0) + 1;
-  const thisReqId = studioState.translationReqId;
-
-  const statusText = document.getElementById('translation-status-text');
-  const t = STUDIO_I18N[studioState.lang];
-
-  const langKey = dialect.startsWith('ar') ? 'ar' : 'en';
-  const dialectObj = (VERNACULAR_DIALECTS[langKey] || []).find(d => d.code === dialect);
-  const dialectName = dialectObj ? (studioState.lang === 'ar' ? dialectObj.nameAr.split('(')[0].trim() : dialectObj.nameEn) : dialect;
-  const flag = dialectObj ? dialectObj.flag : '🌐';
-
-  // 1. Instant cache hit from session data
-  const itemCache = studioState.item.translationsCache && studioState.item.translationsCache[dialect];
-  if (itemCache && !forceRefresh) {
-    studioState.activeTranslations = itemCache;
-    applyTranslationsToDOM(itemCache, dialect);
-    if (statusText) {
-      statusText.innerHTML = `${t.transStatusReady} (${dialectName} ${flag})`;
-    }
-    return;
-  }
-
-  // 2. Fetch from AI Agent backend
-  if (statusText) {
-    statusText.innerHTML = `${t.transStatusLoading} (${flag})`;
-  }
-
-  // Show unobtrusive shimmers in cards while loading
-  document.querySelectorAll('.sentence-translation-text').forEach(elem => {
-    elem.innerHTML = `<span class="translation-shimmer">...</span>`;
-  });
-
-  try {
-    const res = await fetch(`${API_BASE}/tracks/shadowing/translate-sentences`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        historyId: studioState.item.id,
-        language: langKey,
-        dialect: dialect
-      })
     });
 
-    const data = await res.json();
-
-    // Guard against race conditions from rapid dialect switching
-    if (thisReqId !== studioState.translationReqId) {
-      return;
-    }
-
-    if (data.success && data.translations) {
-      if (!studioState.item.translationsCache) {
-        studioState.item.translationsCache = {};
+    window.addEventListener('beforeunload', () => {
+      if (studioState.mediaRecorder && studioState.mediaRecorder.state === 'recording') {
+        try {
+          studioState.mediaRecorder.stop();
+        } catch {}
       }
-      studioState.item.translationsCache[dialect] = data.translations;
-      studioState.activeTranslations = data.translations;
-      applyTranslationsToDOM(data.translations, dialect);
-
-      if (statusText) {
-        statusText.innerHTML = `${t.transStatusReady} (${dialectName} ${flag})`;
+      if (studioState.recordedAudioUrl) {
+        URL.revokeObjectURL(studioState.recordedAudioUrl);
       }
-    }
-  } catch (err) {
-    if (thisReqId !== studioState.translationReqId) return;
-    console.warn('Failed to fetch vernacular dialect translations:', err);
-    if (statusText) statusText.textContent = 'Translation unavailable';
+    });
   }
-}
 
-function applyTranslationsToDOM(translations, dialect) {
-  const isRtl = dialect.startsWith('ar');
-  (studioState.item.sentences || []).forEach(sent => {
-    const textElem = document.getElementById(`sent-trans-text-${sent.index}`);
-    if (textElem) {
-      textElem.setAttribute('dir', isRtl ? 'rtl' : 'ltr');
-      const text = translations[sent.index] || translations[`sent-${sent.index}`] || translations[String(sent.index)] || '';
-      textElem.innerHTML = text.includes('<bdi') ? text : `<bdi>${text}</bdi>`;
-    }
+  /* Bootstrap */
+  document.addEventListener('DOMContentLoaded', () => {
+    applyTheme(studioState.theme);
+    applyUiLanguage(studioState.uiLang);
+    setStudioLayout(studioState.layout === 'top' ? 'top' : 'side');
+    bindEvents();
+    loadLanguagesCatalog();
+    loadStudioSession();
   });
-}
+})();

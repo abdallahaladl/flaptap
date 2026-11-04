@@ -1,0 +1,38 @@
+# =============================================================================
+# Flaptap AI — Production Reverse Proxy Configuration (Caddy)
+# Automatic HTTPS via Let's Encrypt / ZeroSSL, HTTP/3, and Brotli/Zstd compression
+# =============================================================================
+{$DOMAIN:localhost} {
+    encode zstd gzip
+
+    # Static assets caching optimization
+    @static {
+        path /styles.css /studio.css /app.js /studio.js *.svg *.png *.ico *.woff2
+    }
+    header @static {
+        Cache-Control "public, max-age=86400, stale-while-revalidate=604800"
+    }
+
+    # Forward all traffic to the Flaptap container
+    reverse_proxy flaptap:3333 {
+        header_up Host {host}
+        header_up X-Real-IP {remote_host}
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+    }
+
+    # Hardened security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "SAMEORIGIN"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(self), geolocation=()"
+    }
+
+    log {
+        output stdout
+        format console
+        level INFO
+    }
+}

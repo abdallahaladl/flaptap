@@ -1,98 +1,817 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="dark">
+<html lang="en" dir="ltr" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flaptap AI - Professional American Accent & Shadowing Studio</title>
-  <link rel="stylesheet" href="styles.css?v=2.4">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎙️</text></svg>">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Flaptap — Spoken English Studio</title>
+  <meta name="description" content="Master spoken English from real videos, interactive dialogues, and articulatory workouts with millisecond precision." />
+  <meta name="theme-color" content="#141413" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Flaptap — Spoken English Studio" />
+  <meta property="og:description" content="Master spoken English from real videos, interactive dialogues, and articulatory workouts with millisecond precision." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Flaptap — Spoken English Studio" />
+  <meta name="twitter:description" content="Master spoken English from real videos, interactive dialogues, and articulatory workouts with millisecond precision." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="manifest" href="/manifest.json" />
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem('flaptap_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var lang = localStorage.getItem('flaptap_ui_lang') || 'en';
+        document.documentElement.setAttribute('lang', lang);
+        document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+        if (!localStorage.getItem('flaptap_guest_token')) {
+          var rand = 'guest_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+          localStorage.setItem('flaptap_guest_token', rand);
+        }
+      } catch (e) {}
+    })();
+  </script>
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- Editorial Masthead Navbar -->
+  <header class="navbar" role="banner">
+    <div class="navbar-inner">
+      <a href="/" class="brand-link" aria-label="Flaptap Home">
+        <span class="brand-mark" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+          </svg>
+        </span>
+        <span class="brand-wordmark">Flaptap</span>
+        <span class="brand-edition" data-i18n="brandEdition">Spoken English Studio</span>
+      </a>
 
-  <!-- Top Navigation -->
-  <header class="navbar">
-    <div class="brand">
-      <span style="font-size: 1.6rem;">🎙️</span>
-      <div>
-        <div id="brand-title" style="line-height: 1.2;">Flaptap AI</div>
-        <div id="brand-subtitle" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">American Accent & Cadence Studio</div>
-      </div>
-      <span class="brand-badge">Agentic OS</span>
-    </div>
+      <nav class="primary-nav" role="tablist" aria-label="Workspace Sections">
+        <button type="button" class="nav-tab active" data-section="lessons" role="tab" aria-selected="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span data-i18n="navLessons">Lessons</span>
+        </button>
+        <button type="button" class="nav-tab" data-section="dialogue" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+          <span data-i18n="navDialogue">Dialogue</span>
+        </button>
+        <button type="button" class="nav-tab" data-section="pronunciation" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" x2="12" y1="19" y2="22"></line>
+          </svg>
+          <span data-i18n="navPronunciation">Pronunciation</span>
+        </button>
+        <button type="button" class="nav-tab" data-section="vocabulary" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+          </svg>
+          <span data-i18n="navVocabulary">Vocabulary</span>
+          <span class="nav-count-pill" id="nav-vocab-badge" hidden>0</span>
+        </button>
+        <button type="button" class="nav-tab" data-section="history" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+            <path d="M3 3v5h5"></path>
+            <path d="M12 7v5l4 2"></path>
+          </svg>
+          <span data-i18n="navHistory">History &amp; Usage</span>
+        </button>
+      </nav>
 
-    <div class="nav-controls">
-      <!-- Agent Selector Pill -->
-      <div class="agent-select-wrapper">
-        <div class="status-dot"></div>
-        <select id="agent-select" style="background: transparent; border: none; color: inherit; font-family: inherit; font-size: inherit; font-weight: 600; outline: none; cursor: pointer;">
-          <option value="antigravity">Google Antigravity 2.0 (Model: 3.8 Flash High)</option>
-          <option value="claude_code">Anthropic Claude Code</option>
-          <option value="codex">OpenAI Codex / GPT-4o</option>
-          <option value="opencode">OpenCode / Local Llama</option>
+      <div class="navbar-actions">
+        <div class="streak-pill" id="header-streak-pill" title="Practice streak">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+          </svg>
+          <span><strong class="ltr-num" id="header-streak-count">0</strong> <span data-i18n="streakUnit">day streak</span></span>
+        </div>
+
+        <select id="ui-lang-select" class="ui-lang-select" aria-label="Interface language">
+          <option value="en">EN</option>
+          <option value="ar">AR</option>
+          <option value="es">ES</option>
+          <option value="fr">FR</option>
+          <option value="de">DE</option>
+          <option value="tr">TR</option>
         </select>
+
+        <button type="button" class="icon-btn" id="theme-toggle-btn" aria-label="Toggle color theme" title="Switch Light / Dark mode">
+          <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" hidden>
+            <circle cx="12" cy="12" r="4"></circle>
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+          </svg>
+          <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+          </svg>
+        </button>
+
+        <button type="button" class="account-btn" id="open-account-btn">
+          <svg id="account-guest-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+          <img id="account-avatar-img" class="account-avatar-img" alt="" hidden />
+          <span class="account-avatar" id="account-avatar" hidden>A</span>
+          <span id="account-btn-label" data-i18n="signIn">Sign in</span>
+        </button>
       </div>
-
-      <!-- Theme Switcher -->
-      <button class="btn-icon" id="theme-toggle-btn" title="Toggle Dark/Light Mode">
-        <span id="theme-toggle-icon">☀️</span>
-      </button>
-
-      <!-- Language Switcher (EN / AR) -->
-      <button class="btn-sm" id="lang-toggle-btn" style="font-weight: 700; border-radius: var(--radius-md);">
-        العربية
-      </button>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="container">
+  <main class="workspace-main">
+    <!-- SECTION 1: VIDEO LESSONS & LIBRARY -->
+    <section id="section-lessons">
+      <div class="editorial-desk">
+        <div class="desk-kicker">
+          <span class="desk-kicker-mark"></span>
+          <span data-i18n="heroKicker">Spoken English Studio</span>
+        </div>
+        <h1 class="desk-headline" data-i18n="heroHeadline">
+          Turn any English video into a <span class="vox-underline">precision speaking lesson</span>.
+        </h1>
+        <p class="desk-subcopy" data-i18n="heroSubcopy">
+          Paste a YouTube link to train complete sentences, editorial paragraphs, active dictation, and connected-speech coaching at exact word timestamps.
+        </p>
 
-    <!-- Modular Tracks (Isolation Architecture) -->
-    <nav class="track-tabs">
-      <button class="tab-btn active" id="tab-shadowing" data-track="shadowing">🎙️ YouTube Shadowing</button>
-      <button class="tab-btn" id="tab-street-talk" data-track="street_talk">🔥 Street Talk & Slang</button>
-      <button class="tab-btn" id="tab-phonetics" data-track="phonetics">⚡ Flap-T & Phonetic Lab</button>
-      <button class="tab-btn" id="tab-history" data-track="all">📜 Practice History</button>
-    </nav>
+        <form class="command-form" id="video-lesson-form" novalidate>
+          <div class="command-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+            </svg>
+            <input
+              type="url"
+              id="youtube-url-input"
+              class="command-input"
+              placeholder="Paste a YouTube video link..."
+              data-i18n-placeholder="urlPlaceholder"
+              autocomplete="off"
+              spellcheck="false"
+              required
+            />
+          </div>
+          <button type="submit" class="btn-vox" id="start-lesson-btn">
+            <span data-i18n="startLessonBtn">Start Lesson</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+              <polyline points="12 5 19 12 12 19"></polyline>
+            </svg>
+          </button>
+        </form>
 
-    <!-- Hero Card & YouTube Link Input -->
-    <section class="hero-card">
-      <h1 class="hero-title" id="hero-title">Shadow Authentic American Cadence</h1>
-      <p class="hero-subtitle" id="hero-subtitle">Paste any YouTube video link. The AI agent extracts verbatim speech, fixes transcription errors, and highlights slang, idioms, and connected speech.</p>
+        <!-- Instant Cache Detection & Cache Bypass Bar (For Signed-In Users) -->
+        <div id="url-cache-banner" class="url-cache-banner" hidden>
+          <div class="url-cache-info">
+            <span class="cache-hit-badge" data-i18n="cachedBadge">Cached</span>
+            <span id="url-cache-title" class="url-cache-title"></span>
+            <span id="url-cache-pills" class="url-cache-pills"></span>
+          </div>
+          <div class="url-cache-actions">
+            <button type="button" class="btn-secondary btn-xs" id="open-cached-lesson-btn" data-i18n="openCachedBtn">Open Cached (0ms)</button>
+            <label class="force-refresh-toggle">
+              <input type="checkbox" id="force-reextract-checkbox" />
+              <span data-i18n="bypassCacheLabel">Bypass cache &amp; re-extract</span>
+            </label>
+          </div>
+        </div>
 
-      <div class="input-group">
-        <input type="url" id="url-input" class="input-field" placeholder="Enter YouTube video URL (e.g. https://www.youtube.com/watch?v=...)" value="" autocomplete="off" />
-        <button id="process-btn" class="btn-primary">
-          <span>⚡</span>
-          <span id="process-btn-text">Process Video with Agent</span>
-        </button>
+        <div class="desk-capabilities">
+          <span class="capability-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span data-i18n="capFullSentences">Complete sentence boundaries</span>
+          </span>
+          <span class="capability-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span data-i18n="capModes">Shadow, Read, Listen &amp; Coach modes</span>
+          </span>
+          <span class="capability-item">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span data-i18n="capLanguages">170+ translation languages</span>
+          </span>
+        </div>
       </div>
 
-      <!-- Preset Quick Chips (Rendered dynamically per active track) -->
-      <div class="presets-container" style="display: none;"></div>
+      <!-- Practice Telemetry Ledger -->
+      <div class="telemetry-strip" aria-label="Practice overview">
+        <div class="telemetry-cell">
+          <span class="telemetry-label" data-i18n="statLessons">Lessons in Library</span>
+          <span class="telemetry-value ltr-num" id="stat-lessons-count">0</span>
+        </div>
+        <div class="telemetry-cell">
+          <span class="telemetry-label" data-i18n="statDrills">Sessions Completed</span>
+          <span class="telemetry-value ltr-num" id="stat-drills-count">0</span>
+        </div>
+        <div class="telemetry-cell">
+          <span class="telemetry-label" data-i18n="statVocab">Saved Vocabulary</span>
+          <span class="telemetry-value ltr-num" id="stat-vocab-count">0</span>
+        </div>
+        <div class="telemetry-cell">
+          <span class="telemetry-label" data-i18n="statMinutes">Practice Minutes</span>
+          <span class="telemetry-value ltr-num" id="stat-minutes-count">0</span>
+        </div>
+      </div>
+
+      <!-- Lesson Library -->
+      <div class="library-header">
+        <div class="library-title-group">
+          <h2 class="section-heading" data-i18n="libraryHeading">Lesson Library</h2>
+          <span class="section-count ltr-num" id="library-count-label">0</span>
+        </div>
+
+        <div class="library-controls">
+          <div class="filter-pills" role="tablist" aria-label="Filter library">
+            <button type="button" class="filter-pill active" data-filter="all" aria-selected="true" data-i18n="filterAll">All</button>
+            <button type="button" class="filter-pill" data-filter="shadowing" aria-selected="false" data-i18n="filterVideos">Videos</button>
+            <button type="button" class="filter-pill" data-filter="street_talk" aria-selected="false" data-i18n="filterDialogues">Dialogues</button>
+            <button type="button" class="filter-pill" data-filter="phonetics" aria-selected="false" data-i18n="filterPronunciation">Pronunciation</button>
+          </div>
+
+          <label class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input
+              type="search"
+              id="library-search-input"
+              placeholder="Search lessons..."
+              data-i18n-placeholder="searchLessonsPlaceholder"
+            />
+          </label>
+
+          <button type="button" class="btn-secondary btn-xs" id="manage-history-jump-btn">
+            <span data-i18n="manageHistoryCacheBtn">History &amp; Cache</span>
+          </button>
+
+          <button type="button" class="btn-danger-ghost" id="clear-library-btn" hidden>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <span data-i18n="clearLibraryBtn">Clear Library</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="history-grid" class="history-grid"></div>
+      <div id="library-empty-state" class="empty-ledger" hidden>
+        <h3 data-i18n="emptyLibraryTitle">Your library is ready</h3>
+        <p data-i18n="emptyLibraryDesc">Paste any YouTube video link above, or generate a custom dialogue or pronunciation workout to begin.</p>
+      </div>
+      <div id="library-auth-gate-card" class="signed-out-gate-card" hidden>
+        <div class="gate-card-kicker" data-i18n="authRequiredKicker">Account Required</div>
+        <h3 data-i18n="gateLibraryTitle">Sign in to build and access your personal lesson library</h3>
+        <p data-i18n="gateLibraryDesc">Explore any tool above—when you start a video lesson, dialogue, or pronunciation workout, we will ask you to sign in or create an account so all progress, caches, and notes stay synced to you.</p>
+        <div class="gate-card-actions">
+          <button type="button" class="btn-vox" data-open-auth="login" data-i18n="signInToContinue">Sign in to continue</button>
+          <button type="button" class="btn-secondary" data-open-auth="register" data-i18n="createFreeAccount">Create account</button>
+        </div>
+      </div>
     </section>
 
-    <!-- User Activity History (Pro Website Grid) -->
-    <section>
-      <div class="section-header">
-        <h2 class="section-title">
-          <span>📜</span>
-          <span id="history-section-title">Your Practice History & Shadowing Sessions</span>
-        </h2>
-        <button id="reset-history-btn" class="btn-sm" style="color: #EF4444; border-color: rgba(239, 68, 68, 0.4); display: flex; align-items: center; gap: 6px; font-weight: 700;">
-          <span>🗑️</span>
-          <span id="reset-history-text">Clear History</span>
-        </button>
-      </div>
+    <!-- SECTION 2: CUSTOM DIALOGUE GENERATOR -->
+    <section id="section-dialogue" hidden>
+      <div class="editorial-desk">
+        <div class="desk-kicker">
+          <span class="desk-kicker-mark"></span>
+          <span data-i18n="dialogueKicker">Real-World Spoken Dialogue</span>
+        </div>
+        <h1 class="desk-headline" data-i18n="dialogueHeadline">
+          Practice authentic <span class="vox-underline">conversational English</span> for any situation.
+        </h1>
+        <p class="desk-subcopy" data-i18n="dialogueSubcopy">
+          Describe a situation—such as defending a technical architecture decision, negotiating a contract, or catching up at a coffee shop—and open a complete spoken lesson with connected speech, idioms, and audio playback.
+        </p>
 
-      <!-- Cards Grid -->
-      <div id="history-container" class="history-grid">
-        <!-- Rendered dynamically by app.js -->
+        <form class="command-form" id="dialogue-form" novalidate>
+          <div class="command-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <input
+              type="text"
+              id="dialogue-scenario-input"
+              class="command-input"
+              placeholder="Describe the conversation scenario you want to practice..."
+              data-i18n-placeholder="dialoguePlaceholder"
+              autocomplete="off"
+              required
+            />
+          </div>
+          <button type="submit" class="btn-vox" id="generate-dialogue-btn">
+            <span data-i18n="createDialogueBtn">Create Dialogue</span>
+          </button>
+        </form>
       </div>
     </section>
 
+    <!-- SECTION 3: CUSTOM PRONUNCIATION WORKOUT GENERATOR -->
+    <section id="section-pronunciation" hidden>
+      <div class="editorial-desk">
+        <div class="desk-kicker">
+          <span class="desk-kicker-mark"></span>
+          <span data-i18n="pronKicker">Articulatory Mechanics &amp; Prosody</span>
+        </div>
+        <h1 class="desk-headline" data-i18n="pronHeadline">
+          Train physical <span class="vox-underline">mouth mechanics, linking, and rhythm</span>.
+        </h1>
+        <p class="desk-subcopy" data-i18n="pronSubcopy">
+          Specify any phonetic target—such as alveolar Flap-T between vowels, rhotic R coloring, consonant-to-vowel linking, or unstressed schwa reduction—to generate a targeted spoken workout with IPA and jaw/tongue cues.
+        </p>
+
+        <form class="command-form" id="pronunciation-form" novalidate>
+          <div class="command-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" x2="12" y1="19" y2="22"></line>
+            </svg>
+            <input
+              type="text"
+              id="pronunciation-topic-input"
+              class="command-input"
+              placeholder="Enter a sound, rhythm, or connected-speech target..."
+              data-i18n-placeholder="pronPlaceholder"
+              autocomplete="off"
+              required
+            />
+          </div>
+          <button type="submit" class="btn-vox" id="generate-pronunciation-btn">
+            <span data-i18n="createWorkoutBtn">Build Workout</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- SECTION 4: VOCABULARY VAULT & FLASHCARDS -->
+    <section id="section-vocabulary" hidden>
+      <div class="vocab-section-header">
+        <div>
+          <div class="desk-kicker">
+            <span class="desk-kicker-mark"></span>
+            <span data-i18n="vocabKicker">Spaced Active Recall</span>
+          </div>
+          <h1 class="section-heading" style="font-size: 1.85rem;" data-i18n="vocabHeading">Vocabulary Vault</h1>
+        </div>
+
+        <div class="library-controls">
+          <div class="filter-pills" role="tablist">
+            <button type="button" class="filter-pill active" data-vocab-filter="all" aria-selected="true" data-i18n="vocabFilterAll">All</button>
+            <button type="button" class="filter-pill" data-vocab-filter="due" aria-selected="false" data-i18n="vocabFilterDue">Due for Review</button>
+            <button type="button" class="filter-pill" data-vocab-filter="mastered" aria-selected="false" data-i18n="vocabFilterMastered">Mastered</button>
+          </div>
+
+          <label class="search-box">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="search" id="vocab-search-input" placeholder="Search saved words..." data-i18n-placeholder="vocabSearchPlaceholder" />
+          </label>
+
+          <button type="button" class="btn-vox" style="height: 36px; padding: 0 14px; font-size: 0.83rem;" id="toggle-flashcards-btn" aria-expanded="false">
+            <span data-i18n="practiceFlashcardsBtn">Practice Flashcards</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Interactive Flashcard Stage -->
+      <div id="flashcard-stage" class="flashcard-stage" hidden>
+        <div class="flashcard-topbar">
+          <span id="flashcard-progress-text" class="ltr-num">Card 1 / 1</span>
+          <button type="button" class="btn-secondary" style="height: 28px; padding: 0 10px; font-size: 0.76rem;" id="close-flashcards-btn" data-i18n="closeBtn">Close</button>
+        </div>
+        <div class="flashcard-card" id="flashcard-card" tabindex="0" role="button" aria-label="Flip flashcard">
+          <div class="flashcard-term" id="fc-term"></div>
+          <div class="flashcard-ipa ltr-num" id="fc-ipa"></div>
+          <div class="flashcard-context" id="fc-context"></div>
+          <div class="flashcard-answer" id="fc-answer" hidden>
+            <div class="flashcard-def" id="fc-def"></div>
+            <div class="flashcard-trans" id="fc-trans"></div>
+          </div>
+          <div id="fc-flip-hint" style="margin-top: 14px; font-size: 0.78rem; color: var(--ink-muted);" data-i18n="clickToReveal">Click to reveal meaning</div>
+        </div>
+        <div class="flashcard-actions" id="fc-rating-actions" hidden>
+          <button type="button" class="srs-btn" data-srs="again" data-i18n="srsAgain">Review Soon</button>
+          <button type="button" class="srs-btn" data-srs="good" data-i18n="srsGood">Got It</button>
+          <button type="button" class="srs-btn easy" data-srs="easy" data-i18n="srsEasy">Easy</button>
+        </div>
+      </div>
+
+      <div id="vocab-grid" class="vocab-grid"></div>
+      <div id="vocab-empty-state" class="empty-ledger" hidden>
+        <h3 data-i18n="emptyVocabTitle">No saved words yet</h3>
+        <p data-i18n="emptyVocabDesc">Click any word while studying a lesson or save expressions from the Coach tab to build your personal vocabulary deck.</p>
+      </div>
+      <div id="vocab-auth-gate-card" class="signed-out-gate-card" hidden>
+        <div class="gate-card-kicker" data-i18n="authRequiredKicker">Account Required</div>
+        <h3 data-i18n="gateVocabTitle">Sign in to unlock your Vocabulary Vault &amp; Spaced Flashcards</h3>
+        <p data-i18n="gateVocabDesc">Save contextual definitions, connected-speech expressions, and IPA pronunciations while studying—then review them with active-recall flashcards.</p>
+        <div class="gate-card-actions">
+          <button type="button" class="btn-vox" data-open-auth="login" data-i18n="signInToContinue">Sign in to continue</button>
+          <button type="button" class="btn-secondary" data-open-auth="register" data-i18n="createFreeAccount">Create account</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 5: FULL HISTORY, CACHING & USAGE CONTROL CENTER -->
+    <section id="section-history" hidden>
+      <div class="vocab-section-header">
+        <div>
+          <div class="desk-kicker">
+            <span class="desk-kicker-mark"></span>
+            <span data-i18n="historyKicker">Usage, Storage &amp; Cache Control</span>
+          </div>
+          <h1 class="section-heading" style="font-size: 1.85rem;" data-i18n="historyHeading">History, Caching &amp; Usage</h1>
+        </div>
+
+        <div class="library-controls">
+          <button type="button" class="btn-secondary" id="refresh-usage-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
+              <path d="M16 16h5v5"></path>
+            </svg>
+            <span data-i18n="refreshBtn">Refresh</span>
+          </button>
+          <button type="button" class="btn-vox" style="height: 36px; padding: 0 14px; font-size: 0.83rem;" id="export-account-json-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="7 10 12 15 17 10"></polyline>
+              <line x1="12" y1="15" x2="12" y2="3"></line>
+            </svg>
+            <span data-i18n="exportBackupBtn">Export Full Backup (.json)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Signed-out Gate Card for History & Usage (Actions above remain clickable and prompt Sign-In) -->
+      <div id="history-auth-gate-card" class="signed-out-gate-card" hidden>
+        <div class="gate-card-kicker" data-i18n="authRequiredKicker">Account Required</div>
+        <h3 data-i18n="gateHistoryTitle">Sign in to inspect and control your full usage, lesson caches, and activity history</h3>
+        <p data-i18n="gateHistoryDesc">Every transcript, AI Coach analysis, world-language translation cache, study note, and practice session is isolated strictly to your account with one-click cache and export controls.</p>
+        <div class="gate-card-actions">
+          <button type="button" class="btn-vox" data-open-auth="login" data-i18n="signInToContinue">Sign in to continue</button>
+          <button type="button" class="btn-secondary" data-open-auth="register" data-i18n="createFreeAccount">Create account</button>
+        </div>
+      </div>
+
+      <!-- Authenticated History, Cache & Usage Dashboard -->
+      <div id="history-authenticated-content">
+        <!-- Row 1: Daily Goal + Usage Breakdown + Storage & Cache Footprint -->
+        <div class="usage-overview-grid">
+          <!-- Card 1: Daily Goal & Practice Streak -->
+          <div class="usage-card">
+            <div class="usage-card-head">
+              <span class="telemetry-label" data-i18n="dailyGoalCardTitle">Daily Practice Goal</span>
+              <span class="cache-pill active ltr-num" id="usage-goal-badge">0 / 15 min</span>
+            </div>
+            <div class="goal-progress-track" aria-label="Daily practice progress">
+              <div class="goal-progress-fill" id="usage-goal-bar" style="width: 0%;"></div>
+            </div>
+            <div class="usage-kv-list">
+              <div class="usage-kv">
+                <span data-i18n="todayPracticeLabel">Today's Practice</span>
+                <strong class="ltr-num" id="usage-today-min">0 min</strong>
+              </div>
+              <div class="usage-kv">
+                <span data-i18n="totalPracticeLabel">Total Practice Time</span>
+                <strong class="ltr-num" id="usage-total-min">0 min</strong>
+              </div>
+              <div class="usage-kv">
+                <span data-i18n="currentStreakLabel">Current Streak</span>
+                <strong class="ltr-num" id="usage-streak-days">0 days</strong>
+              </div>
+            </div>
+            <div class="quick-goal-row">
+              <span class="field-label" data-i18n="quickGoalLabel">Target:</span>
+              <div class="filter-pills" id="quick-goal-pills">
+                <button type="button" class="filter-pill" data-goal-min="10">10m</button>
+                <button type="button" class="filter-pill active" data-goal-min="15">15m</button>
+                <button type="button" class="filter-pill" data-goal-min="30">30m</button>
+                <button type="button" class="filter-pill" data-goal-min="45">45m</button>
+                <button type="button" class="filter-pill" data-goal-min="60">60m</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Lessons & Vocabulary Breakdown -->
+          <div class="usage-card">
+            <div class="usage-card-head">
+              <span class="telemetry-label" data-i18n="libraryBreakdownTitle">Library &amp; Recall Breakdown</span>
+              <span class="section-count ltr-num" id="usage-total-lessons-pill">0 lessons</span>
+            </div>
+            <div class="usage-kv-list">
+              <div class="usage-kv">
+                <span data-i18n="filterVideos">Videos</span>
+                <strong class="ltr-num" id="usage-track-videos">0</strong>
+              </div>
+              <div class="usage-kv">
+                <span data-i18n="filterDialogues">Dialogues</span>
+                <strong class="ltr-num" id="usage-track-dialogues">0</strong>
+              </div>
+              <div class="usage-kv">
+                <span data-i18n="filterPronunciation">Pronunciation</span>
+                <strong class="ltr-num" id="usage-track-pron">0</strong>
+              </div>
+              <div class="usage-kv">
+                <span data-i18n="vocabDueMasteredLabel">Vocabulary (Due / Mastered / Total)</span>
+                <strong class="ltr-num" id="usage-vocab-breakdown">0 / 0 / 0</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Cache & Storage Footprint + Granular Global Cache Controls -->
+          <div class="usage-card">
+            <div class="usage-card-head">
+              <span class="telemetry-label" data-i18n="cacheStorageTitle">Cache &amp; Storage Footprint</span>
+              <span class="cache-pill ltr-num" id="usage-total-storage">0 KB</span>
+            </div>
+            <div class="usage-kv-list">
+              <div class="usage-kv">
+                <span data-i18n="transcriptCachesLabel">Raw Video Transcript Caches</span>
+                <strong class="ltr-num" id="usage-transcript-caches">0 (0 KB)</strong>
+              </div>
+              <div class="usage-kv">
+                <span data-i18n="aiCoachCachesLabel">Cached AI Coach Analyses</span>
+                <strong class="ltr-num" id="usage-coach-caches">0 lessons</strong>
+              </div>
+              <div class="usage-kv">
+                <span data-i18n="translationCachesLabel">Cached World Translations</span>
+                <strong class="ltr-num" id="usage-translation-caches">0 langs</strong>
+              </div>
+              <div class="usage-kv">
+                <span data-i18n="studyNotesSavedLabel">Lessons with Study Notes</span>
+                <strong class="ltr-num" id="usage-notes-count">0</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Global Cache & Data Control Strip -->
+        <div class="cache-command-bar" aria-label="Global cache and data controls">
+          <div class="cache-command-info">
+            <strong data-i18n="cacheControlsHeading">Global Cache &amp; Data Controls</strong>
+            <span data-i18n="cacheControlsDesc">Clear cached AI layers to force fresh generation without losing your lessons or notes, or wipe specific datasets.</span>
+          </div>
+          <div class="cache-command-buttons">
+            <button type="button" class="btn-secondary btn-xs" data-clear-global-cache="translations" data-i18n="clearTransCacheBtn">Clear Translation Caches</button>
+            <button type="button" class="btn-secondary btn-xs" data-clear-global-cache="coach" data-i18n="clearCoachCacheBtn">Clear AI Coach Caches</button>
+            <button type="button" class="btn-secondary btn-xs" data-clear-global-cache="transcripts" data-i18n="clearTranscriptCacheBtn">Clear Transcript Caches</button>
+            <button type="button" class="btn-secondary btn-xs" data-clear-global-cache="all" data-i18n="clearAllCachesBtn">Clear All Caches</button>
+            <button type="button" class="btn-danger-ghost btn-xs" id="clear-all-vocab-btn" data-i18n="clearVocabVaultBtn">Clear Vocabulary</button>
+            <button type="button" class="btn-danger-ghost btn-xs" id="clear-entire-history-btn" data-i18n="clearEntireHistoryBtn">Delete All Lessons</button>
+          </div>
+        </div>
+
+        <!-- Full Lesson History & Per-Lesson Cache Ledger -->
+        <div class="ledger-panel">
+          <div class="library-header" style="margin-bottom: 14px;">
+            <div class="library-title-group">
+              <h2 class="section-heading" data-i18n="historyLedgerHeading">Lesson History &amp; Per-Item Cache Manager</h2>
+              <span class="section-count ltr-num" id="ledger-count-label">0</span>
+            </div>
+
+            <div class="library-controls">
+              <div class="filter-pills" role="tablist">
+                <button type="button" class="filter-pill active" data-ledger-track="all" aria-selected="true" data-i18n="filterAll">All</button>
+                <button type="button" class="filter-pill" data-ledger-track="shadowing" aria-selected="false" data-i18n="filterVideos">Videos</button>
+                <button type="button" class="filter-pill" data-ledger-track="street_talk" aria-selected="false" data-i18n="filterDialogues">Dialogues</button>
+                <button type="button" class="filter-pill" data-ledger-track="phonetics" aria-selected="false" data-i18n="filterPronunciation">Pronunciation</button>
+              </div>
+
+              <select id="ledger-cache-filter" class="ui-lang-select" aria-label="Filter by cache status">
+                <option value="all" data-i18n="cacheFilterAll">All Cache States</option>
+                <option value="coach" data-i18n="cacheFilterCoach">AI Coach Cached</option>
+                <option value="translations" data-i18n="cacheFilterTrans">Translations Cached</option>
+                <option value="transcript" data-i18n="cacheFilterTranscript">Transcript Cached</option>
+                <option value="notes" data-i18n="cacheFilterNotes">Has Study Notes</option>
+              </select>
+
+              <select id="ledger-sort-select" class="ui-lang-select" aria-label="Sort history">
+                <option value="recent" data-i18n="sortRecent">Newest First</option>
+                <option value="drills" data-i18n="sortMostPracticed">Most Practiced</option>
+                <option value="size" data-i18n="sortLargestCache">Largest Cache</option>
+              </select>
+
+              <label class="search-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="search" id="ledger-search-input" placeholder="Filter history..." data-i18n-placeholder="searchHistoryPlaceholder" />
+              </label>
+            </div>
+          </div>
+
+          <!-- Multi-Select Bulk Action Bar -->
+          <div class="bulk-actions-bar" id="ledger-bulk-bar">
+            <label class="bulk-select-label">
+              <input type="checkbox" id="ledger-select-all" />
+              <span data-i18n="selectAllLabel">Select all visible</span>
+              <span class="section-count ltr-num" id="ledger-selected-count">(0 selected)</span>
+            </label>
+            <div class="bulk-buttons-group">
+              <button type="button" class="btn-secondary btn-xs" id="bulk-clear-cache-btn" disabled data-i18n="bulkClearCacheBtn">Clear Selected Caches</button>
+              <button type="button" class="btn-secondary btn-xs" id="bulk-reset-progress-btn" disabled data-i18n="bulkResetProgressBtn">Reset Selected Progress</button>
+              <button type="button" class="btn-danger-ghost btn-xs" id="bulk-delete-btn" disabled data-i18n="bulkDeleteBtn">Delete Selected</button>
+            </div>
+          </div>
+
+          <div id="history-ledger-list" class="history-ledger-list"></div>
+          <div id="history-ledger-empty" class="empty-ledger" hidden>
+            <h3 data-i18n="emptyHistoryTitle">No matching lessons in history</h3>
+            <p data-i18n="emptyHistoryDesc">Lessons you study appear here with full cache inspection, progress reset, and re-extraction controls.</p>
+          </div>
+        </div>
+
+        <!-- Practice Activity Log Timeline -->
+        <div class="ledger-panel" style="margin-top: 28px;">
+          <div class="library-header" style="margin-bottom: 14px;">
+            <div class="library-title-group">
+              <h2 class="section-heading" data-i18n="activityLogHeading">Practice Activity Timeline</h2>
+              <span class="section-count ltr-num" id="activity-count-label">0</span>
+            </div>
+            <button type="button" class="btn-danger-ghost btn-xs" id="clear-activity-log-btn" hidden data-i18n="clearActivityBtn">Clear Activity Log</button>
+          </div>
+          <div id="activity-timeline-list" class="activity-timeline-list"></div>
+          <div id="activity-empty-state" class="empty-ledger" hidden>
+            <h3 data-i18n="emptyActivityTitle">No completed practice sessions logged yet</h3>
+            <p data-i18n="emptyActivityDesc">Click Complete inside any Studio lesson to record your session, practice mode, and daily streak.</p>
+          </div>
+        </div>
+      </div>
+    </section>
   </main>
 
-  <script src="app.js?v=2.4"></script>
+  <!-- Account, Google OAuth & Security Slide-Over Drawer -->
+  <div class="drawer-backdrop" id="account-drawer-backdrop" hidden>
+    <aside class="account-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+      <div class="drawer-header">
+        <h2 class="drawer-title" id="drawer-title" data-i18n="accountTitle">Account</h2>
+        <button type="button" class="icon-btn" id="close-account-btn" aria-label="Close account panel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Guest Auth Forms (Google OAuth 2.0 + Email Sign In / Create Account) -->
+      <div id="drawer-guest-view">
+        <div id="auth-gate-banner" class="auth-gate-banner" hidden>
+          <strong data-i18n="authGateTitle">Sign in first to continue</strong>
+          <p id="auth-gate-desc" data-i18n="authGateDesc">Your requested action is saved and will run automatically right after you sign in or create an account.</p>
+        </div>
+
+        <!-- Real Google Sign-In Button + GIS Slot -->
+        <div class="google-auth-block">
+          <button type="button" class="btn-google-oauth" id="google-signin-btn">
+            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+            </svg>
+            <span data-i18n="continueWithGoogle">Continue with Google</span>
+          </button>
+          <div id="google-gis-button-slot" class="google-gis-slot" hidden></div>
+
+          <div id="google-setup-card" class="google-setup-card" hidden>
+            <strong>Configure Google OAuth Client Credentials</strong>
+            <p>Google OAuth 2.0 PKCE &amp; RS256 OIDC verification are active on the server. Add your Google Cloud Web Client credentials to <code>.env</code>:</p>
+            <pre class="ltr-num" id="google-setup-snippet">GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret</pre>
+            <p>Authorized Redirect URI: <code id="google-redirect-uri-code" class="ltr-num">http://localhost:3333/api/auth/google/callback</code></p>
+          </div>
+        </div>
+
+        <div class="auth-divider">
+          <span data-i18n="orContinueWithEmail">or continue with email</span>
+        </div>
+
+        <div class="auth-tabs" role="tablist">
+          <button type="button" class="auth-tab active" data-auth-tab="login" aria-selected="true" data-i18n="signIn">Sign in</button>
+          <button type="button" class="auth-tab" data-auth-tab="register" aria-selected="false" data-i18n="createAccount">Create account</button>
+        </div>
+
+        <div id="auth-error-box" class="form-error" hidden style="margin-bottom: 14px;"></div>
+
+        <form id="login-form" class="form-stack">
+          <div class="field-group">
+            <label class="field-label" for="login-email" data-i18n="emailLabel">Email</label>
+            <input class="field-input" type="email" id="login-email" required autocomplete="email" placeholder="you@example.com" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="login-password" data-i18n="passwordLabel">Password</label>
+            <input class="field-input" type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••" />
+          </div>
+          <button type="submit" class="btn-primary" id="login-submit-btn" style="margin-top: 4px;" data-i18n="signIn">Sign in</button>
+        </form>
+
+        <form id="register-form" class="form-stack" hidden>
+          <div class="field-group">
+            <label class="field-label" for="reg-name" data-i18n="nameLabel">Full name</label>
+            <input class="field-input" type="text" id="reg-name" required autocomplete="name" placeholder="Alex Morgan" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="reg-email" data-i18n="emailLabel">Email</label>
+            <input class="field-input" type="email" id="reg-email" required autocomplete="email" placeholder="you@example.com" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="reg-password" data-i18n="passwordMinLabel">Password (8+ characters)</label>
+            <input class="field-input" type="password" id="reg-password" required minlength="8" autocomplete="new-password" placeholder="••••••••" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="reg-native-lang" data-i18n="nativeLangLabel">Translation language</label>
+            <select class="field-input" id="reg-native-lang"></select>
+          </div>
+          <button type="submit" class="btn-vox" id="register-submit-btn" style="margin-top: 4px;" data-i18n="createAccount">Create account</button>
+        </form>
+
+        <p class="auth-note" style="margin-top: 18px;" data-i18n="guestSyncNote">
+          Sign in with Google or email to unlock video extraction, dynamic AI coaching, world translations, vocabulary flashcards, and full history &amp; cache control.
+        </p>
+      </div>
+
+      <!-- Authenticated Profile, Security & Active Sessions View -->
+      <div id="drawer-profile-view" hidden>
+        <div class="profile-card">
+          <div class="profile-card-row">
+            <img id="profile-avatar-img" class="profile-avatar-lg" alt="" hidden />
+            <div class="profile-avatar-fallback" id="profile-avatar-fallback">U</div>
+            <div style="min-width: 0; flex: 1;">
+              <div class="profile-name" id="profile-name"></div>
+              <div class="profile-email" id="profile-email"></div>
+              <div class="profile-badges-row">
+                <span class="cache-pill" id="profile-provider-badge">Email</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form id="preferences-form" class="form-stack">
+          <div class="field-group">
+            <label class="field-label" for="pref-name" data-i18n="nameLabel">Full name</label>
+            <input class="field-input" type="text" id="pref-name" required />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="pref-native-lang" data-i18n="nativeLangLabel">Default translation language</label>
+            <select class="field-input" id="pref-native-lang"></select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="pref-goal" data-i18n="dailyGoalLabel">Daily practice goal (minutes)</label>
+            <input class="field-input ltr-num" type="number" id="pref-goal" min="5" max="180" step="5" value="15" />
+          </div>
+          <button type="submit" class="btn-primary" data-i18n="savePreferences">Save preferences</button>
+        </form>
+
+        <!-- Password Set / Change -->
+        <div class="drawer-section-divider"></div>
+        <form id="password-change-form" class="form-stack">
+          <div class="drawer-subhead" id="password-section-heading" data-i18n="passwordSecurityHeading">Password &amp; Security</div>
+          <div class="field-group" id="current-password-group">
+            <label class="field-label" for="current-password-input" data-i18n="currentPasswordLabel">Current password</label>
+            <input class="field-input" type="password" id="current-password-input" autocomplete="current-password" placeholder="••••••••" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="new-password-input" data-i18n="newPasswordLabel">New password (8+ characters)</label>
+            <input class="field-input" type="password" id="new-password-input" minlength="8" required autocomplete="new-password" placeholder="••••••••" />
+          </div>
+          <button type="submit" class="btn-secondary" data-i18n="updatePasswordBtn">Update password</button>
+        </form>
+
+        <!-- Active Devices & Sessions -->
+        <div class="drawer-section-divider"></div>
+        <div class="sessions-section">
+          <div class="sessions-head">
+            <span class="drawer-subhead" data-i18n="activeSessionsHeading">Active Sessions</span>
+            <button type="button" class="btn-secondary btn-xs" id="revoke-other-sessions-btn" hidden data-i18n="revokeOtherSessionsBtn">Sign out others</button>
+          </div>
+          <div id="active-sessions-list" class="sessions-list"></div>
+        </div>
+
+        <div class="drawer-section-divider"></div>
+        <div class="drawer-footer-actions">
+          <button type="button" class="btn-secondary" style="width: 100%; justify-content: center;" id="logout-btn" data-i18n="signOut">
+            Sign out
+          </button>
+          <button type="button" class="btn-danger-ghost" style="width: 100%; justify-content: center;" id="delete-account-btn" data-i18n="deleteAccountBtn">
+            Delete account &amp; all data
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div id="workspace-toast" class="editorial-toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
 </body>
 </html>

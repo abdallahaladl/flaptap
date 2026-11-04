@@ -1,75 +1,89 @@
-# 🤖 Flaptap AI — Architectural Constitution & Agentic Directives (`AGENTS.md`)
+# Flaptap — Architectural Constitution & Agentic Directives (`AGENTS.md`)
 
-> **MANDATORY CONSTITUTIONAL LAW FOR FLAPTAP AI:**
-> All cognitive intelligence, linguistic judgment, and creative synthesis must be executed exclusively by the **AI Agent / LLM**. Programmatic code is strictly prohibited from attempting to replicate cognitive intelligence through static heuristics, hardcoded templates, or regex ladders.
-
----
-
-## 1. The Agent-First Cognitive Supremacy Principle
-
-1. **The AI Agent is the Sole Cognitive Actor**:
-   Every platform function requiring semantic comprehension, linguistic taxonomy, intonation grouping, sentence thought-unit segmentation, pronunciation mechanics, and dialect translation MUST be delegated directly to the active **AI Agent** (`Antigravity 2.0 / Gemini Flash High`).
-2. **Absolute Elimination of "Dumb" Code & Static Templates**:
-   - **Prohibited**: Hardcoded dialogue dictionaries, static switch cases for scenario topics, arbitrary word-counting loops, and rigid paragraph slicing heuristics.
-   - **Mandated**: Send the raw input/topic to the AI Agent via structured prompts, and have the AI Agent return the dynamic, highly contextualized linguistic data in structured JSON.
-3. **Programmatic Code is Plumbing Only**:
-   Application code (TypeScript / NestJS / Python / JavaScript) is strictly confined to mechanical, non-cognitive infrastructure:
-   - File I/O and persistent database updates (`history.json`).
-   - Network routing, HTTP endpoints, and WebSockets.
-   - Audio capture via `MediaRecorder` and YouTube IFrame playback control.
-   - DOM element rendering, bidirectional (RTL/LTR) styling, and reactive state propagation.
+> **MANDATORY CONSTITUTIONAL LAW FOR FLAPTAP**
+>
+> Cognitive linguistic work is performed **only** by the configured AI model, reached through the single OpenCode Go transport (`backend/src/core/ai/ai.client.ts`). There is no agent adapter layer, no model routing cascade, no CLI agent, and **zero static regex wordlists** pretending to do linguistic extraction. Application code handles deterministic plumbing: caption extraction, full-sentence & cohesive-paragraph timing alignment, relational SQLite persistence, authentication, and editorial rendering.
 
 ---
 
-## 2. Active AI Agent & Model Specifications
+## 1. AI Transport: One Client, One Model
 
-- **Primary Agent Engine**: **Google Antigravity 2.0 (`agy`)**
-- **Default Cognitive Model**: **Gemini Flash (Gemini 2.5 / 3.8 Flash High)**
-  - Configured for high-speed, sub-second latency, and zero-hallucination structured JSON output.
-  - Optimized for natural American English prosody, phonetic IPA mechanics, and modern street slang nuance.
-- **Secondary Multi-Agent Adapters**:
-  - Claude Code (`Anthropic Claude 3.7 Sonnet / Haiku`)
-  - OpenAI Codex CLI (`GPT-4o / o3-mini`)
-  - OpenCode Interpreter (`Local / vLLM`)
-- **Fast Vernacular Fallback**: `allam-2-7b` (optimized for 22 spoken Arabic vernaculars with zero hidden reasoning overhead).
+1. **OpenCode Go only**
+   - Every AI call goes exclusively through `backend/src/core/ai/ai.client.ts`.
+   - Provider endpoint: `https://opencode.ai/inference/go/openai/v1` (OpenAI-compatible).
+   - Default model: **DeepSeek V4.1 Flash** (`deepseek-v4.1-flash`).
+   - Configuration lives in `.env`:
+     ```env
+     OPENCODE_GO_API_KEY=...
+     OPENCODE_GO_MODEL=deepseek-v4.1-flash
+     OPENCODE_GO_BASE_URL=https://opencode.ai/inference/go/openai/v1
+     ```
+   - `OPENCODE_GO_API_KEY` must never be committed. `.env` is git-ignored.
+2. **No agent layer & no static linguistic fallbacks**
+   - Do not add CLI agent adapters or UI model pickers.
+   - Connected speech, expressions/idioms, contextual vocabulary, prosody coaching, word lookup, translation, dialogue generation, and pronunciation workouts are 100% model-authored via engineered prompts. Never reintroduce hardcoded regex tables or `0` counter badges.
+3. **Reasoning off for interactive latency**
+   - Every request sets `reasoning_effort: "none"` for fast interactive responses.
 
 ---
 
-## 3. Cognitive Function Registry & Agent Prompt Contracts
+## 2. Cognitive & Segmentation Contracts
 
-| Cognitive Task | AI Agent Responsibility | Programmatic Role (Plumbing Only) |
+| Feature | Owner | Contract |
 | :--- | :--- | :--- |
-| **Sentence Thought-Unit Segmentation** | Analyzes breath groups, clause boundaries, and natural spoken cadences (4–11 words) without dangling prepositions. | Computes millisecond seek ranges and renders drill cards. |
-| **Real-World Vernacular Translation** | Synthesizes authentic spoken colloquial phrasing (22 Arab dialects + English accents), preserving technical loanwords in English script. | Injects translations into DOM cards and manages client caching. |
-| **Street Talk & Slang Generation** | Authors authentic, unscripted urban dialogues with contextual slang and connected speech phenomena. | Stores generated session in database and renders interactive tables. |
-| **Phonetics & Mouth Mechanics** | Authors precise tongue placement, jaw opening, and IPA acoustic mechanics (Flap-T, Glottal Stop, Dark-L, TH). | Dispatches drill matrices and coordinates playback loop. |
-| **Linguistic & ASR Error Audit** | Scans speech for real-world acoustic homophones, reductions, and intonational stress peaks. | Highlights detected tokens in the transcript DOM. |
+| **Dynamic AI Coach & Word Lookup** | `ShadowingAnalysisService` | Universal genre-adaptive prompt extracting verbatim-grounded Connected Speech (with IPA & mouth mechanics), Expressions/Idioms, Key Vocabulary, Prosody Brief, and Contextual Word Definitions. |
+| **World-Language Translation** | `ShadowingTranslationService` | Translate spoken English into 170+ languages (Arabic `ar` default). Standard register, preserve names & technical terms in Latin script (`<bdi class="tech-loanword" dir="ltr">` for RTL). |
+| **Dialogue Generation** | `StreetTalkService` | Author realistic spoken American dialogues with dynamic connected speech, expressions, and vocabulary. |
+| **Pronunciation Workouts** | `PhoneticsService` | Author physical articulatory workouts with IPA, tongue/jaw mechanics, and spoken lines. |
+| **Caption Extraction & Timing** | `TranscriptService` + Python helper | Mechanical JSON3 word-offset ingestion, rolling-cue deduplication, and accurate failure taxonomy. |
+| **Full-Sentence & Paragraph Segmentation** | `segmentation.ts` | Punctuated transcripts cut strictly at true grammatical sentence endings (`.`, `?`, `!`), never mid-sentence on caption cues or commas. Unpunctuated ASR streams combine acoustic pause absorption with syntactic completeness. Paragraphs (`ChunkItem[]`) are strictly contiguous unions of complete sentences. |
+
+### Playback Boundary Law
+
+- Prefer YouTube JSON3 per-word `tOffsetMs` values over interpolation.
+- Store and compare start/end times at **millisecond precision** (3 decimals).
+- Seek to `startSec` exactly (no `-50ms` lead-in).
+- Mute during asynchronous seek and unmute at first-word onset.
+- Stop before the last word's boundary (`endSec - 12ms`) so the next word's onset never bleeds in.
+- Preserve verbatim text character-for-character across all `<mark>` highlights (`highlightsAreVerbatim`).
+
+### Caption Failure Contract
+
+- `video_unavailable` (404) — removed, private, or region-restricted video (no retry button);
+- `no_captions` (422) — no English caption track (no retry button);
+- `rate_limited` (503) — YouTube temporary throttle (retry offered);
+- `timeout` (503) — time budget exceeded (retry offered).
 
 ---
 
-## 4. Linguistic Directives for Cognitive Skills
+## 3. Relational Persistence, Authentication, Caching & Performance
 
-### A. Thought-Unit Segmentation Law
-- **Complete Short Sentences**: Grammatically complete sentences or questions must remain intact as single items. Never split a verb from its prepositional complement (*"Should human beings remain in control of planet Earth?"* must NEVER be cut in half).
-- **Atomic Breath Units**: Typical shadowing length is 4 to 12 words (2.0s to 6.5s).
-- **Zero Verbatim Alteration**: The exact spoken words in exact order must be preserved 100%.
-
-### B. Vernacular Translation Directives
-- **Spoken Vernacular Only**: Absolutely no literal, academic, or stiff textbook translations.
-- **Default Dialects**:
-  - Arabic: **Egyptian Arabic (`ar-EG` 🇪🇬)** as top default.
-  - English: **US English (`en-US` 🇺🇸 - General American)** as top default.
-- **Loanword Preservation**: All technical, software, computing, and startup terms MUST remain in English script enclosed in `<bdi class="tech-loanword" dir="ltr">term</bdi>` so mixed RTL/LTR flows flawlessly.
-
-### C. Acoustic Boundaries Law
-- Sentence start seek lead-in is clamped to `-0.05s` (50ms buffer) to capture initial plosive consonants without preceding audio.
-- Sentence end drill cutoff is locked to `+0.02s` (20ms tail) to eliminate audio bleeding into subsequent sentences.
+1. **Built-in SQLite WAL Engine (`node:sqlite`) & Strict Account Isolation**
+   - `SqliteService` manages `data/flaptap.sqlite` (`users`, `auth_sessions`, `oauth_states`, `lessons`, `vocabulary_items`, `practice_logs`) using Node's native `node:sqlite` (`DatabaseSync`, zero native compilation dependencies).
+   - **Zero Benefit Before Sign-In:** All UI sections and inputs are browseable by visitors, but every value-producing action prompts the user to sign in or create an account **before execution** (preserving and auto-resuming their pending action) and every protected backend route enforces `requireAuthenticatedUser` (`401 auth_required`) with strict `WHERE user_id = ?` isolation.
+   - `AuthService` + `GoogleOAuthService` provide real Google OAuth 2.0 Authorization Code + PKCE (`S256`) and native `node:crypto` RS256 OIDC JWKS verification alongside `scrypt` email/password accounts, `HttpOnly` session cookies + Bearer tokens, active session revocation, password management, and full account deletion.
+   - `HistoryRepository` & `VocabularyService` power the **History, Caching & Usage Control Center** (per-lesson & global cache clearing across transcripts/coach/translations, cache-bypass `force` re-extraction, progress reset, bulk operations, activity log controls, full JSON account export) and spaced active-recall flashcards (`mastery_level` 0–4).
+2. **Instant Video Open Path**
+   - `POST /api/tracks/shadowing/process` performs caption extraction + deterministic full-sentence/paragraph segmentation + SQLite save and returns immediately.
+   - Dynamic AI Coach analysis (`POST /api/tracks/shadowing/analyze`) runs asynchronously once the Studio renders and caches permanently in SQLite.
+3. **Zero External Font or Render-Blocking Assets**
+   - System editorial font stacks (`Iowan Old Style` / `Charter` / `Georgia` + system UI sans + monospace strictly for timestamps/IPA).
 
 ---
 
-## 5. Developer & Contributor Enforcement
+## 4. Paper & Vox Editorial Frontend Laws
 
-- **Never** add hardcoded string switch-statements to simulate AI intelligence.
-- **Never** commit API keys, `.env` files, or credentials to version control.
-- **Never** bypass the Agent Adapter layer to serve mock heuristic data for cognitive tracks.
-- Always implement new features by defining an Agent Prompt Contract in the adapter and consuming the structured AI Agent response.
+- Minimal, paper-tactile (`#F6F4EE` / `#FCFBF7` newsprint + `#141413` ink + `#FFF04B` Vox highlighter yellow) Light Mode and matte carbon (`#121210` / `#191916`) Dark Mode.
+- Authored 1.5px stroke SVG icons everywhere — zero emojis, zero static example chips under inputs, zero purple AI gradients.
+- English (`en`, LTR) default UI with multi-language support (`ar` RTL, `es`, `fr`, `de`, `tr`).
+- Flexible video docking (`Side` | `Top` | `Focus`) and scalable primary Studio learning modes (`Shadow` | `Read` | `Listen` | `Coach` | `Notes`) switch in 0ms client-side without reloading the page or remounting the YouTube player.
+- Timestamp and IPA spans enforce `direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums`.
+
+---
+
+## 5. Testing & Enforcement
+
+- Build TypeScript: `npm run build` (`cd backend && npm run build`).
+- Offline timing unit suite: `npm run test:timing`.
+- Full production E2E suite (API + SQLite + Auth + Dynamic AI + Puppeteer Browser): `npm run test:e2e`.
+- Never commit `.env`, API keys, `data/*.sqlite*`, or temporary artifacts.

@@ -1,0 +1,48 @@
+services:
+  flaptap:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: flaptap-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3333
+      - HOST=0.0.0.0
+      - FLAPTAP_SQLITE_PATH=/app/data/flaptap.sqlite
+      - TRUST_PROXY=1
+    volumes:
+      # Persistent SQLite database and transcript cache storage
+      - ./data:/app/data
+    ports:
+      # Bound to localhost so all public ingress flows securely through Caddy
+      - "127.0.0.1:3333:3333"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:3333/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: flaptap-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      flaptap:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:

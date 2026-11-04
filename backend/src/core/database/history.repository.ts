@@ -1,14 +1,25 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
+import { v4 as uuidv4 } from 'uuid';
+import { SqliteService } from './sqlite.service';
+import { escapeTranscriptHtml, highlightsAreVerbatim, sanitizeVerbatimHtml } from '../linguistics/highlights';
+import { segmentParagraphs, segmentSentences } from '../linguistics/segmentation';
+
+export interface RequestIdentityScope {
+  userId?: string | null;
+  guestToken?: string | null;
+}
 
 export interface ChunkItem {
+  index?: number;
   timeRange: string;
   time_range?: string;
   start?: string;
   end?: string;
   startSec: number;
   endSec: number;
+  sentenceIndices?: number[];
   title?: string;
   text: string;
   highlightedHtml: string;
@@ -26,8 +37,58 @@ export interface SentenceItem {
   translations?: Record<string, string>;
 }
 
+export interface ConnectedSpeechEntry {
+  exactPhrase: string;
+  spokenIpa: string;
+  phenomenon: string;
+  mechanics: string;
+  sentenceIndex: number;
+}
+
+export interface ExpressionEntry {
+  phrase: string;
+  meaning: string;
+  register: string;
+  usageNote: string;
+  sentenceIndex: number;
+}
+
+export interface VocabularyCoachEntry {
+  term: string;
+  ipa: string;
+  partOfSpeech: string;
+  definition: string;
+  sentenceIndex: number;
+}
+
+export interface AiCoachAnalysis {
+  version: number;
+  analyzedAt: string;
+  aiModel: string;
+  overview: {
+    summary: string;
+    speakerStyle: string;
+    cefrLevel: 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+    focusTips: string[];
+  };
+  connectedSpeech: ConnectedSpeechEntry[];
+  expressions: ExpressionEntry[];
+  vocabulary: VocabularyCoachEntry[];
+}
+
+export interface LessonCacheInfo {
+  transcriptCached: boolean;
+  transcriptBytes: number;
+  aiCoachCached: boolean;
+  aiInsightsCount: number;
+  translationLanguages: string[];
+  hasNotes: boolean;
+}
+
 export interface HistoryItem {
   id: string;
+  userId?: string | null;
+  guestToken?: string | null;
   track: 'shadowing' | 'street_talk' | 'phonetics' | 'creator_script';
   trackTitle: string;
   title: string;
@@ -35,422 +96,927 @@ export interface HistoryItem {
   videoId?: string;
   sourceUrl: string;
   thumbnailUrl: string;
-  categoryIcon: string;
   accentDialect: string;
-  colorTheme: string;
   durationSeconds: number;
   pacingWpm: number;
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced';
+  cefrLevel?: string;
+  sentencesCount?: number;
+  chunksCount: number;
+  analysisStatus?: 'pending' | 'ready';
+  aiAnalysis?: AiCoachAnalysis;
   stats: {
-    slangCount: number;
-    idiomsCount: number;
-    reductionsCount: number;
-    fillersCount: number;
-    correctionsCount: number;
     totalWords: number;
+    sentencesCount: number;
+    connectedCount: number;
+    expressionsCount: number;
+    vocabularyCount: number;
   };
-  keyHighlights: Array<{
-    category: string;
-    text: string;
-    meaning?: string;
-    icon: string;
-    color: string;
-  }>;
   chunks?: ChunkItem[];
   sentences?: SentenceItem[];
   translationsCache?: Record<string, Record<number, string>>;
-  slangTable?: Array<{ term: string; meaning: string; delivery: string }>;
-  idiomsTable?: Array<{ phrase: string; equivalent: string; usage: string }>;
-  reductionsTable?: Array<{ written: string; spoken: string; phenomenon: string; mechanics: string }>;
-  asrFixes?: Array<{ timestamp: string; wrong: string; corrected: string; reason: string }>;
-  chunksCount: number;
+  translationEngineVersion?: number;
+  timingVersion?: number;
+  segmentationVersion?: number;
+  studyNotes?: string;
   noteMarkdown: string;
-  agentUsed: string;
+  payloadBytes?: number;
+  cacheInfo?: LessonCacheInfo;
   createdAt: string;
+  updatedAt?: string;
   completedDrills: number;
 }
 
+export type HistorySummary = Omit<
+  HistoryItem,
+  'chunks' | 'sentences' | 'noteMarkdown' | 'translationsCache' | 'aiAnalysis'
+>;
+
+export type CacheClearScope = 'all' | 'coach' | 'translations' | 'transcript';
+
 @Injectable()
 export class HistoryRepository {
-  private readonly storagePath = path.resolve(__dirname, '../../../../data/history.json');
   private readonly logger = new Logger(HistoryRepository.name);
-  private items: HistoryItem[] = [];
+  private readonly transcriptCacheDir = path.resolve(__dirname, '../../../../data/transcripts');
 
-  constructor() {
-    this.ensureStorageExists();
-    this.load();
+  constructor(private readonly sqlite: SqliteService) {
+    this.backfillCacheMetadataColumns();
   }
 
-  private ensureStorageExists() {
-    const dir = path.dirname(this.storagePath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    if (!fs.existsSync(this.storagePath)) {
-      fs.writeFileSync(this.storagePath, JSON.stringify([], null, 2), 'utf-8');
-    }
-  }
-
-  private load() {
+  private backfillCacheMetadataColumns(): void {
     try {
-      const data = fs.readFileSync(this.storagePath, 'utf-8');
-      const parsed: HistoryItem[] = JSON.parse(data);
-      let modified = false;
+      const rows = this.sqlite.db
+        .prepare(
+          `SELECT id, payload_json FROM lessons WHERE cached_langs = '' AND ai_insights_count = 0 LIMIT 250`,
+        )
+        .all() as Array<Record<string, any>>;
 
-      // 1. Strict Track-Aware Deduplication
-      const seen = new Set<string>();
-      const deduped: HistoryItem[] = [];
-      for (const item of parsed) {
-        const key = (item.track === 'shadowing' && item.videoId)
-          ? `shadowing:v:${item.videoId.toLowerCase()}`
-          : (item.sourceUrl ? `u:${item.sourceUrl.toLowerCase()}` : `id:${item.id}`);
-        if (!seen.has(key)) {
-          seen.add(key);
-          deduped.push(item);
-        } else {
-          modified = true;
-        }
-      }
-      this.items = deduped;
-
-      // 2. Preserve AI-generated sentences; only fallback if completely empty
-      for (const item of this.items) {
-        if (!item.sentences || item.sentences.length === 0) {
-          if (item.chunks && item.chunks.length > 0) {
-            item.sentences = this.synthesizeSentences(item.chunks);
-            modified = true;
+      for (const r of rows) {
+        try {
+          const parsed: HistoryItem = JSON.parse(String(r.payload_json));
+          const langs = Object.keys(parsed.translationsCache || {}).sort().join(',');
+          const insights = parsed.aiAnalysis
+            ? (parsed.aiAnalysis.connectedSpeech?.length || 0) +
+              (parsed.aiAnalysis.expressions?.length || 0) +
+              (parsed.aiAnalysis.vocabulary?.length || 0)
+            : 0;
+          if (langs || insights > 0) {
+            this.sqlite.db
+              .prepare('UPDATE lessons SET cached_langs = ?, ai_insights_count = ? WHERE id = ?')
+              .run(langs, insights, String(r.id));
           }
+        } catch {
+          // Ignore malformed legacy row
         }
       }
-
-      if (modified) {
-        this.persist();
-      }
-      this.logger.log(`Loaded and verified ${this.items.length} unique historical practice sessions.`);
-    } catch (e: any) {
-      this.logger.warn(`Could not parse storage file, initializing clean database: ${e.message}`);
-      this.items = [];
-      this.persist();
+    } catch {
+      // Non-fatal
     }
   }
 
-  private synthesizeSentences(chunks: ChunkItem[]): SentenceItem[] {
-    const parseTime = (ts?: string): number => {
-      if (!ts) return 0;
-      const parts = ts.replace(/[\[\]]/g, '').trim().split(':');
-      if (parts.length === 3) {
-        return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseFloat(parts[2]);
-      }
-      if (parts.length === 2) {
-        return parseInt(parts[0], 10) * 60 + parseFloat(parts[1]);
-      }
-      const f = parseFloat(ts);
-      return isNaN(f) ? 0 : f;
-    };
+  private cleanTrackTitle(track: string): string {
+    switch (track) {
+      case 'street_talk':
+        return 'Dialogue Practice';
+      case 'phonetics':
+        return 'Pronunciation Workout';
+      default:
+        return 'Video Lesson';
+    }
+  }
 
-    const formatTime = (sec: number): string => {
-      const m = Math.floor(sec / 60);
-      const s = Math.floor(sec % 60);
-      const mm = m < 10 ? `0${m}` : `${m}`;
-      const ss = s < 10 ? `0${s}` : `${s}`;
-      return `${mm}:${ss}`;
-    };
-
-    const DANGLING_END_WORDS = new Set([
-      'the', 'a', 'an',
-      'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from', 'as', 'into', 'upon', 'towards',
-      'and', 'or', 'but', 'so', 'because', 'nor', 'yet',
-      'that', 'which', 'who', 'whom', 'whose', 'where', 'when', 'if',
-      'my', 'your', 'his', 'her', 'its', 'our', 'their',
-      'this', 'these', 'those'
-    ]);
-
-    const BREAK_BEFORE_WORDS = new Set([
-      'and', 'but', 'so', 'or', 'nor', 'yet',
-      'because', 'although', 'though', 'while', 'since', 'if', 'unless',
-      'which', 'where', 'when', 'who', 'why', 'how',
-      'instead', 'before', 'after', 'during', 'without', 'like'
-    ]);
-
-    const BREAK_PHRASES = [
-      'he says', 'she says', 'they say', 'i say',
-      'for example', 'you know', 'i mean', 'i think',
-      'so that', 'might as well', 'instead of', 'throughout the day',
-      'as well as', 'in fact', 'back in', 'meant that', 'what i', "that's how"
+  public buildCleanMarkdown(
+    title: string,
+    creator: string,
+    sourceUrl: string,
+    chunks: ChunkItem[] = [],
+    analysis?: AiCoachAnalysis,
+    studyNotes?: string,
+  ): string {
+    const lines: string[] = [
+      `# ${title || 'English Lesson'}`,
+      `> **Source:** ${creator || 'Creator'}${sourceUrl ? ` · ${sourceUrl}` : ''}`,
+      '',
     ];
 
-    const applyHighlights = (text: string): string => {
-      let html = text;
-      // Reductions
-      html = html.replace(/\bgoing to\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">going to [gonna]</mark>');
-      html = html.replace(/\bwant to\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">want to [wanna]</mark>');
-      html = html.replace(/\bgot to\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">got to [gotta]</mark>');
-      html = html.replace(/\blet me\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">let me [lemme]</mark>');
-      html = html.replace(/\bkind of\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">kind of [kinda]</mark>');
-      html = html.replace(/\bout of\b/gi, '<mark class="shadow-reduction" style="background-color: #BAE6FD; color: #0C4A6E; padding: 2px 5px; border-radius: 4px; font-weight: 500;">out of [outta]</mark>');
-      return html;
+    if (studyNotes && studyNotes.trim()) {
+      lines.push('## Personal Study Notes', '', studyNotes.trim(), '');
+    }
+
+    if (analysis) {
+      lines.push(
+        '## Coaching Overview',
+        `- **CEFR Level:** ${analysis.overview.cefrLevel}`,
+        `- **Delivery Style:** ${analysis.overview.speakerStyle}`,
+        `- **Summary:** ${analysis.overview.summary}`,
+        '',
+      );
+
+      if (analysis.connectedSpeech.length > 0) {
+        lines.push(
+          '## Connected Speech & Prosody',
+          '| Spoken Phrase | IPA / Sound | Phenomenon | Articulatory Mechanics |',
+          '| :--- | :--- | :--- | :--- |',
+          ...analysis.connectedSpeech.map(
+            (c) => `| \`${c.exactPhrase}\` | **${c.spokenIpa}** | ${c.phenomenon} | ${c.mechanics} |`,
+          ),
+          '',
+        );
+      }
+
+      if (analysis.expressions.length > 0) {
+        lines.push(
+          '## Expressions & Idioms',
+          '| Expression | Meaning | Register | Usage Note |',
+          '| :--- | :--- | :--- | :--- |',
+          ...analysis.expressions.map(
+            (e) => `| **${e.phrase}** | ${e.meaning} | ${e.register} | ${e.usageNote} |`,
+          ),
+          '',
+        );
+      }
+
+      if (analysis.vocabulary.length > 0) {
+        lines.push(
+          '## Key Vocabulary',
+          '| Term | IPA | Part of Speech | Contextual Definition |',
+          '| :--- | :--- | :--- | :--- |',
+          ...analysis.vocabulary.map(
+            (v) => `| **${v.term}** | ${v.ipa} | *${v.partOfSpeech}* | ${v.definition} |`,
+          ),
+          '',
+        );
+      }
+    }
+
+    lines.push('## Transcript Paragraphs', '');
+    for (const chunk of chunks) {
+      lines.push(`### ${chunk.timeRange}`, chunk.text, '');
+    }
+
+    return lines.join('\n');
+  }
+
+  /**
+   * Strict account isolation: every user only ever sees and controls their own
+   * personal history, caches, notes, and practice records.
+   */
+  private scopeWhereClause(scope?: RequestIdentityScope): { sql: string; params: any[] } {
+    if (scope?.userId) {
+      return {
+        sql: 'user_id = ?',
+        params: [scope.userId],
+      };
+    }
+    return {
+      sql: '1 = 0',
+      params: [],
+    };
+  }
+
+  private getTranscriptCacheFileStats(videoId?: string): { cached: boolean; bytes: number } {
+    if (!videoId) return { cached: false, bytes: 0 };
+    try {
+      const file = path.join(this.transcriptCacheDir, `${videoId}.json`);
+      if (!fs.existsSync(file)) return { cached: false, bytes: 0 };
+      const st = fs.statSync(file);
+      return { cached: true, bytes: st.size };
+    } catch {
+      return { cached: false, bytes: 0 };
+    }
+  }
+
+  private deleteTranscriptCacheFile(videoId?: string): boolean {
+    if (!videoId) return false;
+    try {
+      const file = path.join(this.transcriptCacheDir, `${videoId}.json`);
+      if (!fs.existsSync(file)) return false;
+      fs.unlinkSync(file);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private rowToItem(row: Record<string, any> | undefined): HistoryItem | undefined {
+    if (!row) return undefined;
+    try {
+      const payload: HistoryItem = JSON.parse(String(row.payload_json));
+      payload.id = String(row.id);
+      payload.userId = row.user_id ? String(row.user_id) : null;
+      payload.guestToken = row.guest_token ? String(row.guest_token) : null;
+      payload.completedDrills = Number(row.completed_drills ?? payload.completedDrills ?? 0);
+      payload.studyNotes = String(row.study_notes ?? payload.studyNotes ?? '');
+      payload.analysisStatus = (row.analysis_status as 'pending' | 'ready') || payload.analysisStatus || 'pending';
+      payload.cefrLevel = String(row.cefr_level ?? payload.cefrLevel ?? '');
+      payload.sentencesCount = Number(row.sentences_count ?? payload.sentences?.length ?? 0);
+      payload.chunksCount = Number(row.chunks_count ?? payload.chunks?.length ?? 0);
+      payload.createdAt = String(row.created_at || payload.createdAt);
+      payload.updatedAt = String(row.updated_at || payload.updatedAt || payload.createdAt);
+
+      if (
+        payload.track === 'shadowing' &&
+        payload.segmentationVersion !== 2 &&
+        payload.videoId
+      ) {
+        const cacheFile = path.join(this.transcriptCacheDir, `${payload.videoId}.json`);
+        if (fs.existsSync(cacheFile)) {
+          try {
+            const cached = JSON.parse(fs.readFileSync(cacheFile, 'utf-8'));
+            if (cached?.data?.timed_words?.length) {
+              payload.sentences = segmentSentences(cached.data);
+              payload.chunks = segmentParagraphs(payload.sentences);
+              payload.sentencesCount = payload.sentences.length;
+              payload.chunksCount = payload.chunks.length;
+              payload.segmentationVersion = 2;
+              payload.timingVersion = 2;
+              payload.translationsCache = {};
+              this.insertOrReplaceRow(payload, {
+                userId: payload.userId,
+                guestToken: payload.guestToken,
+              });
+            }
+          } catch {
+            // Keep stored payload
+          }
+        }
+      }
+
+      return payload;
+    } catch (error: any) {
+      this.logger.warn(`Corrupt lesson row ${row?.id}: ${error.message}`);
+      return undefined;
+    }
+  }
+
+  private insertOrReplaceRow(item: HistoryItem, scope?: RequestIdentityScope): void {
+    const now = new Date().toISOString();
+    const userId = item.userId !== undefined ? item.userId : (scope?.userId ?? null);
+    const guestToken = userId ? null : (item.guestToken !== undefined ? item.guestToken : (scope?.guestToken ?? null));
+    const sentencesCount = item.sentences?.length ?? item.sentencesCount ?? 0;
+    const chunksCount = item.chunks?.length ?? item.chunksCount ?? 0;
+    const analysisStatus = item.aiAnalysis ? 'ready' : (item.analysisStatus || 'pending');
+    const cefrLevel = item.aiAnalysis?.overview?.cefrLevel || item.cefrLevel || '';
+
+    const cachedLangs = Object.keys(item.translationsCache || {})
+      .filter((code) => Object.keys(item.translationsCache?.[code] || {}).length > 0)
+      .sort()
+      .join(',');
+
+    const aiInsightsCount = item.aiAnalysis
+      ? (item.aiAnalysis.connectedSpeech?.length || 0) +
+        (item.aiAnalysis.expressions?.length || 0) +
+        (item.aiAnalysis.vocabulary?.length || 0)
+      : 0;
+
+    item.userId = userId;
+    item.guestToken = guestToken;
+    item.sentencesCount = sentencesCount;
+    item.chunksCount = chunksCount;
+    item.analysisStatus = analysisStatus;
+    item.cefrLevel = cefrLevel;
+    item.updatedAt = now;
+    if (!item.createdAt) item.createdAt = now;
+
+    item.stats = {
+      totalWords: item.stats?.totalWords || 1,
+      sentencesCount,
+      connectedCount: item.aiAnalysis?.connectedSpeech?.length || 0,
+      expressionsCount: item.aiAnalysis?.expressions?.length || 0,
+      vocabularyCount: item.aiAnalysis?.vocabulary?.length || 0,
     };
 
-    const sentences: SentenceItem[] = [];
-    let count = 1;
+    // Do not embed transient summary-only fields inside payload_json
+    const serializable = { ...item };
+    delete serializable.payloadBytes;
+    delete serializable.cacheInfo;
+    const payloadJson = JSON.stringify(serializable);
 
-    for (const chunk of chunks) {
-      let cStart = parseTime(chunk.start);
-      if (!cStart && chunk.time_range) {
-        const match = chunk.time_range.match(/\[([\d:.]+)/);
-        if (match) cStart = parseTime(match[1]);
-      }
-      if (cStart === 0 && chunk.startSec) cStart = chunk.startSec;
-
-      let cEnd = parseTime(chunk.end);
-      if (!cEnd && chunk.time_range) {
-        const match = chunk.time_range.match(/-\s*([\d:.]+)\]/);
-        if (match) cEnd = parseTime(match[1]);
-      }
-      if (!cEnd || cEnd <= cStart) cEnd = (chunk.endSec && chunk.endSec > cStart) ? chunk.endSec : cStart + 30;
-      const cDuration = Math.max(cEnd - cStart, 1);
-
-      const rawText = (chunk.text || '').replace(/\s+/g, ' ').trim();
-      if (!rawText) continue;
-
-      const initialSections = rawText.split(/(?<=[.?!;:])\s+/).filter(s => s.trim().length > 0);
-      const chunkSubUnits: string[] = [];
-
-      for (const section of initialSections) {
-        const words = section.trim().split(/\s+/).filter(Boolean);
-        if (words.length <= 11) {
-          chunkSubUnits.push(words.join(' '));
-          continue;
-        }
-
-        let currentUnit: string[] = [];
-        let i = 0;
-
-        while (i < words.length) {
-          currentUnit.push(words[i]);
-          const currentCount = currentUnit.length;
-          const remainingWords = words.length - (i + 1);
-
-          if (currentCount >= 4) {
-            const nextWord = (words[i + 1] || '').toLowerCase().replace(/^[^\w]+|[^\w]+$/g, '');
-            const nextTwoWords = ((words[i + 1] || '') + ' ' + (words[i + 2] || '')).toLowerCase();
-            const currWordClean = words[i].toLowerCase().replace(/^[^\w]+|[^\w]+$/g, '');
-            const endsWithPunct = /[,\u2014\u2013:;-]$/.test(words[i]);
-
-            let isBreakPoint = false;
-
-            if (endsWithPunct && currentCount >= 4 && !DANGLING_END_WORDS.has(currWordClean)) {
-              isBreakPoint = true;
-            } else if (BREAK_PHRASES.some(p => nextTwoWords.startsWith(p)) && currentCount >= 4 && !DANGLING_END_WORDS.has(currWordClean)) {
-              isBreakPoint = true;
-            } else if (BREAK_BEFORE_WORDS.has(nextWord) && currentCount >= 7 && !DANGLING_END_WORDS.has(currWordClean)) {
-              isBreakPoint = true;
-            } else if (currentCount >= 11) {
-              if (!DANGLING_END_WORDS.has(currWordClean) && remainingWords > 2) {
-                isBreakPoint = true;
-              } else if (currentCount >= 14) {
-                isBreakPoint = true;
-              }
-            }
-
-            if (isBreakPoint && remainingWords > 0) {
-              if (remainingWords >= 4 || currentCount >= 11) {
-                chunkSubUnits.push(currentUnit.join(' '));
-                currentUnit = [];
-              }
-            }
-          }
-          i++;
-        }
-
-        if (currentUnit.length > 0) {
-          if (currentUnit.length < 4 && chunkSubUnits.length > 0) {
-            const prev = chunkSubUnits.pop()!;
-            chunkSubUnits.push(prev + ' ' + currentUnit.join(' '));
-          } else {
-            chunkSubUnits.push(currentUnit.join(' '));
-          }
-        }
-      }
-
-      const totalChars = chunkSubUnits.reduce((acc, u) => acc + u.length, 0) || 1;
-      let accumulated = 0;
-
-      for (const unitText of chunkSubUnits) {
-        const uLen = unitText.length;
-        const startSec = Math.round((cStart + (accumulated / totalChars) * cDuration) * 100) / 100;
-        accumulated += uLen;
-        const endSec = Math.round((cStart + (accumulated / totalChars) * cDuration) * 100) / 100;
-        const durationSec = Math.max(Math.round((endSec - startSec) * 100) / 100, 0.8);
-
-        sentences.push({
-          id: `sent-${count}`,
-          index: count,
-          timeRange: `[${formatTime(startSec)} - ${formatTime(endSec)}]`,
-          startSec,
-          endSec,
-          durationSec,
-          text: unitText,
-          highlightedHtml: applyHighlights(unitText),
-        });
-        count++;
-      }
-    }
-
-    // Post-processing Pass: Merge tiny 1-3 word fragments into adjacent sentences
-    const mergedSentences: SentenceItem[] = [];
-    for (const s of sentences) {
-      const words = s.text.trim().split(/\s+/).filter(Boolean);
-      if (words.length < 4 && mergedSentences.length > 0) {
-        const prev = mergedSentences[mergedSentences.length - 1];
-        prev.text = prev.text.trim() + ' ' + s.text.trim();
-        prev.endSec = Math.max(prev.endSec, s.endSec);
-        prev.durationSec = Math.max(Math.round((prev.endSec - prev.startSec) * 100) / 100, 0.8);
-        prev.timeRange = `[${formatTime(prev.startSec)} - ${formatTime(prev.endSec)}]`;
-        prev.highlightedHtml = applyHighlights(prev.text);
-      } else {
-        mergedSentences.push(s);
-      }
-    }
-
-    if (mergedSentences.length > 1 && mergedSentences[0].text.trim().split(/\s+/).filter(Boolean).length < 4) {
-      const first = mergedSentences.shift()!;
-      mergedSentences[0].text = first.text.trim() + ' ' + mergedSentences[0].text.trim();
-      mergedSentences[0].startSec = first.startSec;
-      mergedSentences[0].durationSec = Math.max(Math.round((mergedSentences[0].endSec - mergedSentences[0].startSec) * 100) / 100, 0.8);
-      mergedSentences[0].timeRange = `[${formatTime(first.startSec)} - ${formatTime(mergedSentences[0].endSec)}]`;
-      mergedSentences[0].highlightedHtml = applyHighlights(mergedSentences[0].text);
-    }
-
-    // Pass 2: Merge non-terminal sentence fragments where combined length <= 16 words
-    const finalMerged: SentenceItem[] = [];
-    for (const s of mergedSentences) {
-      if (finalMerged.length > 0) {
-        const prev = finalMerged[finalMerged.length - 1];
-        const prevHasTerminal = /[.?!]["']?$/.test(prev.text.trim());
-        const combWords = prev.text.trim().split(/\s+/).length + s.text.trim().split(/\s+/).length;
-        if (!prevHasTerminal && combWords <= 16) {
-          prev.text = prev.text.trim() + ' ' + s.text.trim();
-          prev.endSec = Math.max(prev.endSec, s.endSec);
-          prev.durationSec = Math.max(Math.round((prev.endSec - prev.startSec) * 100) / 100, 0.8);
-          prev.timeRange = `[${formatTime(prev.startSec)} - ${formatTime(prev.endSec)}]`;
-          prev.highlightedHtml = applyHighlights(prev.text);
-          continue;
-        }
-      }
-      finalMerged.push(s);
-    }
-
-    for (let idx = 0; idx < finalMerged.length; idx++) {
-      finalMerged[idx].index = idx + 1;
-      finalMerged[idx].id = `sent-${idx + 1}`;
-    }
-
-    return finalMerged;
+    this.sqlite.db
+      .prepare(`
+        INSERT INTO lessons (
+          id, user_id, guest_token, track, video_id, source_url, title, creator,
+          thumbnail_url, accent_dialect, duration_seconds, pacing_wpm, difficulty,
+          cefr_level, sentences_count, chunks_count, completed_drills, study_notes,
+          analysis_status, cached_langs, ai_insights_count, payload_json, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          user_id = COALESCE(excluded.user_id, lessons.user_id),
+          guest_token = CASE WHEN COALESCE(excluded.user_id, lessons.user_id) IS NOT NULL THEN NULL ELSE COALESCE(excluded.guest_token, lessons.guest_token) END,
+          track = excluded.track,
+          video_id = excluded.video_id,
+          source_url = excluded.source_url,
+          title = excluded.title,
+          creator = excluded.creator,
+          thumbnail_url = excluded.thumbnail_url,
+          accent_dialect = excluded.accent_dialect,
+          duration_seconds = excluded.duration_seconds,
+          pacing_wpm = excluded.pacing_wpm,
+          difficulty = excluded.difficulty,
+          cefr_level = excluded.cefr_level,
+          sentences_count = excluded.sentences_count,
+          chunks_count = excluded.chunks_count,
+          completed_drills = excluded.completed_drills,
+          study_notes = excluded.study_notes,
+          analysis_status = excluded.analysis_status,
+          cached_langs = excluded.cached_langs,
+          ai_insights_count = excluded.ai_insights_count,
+          payload_json = excluded.payload_json,
+          updated_at = excluded.updated_at
+      `)
+      .run(
+        item.id,
+        userId,
+        guestToken,
+        item.track,
+        item.videoId || null,
+        item.sourceUrl || '',
+        item.title || 'English Lesson',
+        item.creator || 'Creator',
+        item.thumbnailUrl || '',
+        item.accentDialect || 'General American English',
+        Math.round(Number(item.durationSeconds) || 0),
+        Math.round(Number(item.pacingWpm) || 140),
+        item.difficulty || 'Intermediate',
+        cefrLevel,
+        sentencesCount,
+        chunksCount,
+        Number(item.completedDrills) || 0,
+        item.studyNotes || '',
+        analysisStatus,
+        cachedLangs,
+        aiInsightsCount,
+        payloadJson,
+        item.createdAt,
+        now,
+      );
   }
 
-  private persist() {
-    try {
-      fs.writeFileSync(this.storagePath, JSON.stringify(this.items, null, 2), 'utf-8');
-    } catch (e: any) {
-      this.logger.error(`Failed to persist history: ${e.message}`);
-    }
-  }
+  /**
+   * Fast SQL projection for Library and History & Cache Manager:
+   * reads indexed metadata + cache telemetry columns without deserializing
+   * heavy transcript JSON payloads.
+   */
+  findSummaries(track?: string, scope?: RequestIdentityScope): HistorySummary[] {
+    const where = this.scopeWhereClause(scope);
+    const params: any[] = [...where.params];
+    let sql = `
+      SELECT
+        id, user_id, guest_token, track, video_id, source_url, title, creator,
+        thumbnail_url, accent_dialect, duration_seconds, pacing_wpm, difficulty,
+        cefr_level, sentences_count, chunks_count, completed_drills, study_notes,
+        analysis_status, cached_langs, ai_insights_count,
+        LENGTH(payload_json) AS payload_bytes,
+        created_at, updated_at
+      FROM lessons
+      WHERE ${where.sql}
+    `;
 
-  findAll(track?: string): HistoryItem[] {
     if (track && track !== 'all') {
-      return this.items.filter((i) => i.track === track);
+      sql += ' AND track = ?';
+      params.push(track);
     }
-    return [...this.items].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }
 
-  findById(id: string): HistoryItem | undefined {
-    return this.items.find((i) => i.id === id);
-  }
+    sql += ' ORDER BY updated_at DESC, created_at DESC';
 
-  findByUrlOrVideoId(url: string, videoId?: string): HistoryItem | undefined {
-    const cleanUrl = url ? url.trim().toLowerCase() : '';
-    return this.items.find((i) => {
-      if (cleanUrl && i.sourceUrl && i.sourceUrl.trim().toLowerCase() === cleanUrl) return true;
-      if (videoId && i.videoId && i.videoId.toLowerCase() === videoId.toLowerCase() && i.track === 'shadowing') return true;
-      return false;
+    const rows = this.sqlite.db.prepare(sql).all(...params) as Array<Record<string, any>>;
+    return rows.map((row) => {
+      const videoId = row.video_id ? String(row.video_id) : undefined;
+      const tStats = this.getTranscriptCacheFileStats(videoId);
+      const langs = String(row.cached_langs || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const notes = String(row.study_notes || '');
+      const analysisStatus = (row.analysis_status as 'pending' | 'ready') || 'pending';
+      const insightsCount = Number(row.ai_insights_count) || 0;
+
+      return {
+        id: String(row.id),
+        userId: row.user_id ? String(row.user_id) : null,
+        guestToken: row.guest_token ? String(row.guest_token) : null,
+        track: row.track as HistoryItem['track'],
+        trackTitle: this.cleanTrackTitle(String(row.track)),
+        title: String(row.title),
+        creator: String(row.creator),
+        videoId,
+        sourceUrl: String(row.source_url),
+        thumbnailUrl: String(row.thumbnail_url),
+        accentDialect: String(row.accent_dialect),
+        durationSeconds: Number(row.duration_seconds) || 0,
+        pacingWpm: Number(row.pacing_wpm) || 140,
+        difficulty: (row.difficulty as HistoryItem['difficulty']) || 'Intermediate',
+        cefrLevel: String(row.cefr_level || ''),
+        sentencesCount: Number(row.sentences_count) || 0,
+        chunksCount: Number(row.chunks_count) || 0,
+        analysisStatus,
+        timingVersion: 2,
+        segmentationVersion: 2,
+        stats: {
+          totalWords: Math.round(((Number(row.duration_seconds) || 60) / 60) * (Number(row.pacing_wpm) || 140)),
+          sentencesCount: Number(row.sentences_count) || 0,
+          connectedCount: insightsCount,
+          expressionsCount: 0,
+          vocabularyCount: 0,
+        },
+        studyNotes: notes,
+        payloadBytes: Number(row.payload_bytes) || 0,
+        cacheInfo: {
+          transcriptCached: tStats.cached,
+          transcriptBytes: tStats.bytes,
+          aiCoachCached: analysisStatus === 'ready',
+          aiInsightsCount: insightsCount,
+          translationLanguages: langs,
+          hasNotes: Boolean(notes.trim()),
+        },
+        createdAt: String(row.created_at),
+        updatedAt: String(row.updated_at),
+        completedDrills: Number(row.completed_drills) || 0,
+      };
     });
   }
 
-  create(item: HistoryItem): HistoryItem {
-    // Check if an existing item matches by ID, sourceUrl, or shadowing videoId
-    const existingIndex = this.items.findIndex((i) => {
-      if (item.id && i.id === item.id) return true;
-      if (item.track === 'shadowing' && i.track === 'shadowing') {
-        if (item.videoId && i.videoId && i.videoId.toLowerCase() === item.videoId.toLowerCase()) return true;
-        if (item.sourceUrl && i.sourceUrl && i.sourceUrl.toLowerCase() === item.sourceUrl.toLowerCase()) return true;
-      } else if (item.track === i.track && item.sourceUrl && i.sourceUrl && item.sourceUrl.toLowerCase() === i.sourceUrl.toLowerCase()) {
-        return true;
+  findById(id: string, scope?: RequestIdentityScope): HistoryItem | undefined {
+    if (!id) return undefined;
+    if (scope?.userId) {
+      const row = this.sqlite.db
+        .prepare('SELECT * FROM lessons WHERE id = ? AND user_id = ?')
+        .get(id, scope.userId);
+      return this.rowToItem(row);
+    }
+    const row = this.sqlite.db.prepare('SELECT * FROM lessons WHERE id = ?').get(id);
+    return this.rowToItem(row);
+  }
+
+  findByUrlOrVideoId(url: string, videoId?: string, scope?: RequestIdentityScope): HistoryItem | undefined {
+    const cleanUrl = (url || '').trim().toLowerCase();
+    const cleanVid = (videoId || '').trim().toLowerCase();
+    const where = this.scopeWhereClause(scope);
+
+    if (cleanVid) {
+      const row = this.sqlite.db
+        .prepare(
+          `SELECT * FROM lessons WHERE ${where.sql} AND track = 'shadowing' AND LOWER(video_id) = ? ORDER BY updated_at DESC LIMIT 1`,
+        )
+        .get(...where.params, cleanVid);
+      if (row) return this.rowToItem(row);
+    }
+
+    if (cleanUrl) {
+      const row = this.sqlite.db
+        .prepare(
+          `SELECT * FROM lessons WHERE ${where.sql} AND LOWER(source_url) = ? ORDER BY updated_at DESC LIMIT 1`,
+        )
+        .get(...where.params, cleanUrl);
+      if (row) return this.rowToItem(row);
+    }
+
+    return undefined;
+  }
+
+  create(item: HistoryItem, scope?: RequestIdentityScope): HistoryItem {
+    const existing =
+      (item.id ? this.findById(item.id, scope) : undefined) ||
+      this.findByUrlOrVideoId(item.sourceUrl, item.videoId, scope);
+
+    if (existing) {
+      item.id = existing.id;
+      item.userId = existing.userId ?? scope?.userId ?? null;
+      item.createdAt = existing.createdAt;
+      item.completedDrills = Math.max(item.completedDrills || 0, existing.completedDrills || 0);
+      item.studyNotes = item.studyNotes || existing.studyNotes || '';
+      if (!item.aiAnalysis && existing.aiAnalysis && existing.segmentationVersion === item.segmentationVersion) {
+        item.aiAnalysis = existing.aiAnalysis;
+        item.analysisStatus = existing.analysisStatus;
       }
-      return false;
+      if (!item.translationsCache && existing.translationsCache && existing.segmentationVersion === item.segmentationVersion) {
+        item.translationsCache = existing.translationsCache;
+      }
+      this.insertOrReplaceRow(item, scope);
+      this.logger.log(`Updated lesson in SQLite: ${item.title} (${item.id})`);
+      return item;
+    }
+
+    this.insertOrReplaceRow(item, scope);
+    this.logger.log(`Stored new lesson in SQLite: ${item.title} (${item.id})`);
+    return item;
+  }
+
+  update(id: string, updates: Partial<HistoryItem>, scope?: RequestIdentityScope): HistoryItem | undefined {
+    const existing = this.findById(id, scope);
+    if (!existing) return undefined;
+    const merged: HistoryItem = {
+      ...existing,
+      ...updates,
+      id: existing.id,
+    };
+    this.insertOrReplaceRow(merged, {
+      userId: merged.userId,
+      guestToken: merged.guestToken,
+    });
+    return merged;
+  }
+
+  updateNotes(id: string, studyNotes: string, scope?: RequestIdentityScope): HistoryItem | undefined {
+    const existing = this.findById(id, scope);
+    if (!existing) return undefined;
+    existing.studyNotes = String(studyNotes ?? '');
+    existing.noteMarkdown = this.buildCleanMarkdown(
+      existing.title,
+      existing.creator,
+      existing.sourceUrl,
+      existing.chunks || [],
+      existing.aiAnalysis,
+      existing.studyNotes,
+    );
+    this.insertOrReplaceRow(existing, {
+      userId: existing.userId,
+      guestToken: existing.guestToken,
+    });
+    return existing;
+  }
+
+  delete(id: string, scope?: RequestIdentityScope): boolean {
+    if (!id) return false;
+    const where = this.scopeWhereClause(scope);
+    const res = this.sqlite.db
+      .prepare(`DELETE FROM lessons WHERE id = ? AND ${where.sql}`)
+      .run(id, ...where.params);
+    if (Number(res.changes) > 0 && scope?.userId) {
+      this.sqlite.db
+        .prepare('DELETE FROM practice_logs WHERE lesson_id = ? AND user_id = ?')
+        .run(id, scope.userId);
+    }
+    return Number(res.changes) > 0;
+  }
+
+  clearAll(scope?: RequestIdentityScope): number {
+    const where = this.scopeWhereClause(scope);
+    const res = this.sqlite.db.prepare(`DELETE FROM lessons WHERE ${where.sql}`).run(...where.params);
+    this.logger.log('Cleared scoped lesson library.');
+    return Number(res.changes) || 0;
+  }
+
+  resetToDefaultShowcase(scope?: RequestIdentityScope): HistoryItem[] {
+    this.clearAll(scope);
+    return [];
+  }
+
+  /**
+   * Granular per-lesson cache control: clear AI Coach analysis, cached translations,
+   * and/or on-disk YouTube caption extraction cache without losing the lesson or notes.
+   */
+  clearLessonCache(
+    id: string,
+    cacheScope: CacheClearScope = 'all',
+    scope?: RequestIdentityScope,
+  ): HistorySummary | undefined {
+    const item = this.findById(id, scope);
+    if (!item) return undefined;
+
+    if (cacheScope === 'coach' || cacheScope === 'all') {
+      delete item.aiAnalysis;
+      item.analysisStatus = 'pending';
+      item.cefrLevel = '';
+      item.sentences = (item.sentences || []).map((s) => ({
+        ...s,
+        highlightedHtml: escapeTranscriptHtml(s.text),
+      }));
+      item.chunks = (item.chunks || []).map((c) => ({
+        ...c,
+        highlightedHtml: escapeTranscriptHtml(c.text),
+      }));
+    }
+
+    if (cacheScope === 'translations' || cacheScope === 'all') {
+      item.translationsCache = {};
+      item.sentences = (item.sentences || []).map((s) => ({
+        ...s,
+        translations: {},
+      }));
+    }
+
+    if ((cacheScope === 'transcript' || cacheScope === 'all') && item.videoId) {
+      this.deleteTranscriptCacheFile(item.videoId);
+    }
+
+    item.noteMarkdown = this.buildCleanMarkdown(
+      item.title,
+      item.creator,
+      item.sourceUrl,
+      item.chunks || [],
+      item.aiAnalysis,
+      item.studyNotes,
+    );
+
+    this.insertOrReplaceRow(item, scope);
+    return this.findSummaries(undefined, scope).find((s) => s.id === id);
+  }
+
+  clearAllCaches(
+    cacheScope: 'all' | 'coach' | 'translations' | 'transcripts' = 'all',
+    scope?: RequestIdentityScope,
+  ): { clearedLessonsCount: number } {
+    const summaries = this.findSummaries(undefined, scope);
+    let cleared = 0;
+    const mapped: CacheClearScope =
+      cacheScope === 'transcripts' ? 'transcript' : cacheScope;
+    for (const s of summaries) {
+      if (this.clearLessonCache(s.id, mapped, scope)) {
+        cleared++;
+      }
+    }
+    return { clearedLessonsCount: cleared };
+  }
+
+  resetLessonProgress(
+    id: string,
+    options: { clearNotes?: boolean } = {},
+    scope?: RequestIdentityScope,
+  ): HistorySummary | undefined {
+    const item = this.findById(id, scope);
+    if (!item) return undefined;
+
+    item.completedDrills = 0;
+    if (options.clearNotes) {
+      item.studyNotes = '';
+    }
+    item.noteMarkdown = this.buildCleanMarkdown(
+      item.title,
+      item.creator,
+      item.sourceUrl,
+      item.chunks || [],
+      item.aiAnalysis,
+      item.studyNotes,
+    );
+    this.insertOrReplaceRow(item, scope);
+
+    if (scope?.userId) {
+      this.sqlite.db
+        .prepare('DELETE FROM practice_logs WHERE user_id = ? AND lesson_id = ?')
+        .run(scope.userId, id);
+    }
+
+    return this.findSummaries(undefined, scope).find((s) => s.id === id);
+  }
+
+  bulkManage(
+    ids: string[],
+    action: 'delete' | 'clear_cache' | 'reset_progress',
+    scope?: RequestIdentityScope,
+  ): { affectedCount: number } {
+    if (!Array.isArray(ids) || ids.length === 0) return { affectedCount: 0 };
+    let affected = 0;
+    for (const rawId of ids) {
+      const id = String(rawId || '').trim();
+      if (!id) continue;
+      if (action === 'delete') {
+        if (this.delete(id, scope)) affected++;
+      } else if (action === 'clear_cache') {
+        if (this.clearLessonCache(id, 'all', scope)) affected++;
+      } else if (action === 'reset_progress') {
+        if (this.resetLessonProgress(id, {}, scope)) affected++;
+      }
+    }
+    return { affectedCount: affected };
+  }
+
+  incrementDrill(id: string, scope?: RequestIdentityScope, mode = 'shadow'): HistoryItem | undefined {
+    const item = this.findById(id, scope);
+    if (!item) return undefined;
+
+    item.completedDrills = (item.completedDrills || 0) + 1;
+    this.insertOrReplaceRow(item, {
+      userId: item.userId ?? scope?.userId ?? null,
+      guestToken: null,
     });
 
-    if (existingIndex >= 0) {
-      // Retain or maximize completed drills count
-      item.completedDrills = Math.max(item.completedDrills || 0, this.items[existingIndex].completedDrills || 0);
-      item.id = this.items[existingIndex].id; // Keep stable ID
-      this.items[existingIndex] = item;
-      this.logger.log(`Updated existing session in database: ${item.title} (${item.id})`);
-    } else {
-      this.items.unshift(item);
-      this.logger.log(`Created new session in database: ${item.title} (${item.id})`);
+    const now = new Date().toISOString();
+    const logUserId = scope?.userId || item.userId || null;
+
+    this.sqlite.db
+      .prepare(`
+        INSERT INTO practice_logs (id, user_id, guest_token, lesson_id, mode, drills_count, duration_sec, created_at)
+        VALUES (?, ?, NULL, ?, ?, 1, 60, ?)
+      `)
+      .run(uuidv4(), logUserId, id, mode || 'shadow', now);
+
+    if (logUserId) {
+      this.updateUserStreak(logUserId);
     }
 
-    this.persist();
     return item;
   }
 
-  update(id: string, updates: Partial<HistoryItem>): HistoryItem | undefined {
-    const item = this.findById(id);
-    if (!item) return undefined;
-    Object.assign(item, updates);
-    this.persist();
-    return item;
+  private updateUserStreak(userId: string): void {
+    const user = this.sqlite.db
+      .prepare('SELECT streak_days, last_practice_date FROM users WHERE id = ?')
+      .get(userId) as Record<string, any> | undefined;
+    if (!user) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const last = user.last_practice_date ? String(user.last_practice_date) : '';
+    if (last === today) return;
+
+    const yesterdayDate = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const nextStreak = last === yesterdayDate ? Number(user.streak_days || 0) + 1 : 1;
+
+    this.sqlite.db
+      .prepare('UPDATE users SET streak_days = ?, last_practice_date = ? WHERE id = ?')
+      .run(nextStreak, today, userId);
   }
 
-  delete(id: string): boolean {
-    const initialLen = this.items.length;
-    this.items = this.items.filter((i) => i.id !== id);
-    if (this.items.length !== initialLen) {
-      this.persist();
-      return true;
+  deleteActivityLog(logId: string, scope?: RequestIdentityScope): boolean {
+    if (!logId || !scope?.userId) return false;
+    const res = this.sqlite.db
+      .prepare('DELETE FROM practice_logs WHERE id = ? AND user_id = ?')
+      .run(logId, scope.userId);
+    return Number(res.changes) > 0;
+  }
+
+  clearActivityLogs(scope?: RequestIdentityScope): number {
+    if (!scope?.userId) return 0;
+    const res = this.sqlite.db
+      .prepare('DELETE FROM practice_logs WHERE user_id = ?')
+      .run(scope.userId);
+    this.sqlite.db
+      .prepare('UPDATE users SET streak_days = 0, last_practice_date = NULL WHERE id = ?')
+      .run(scope.userId);
+    return Number(res.changes) || 0;
+  }
+
+  getStats(scope?: RequestIdentityScope) {
+    if (!scope?.userId) {
+      return {
+        lessonsCount: 0,
+        completedDrills: 0,
+        vocabularyCount: 0,
+        dueVocabularyCount: 0,
+        practiceMinutes: 0,
+        streakDays: 0,
+        dailyGoalMinutes: 15,
+      };
     }
-    return false;
-  }
 
-  clearAll(): void {
-    this.items = [];
-    this.persist();
-    this.logger.log('All practice history has been completely cleared.');
-  }
+    const lessonRow = this.sqlite.db
+      .prepare(
+        `SELECT COUNT(*) AS lessonsCount, COALESCE(SUM(completed_drills), 0) AS completedDrills
+         FROM lessons WHERE user_id = ?`,
+      )
+      .get(scope.userId) as Record<string, any> | undefined;
 
-  resetWith(items: HistoryItem[]): void {
-    this.items = items;
-    this.persist();
-    this.logger.log(`History reset with ${items.length} initial items.`);
-  }
+    const nowIso = new Date().toISOString();
+    const vocabRow = this.sqlite.db
+      .prepare(
+        `SELECT COUNT(*) AS total,
+                COALESCE(SUM(CASE WHEN next_review_at <= ? THEN 1 ELSE 0 END), 0) AS due,
+                COALESCE(SUM(CASE WHEN mastery_level >= 3 THEN 1 ELSE 0 END), 0) AS mastered
+         FROM vocabulary_items WHERE user_id = ?`,
+      )
+      .get(nowIso, scope.userId) as Record<string, any> | undefined;
 
-  resetToDefaultShowcase(): HistoryItem[] {
-    this.clearAll();
-    this.logger.log('History cleared to clean production state.');
-    return [];
-  }
+    const logsRow = this.sqlite.db
+      .prepare(
+        `SELECT COALESCE(SUM(duration_sec), 0) AS totalSec FROM practice_logs WHERE user_id = ?`,
+      )
+      .get(scope.userId) as Record<string, any> | undefined;
 
-  getDefaultShowcaseItems(): HistoryItem[] {
-    return [];
-  }
+    const todayPrefix = `${new Date().toISOString().slice(0, 10)}%`;
+    const todayLogsRow = this.sqlite.db
+      .prepare(
+        `SELECT COALESCE(SUM(duration_sec), 0) AS todaySec FROM practice_logs WHERE user_id = ? AND created_at LIKE ?`,
+      )
+      .get(scope.userId, todayPrefix) as Record<string, any> | undefined;
 
-  incrementDrill(id: string): HistoryItem | undefined {
-    const item = this.findById(id);
-    if (item) {
-      item.completedDrills = (item.completedDrills || 0) + 1;
-      this.persist();
+    let streakDays = 0;
+    let dailyGoalMinutes = 15;
+    const u = this.sqlite.db
+      .prepare('SELECT streak_days, daily_goal_minutes FROM users WHERE id = ?')
+      .get(scope.userId) as Record<string, any> | undefined;
+    if (u) {
+      streakDays = Number(u.streak_days) || 0;
+      dailyGoalMinutes = Number(u.daily_goal_minutes) || 15;
     }
-    return item;
+
+    return {
+      lessonsCount: Number(lessonRow?.lessonsCount) || 0,
+      completedDrills: Number(lessonRow?.completedDrills) || 0,
+      vocabularyCount: Number(vocabRow?.total) || 0,
+      dueVocabularyCount: Number(vocabRow?.due) || 0,
+      masteredVocabularyCount: Number(vocabRow?.mastered) || 0,
+      practiceMinutes: Math.max(
+        Math.round((Number(logsRow?.totalSec) || 0) / 60),
+        Number(lessonRow?.completedDrills) || 0,
+      ),
+      todayMinutes: Math.round((Number(todayLogsRow?.todaySec) || 0) / 60),
+      streakDays,
+      dailyGoalMinutes,
+    };
+  }
+
+  getUsageOverview(scope?: RequestIdentityScope) {
+    const stats = this.getStats(scope);
+    const summaries = this.findSummaries(undefined, scope);
+
+    const byTrack = {
+      shadowing: 0,
+      street_talk: 0,
+      phonetics: 0,
+    };
+
+    let totalLessonsBytes = 0;
+    let transcriptCacheCount = 0;
+    let transcriptCacheBytes = 0;
+    const seenVideoIds = new Set<string>();
+    let aiCoachCachedCount = 0;
+    let translationCachedLessonsCount = 0;
+    let totalCachedLanguagesCount = 0;
+    let notesCount = 0;
+
+    for (const s of summaries) {
+      if (s.track === 'street_talk') byTrack.street_talk++;
+      else if (s.track === 'phonetics') byTrack.phonetics++;
+      else byTrack.shadowing++;
+
+      totalLessonsBytes += Number(s.payloadBytes) || 0;
+      if (s.cacheInfo?.aiCoachCached) aiCoachCachedCount++;
+      if (s.cacheInfo?.translationLanguages?.length) {
+        translationCachedLessonsCount++;
+        totalCachedLanguagesCount += s.cacheInfo.translationLanguages.length;
+      }
+      if (s.cacheInfo?.hasNotes) notesCount++;
+
+      if (s.videoId && !seenVideoIds.has(s.videoId) && s.cacheInfo?.transcriptCached) {
+        seenVideoIds.add(s.videoId);
+        transcriptCacheCount++;
+        transcriptCacheBytes += Number(s.cacheInfo.transcriptBytes) || 0;
+      }
+    }
+
+    const recentActivity = scope?.userId
+      ? (this.sqlite.db
+          .prepare(`
+            SELECT
+              p.id,
+              p.lesson_id AS lessonId,
+              COALESCE(l.title, 'Deleted Lesson') AS lessonTitle,
+              COALESCE(l.track, 'shadowing') AS track,
+              p.mode,
+              p.drills_count AS drillsCount,
+              p.duration_sec AS durationSec,
+              p.created_at AS createdAt
+            FROM practice_logs p
+            LEFT JOIN lessons l ON l.id = p.lesson_id
+            WHERE p.user_id = ?
+            ORDER BY p.created_at DESC
+            LIMIT 80
+          `)
+          .all(scope.userId) as Array<Record<string, any>>)
+      : [];
+
+    return {
+      stats: {
+        ...stats,
+        byTrack,
+      },
+      cacheOverview: {
+        totalLessonsBytes,
+        transcriptCacheCount,
+        transcriptCacheBytes,
+        totalStorageBytes: totalLessonsBytes + transcriptCacheBytes,
+        aiCoachCachedCount,
+        translationCachedLessonsCount,
+        totalCachedLanguagesCount,
+        notesCount,
+      },
+      recentActivity,
+    };
+  }
+
+  exportAccountData(user: any, scope?: RequestIdentityScope) {
+    if (!scope?.userId) return null;
+    const lessonRows = this.sqlite.db
+      .prepare('SELECT * FROM lessons WHERE user_id = ? ORDER BY created_at DESC')
+      .all(scope.userId) as Array<Record<string, any>>;
+    const lessons = lessonRows.map((r) => this.rowToItem(r)).filter(Boolean);
+
+    const vocabulary = this.sqlite.db
+      .prepare('SELECT * FROM vocabulary_items WHERE user_id = ? ORDER BY created_at DESC')
+      .all(scope.userId);
+
+    const practiceLogs = this.sqlite.db
+      .prepare('SELECT * FROM practice_logs WHERE user_id = ? ORDER BY created_at DESC')
+      .all(scope.userId);
+
+    return {
+      exportedAt: new Date().toISOString(),
+      platform: 'Flaptap Spoken English Studio',
+      version: 2,
+      user,
+      stats: this.getStats(scope),
+      lessons,
+      vocabulary,
+      practiceLogs,
+    };
   }
 }

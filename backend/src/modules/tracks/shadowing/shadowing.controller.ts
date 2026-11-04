@@ -1,64 +1,78 @@
-import { Controller, Post, Body, Get, Param, Query, NotFoundException } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req } from '@nestjs/common';
+import { Request } from 'express';
 import { ShadowingService } from './shadowing.service';
-import { AgentType } from '../../../core/agents/agent.interface';
+import { AuthService } from '../../auth/auth.service';
+import { requireAuthenticatedUser } from '../../auth/auth.request';
 
 export class ProcessVideoDto {
   url: string;
-  agentType?: AgentType;
+  force?: boolean;
 }
 
 export class TranslateSentencesDto {
   historyId: string;
   language?: string;
-  dialect?: string;
-  agentType?: AgentType;
+  force?: boolean;
+}
+
+export class AnalyzeLessonDto {
+  historyId: string;
+  force?: boolean;
+}
+
+export class DefineWordDto {
+  historyId: string;
+  word: string;
+  sentenceIndex?: number;
+  language?: string;
 }
 
 @Controller('api/tracks/shadowing')
 export class ShadowingController {
-  constructor(private readonly shadowingService: ShadowingService) {}
+  constructor(
+    private readonly shadowingService: ShadowingService,
+    private readonly authService: AuthService,
+  ) {}
 
   @Get('check-existing')
-  checkExisting(@Query('url') url: string) {
+  checkExisting(@Query('url') url: string, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
     if (!url) return { exists: false };
-    return this.shadowingService.checkExisting(url);
-  }
-
-  @Post('start-job')
-  startJob(@Body() dto: ProcessVideoDto) {
-    if (!dto.url) {
-      throw new Error('YouTube URL is required');
-    }
-    return this.shadowingService.startJob(dto.url, dto.agentType || AgentType.ANTIGRAVITY);
-  }
-
-  @Get('job-status/:jobId')
-  getJobStatus(@Param('jobId') jobId: string) {
-    const job = this.shadowingService.getJobStatus(jobId);
-    if (!job) {
-      throw new NotFoundException(`Job ${jobId} not found`);
-    }
-    return job;
+    return this.shadowingService.checkExisting(url, identity);
   }
 
   @Post('process')
-  async processVideo(@Body() dto: ProcessVideoDto) {
-    if (!dto.url) {
-      throw new Error('YouTube URL is required');
-    }
-    return this.shadowingService.processVideo(dto.url, dto.agentType || AgentType.ANTIGRAVITY);
+  processVideo(@Body() dto: ProcessVideoDto, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return this.shadowingService.process(dto?.url, Boolean(dto?.force), identity);
   }
 
   @Post('translate-sentences')
-  async translateSentences(@Body() dto: TranslateSentencesDto) {
-    if (!dto.historyId) {
-      throw new Error('historyId is required');
-    }
+  translateSentences(@Body() dto: TranslateSentencesDto, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
     return this.shadowingService.translateSentences(
-      dto.historyId,
-      dto.language || 'ar',
-      dto.dialect || 'ar-SA',
-      dto.agentType || AgentType.ANTIGRAVITY
+      dto?.historyId,
+      dto?.language,
+      Boolean(dto?.force),
+      identity,
+    );
+  }
+
+  @Post('analyze')
+  analyzeLesson(@Body() dto: AnalyzeLessonDto, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return this.shadowingService.analyzeLesson(dto?.historyId, Boolean(dto?.force), identity);
+  }
+
+  @Post('define-word')
+  defineWord(@Body() dto: DefineWordDto, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return this.shadowingService.defineWord(
+      dto?.historyId,
+      dto?.word,
+      dto?.sentenceIndex,
+      dto?.language,
+      identity,
     );
   }
 }
