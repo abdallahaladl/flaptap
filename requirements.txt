@@ -1,3 +1,4 @@
 # Flaptap AI — Production Python Dependencies for Audio & Caption Ingestion
-youtube-transcript-api>=0.6.2
-yt-dlp>=2025.01.0
+youtube-transcript-api>=1.2.4
+yt-dlp[default,curl-cffi]>=2026.10.0
+faster-whisper>=1.2.0

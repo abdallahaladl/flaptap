@@ -69,6 +69,8 @@ lerna-debug.log*
 
 # E2E Screenshots
 scripts/artifacts/
+data/audit_screenshots/
+data/screenshots/
 
 # IDE & Editor Configurations
 .vscode/
@@ -89,6 +91,7 @@ temp/
 
 # Runtime transcript cache & SQLite database
 data/transcripts/
+data/media/
 data/logs/
 data/*.pid
 data/PUBLIC_URL.txt

@@ -202,7 +202,7 @@ export class ShadowingAnalysisService {
     try {
       raw = await this.ai.chatJson<any>(systemPrompt, userPrompt, {
         temperature: 0.2,
-        maxTokens: 3600,
+        maxTokens: 6000,
         timeoutMs: 55000,
         json: true,
       });

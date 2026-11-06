@@ -21,3 +21,28 @@ export function getSkillScriptPath(): string {
 
   return 'extract_transcript.py';
 }
+
+export function getPythonBinaryPath(): string {
+  const candidates = [
+    process.env.FLAPTAP_PYTHON_BIN,
+    '/opt/venv/bin/python3',
+    path.resolve(__dirname, '../../../../.venv/bin/python3'),
+    path.resolve(__dirname, '../../../.venv/bin/python3'),
+    '/usr/local/bin/python3.11',
+    '/opt/homebrew/bin/python3.11',
+    '/usr/local/bin/python3',
+    '/opt/homebrew/bin/python3',
+  ].filter(Boolean) as string[];
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+        return candidate;
+      }
+    } catch {
+      // continue
+    }
+  }
+
+  return 'python3';
+}

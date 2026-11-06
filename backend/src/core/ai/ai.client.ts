@@ -122,8 +122,19 @@ export class AiClient {
   }
 
   async chatJson<T>(systemPrompt: string, userPrompt: string, options: AiChatOptions = {}): Promise<T> {
-    const raw = await this.chat(systemPrompt, userPrompt, { ...options, json: true });
-    return this.parseJson<T>(raw);
+    const firstRaw = await this.chat(systemPrompt, userPrompt, { ...options, json: true });
+    try {
+      return this.parseJson<T>(firstRaw);
+    } catch (firstErr: any) {
+      this.logger.warn(`Initial JSON parse failed (${firstErr?.message}); retrying with expanded token budget.`);
+      const expandedMax = Math.min(8192, Math.max((options.maxTokens ?? 2048) + 2048, 4096));
+      const secondRaw = await this.chat(systemPrompt, userPrompt, {
+        ...options,
+        maxTokens: expandedMax,
+        json: true,
+      });
+      return this.parseJson<T>(secondRaw);
+    }
   }
 
   parseJson<T>(raw: string): T {

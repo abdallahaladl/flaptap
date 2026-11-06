@@ -11,9 +11,19 @@
   const EXACT_SPEED_PRESETS = new Set([0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
 
   const PLAY_ICON_SVG =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>';
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>';
+  const PLAYING_ICON_SVG =
+    '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>';
   const PAUSE_ICON_SVG =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>';
+  const LOOP_ICON_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 2 21 6 17 10"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 22 3 18 7 14"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>';
+  const TRANSLATE_ICON_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>';
+  const SPINNER_ICON_SVG =
+    '<svg class="trans-spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>';
+  const CHECK_ICON_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
 
   const I18N = {
     en: {
@@ -22,9 +32,12 @@
       backToLibrary: 'Back to Library',
       tryAgain: 'Try Again',
       libraryBack: 'Library',
-      layoutSide: 'Side',
+      layoutSide: 'Split',
+      layoutTheater: 'Theater',
       layoutTop: 'Top',
       layoutFocus: 'Focus',
+      masterTransportLabel: 'Master Transport',
+      signIn: 'Sign in',
       exportMd: 'Export .md',
       completeSession: 'Complete',
       ttsHint: 'Powered by browser speech synthesis synced to your speed setting.',
@@ -49,7 +62,18 @@
       modeListen: 'Listen',
       modeCoach: 'Coach',
       modeNotes: 'Notes',
-      showTranslation: 'Show Translation',
+      translationLangLabel: 'Language',
+      transLangNone: 'None (Off)',
+      translateSentenceBtn: 'Translate',
+      translateAllBtn: 'Translate All',
+      translateRemainingBtn: 'Translate Remaining',
+      translatingShort: 'Translating...',
+      allTranslatedBtn: 'All Translated',
+      allTranslatedHint: 'All sentences are translated and saved permanently — no AI quota used',
+      translationOffHint: 'Select a language to enable translation',
+      readyToTranslateHint: 'Click Translate on any sentence or Translate All',
+      translatedSavedShort: 'translated · Saved',
+      allTranslatedSavedHint: 'Saved permanently',
       legendConnected: 'Connected Speech',
       legendExpressions: 'Expressions',
       legendVocab: 'Key Vocabulary',
@@ -82,6 +106,7 @@
       sessionCompletedToast: 'Practice session recorded',
       sentencesUnit: 'sentences',
       playBtn: 'Play',
+      playingBtn: 'Playing',
       pauseBtn: 'Pause',
       loopBtn: 'Loop',
       saveBtn: '+ Save',
@@ -103,9 +128,12 @@
       backToLibrary: 'العودة للمكتبة',
       tryAgain: 'إعادة المحاولة',
       libraryBack: 'المكتبة',
-      layoutSide: 'جانبي',
+      layoutSide: 'تقسيم',
+      layoutTheater: 'مسرح',
       layoutTop: 'علوي',
       layoutFocus: 'تركيز',
+      masterTransportLabel: 'التحكم الرئيسي',
+      signIn: 'تسجيل الدخول',
       exportMd: 'تصدير .md',
       completeSession: 'إتمام التدريب',
       ttsHint: 'يعمل عبر النطق الصوتي للمتصفح متزامناً مع السرعة المحددة.',
@@ -130,7 +158,18 @@
       modeListen: 'الإملاء',
       modeCoach: 'المدرب',
       modeNotes: 'الملاحظات',
-      showTranslation: 'إظهار الترجمة',
+      translationLangLabel: 'اللغة',
+      transLangNone: 'بدون ترجمة (إيقاف)',
+      translateSentenceBtn: 'ترجمة',
+      translateAllBtn: 'ترجمة الكل',
+      translateRemainingBtn: 'ترجمة المتبقي',
+      translatingShort: 'جارٍ الترجمة...',
+      allTranslatedBtn: 'تمت ترجمة الكل',
+      allTranslatedHint: 'تمت ترجمة جميع الجمل وحفظها نهائياً — بدون استهلاك رصيد الذكاء الاصطناعي',
+      translationOffHint: 'اختر لغة لتفعيل الترجمة',
+      readyToTranslateHint: 'اضغط ترجمة على أي جملة أو ترجمة الكل',
+      translatedSavedShort: 'مترجم ومحفوظ',
+      allTranslatedSavedHint: 'محفوظة نهائياً',
       legendConnected: 'الكلام المتصل',
       legendExpressions: 'التعبيرات',
       legendVocab: 'المفردات',
@@ -163,6 +202,7 @@
       sessionCompletedToast: 'تم تسجيل إتمام الجلسة',
       sentencesUnit: 'جملة',
       playBtn: 'تشغيل',
+      playingBtn: 'يعمل',
       pauseBtn: 'إيقاف',
       loopBtn: 'تكرار',
       saveBtn: '+ حفظ',
@@ -185,7 +225,12 @@
       modeListen: 'Dictado',
       modeCoach: 'Coach',
       modeNotes: 'Notas',
-      showTranslation: 'Mostrar traducción',
+      translationLangLabel: 'Idioma',
+      transLangNone: 'Ninguno (Desactivado)',
+      translateSentenceBtn: 'Traducir',
+      translateAllBtn: 'Traducir todo',
+      translateRemainingBtn: 'Traducir restantes',
+      allTranslatedBtn: 'Todo traducido',
       completeSession: 'Completar',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
     },
@@ -196,7 +241,12 @@
       modeListen: 'Dictée',
       modeCoach: 'Coach',
       modeNotes: 'Notes',
-      showTranslation: 'Afficher la traduction',
+      translationLangLabel: 'Langue',
+      transLangNone: 'Aucun (Désactivé)',
+      translateSentenceBtn: 'Traduire',
+      translateAllBtn: 'Tout traduire',
+      translateRemainingBtn: 'Traduire le reste',
+      allTranslatedBtn: 'Tout traduit',
       completeSession: 'Terminer',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
     },
@@ -207,7 +257,12 @@
       modeListen: 'Diktat',
       modeCoach: 'Coach',
       modeNotes: 'Notizen',
-      showTranslation: 'Übersetzung anzeigen',
+      translationLangLabel: 'Sprache',
+      transLangNone: 'Keine (Aus)',
+      translateSentenceBtn: 'Übersetzen',
+      translateAllBtn: 'Alle übersetzen',
+      translateRemainingBtn: 'Restliche übersetzen',
+      allTranslatedBtn: 'Alle übersetzt',
       completeSession: 'Abschließen',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
     },
@@ -218,7 +273,12 @@
       modeListen: 'Dikte',
       modeCoach: 'Koç',
       modeNotes: 'Notlar',
-      showTranslation: 'Çeviriyi Göster',
+      translationLangLabel: 'Dil',
+      transLangNone: 'Yok (Kapalı)',
+      translateSentenceBtn: 'Çevir',
+      translateAllBtn: 'Tümünü Çevir',
+      translateRemainingBtn: 'Kalanları Çevir',
+      allTranslatedBtn: 'Tümü Çevrildi',
       completeSession: 'Tamamla',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
     },
@@ -241,16 +301,19 @@
     isPlaying: false,
     loopSentenceIndex: null,
     endAction: 'pause', // 'pause' | 'loop' | 'continue'
+    activeSentenceStep: 'idle', // 'idle' | 'playing-once' | 'paused-from-once' | 'looping' | 'paused-from-loop'
+    endedNaturally: false,
     speed: 1.0,
     seekTargetStart: 0,
     awaitingOnsetUnmute: false,
     lastSeekTime: 0,
     playbackTicker: null,
-    translationEnabled: false,
     translationLang: localStorage.getItem('flaptap_trans_lang') || 'ar',
     translationRtl: true,
     languages: [],
     translationsByLang: {},
+    translatingAllByLang: {},
+    translatingSentencesByLang: {},
     analysisInFlight: false,
     dictationIndex: 1,
     dictationLevel: 'medium',
@@ -260,6 +323,10 @@
     mediaRecorder: null,
     recordedChunks: [],
     recordedAudioUrl: null,
+    autoFollow: true,
+    userScrolledAway: false,
+    showTranslations: true,
+    recordingStartTime: 0,
   };
 
   window.studioState = studioState;
@@ -365,8 +432,14 @@
       }
     }
 
+    const noneOption = document.querySelector('#trans-lang-select option[value="none"]');
+    if (noneOption) {
+      noneOption.textContent = t('transLangNone');
+    }
+
     syncPlaybackButtonsDom();
     syncSavedButtonsDom();
+    syncTranslationUiState();
   }
 
   /* ========================================================================
@@ -375,30 +448,59 @@
      ======================================================================== */
 
   function syncPlaybackButtonsDom() {
-    const activeIdx = studioState.activeSentence?.index ?? null;
+    const activeIdx = studioState.activeSentence?.index ?? (studioState.item?.sentences?.[0]?.index ?? 1);
     const loopIdx = studioState.loopSentenceIndex;
     const isPlaying = Boolean(studioState.isPlaying);
 
-    // 1. Per-sentence Loop buttons — strictly at most ONE active
-    document.querySelectorAll('[data-loop-sent]').forEach((btn) => {
-      const idx = Number(btn.dataset.loopSent);
-      const isLooping = loopIdx !== null && idx === loopIdx;
-      btn.classList.toggle('active', isLooping);
-      btn.setAttribute('aria-pressed', isLooping ? 'true' : 'false');
-    });
-
-    // 2. Per-sentence Play/Pause buttons
+    // 1. Play/Pause Buttons (Pure Icon, 2 States Only: Play vs Pause)
     document.querySelectorAll('[data-play-sent]').forEach((btn) => {
       const idx = Number(btn.dataset.playSent);
-      const isThisPlaying = isPlaying && activeIdx !== null && idx === activeIdx;
+      const isThisActive = activeIdx !== null && idx === activeIdx;
+      const isThisPlaying = isPlaying && isThisActive;
+
       btn.classList.toggle('active', isThisPlaying);
+      btn.classList.toggle('is-playing', isThisPlaying);
       btn.setAttribute('aria-pressed', isThisPlaying ? 'true' : 'false');
-      btn.innerHTML = `${isThisPlaying ? PAUSE_ICON_SVG : PLAY_ICON_SVG}<span>${escapeHtml(
-        isThisPlaying ? t('pauseBtn') : t('playBtn'),
-      )}</span>`;
+      btn.dataset.playState = isThisPlaying ? 'playing' : 'idle';
+      btn.title = isThisPlaying ? t('pauseBtn') : t('playBtn');
+      btn.setAttribute('aria-label', isThisPlaying ? t('pauseBtn') : t('playBtn'));
+      btn.innerHTML = isThisPlaying ? PAUSE_ICON_SVG : PLAY_ICON_SVG;
     });
 
-    // 3. Coach Mode Play Clip buttons
+    // 2. Master Transport Play/Pause Button
+    const masterPlayBtn = document.getElementById('deck-play-active-btn');
+    const masterPlayIcon = document.getElementById('deck-play-icon');
+    const masterPauseIcon = document.getElementById('deck-pause-icon');
+    const masterPlayText = document.getElementById('deck-play-btn-text');
+
+    if (masterPlayBtn) {
+      masterPlayBtn.classList.toggle('is-playing', isPlaying);
+      masterPlayBtn.setAttribute('aria-pressed', isPlaying ? 'true' : 'false');
+    }
+    if (masterPlayIcon && masterPauseIcon) {
+      masterPlayIcon.hidden = isPlaying;
+      masterPauseIcon.hidden = !isPlaying;
+    }
+    if (masterPlayText) {
+      const numStr = `#${String(activeIdx).padStart(2, '0')}`;
+      masterPlayText.textContent = isPlaying ? `Pause ${numStr}` : `Play ${numStr}`;
+    }
+
+    // 3. Active Sentence Time Badge in Side Deck
+    const timeBadge = document.getElementById('active-sentence-time-badge');
+    if (timeBadge) {
+      timeBadge.textContent =
+        studioState.activeSentence?.timeRange ||
+        (studioState.item?.sentences?.[0]?.timeRange || '—');
+    }
+
+    // 4. Floating Jump Pill Target Number
+    const jumpNum = document.getElementById('floating-jump-sent-num');
+    if (jumpNum) {
+      jumpNum.textContent = `#${String(activeIdx).padStart(2, '0')}`;
+    }
+
+    // 5. Coach Mode Play Clip buttons
     document.querySelectorAll('[data-coach-play]').forEach((btn) => {
       const idx = Number(btn.dataset.coachPlay);
       const isCoachPlaying = isPlaying && activeIdx !== null && idx === activeIdx;
@@ -406,7 +508,7 @@
       btn.setAttribute('aria-pressed', isCoachPlaying ? 'true' : 'false');
     });
 
-    // 4. Listen Mode Dictation Play button
+    // 6. Listen Mode Dictation Play button
     const dictPlayBtn = document.getElementById('dict-play-btn');
     if (dictPlayBtn) {
       const isDictPlaying = isPlaying && activeIdx === studioState.dictationIndex;
@@ -416,14 +518,14 @@
       span.textContent = isDictPlaying ? t('pauseClipBtn') : t('playClipBtn');
     }
 
-    // 5. Voice Deck Speaker Replay button
+    // 7. Voice Deck Speaker Replay button
     const replayBtn = document.getElementById('replay-original-btn');
     if (replayBtn) {
       replayBtn.classList.toggle('active', isPlaying);
       replayBtn.setAttribute('aria-pressed', isPlaying ? 'true' : 'false');
     }
 
-    // 6. Sentence Flow Segmented Control (Auto-Pause | Loop | Continuous)
+    // 8. Sentence Flow Segmented Control (Auto-Pause | Loop | Continuous)
     document.querySelectorAll('.flow-btn[data-end-action]').forEach((btn) => {
       const isSelected = btn.dataset.endAction === studioState.endAction;
       btn.classList.toggle('active', isSelected);
@@ -432,8 +534,14 @@
   }
 
   function setSentenceLoop(indexOrNull) {
-    studioState.loopSentenceIndex =
+    const nextIdx =
       indexOrNull !== null && indexOrNull !== undefined ? Number(indexOrNull) : null;
+    studioState.loopSentenceIndex = nextIdx;
+    if (nextIdx !== null) {
+      studioState.endAction = 'loop';
+    } else if (studioState.endAction === 'loop') {
+      studioState.endAction = 'pause';
+    }
     syncPlaybackButtonsDom();
   }
 
@@ -489,23 +597,18 @@
     if (!workspace) return;
 
     let target = layoutChoice;
-    if (layoutChoice === 'focus' && studioState.layout === 'focus') {
-      target = studioState.previousNonFocusLayout || 'side';
-    } else if (layoutChoice !== 'focus') {
-      studioState.previousNonFocusLayout = layoutChoice;
-    }
-
-    if (!['side', 'top', 'focus'].includes(target)) target = 'side';
+    if (target === 'top' || target === 'focus') target = 'theater';
+    if (!['side', 'theater'].includes(target)) target = 'side';
     studioState.layout = target;
-    if (target !== 'focus') {
-      localStorage.setItem('flaptap_studio_layout', target);
-    }
+    localStorage.setItem('flaptap_studio_layout', target);
 
     workspace.setAttribute('data-layout', target);
-    workspace.classList.toggle('video-expanded', target === 'focus');
 
     document.querySelectorAll('.layout-btn[data-layout-choice]').forEach((btn) => {
-      const isActive = btn.dataset.layoutChoice === target;
+      const choice = btn.dataset.layoutChoice;
+      const isActive =
+        choice === target ||
+        (choice === 'theater' && (layoutChoice === 'top' || layoutChoice === 'focus'));
       btn.classList.toggle('active', isActive);
       btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
@@ -627,26 +730,22 @@
     document.getElementById('badge-paragraphs-count').textContent = String(chunks.length);
 
     const activeIdx = studioState.activeSentence?.index || null;
-    const langCache =
-      studioState.translationsByLang[studioState.translationLang] ||
-      item.translationsCache?.[studioState.translationLang] ||
-      null;
 
     // 1. Render Shadow Mode Sentence Cards
     const sentContainer = document.getElementById('subview-sentences-list');
     if (sentContainer) {
+      const isLoopMode =
+        studioState.endAction === 'loop' || studioState.loopSentenceIndex !== null;
       sentContainer.innerHTML = sentences
         .map((s) => {
           const isActive = activeIdx === s.index;
-          const isLooping = studioState.loopSentenceIndex === s.index;
-          const isThisPlaying = studioState.isPlaying && isActive;
+          const isThisPlaying = Boolean(studioState.isPlaying && isActive);
+          const isLoopActive =
+            studioState.loopSentenceIndex === s.index ||
+            (isActive && studioState.endAction === 'loop');
+
           const baseHtml = s.highlightedHtml || escapeHtml(s.text);
           const interactiveHtml = decorateClickableWords(baseHtml, s.index);
-
-          const transHtml =
-            langCache && langCache[s.index]
-              ? langCache[s.index]
-              : (s.translations?.[studioState.translationLang] || '—');
 
           return `
             <article
@@ -662,41 +761,34 @@
                 <div class="sent-actions-right">
                   <button
                     type="button"
-                    class="sent-action-btn ${isLooping ? 'active' : ''}"
-                    data-loop-sent="${s.index}"
-                    aria-pressed="${isLooping ? 'true' : 'false'}"
-                    title="Loop this sentence"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
-                    <span>${escapeHtml(t('loopBtn'))}</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="sent-action-btn ${isThisPlaying ? 'active' : ''}"
+                    class="sent-action-btn sent-icon-btn sent-play-btn ${isThisPlaying ? 'active is-playing' : ''}"
                     data-play-sent="${s.index}"
+                    data-play-state="${isThisPlaying ? 'playing' : 'idle'}"
                     aria-pressed="${isThisPlaying ? 'true' : 'false'}"
-                    title="Play or pause sentence"
+                    title="${escapeHtml(isThisPlaying ? t('pauseBtn') : t('playBtn'))}"
+                    aria-label="${escapeHtml(isThisPlaying ? t('pauseBtn') : t('playBtn'))}"
                   >
                     ${isThisPlaying ? PAUSE_ICON_SVG : PLAY_ICON_SVG}
-                    <span>${escapeHtml(isThisPlaying ? t('pauseBtn') : t('playBtn'))}</span>
                   </button>
                 </div>
               </div>
 
               <div class="sent-english-line" data-line-sent="${s.index}">${interactiveHtml}</div>
 
-              <div class="sentence-translation-box" ${studioState.translationEnabled ? '' : 'hidden'}>
+              <div class="sentence-translation-box" data-trans-box="${s.index}" hidden>
                 <div
                   class="sentence-translation-text"
                   dir="${studioState.translationRtl ? 'rtl' : 'ltr'}"
                   data-trans-sent="${s.index}"
-                >${transHtml}</div>
+                ></div>
               </div>
             </article>
           `;
         })
         .join('');
     }
+
+    syncTranslationUiState();
 
     // 2. Render Read Mode Cohesive Editorial Paragraphs
     const chunkContainer = document.getElementById('subview-chunks-list');
@@ -732,17 +824,24 @@
   }
 
   /* ========================================================================
-     YOUTUBE PLAYER & EXACT MILLISECOND PLAYBACK BOUNDARIES
+     UNIVERSAL MEDIA PLAYERS (YOUTUBE & HTML5) & EXACT PLAYBACK BOUNDARIES
      ======================================================================== */
 
   function mountMediaDeck(item) {
     const ytDiv = document.getElementById('studio-youtube-player');
     const ttsStage = document.getElementById('tts-audio-stage');
 
-    if (item.videoId) {
+    const vidId = String(item.videoId || item.video_id || '').trim();
+    const isExternal = vidId.startsWith('ext_') || (vidId.length > 0 && !vidId.match(/^[a-zA-Z0-9_-]{11}$/));
+
+    if (vidId && isExternal) {
       if (ttsStage) ttsStage.hidden = true;
       if (ytDiv) ytDiv.hidden = false;
-      loadYouTubeIframeApi(item.videoId);
+      createHtml5Player(vidId);
+    } else if (vidId) {
+      if (ttsStage) ttsStage.hidden = true;
+      if (ytDiv) ytDiv.hidden = false;
+      loadYouTubeIframeApi(vidId);
     } else {
       if (ytDiv) ytDiv.hidden = true;
       if (ttsStage) {
@@ -752,6 +851,94 @@
           document.getElementById('tts-active-quote').textContent = `“${item.sentences[0].text}”`;
         }
       }
+    }
+  }
+
+  function createHtml5Player(mediaId) {
+    if (studioState.ytPlayer) return; // Never remount!
+    const container = document.getElementById('video-stage-container');
+    if (!container) return;
+
+    let videoEl = document.getElementById('studio-html5-player');
+    if (!videoEl) {
+      const ytDiv = document.getElementById('studio-youtube-player');
+      if (ytDiv) ytDiv.style.display = 'none';
+
+      videoEl = document.createElement('video');
+      videoEl.id = 'studio-html5-player';
+      videoEl.className = 'studio-html5-video';
+      videoEl.setAttribute('playsinline', '');
+      videoEl.setAttribute('controls', '');
+      videoEl.setAttribute('preload', 'auto');
+      videoEl.src = `/api/tracks/shadowing/media/${encodeURIComponent(mediaId)}`;
+      container.appendChild(videoEl);
+
+      videoEl.addEventListener('play', () => {
+        studioState.isPlaying = true;
+        syncPlaybackButtonsDom();
+        startPlaybackTicker();
+      });
+
+      videoEl.addEventListener('pause', () => {
+        studioState.isPlaying = false;
+        syncPlaybackButtonsDom();
+      });
+
+      videoEl.addEventListener('ended', () => {
+        studioState.isPlaying = false;
+        syncPlaybackButtonsDom();
+      });
+
+      videoEl.addEventListener('timeupdate', () => {
+        if (!studioState.isPlaying) {
+          checkSentenceDrillProgress();
+        }
+      });
+    }
+
+    studioState.ytPlayer = {
+      isHtml5: true,
+      seekTo(seconds, allowSeekAhead) {
+        if (videoEl) videoEl.currentTime = Number(seconds) || 0;
+      },
+      playVideo() {
+        if (videoEl) {
+          const p = videoEl.play();
+          if (p && typeof p.catch === 'function') p.catch(() => {});
+        }
+      },
+      pauseVideo() {
+        if (videoEl) videoEl.pause();
+      },
+      mute() {
+        if (videoEl) videoEl.muted = true;
+      },
+      unMute() {
+        if (videoEl) videoEl.muted = false;
+      },
+      getCurrentTime() {
+        return videoEl ? videoEl.currentTime : 0;
+      },
+      getDuration() {
+        return videoEl ? videoEl.duration : 0;
+      },
+      setPlaybackRate(rate) {
+        if (videoEl) videoEl.playbackRate = Number(rate) || 1.0;
+      },
+      getPlayerState() {
+        if (!videoEl) return 2;
+        return videoEl.paused ? 2 : 1;
+      },
+    };
+
+    studioState.ytReady = true;
+    try {
+      studioState.ytPlayer.setPlaybackRate(studioState.speed);
+    } catch {}
+    if (studioState.pendingPlaySentenceIndex !== null) {
+      const idx = studioState.pendingPlaySentenceIndex;
+      studioState.pendingPlaySentenceIndex = null;
+      playSentence(idx, { preserveLoop: studioState.loopSentenceIndex === idx });
     }
   }
 
@@ -800,6 +987,7 @@
           if (ev?.data === 1) {
             studioState.isPlaying = true;
             syncPlaybackButtonsDom();
+            startPlaybackTicker();
           } else if (ev?.data === 2 || ev?.data === 0) {
             studioState.isPlaying = false;
             syncPlaybackButtonsDom();
@@ -824,6 +1012,12 @@
     document.querySelectorAll(`.read-sentence[data-read-sent="${index}"]`).forEach((el) => {
       el.classList.add('active-reading');
     });
+
+    const activeBadge = document.getElementById('active-sentence-time-badge');
+    const targetSentence = (studioState.item?.sentences || []).find((s) => s.index === index);
+    if (activeBadge && targetSentence) {
+      activeBadge.textContent = targetSentence.timeRange || '—';
+    }
   }
 
   function pauseCurrentPlayback() {
@@ -854,15 +1048,30 @@
     const sentence = sentences.find((s) => Number(s.index) === targetIdx);
     if (!sentence) return;
 
-    // Reset per-item Loop automatically whenever moving to a different sentence
-    if (
-      !options.preserveLoop &&
-      studioState.loopSentenceIndex !== null &&
-      studioState.loopSentenceIndex !== sentence.index
-    ) {
+    const wasDifferentSentence = studioState.activeSentence?.index !== sentence.index;
+    const shouldInheritLoop =
+      options.forceMode === 'loop' ||
+      options.preserveLoop === true ||
+      (options.forceMode !== 'once' &&
+        (studioState.endAction === 'loop' || studioState.loopSentenceIndex !== null));
+
+    if (shouldInheritLoop) {
+      studioState.loopSentenceIndex = sentence.index;
+      studioState.endAction = 'loop';
+      if (!options.keepStep) {
+        studioState.activeSentenceStep = 'looping';
+      }
+    } else {
       studioState.loopSentenceIndex = null;
+      if (studioState.endAction === 'loop') {
+        studioState.endAction = 'pause';
+      }
+      if (!options.keepStep) {
+        studioState.activeSentenceStep = 'playing-once';
+      }
     }
 
+    studioState.endedNaturally = false;
     studioState.activeSentence = sentence;
     studioState.seekTargetStart = sentence.startSec;
     studioState.isPlaying = true;
@@ -887,14 +1096,17 @@
             const shouldRepeat =
               studioState.loopSentenceIndex === sentence.index || studioState.endAction === 'loop';
             if (shouldRepeat && studioState.activeSentence?.index === sentence.index) {
-              playSentence(sentence.index, { preserveLoop: true });
+              playSentence(sentence.index, { preserveLoop: true, keepStep: true });
               return;
             }
             studioState.isPlaying = false;
+            studioState.endedNaturally = true;
+            studioState.activeSentenceStep = 'idle';
             syncPlaybackButtonsDom();
           };
           utter.onerror = () => {
             studioState.isPlaying = false;
+            studioState.activeSentenceStep = 'idle';
             syncPlaybackButtonsDom();
           };
           window.speechSynthesis.speak(utter);
@@ -934,6 +1146,37 @@
 
   window.playSentence = playSentence;
 
+  function handleSentencePlayButtonClick(idx) {
+    if (studioState.isPlaying && studioState.activeSentence?.index === idx) {
+      pauseCurrentPlayback();
+    } else {
+      const isLoopMode =
+        studioState.loopSentenceIndex === idx || studioState.endAction === 'loop';
+      playSentence(idx, {
+        forceMode: isLoopMode ? 'loop' : 'once',
+      });
+    }
+  }
+
+  function handleSentenceLoopButtonClick(idx) {
+    const isCurrentlyLooping =
+      studioState.loopSentenceIndex === idx ||
+      (studioState.activeSentence?.index === idx && studioState.endAction === 'loop');
+
+    if (isCurrentlyLooping) {
+      setSentenceLoop(null);
+    } else {
+      setSentenceLoop(idx);
+      if (!studioState.isPlaying || studioState.activeSentence?.index !== idx) {
+        playSentence(idx, { forceMode: 'loop' });
+      }
+    }
+    syncPlaybackButtonsDom();
+  }
+
+  window.handleSentencePlayButtonClick = handleSentencePlayButtonClick;
+  window.handleSentenceLoopButtonClick = handleSentenceLoopButtonClick;
+
   function startPlaybackTicker() {
     if (studioState.playbackTicker) {
       clearInterval(studioState.playbackTicker);
@@ -943,12 +1186,12 @@
 
   function checkSentenceDrillProgress() {
     const player = studioState.ytPlayer;
-    const active = studioState.activeSentence;
-    if (!player || !active || typeof player.getCurrentTime !== 'function') return;
+    if (!player || typeof player.getCurrentTime !== 'function') return;
 
     const current = Number(player.getCurrentTime() || 0);
+    const active = studioState.activeSentence;
 
-    if (studioState.awaitingOnsetUnmute && current >= active.startSec - 0.001) {
+    if (active && studioState.awaitingOnsetUnmute && current >= active.startSec - 0.001) {
       if (typeof player.unMute === 'function') player.unMute();
       studioState.awaitingOnsetUnmute = false;
     }
@@ -958,53 +1201,75 @@
       return;
     }
 
-    const endCutoff = Math.max(
-      active.startSec + 0.05,
-      Number((active.endSec - 0.012).toFixed(3)),
-    );
-
-    if (current >= endCutoff) {
-      const shouldLoop =
-        studioState.loopSentenceIndex === active.index || studioState.endAction === 'loop';
-
-      if (shouldLoop) {
-        studioState.awaitingOnsetUnmute = true;
-        studioState.lastSeekTime = Date.now();
-        if (typeof player.mute === 'function') player.mute();
-        player.seekTo(active.startSec, true);
-        if (typeof player.playVideo === 'function') player.playVideo();
-        return;
+    // 1. Real-Time Playhead Tracking: Update active sentence as video progresses
+    const sentences = studioState.item?.sentences || [];
+    if (sentences.length > 0) {
+      const match = sentences.find((s) => current >= s.startSec && current < s.endSec);
+      if (match && (!active || active.index !== match.index)) {
+        studioState.activeSentence = match;
+        updateActiveSentenceDom(match.index);
+        syncPlaybackButtonsDom();
+        scrollSentenceIntoView(match.index, false);
       }
+    }
 
-      if (studioState.endAction === 'pause') {
-        if (typeof player.pauseVideo === 'function') player.pauseVideo();
-        if (studioState.playbackTicker) {
-          clearInterval(studioState.playbackTicker);
-          studioState.playbackTicker = null;
-        }
-        studioState.isPlaying = false;
-        syncPlaybackButtonsDom();
-        return;
-      }
+    // 2. Playback Boundary Enforcement (Exact startSec to endSec - 12ms cutoff)
+    if (active) {
+      const endCutoff = Math.max(
+        active.startSec + 0.05,
+        Number((active.endSec - 0.012).toFixed(3)),
+      );
 
-      // Continuous flow: advance active sentence highlight without seeking/stuttering
-      const sentences = studioState.item?.sentences || [];
-      const nextSentence = sentences.find((s) => s.index === active.index + 1);
-      if (nextSentence) {
-        if (studioState.loopSentenceIndex !== null && studioState.loopSentenceIndex !== nextSentence.index) {
-          studioState.loopSentenceIndex = null;
+      if (current >= endCutoff) {
+        const shouldLoop =
+          studioState.loopSentenceIndex === active.index || studioState.endAction === 'loop';
+
+        if (shouldLoop) {
+          studioState.awaitingOnsetUnmute = true;
+          studioState.lastSeekTime = Date.now();
+          if (typeof player.mute === 'function') player.mute();
+          player.seekTo(active.startSec, true);
+          if (typeof player.playVideo === 'function') player.playVideo();
+          return;
         }
-        studioState.activeSentence = nextSentence;
-        updateActiveSentenceDom(nextSentence.index);
-        syncPlaybackButtonsDom();
-      } else {
-        if (typeof player.pauseVideo === 'function') player.pauseVideo();
-        if (studioState.playbackTicker) {
-          clearInterval(studioState.playbackTicker);
-          studioState.playbackTicker = null;
+
+        if (studioState.endAction === 'pause') {
+          if (typeof player.pauseVideo === 'function') player.pauseVideo();
+          if (studioState.playbackTicker) {
+            clearInterval(studioState.playbackTicker);
+            studioState.playbackTicker = null;
+          }
+          studioState.isPlaying = false;
+          studioState.endedNaturally = true;
+          studioState.activeSentenceStep = 'idle';
+          syncPlaybackButtonsDom();
+          syncFloatingJumpButton();
+          return;
         }
-        studioState.isPlaying = false;
-        syncPlaybackButtonsDom();
+
+        // Continuous flow: advance active sentence highlight without seeking/stuttering
+        const nextSentence = sentences.find((s) => s.index === active.index + 1);
+        if (nextSentence) {
+          if (studioState.loopSentenceIndex !== null) {
+            studioState.loopSentenceIndex = nextSentence.index;
+          }
+          studioState.activeSentence = nextSentence;
+          studioState.activeSentenceStep = 'playing-once';
+          updateActiveSentenceDom(nextSentence.index);
+          syncPlaybackButtonsDom();
+          scrollSentenceIntoView(nextSentence.index, false);
+        } else {
+          if (typeof player.pauseVideo === 'function') player.pauseVideo();
+          if (studioState.playbackTicker) {
+            clearInterval(studioState.playbackTicker);
+            studioState.playbackTicker = null;
+          }
+          studioState.isPlaying = false;
+          studioState.endedNaturally = true;
+          studioState.activeSentenceStep = 'idle';
+          syncPlaybackButtonsDom();
+          syncFloatingJumpButton();
+        }
       }
     }
   }
@@ -1012,7 +1277,57 @@
   window.checkSentenceDrillProgress = checkSentenceDrillProgress;
 
   /* ========================================================================
-     SPEED CONTROL (0.10x Snap + Exact Presets)
+     REAL-TIME AUTO-FOLLOW & FLUID PLAYBACK SCROLL SYNC
+     ======================================================================== */
+
+  function scrollSentenceIntoView(index, force) {
+    if (!studioState.autoFollow && !force) return;
+    if (studioState.userScrolledAway && !force) return;
+
+    if (studioState.mode === 'shadow') {
+      const card = document.getElementById(`sent-card-${index}`);
+      if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } else if (studioState.mode === 'read') {
+      const readSent = document.querySelector(`.read-sentence[data-read-sent="${index}"]`);
+      if (readSent) {
+        readSent.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } else if (studioState.mode === 'listen') {
+      studioState.dictationIndex = index;
+      renderDictationCard();
+    }
+  }
+
+  function syncAutoFollowButtonDom() {
+    const btn = document.getElementById('deck-auto-follow-btn');
+    const textEl = document.getElementById('deck-auto-follow-text');
+    if (btn) {
+      btn.classList.toggle('active', studioState.autoFollow);
+      btn.setAttribute('aria-pressed', studioState.autoFollow ? 'true' : 'false');
+    }
+    if (textEl) {
+      textEl.innerHTML = `Auto-Follow: <strong>${studioState.autoFollow ? 'ON' : 'OFF'}</strong>`;
+    }
+  }
+
+  function syncFloatingJumpButton() {
+    const pill = document.getElementById('floating-jump-active-btn');
+    if (!pill) return;
+    const shouldShow = Boolean(studioState.userScrolledAway && studioState.isPlaying);
+    pill.hidden = !shouldShow;
+    if (shouldShow) {
+      const jumpNum = document.getElementById('floating-jump-sent-num');
+      if (jumpNum) {
+        const curr = studioState.activeSentence?.index || 1;
+        jumpNum.textContent = `#${String(curr).padStart(2, '0')}`;
+      }
+    }
+  }
+
+  /* ========================================================================
+     SPEED CONTROL (0.05x Precision + Stepper Buttons)
      ======================================================================== */
 
   function setStudioSpeed(rawVal) {
@@ -1020,10 +1335,8 @@
     if (!Number.isFinite(num)) num = 1.0;
     num = Math.max(0.25, Math.min(2.0, num));
 
-    const roundedQuarter = Math.round(num * 100) / 100;
-    const speed = EXACT_SPEED_PRESETS.has(roundedQuarter)
-      ? roundedQuarter
-      : Math.round(num * 10) / 10;
+    // Exact 0.05x precision fractions (0.25, 0.30, 0.35 ... 1.00 ... 2.00)
+    const speed = Math.round(num * 20) / 20;
 
     studioState.speed = speed;
 
@@ -1047,11 +1360,72 @@
     }
   }
 
+  function stepSpeed(delta) {
+    setStudioSpeed(studioState.speed + delta);
+  }
+
+  window.setStudioSpeed = setStudioSpeed;
+  window.stepSpeed = stepSpeed;
+
   window.setStudioSpeed = setStudioSpeed;
 
   /* ========================================================================
-     170+ WORLD LANGUAGE TRANSLATION DECK (With Cache Bypass Control)
+     170+ WORLD LANGUAGE TRANSLATION DECK
+     Strict 2-Trigger State Machine (Per-Sentence + Translate All) · Quota Lock
      ======================================================================== */
+
+  function getLangTranslationMap(langCode) {
+    if (!langCode || langCode === 'none') return {};
+    if (!studioState.translationsByLang[langCode]) {
+      studioState.translationsByLang[langCode] = {};
+    }
+    const target = studioState.translationsByLang[langCode];
+    const itemCache = studioState.item?.translationsCache?.[langCode];
+    if (itemCache && typeof itemCache === 'object') {
+      for (const [k, v] of Object.entries(itemCache)) {
+        const idx = Number(k);
+        if (Number.isFinite(idx) && typeof v === 'string' && v.trim() && !target[idx]) {
+          target[idx] = v;
+        }
+      }
+    }
+    const sentences = studioState.item?.sentences || [];
+    for (const s of sentences) {
+      const idx = Number(s.index);
+      const val = s.translations?.[langCode];
+      if (Number.isFinite(idx) && typeof val === 'string' && val.trim() && !target[idx]) {
+        target[idx] = val;
+      }
+    }
+    return target;
+  }
+
+  function mergeTranslationsIntoStudioState(langCode, incomingMap) {
+    if (!langCode || !incomingMap || typeof incomingMap !== 'object') return;
+    const map = getLangTranslationMap(langCode);
+    for (const [k, v] of Object.entries(incomingMap)) {
+      const idx = Number(k);
+      if (Number.isFinite(idx) && typeof v === 'string' && v.trim()) {
+        map[idx] = v;
+      }
+    }
+    if (studioState.item) {
+      if (!studioState.item.translationsCache) studioState.item.translationsCache = {};
+      studioState.item.translationsCache[langCode] = Object.assign(
+        {},
+        studioState.item.translationsCache[langCode] || {},
+        map,
+      );
+      if (Array.isArray(studioState.item.sentences)) {
+        for (const s of studioState.item.sentences) {
+          const val = map[Number(s.index)];
+          if (!val) continue;
+          if (!s.translations) s.translations = {};
+          s.translations[langCode] = val;
+        }
+      }
+    }
+  }
 
   async function loadLanguagesCatalog() {
     try {
@@ -1060,12 +1434,19 @@
       const select = document.getElementById('trans-lang-select');
       if (!select) return;
 
-      select.innerHTML = studioState.languages
-        .map((l) => `<option value="${escapeHtml(l.code)}">${escapeHtml(l.name)} — ${escapeHtml(l.native)}</option>`)
-        .join('');
+      const optionsHtml = [
+        `<option value="none">${escapeHtml(t('transLangNone'))}</option>`,
+        ...studioState.languages.map(
+          (l) => `<option value="${escapeHtml(l.code)}">${escapeHtml(l.name)} — ${escapeHtml(l.native)}</option>`,
+        ),
+      ].join('');
+      select.innerHTML = optionsHtml;
 
       const preferred = studioState.translationLang || data.defaultLanguage || 'ar';
-      if (studioState.languages.some((l) => l.code === preferred)) {
+      if (preferred === 'none') {
+        select.value = 'none';
+        studioState.translationLang = 'none';
+      } else if (studioState.languages.some((l) => l.code === preferred)) {
         select.value = preferred;
         studioState.translationLang = preferred;
       } else if (studioState.languages[0]) {
@@ -1074,43 +1455,195 @@
       }
 
       const langMeta = studioState.languages.find((l) => l.code === studioState.translationLang);
-      studioState.translationRtl = Boolean(langMeta?.rtl);
+      studioState.translationRtl = Boolean(langMeta?.rtl ?? (studioState.translationLang === 'ar'));
+      syncTranslationUiState();
     } catch {}
   }
 
-  async function requestTranslations(forceRefresh) {
-    if (!studioState.item) return;
-    const force = Boolean(forceRefresh);
+  function syncTranslationUiState() {
     const langCode = studioState.translationLang || 'ar';
+    const select = document.getElementById('trans-lang-select');
+    if (select && select.options.length > 0 && select.value !== langCode) {
+      if ([...select.options].some((o) => o.value === langCode)) {
+        select.value = langCode;
+      }
+    }
+
+    const allBtn = document.getElementById('trans-all-btn');
     const statusEl = document.getElementById('translation-status-text');
-    const refreshBtn = document.getElementById('trans-refresh-btn');
+    const sideStatusEl = document.getElementById('side-trans-status-text');
+    const sideActiveBtn = document.getElementById('side-trans-active-btn');
+    const sideAllBtn = document.getElementById('side-trans-all-btn');
+    const visToggle = document.getElementById('side-trans-visibility-toggle');
+
+    if (visToggle) {
+      visToggle.checked = Boolean(studioState.showTranslations);
+    }
+
+    if (langCode === 'none') {
+      if (allBtn) {
+        allBtn.hidden = true;
+        allBtn.disabled = true;
+        allBtn.classList.remove('is-loading', 'is-completed');
+        allBtn.dataset.transAllState = 'off';
+      }
+      if (statusEl) {
+        statusEl.textContent = t('translationOffHint');
+      }
+      if (sideStatusEl) {
+        sideStatusEl.textContent = 'Off';
+      }
+      if (sideActiveBtn) {
+        sideActiveBtn.disabled = true;
+      }
+      document.querySelectorAll('.sentence-translation-box').forEach((box) => {
+        box.hidden = true;
+      });
+      return;
+    }
 
     const langMeta = studioState.languages.find((l) => l.code === langCode);
-    studioState.translationRtl = Boolean(langMeta?.rtl ?? (langCode === 'ar'));
+    const rtl = Boolean(langMeta ? langMeta.rtl : langCode === 'ar');
+    studioState.translationRtl = rtl;
+    const langName = langMeta ? langMeta.name : langCode.toUpperCase();
 
-    document.querySelectorAll('.sentence-translation-box').forEach((box) => {
-      box.hidden = !studioState.translationEnabled;
-    });
+    const sentences = studioState.item?.sentences || [];
+    const totalSentences = sentences.length;
+    const langMap = getLangTranslationMap(langCode);
+    const isTranslatingAll = Boolean(studioState.translatingAllByLang[langCode]);
+    const inFlightSet = studioState.translatingSentencesByLang[langCode] || new Set();
 
-    if (!studioState.translationEnabled) {
-      if (statusEl) statusEl.textContent = '';
+    let translatedCount = 0;
+    for (const s of sentences) {
+      const idx = Number(s.index);
+      const html = langMap[idx];
+      const hasTrans = Boolean(html && String(html).trim());
+      if (hasTrans) translatedCount++;
+      const isSentLoading = !hasTrans && (isTranslatingAll || inFlightSet.has(idx));
+
+      const box = document.querySelector(`[data-trans-box="${idx}"]`);
+      const textEl = document.querySelector(`.sentence-translation-text[data-trans-sent="${idx}"]`);
+
+      if (hasTrans) {
+        if (box) {
+          box.hidden = !studioState.showTranslations;
+        }
+        if (textEl) {
+          textEl.classList.remove('is-loading');
+          textEl.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+          if (textEl.innerHTML !== html) {
+            textEl.innerHTML = html;
+          }
+        }
+      } else if (isSentLoading) {
+        if (box) {
+          box.hidden = !studioState.showTranslations;
+        }
+        if (textEl) {
+          textEl.classList.add('is-loading');
+          textEl.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+          textEl.textContent = t('translatingStatus');
+        }
+      } else {
+        if (box) {
+          box.hidden = true;
+        }
+        if (textEl) {
+          textEl.classList.remove('is-loading');
+          textEl.textContent = '';
+        }
+      }
+    }
+
+    const untranslatedCount = Math.max(0, totalSentences - translatedCount);
+    const activeIdx = studioState.activeSentence?.index || 1;
+    const activeHasTrans = Boolean(langMap[activeIdx]);
+
+    if (sideActiveBtn) {
+      sideActiveBtn.disabled = activeHasTrans || inFlightSet.has(activeIdx) || isTranslatingAll;
+      sideActiveBtn.title = activeHasTrans ? 'Active sentence already translated' : 'Translate active sentence (T)';
+    }
+
+    if (sideStatusEl) {
+      if (isTranslatingAll) {
+        sideStatusEl.textContent = `${langName} · Translating...`;
+      } else if (translatedCount > 0) {
+        sideStatusEl.textContent = `${langName} · ${translatedCount}/${totalSentences}`;
+      } else {
+        sideStatusEl.textContent = `${langName} · Ready`;
+      }
+    }
+
+    if (allBtn) {
+      allBtn.hidden = false;
+      if (totalSentences > 0 && translatedCount >= totalSentences) {
+        allBtn.disabled = true;
+        allBtn.classList.remove('is-loading');
+        allBtn.classList.add('is-completed');
+        allBtn.dataset.transAllState = 'completed';
+        allBtn.removeAttribute('aria-busy');
+        allBtn.title = t('allTranslatedHint');
+        allBtn.innerHTML = `${CHECK_ICON_SVG}<span>${escapeHtml(t('allTranslatedBtn'))}</span>`;
+        if (statusEl) {
+          statusEl.textContent = `${langName} · ${t('allTranslatedSavedHint')} (${totalSentences}/${totalSentences})`;
+        }
+      } else if (isTranslatingAll) {
+        allBtn.disabled = true;
+        allBtn.classList.add('is-loading');
+        allBtn.classList.remove('is-completed');
+        allBtn.dataset.transAllState = 'loading';
+        allBtn.setAttribute('aria-busy', 'true');
+        allBtn.title = t('translatingStatus');
+        allBtn.innerHTML = `${SPINNER_ICON_SVG}<span>${escapeHtml(t('translatingShort'))} (${translatedCount}/${totalSentences})</span>`;
+        if (statusEl) {
+          statusEl.textContent = `${langName} · ${t('translatingStatus')}`;
+        }
+      } else {
+        allBtn.disabled = false;
+        allBtn.classList.remove('is-loading', 'is-completed');
+        allBtn.dataset.transAllState = 'ready';
+        allBtn.removeAttribute('aria-busy');
+        const label =
+          translatedCount > 0
+            ? `${t('translateRemainingBtn')} (${untranslatedCount})`
+            : `${t('translateAllBtn')} (${totalSentences})`;
+        allBtn.title = label;
+        allBtn.innerHTML = `${TRANSLATE_ICON_SVG}<span>${escapeHtml(label)}</span>`;
+        if (statusEl) {
+          if (inFlightSet.size > 0) {
+            statusEl.textContent = `${langName} · ${t('translatingStatus')}`;
+          } else if (translatedCount > 0) {
+            statusEl.textContent = `${langName} · ${translatedCount}/${totalSentences} ${t('translatedSavedShort')}`;
+          } else {
+            statusEl.textContent = `${langName} · ${t('readyToTranslateHint')}`;
+          }
+        }
+      }
+    }
+  }
+
+  async function translateSingleSentence(sentenceIndex) {
+    if (!studioState.item) return;
+    const langCode = studioState.translationLang || 'ar';
+    if (langCode === 'none') return;
+
+    const idx = Number(sentenceIndex);
+    if (!Number.isFinite(idx) || idx <= 0) return;
+
+    const langMap = getLangTranslationMap(langCode);
+    if (langMap[idx]) {
+      syncTranslationUiState();
       return;
     }
 
-    const existing = !force ? studioState.translationsByLang[langCode] : null;
-    const totalSentences = (studioState.item.sentences || []).length;
-    if (existing && Object.keys(existing).length >= totalSentences) {
-      applyTranslationsToDom(existing, studioState.translationRtl);
-      if (statusEl) statusEl.textContent = t('translatedReady');
-      return;
+    if (studioState.translatingAllByLang[langCode]) return;
+    if (!studioState.translatingSentencesByLang[langCode]) {
+      studioState.translatingSentencesByLang[langCode] = new Set();
     }
+    if (studioState.translatingSentencesByLang[langCode].has(idx)) return;
 
-    if (statusEl) statusEl.textContent = t('translatingStatus');
-    if (refreshBtn) refreshBtn.disabled = true;
-    document.querySelectorAll('.sentence-translation-text').forEach((el) => {
-      el.setAttribute('dir', studioState.translationRtl ? 'rtl' : 'ltr');
-      if (force || !el.textContent || el.textContent === '—') el.textContent = '...';
-    });
+    studioState.translatingSentencesByLang[langCode].add(idx);
+    syncTranslationUiState();
 
     try {
       const res = await apiFetch('/api/tracks/shadowing/translate-sentences', {
@@ -1118,32 +1651,59 @@
         body: JSON.stringify({
           historyId: studioState.item.id,
           language: langCode,
-          force,
+          force: false,
+          sentenceIndices: [idx],
         }),
       });
-
       studioState.translationRtl = Boolean(res.rtl);
-      studioState.translationsByLang[langCode] = res.translations || {};
-      applyTranslationsToDom(res.translations || {}, Boolean(res.rtl));
-      if (statusEl) statusEl.textContent = `${res.languageName} · ${t('translatedReady')}`;
+      mergeTranslationsIntoStudioState(langCode, res.translations || {});
     } catch (error) {
-      if (statusEl) statusEl.textContent = error.message;
       showToast(error.message);
     } finally {
-      if (refreshBtn) refreshBtn.disabled = false;
+      studioState.translatingSentencesByLang[langCode]?.delete(idx);
+      syncTranslationUiState();
     }
   }
 
-  function applyTranslationsToDom(translations, rtl) {
-    document.querySelectorAll('.sentence-translation-text[data-trans-sent]').forEach((el) => {
-      const idx = Number(el.dataset.transSent);
-      const html = translations[idx] ?? translations[String(idx)];
-      el.setAttribute('dir', rtl ? 'rtl' : 'ltr');
-      if (html) {
-        el.innerHTML = html;
-      }
-    });
+  async function translateAllSentences() {
+    if (!studioState.item) return;
+    const langCode = studioState.translationLang || 'ar';
+    if (langCode === 'none') return;
+
+    const sentences = studioState.item.sentences || [];
+    const langMap = getLangTranslationMap(langCode);
+    const missing = sentences.filter((s) => !langMap[Number(s.index)]);
+    if (missing.length === 0) {
+      syncTranslationUiState();
+      return;
+    }
+
+    if (studioState.translatingAllByLang[langCode]) return;
+    studioState.translatingAllByLang[langCode] = true;
+    syncTranslationUiState();
+
+    try {
+      const res = await apiFetch('/api/tracks/shadowing/translate-sentences', {
+        method: 'POST',
+        body: JSON.stringify({
+          historyId: studioState.item.id,
+          language: langCode,
+          force: false,
+        }),
+      });
+      studioState.translationRtl = Boolean(res.rtl);
+      mergeTranslationsIntoStudioState(langCode, res.translations || {});
+    } catch (error) {
+      showToast(error.message);
+    } finally {
+      studioState.translatingAllByLang[langCode] = false;
+      syncTranslationUiState();
+    }
   }
+
+  window.translateSingleSentence = translateSingleSentence;
+  window.translateAllSentences = translateAllSentences;
+  window.syncTranslationUiState = syncTranslationUiState;
 
   /* ========================================================================
      MODE 3: LISTEN (ACTIVE CLOZE DICTATION)
@@ -1491,7 +2051,10 @@
           historyId: studioState.item.id,
           word,
           sentenceIndex: Number(sentenceIndex) || 1,
-          language: studioState.translationLang || 'ar',
+          language:
+            studioState.translationLang && studioState.translationLang !== 'none'
+              ? studioState.translationLang
+              : 'ar',
         }),
       });
 
@@ -1543,19 +2106,32 @@
   }
 
   /* ========================================================================
-     VOICE RECORDER
+     VOICE RECORDER & ARTICULATORY AUDIT (A/B SEQUENTIAL COMPARISON)
      ======================================================================== */
+
+  let micStream = null;
+  let audioContext = null;
+  let analyserNode = null;
+  let vuInterval = null;
+  let recordingTimerInterval = null;
 
   async function toggleVoiceRecording() {
     const btn = document.getElementById('record-toggle-btn');
     const txt = document.getElementById('record-btn-text');
     const status = document.getElementById('rec-status-label');
-    const audioEl = document.getElementById('recorded-audio-player');
+    const timerBadge = document.getElementById('rec-timer-badge');
+    const vuMeter = document.getElementById('rec-vu-meter');
+    const vuFill = document.getElementById('rec-vu-fill');
+    const replayBtn = document.getElementById('replay-recording-btn');
+    const abBtn = document.getElementById('ab-compare-btn');
 
     if (studioState.mediaRecorder && studioState.mediaRecorder.state === 'recording') {
       studioState.mediaRecorder.stop();
       return;
     }
+
+    // 1. Immediately pause video playback to avoid microphone bleed
+    pauseCurrentPlayback();
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       showToast('Microphone access is not available in this browser.');
@@ -1563,40 +2139,212 @@
     }
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      studioState.recordedChunks = [];
-      const recorder = new MediaRecorder(stream);
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // 2. Negotiate supported codec for 100% Safari/WebKit/Chrome reliability
+      let chosenType = '';
+      const codecs = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/aac',
+        'audio/ogg;codecs=opus',
+      ];
+      if (typeof MediaRecorder.isTypeSupported === 'function') {
+        for (const c of codecs) {
+          if (MediaRecorder.isTypeSupported(c)) {
+            chosenType = c;
+            break;
+          }
+        }
+      }
+
+      const options = chosenType ? { mimeType: chosenType } : {};
+      const recorder = new MediaRecorder(micStream, options);
       studioState.mediaRecorder = recorder;
+      studioState.recordedChunks = [];
+
+      // 3. Web Audio VU meter
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          audioContext = new AudioCtx();
+          const source = audioContext.createMediaStreamSource(micStream);
+          analyserNode = audioContext.createAnalyser();
+          analyserNode.fftSize = 64;
+          source.connect(analyserNode);
+          const dataArray = new Uint8Array(analyserNode.frequencyBinCount);
+
+          if (vuMeter) vuMeter.hidden = false;
+          clearInterval(vuInterval);
+          vuInterval = setInterval(() => {
+            if (!analyserNode) return;
+            analyserNode.getByteFrequencyData(dataArray);
+            let sum = 0;
+            for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+            const avg = sum / dataArray.length;
+            const pct = Math.min(100, Math.round((avg / 128) * 100));
+            if (vuFill) vuFill.style.width = `${pct}%`;
+          }, 60);
+        }
+      } catch {}
 
       recorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) studioState.recordedChunks.push(e.data);
       };
 
       recorder.onstop = () => {
-        stream.getTracks().forEach((tr) => tr.stop());
-        const blob = new Blob(studioState.recordedChunks, { type: 'audio/webm' });
+        clearInterval(recordingTimerInterval);
+        clearInterval(vuInterval);
+        if (vuMeter) vuMeter.hidden = true;
+        if (vuFill) vuFill.style.width = '0%';
+        if (audioContext && audioContext.state !== 'closed') {
+          try {
+            audioContext.close();
+          } catch {}
+        }
+        if (micStream) {
+          micStream.getTracks().forEach((tr) => tr.stop());
+          micStream = null;
+        }
+
+        const blobType = chosenType || 'audio/webm';
+        const blob = new Blob(studioState.recordedChunks, { type: blobType });
         if (studioState.recordedAudioUrl) {
           URL.revokeObjectURL(studioState.recordedAudioUrl);
         }
         studioState.recordedAudioUrl = URL.createObjectURL(blob);
+
+        const audioEl = document.getElementById('recorded-audio-player');
         if (audioEl) {
           audioEl.src = studioState.recordedAudioUrl;
-          audioEl.hidden = false;
         }
+
         btn?.classList.remove('recording');
         btn?.setAttribute('aria-pressed', 'false');
         if (txt) txt.textContent = t('recordVoice');
         if (status) status.textContent = t('recSaved');
+        if (timerBadge) timerBadge.hidden = true;
+
+        if (replayBtn) replayBtn.disabled = false;
+        if (abBtn) abBtn.disabled = false;
       };
 
-      recorder.start();
+      recorder.start(100);
       btn?.classList.add('recording');
       btn?.setAttribute('aria-pressed', 'true');
       if (txt) txt.textContent = t('stopRecord');
       if (status) status.textContent = t('recRecording');
+
+      // Live recording timer badge
+      studioState.recordingStartTime = Date.now();
+      if (timerBadge) {
+        timerBadge.hidden = false;
+        timerBadge.textContent = '00:00';
+      }
+      clearInterval(recordingTimerInterval);
+      recordingTimerInterval = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - studioState.recordingStartTime) / 1000);
+        const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+        const secs = String(elapsed % 60).padStart(2, '0');
+        if (timerBadge) timerBadge.textContent = `${mins}:${secs}`;
+      }, 500);
+
     } catch {
-      showToast('Microphone permission was denied.');
+      showToast('Microphone permission was denied or unavailable.');
     }
+  }
+
+  function playUserRecording(onEnded) {
+    const audioEl = document.getElementById('recorded-audio-player');
+    if (!studioState.recordedAudioUrl || !audioEl) return;
+    audioEl.currentTime = 0;
+    if (onEnded) {
+      const handler = () => {
+        audioEl.removeEventListener('ended', handler);
+        onEnded();
+      };
+      audioEl.addEventListener('ended', handler);
+    }
+    const p = audioEl.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  }
+
+  function startABComparison() {
+    const active = studioState.activeSentence || studioState.item?.sentences?.[0];
+    if (!active) return;
+    if (!studioState.recordedAudioUrl) {
+      showToast('Record your voice first to compare with the speaker.');
+      return;
+    }
+
+    const abBtn = document.getElementById('ab-compare-btn');
+    if (abBtn) {
+      abBtn.classList.add('active');
+      abBtn.disabled = true;
+    }
+
+    // 1. Play original speaker sentence clip first
+    playSentence(active.index, { forceMode: 'once' });
+
+    // 2. Poll until sentence clip ends naturally, then immediately play user recording!
+    const safetyTimer = setTimeout(() => {
+      clearInterval(pollDone);
+      if (abBtn) {
+        abBtn.classList.remove('active');
+        abBtn.disabled = false;
+      }
+    }, 15000);
+
+    const pollDone = setInterval(() => {
+      if (!studioState.isPlaying) {
+        clearInterval(pollDone);
+        clearTimeout(safetyTimer);
+        playUserRecording(() => {
+          if (abBtn) {
+            abBtn.classList.remove('active');
+            abBtn.disabled = false;
+          }
+        });
+      }
+    }, 40);
+  }
+
+  /* ========================================================================
+     USER PROFILE HYDRATION IN TOPBAR HEADER
+     ======================================================================== */
+
+  async function hydrateStudioUserProfile() {
+    const btn = document.getElementById('studio-account-btn');
+    const label = document.getElementById('studio-account-label');
+    const avatar = document.getElementById('studio-avatar');
+    const avatarImg = document.getElementById('studio-avatar-img');
+    const guestIcon = document.getElementById('studio-guest-icon');
+
+    if (!studioState.authToken) {
+      if (label) label.textContent = t('signIn');
+      return;
+    }
+
+    try {
+      const res = await apiFetch('/api/auth/me', { method: 'GET' });
+      if (res && res.user) {
+        studioState.user = res.user;
+        btn?.classList.add('authenticated');
+        if (label) label.textContent = res.user.name.split(' ')[0];
+        if (res.user.avatarUrl && avatarImg) {
+          avatarImg.src = res.user.avatarUrl;
+          avatarImg.hidden = false;
+          if (avatar) avatar.hidden = true;
+          if (guestIcon) guestIcon.hidden = true;
+        } else if (avatar) {
+          avatar.textContent = (res.user.name || 'U').charAt(0).toUpperCase();
+          avatar.hidden = false;
+          if (avatarImg) avatarImg.hidden = true;
+          if (guestIcon) guestIcon.hidden = true;
+        }
+      }
+    } catch {}
   }
 
   /* ========================================================================
@@ -1657,7 +2405,14 @@
 
   function hydrateStudioItem(item) {
     studioState.item = item;
-    studioState.translationsByLang = Object.assign({}, item.translationsCache || {});
+    studioState.translationsByLang = {};
+    if (item.translationsCache && typeof item.translationsCache === 'object') {
+      for (const [lang, map] of Object.entries(item.translationsCache)) {
+        studioState.translationsByLang[lang] = Object.assign({}, map || {});
+      }
+    }
+    studioState.translatingAllByLang = {};
+    studioState.translatingSentencesByLang = {};
 
     document.title = `${item.title || 'Lesson'} — Flaptap Studio`;
     document.getElementById('studio-title').textContent = item.title || 'English Lesson';
@@ -1800,14 +2555,21 @@
     document.querySelectorAll('.flow-btn[data-end-action]').forEach((btn) => {
       btn.addEventListener('click', () => {
         studioState.endAction = btn.dataset.endAction;
-        if (studioState.endAction !== 'loop') {
+        if (studioState.endAction === 'loop') {
+          studioState.loopSentenceIndex = studioState.activeSentence?.index ?? null;
+          studioState.activeSentenceStep = studioState.isPlaying ? 'looping' : 'paused-from-once';
+        } else {
           studioState.loopSentenceIndex = null;
+          studioState.activeSentenceStep = studioState.isPlaying ? 'playing-once' : 'idle';
         }
         syncPlaybackButtonsDom();
       });
     });
 
-    // Speed Slider & Preset Ticks
+    // Speed Slider & Stepper Buttons
+    document.getElementById('speed-down-btn')?.addEventListener('click', () => stepSpeed(-0.05));
+    document.getElementById('speed-up-btn')?.addEventListener('click', () => stepSpeed(0.05));
+
     document.getElementById('speed-slider')?.addEventListener('input', (e) => {
       setStudioSpeed(e.target.value);
     });
@@ -1816,27 +2578,80 @@
       tick.addEventListener('click', () => setStudioSpeed(tick.dataset.speed));
     });
 
-    // Shadow Mode Sentence Interactions (Play/Pause, Loop, Click Word, Click Line)
+    // Master Sentence Transport Controls
+    document.getElementById('deck-prev-sent-btn')?.addEventListener('click', () => {
+      const curr = studioState.activeSentence?.index || 1;
+      if (curr > 1) playSentence(curr - 1);
+    });
+
+    document.getElementById('deck-next-sent-btn')?.addEventListener('click', () => {
+      const sentences = studioState.item?.sentences || [];
+      const curr = studioState.activeSentence?.index || 1;
+      if (curr < sentences.length) playSentence(curr + 1);
+    });
+
+    document.getElementById('deck-play-active-btn')?.addEventListener('click', () => {
+      const curr = studioState.activeSentence?.index || 1;
+      handleSentencePlayButtonClick(curr);
+    });
+
+    document.getElementById('deck-auto-follow-btn')?.addEventListener('click', () => {
+      studioState.autoFollow = !studioState.autoFollow;
+      if (studioState.autoFollow) {
+        studioState.userScrolledAway = false;
+        scrollSentenceIntoView(studioState.activeSentence?.index || 1, true);
+      }
+      syncAutoFollowButtonDom();
+      syncFloatingJumpButton();
+    });
+
+    document.getElementById('deck-jump-active-btn')?.addEventListener('click', () => {
+      studioState.userScrolledAway = false;
+      studioState.autoFollow = true;
+      syncAutoFollowButtonDom();
+      scrollSentenceIntoView(studioState.activeSentence?.index || 1, true);
+      syncFloatingJumpButton();
+    });
+
+    document.getElementById('floating-jump-active-btn')?.addEventListener('click', () => {
+      studioState.userScrolledAway = false;
+      studioState.autoFollow = true;
+      syncAutoFollowButtonDom();
+      scrollSentenceIntoView(studioState.activeSentence?.index || 1, true);
+      syncFloatingJumpButton();
+    });
+
+    // User Profile Topbar Button
+    document.getElementById('studio-account-btn')?.addEventListener('click', () => {
+      if (studioState.authToken) {
+        window.location.href = '/?account=open';
+      } else {
+        redirectToSignInGate();
+      }
+    });
+
+    // Manual scroll detection: when user scrolls canvas away, show floating jump pill
+    window.addEventListener('wheel', (e) => {
+      if (e.target.closest('#studio-main-content') && studioState.isPlaying) {
+        studioState.userScrolledAway = true;
+        syncFloatingJumpButton();
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (e.target.closest('#studio-main-content') && studioState.isPlaying) {
+        studioState.userScrolledAway = true;
+        syncFloatingJumpButton();
+      }
+    }, { passive: true });
+
+    // Shadow Mode Sentence Interactions (Play/Pause, Click Word, Click Card)
     document.getElementById('subview-sentences-list')?.addEventListener('click', (e) => {
       const playBtn = e.target.closest('[data-play-sent]');
       if (playBtn) {
+        e.stopPropagation();
         const idx = Number(playBtn.dataset.playSent);
-        if (studioState.isPlaying && studioState.activeSentence?.index === idx) {
-          pauseCurrentPlayback();
-        } else {
-          playSentence(idx);
-        }
-        return;
-      }
-
-      const loopBtn = e.target.closest('[data-loop-sent]');
-      if (loopBtn) {
-        const idx = Number(loopBtn.dataset.loopSent);
-        const nextLoop = studioState.loopSentenceIndex === idx ? null : idx;
-        setSentenceLoop(nextLoop);
-        if (nextLoop === idx) {
-          playSentence(idx, { preserveLoop: true });
-        }
+        handleSentencePlayButtonClick(idx);
         return;
       }
 
@@ -1847,9 +2662,13 @@
         return;
       }
 
-      const line = e.target.closest('[data-line-sent]');
-      if (line) {
-        playSentence(Number(line.dataset.lineSent));
+      // Full Item Clickable: Clicking anywhere on the sentence card triggers playback
+      const card = e.target.closest('.sentence-driller-card[data-sentence-index]');
+      if (card) {
+        const sentIdx = Number(card.dataset.sentenceIndex);
+        if (Number.isFinite(sentIdx)) {
+          handleSentencePlayButtonClick(sentIdx);
+        }
       }
     });
 
@@ -1875,27 +2694,26 @@
       closeWordLookupPopover();
     });
 
-    // Translation Deck
-    document.getElementById('translation-toggle-checkbox')?.addEventListener('change', (e) => {
-      studioState.translationEnabled = Boolean(e.target.checked);
-      requestTranslations(false);
-    });
-
+    // Translation Console in Side Deck
     document.getElementById('trans-lang-select')?.addEventListener('change', (e) => {
-      studioState.translationLang = e.target.value;
+      studioState.translationLang = e.target.value || 'none';
       localStorage.setItem('flaptap_trans_lang', studioState.translationLang);
-      if (studioState.translationEnabled) {
-        requestTranslations(false);
-      }
+      syncTranslationUiState();
     });
 
-    document.getElementById('trans-refresh-btn')?.addEventListener('click', () => {
-      if (!studioState.translationEnabled) {
-        const cb = document.getElementById('translation-toggle-checkbox');
-        if (cb) cb.checked = true;
-        studioState.translationEnabled = true;
-      }
-      requestTranslations(true);
+    document.getElementById('side-trans-active-btn')?.addEventListener('click', () => {
+      const curr = studioState.activeSentence?.index || 1;
+      translateSingleSentence(curr);
+    });
+
+    document.getElementById('trans-all-btn')?.addEventListener('click', (e) => {
+      if (e.currentTarget?.disabled) return;
+      translateAllSentences();
+    });
+
+    document.getElementById('side-trans-visibility-toggle')?.addEventListener('change', (e) => {
+      studioState.showTranslations = Boolean(e.target.checked);
+      syncTranslationUiState();
     });
 
     // Listen Mode (Cloze Dictation)
@@ -2062,8 +2880,9 @@
       showToast(t('mdExportedToast'));
     });
 
-    // Voice Recorder
+    // Voice Recorder & Articulatory Replay Controls
     document.getElementById('record-toggle-btn')?.addEventListener('click', toggleVoiceRecording);
+
     document.getElementById('replay-original-btn')?.addEventListener('click', () => {
       const idx = studioState.activeSentence?.index || 1;
       if (studioState.isPlaying && studioState.activeSentence?.index === idx) {
@@ -2071,6 +2890,14 @@
       } else {
         playSentence(idx);
       }
+    });
+
+    document.getElementById('replay-recording-btn')?.addEventListener('click', () => {
+      playUserRecording();
+    });
+
+    document.getElementById('ab-compare-btn')?.addEventListener('click', () => {
+      startABComparison();
     });
 
     // Keyboard Shortcuts
@@ -2094,11 +2921,7 @@
 
       if (e.code === 'Space') {
         e.preventDefault();
-        if (studioState.isPlaying) {
-          pauseCurrentPlayback();
-        } else {
-          playSentence(currIdx, { preserveLoop: studioState.loopSentenceIndex === currIdx });
-        }
+        handleSentencePlayButtonClick(currIdx);
       } else if (e.key === 'ArrowRight') {
         e.preventDefault();
         if (currIdx < sentences.length) playSentence(currIdx + 1);
@@ -2107,21 +2930,21 @@
         if (currIdx > 1) playSentence(currIdx - 1);
       } else if (e.key === 'l' || e.key === 'L') {
         e.preventDefault();
-        const nextLoop = studioState.loopSentenceIndex === currIdx ? null : currIdx;
-        setSentenceLoop(nextLoop);
-        if (nextLoop === currIdx) {
-          playSentence(currIdx, { preserveLoop: true });
-        }
+        handleSentenceLoopButtonClick(currIdx);
       } else if (e.key === 't' || e.key === 'T') {
-        if (studioState.mode === 'shadow') {
+        if (studioState.mode === 'shadow' && studioState.translationLang !== 'none') {
           e.preventDefault();
-          const cb = document.getElementById('translation-toggle-checkbox');
-          if (cb) {
-            cb.checked = !cb.checked;
-            studioState.translationEnabled = cb.checked;
-            requestTranslations(false);
-          }
+          translateSingleSentence(currIdx);
         }
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        studioState.autoFollow = !studioState.autoFollow;
+        if (studioState.autoFollow) {
+          studioState.userScrolledAway = false;
+          scrollSentenceIntoView(currIdx, true);
+        }
+        syncAutoFollowButtonDom();
+        syncFloatingJumpButton();
       }
     });
 
@@ -2141,9 +2964,10 @@
   document.addEventListener('DOMContentLoaded', () => {
     applyTheme(studioState.theme);
     applyUiLanguage(studioState.uiLang);
-    setStudioLayout(studioState.layout === 'top' ? 'top' : 'side');
+    setStudioLayout(studioState.layout === 'theater' ? 'theater' : 'side');
     bindEvents();
     loadLanguagesCatalog();
+    hydrateStudioUserProfile();
     loadStudioSession();
   });
 })();

@@ -97,8 +97,6 @@ while kill -0 "$CF_PID" 2>/dev/null; do
     if [ -n "$DETECTED_URL" ]; then
       CURRENT_URL="$DETECTED_URL"
       echo "$CURRENT_URL" > "${URL_FILE}"
-      sleep 3
-      sync_chrome_tabs "$CURRENT_URL"
     fi
   fi
 
@@ -113,7 +111,12 @@ while kill -0 "$CF_PID" 2>/dev/null; do
     fi
   fi
 
-  sleep 2
+  if [ -z "$CURRENT_URL" ]; then
+    sleep 2 &
+  else
+    sleep 15 &
+  fi
+  wait $! || true
 done
 
 wait "$CF_PID"

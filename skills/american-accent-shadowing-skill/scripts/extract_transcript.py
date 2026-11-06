@@ -20,6 +20,8 @@ import socket
 import time
 import threading
 import difflib
+import hashlib
+import ipaddress
 import shutil
 import urllib.error
 import urllib.parse
@@ -50,6 +52,20 @@ RATE_LIMITED_MESSAGE = (
     "Please try again in a few minutes."
 )
 TIMEOUT_MESSAGE = "YouTube took too long to respond. Please try again."
+MEDIA_TOO_LONG = "media_too_long"
+MEDIA_TOO_LONG_MESSAGE = (
+    "This video is longer than 30 minutes. Please pick a shorter clip (up to 30 minutes) "
+    "so word-level timing can be aligned accurately."
+)
+EXTERNAL_UNAVAILABLE_MESSAGE = (
+    "This video could not be opened. It may be private, removed, login-only, "
+    "or restricted by the platform."
+)
+UNSUPPORTED_URL_MESSAGE = (
+    "This link does not point to a playable public video. Paste a direct link to a "
+    "YouTube, TikTok, Instagram, X, Vimeo, Facebook, Reddit, TED, Loom, Twitch, or Dailymotion video."
+)
+EXTERNAL_MAX_DURATION_SEC = 1800
 
 
 class TranscriptError(RuntimeError):
@@ -236,6 +252,20 @@ def extract_youtube_id(url: str) -> Optional[str]:
     url = url.strip()
     if re.fullmatch(r'^[a-zA-Z0-9_-]{11}$', url):
         return url
+    try:
+        parsed = urllib.parse.urlsplit(url)
+        host = (parsed.hostname or "").lower()
+    except Exception:
+        host = ""
+    if host and not (
+        host == "youtu.be"
+        or host.endswith(".youtu.be")
+        or host == "youtube.com"
+        or host.endswith(".youtube.com")
+        or host == "youtube-nocookie.com"
+        or host.endswith(".youtube-nocookie.com")
+    ):
+        return None
     patterns = [
         r'(?:v=|\/shorts\/|\/embed\/|\/live\/|\/v\/|youtu\.be\/|\/e\/)([\w-]{11})',
         r'[\?&]v=([\w-]{11})',
@@ -245,6 +275,122 @@ def extract_youtube_id(url: str) -> Optional[str]:
         if m:
             return m.group(1)
     return None
+
+
+_STRIP_TRACKING_PARAMS = {
+    "utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content",
+    "igsh", "igshid", "si", "fbclid", "gclid", "feature", "ref", "ref_src",
+}
+
+
+def _is_blocked_host(hostname: str) -> bool:
+    host = (hostname or "").strip().lower().rstrip(".")
+    if not host or host in ("localhost", "0.0.0.0", "broadcasthost"):
+        return True
+    if host.endswith((".local", ".internal", ".localhost", ".lan")):
+        return True
+    try:
+        ip = ipaddress.ip_address(host)
+        return (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_multicast
+            or ip.is_reserved
+            or ip.is_unspecified
+        )
+    except ValueError:
+        return "." not in host
+
+
+def _detect_platform_label(hostname: str, path_lower: str) -> str:
+    host = (hostname or "").lower()
+    if any(k in host for k in ("youtube.com", "youtu.be", "youtube-nocookie.com")):
+        return "YouTube"
+    if "tiktok.com" in host:
+        return "TikTok"
+    if "instagram.com" in host:
+        return "Instagram"
+    if host in ("x.com", "www.x.com", "twitter.com", "www.twitter.com", "mobile.twitter.com", "t.co"):
+        return "X"
+    if "vimeo.com" in host:
+        return "Vimeo"
+    if "facebook.com" in host or "fb.watch" in host or host == "fb.com":
+        return "Facebook"
+    if "reddit.com" in host or "redd.it" in host:
+        return "Reddit"
+    if "ted.com" in host:
+        return "TED"
+    if "twitch.tv" in host:
+        return "Twitch"
+    if "loom.com" in host:
+        return "Loom"
+    if "dailymotion.com" in host or "dai.ly" in host:
+        return "Dailymotion"
+    if "linkedin.com" in host:
+        return "LinkedIn"
+    if "threads.net" in host:
+        return "Threads"
+    if "bsky.app" in host:
+        return "Bluesky"
+    if path_lower.endswith((".mp4", ".webm", ".m4a", ".mp3", ".mov", ".wav")):
+        return "Direct Media"
+    return "Web Video"
+
+
+def classify_media_url(raw_url: str) -> Optional[Dict[str, str]]:
+    """
+    Validate and classify a YouTube ID/URL or any public social/video URL
+    (TikTok, Instagram, X/Twitter, Vimeo, Facebook, Reddit, TED, Loom, Twitch,
+    Dailymotion, LinkedIn, or direct media files).
+    """
+    if not raw_url:
+        return None
+    clean = raw_url.strip()
+    yt_id = extract_youtube_id(clean)
+    if yt_id:
+        canonical = clean if clean.startswith(("http://", "https://")) else f"https://www.youtube.com/watch?v={yt_id}"
+        return {
+            "source": "youtube",
+            "media_id": yt_id,
+            "platform": "YouTube",
+            "canonical_url": canonical,
+        }
+
+    try:
+        parsed = urllib.parse.urlsplit(clean)
+    except Exception:
+        return None
+
+    scheme = (parsed.scheme or "").lower()
+    hostname = (parsed.hostname or "").lower()
+    if scheme not in ("http", "https") or _is_blocked_host(hostname):
+        return None
+
+    # If the domain IS YouTube, require a valid 11-char video ID
+    if any(hostname == d or hostname.endswith(f".{d}") for d in ("youtube.com", "youtu.be", "youtube-nocookie.com")):
+        return None
+
+    kept_query = [
+        (k, v)
+        for k, v in urllib.parse.parse_qsl(parsed.query, keep_blank_values=False)
+        if k.lower() not in _STRIP_TRACKING_PARAMS
+    ]
+    normalized_query = urllib.parse.urlencode(kept_query, doseq=True)
+    normalized_url = urllib.parse.urlunsplit((
+        scheme,
+        parsed.netloc.lower(),
+        parsed.path or "/",
+        normalized_query,
+        "",
+    ))
+    digest = hashlib.sha1(normalized_url.encode("utf-8")).hexdigest()[:12]
+    return {
+        "source": "external",
+        "media_id": f"ext_{digest}",
+        "platform": _detect_platform_label(hostname, (parsed.path or "").lower()),
+        "canonical_url": clean,
+    }
 
 def extract_timed_words(cues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
@@ -488,8 +634,29 @@ def _fetch_json3_events(transcript: Any) -> List[Dict[str, Any]]:
     base = transcript._url
     for suffix in ("&fmt=json3", "&fmt=srv3", "&fmt=vtt"):
         base = base.replace(suffix, "")
+    target_url = base + "&fmt=json3"
+
+    # Prefer Chrome TLS/HTTP2 impersonation when talking to YouTube directly so
+    # Python's default TLS fingerprint does not trip GFE bot heuristics.
+    if target_url.startswith("https://www.youtube.com/"):
+        try:
+            from curl_cffi import requests as curl_requests  # type: ignore
+
+            c_resp = curl_requests.get(target_url, impersonate="chrome", timeout=6)
+            if c_resp.status_code == 429 or "sorry..." in (c_resp.text or "")[:300].lower():
+                raise TranscriptError(RATE_LIMITED, RATE_LIMITED_MESSAGE)
+            c_resp.raise_for_status()
+            return json.loads(c_resp.text).get("events", [])
+        except ImportError:
+            pass
+        except TranscriptError:
+            raise
+        except Exception as error:
+            if _is_rate_limited(error):
+                raise TranscriptError(RATE_LIMITED, RATE_LIMITED_MESSAGE)
+
     try:
-        response = transcript._http_client.get(base + "&fmt=json3")
+        response = transcript._http_client.get(target_url)
         response.raise_for_status()
     except Exception as error:
         if _is_rate_limited(error):
@@ -758,11 +925,25 @@ def _build_payload(
 
 def _english_tracks(transcript_list: Any) -> List[Any]:
     tracks = list(transcript_list)
+
+    def _track_rank(track: Any) -> int:
+        code = str(getattr(track, "language_code", "") or "").lower()
+        if code == "en-orig":
+            return 0
+        if code in ("en", "en-us", "en-gb", "en-au", "en-ca"):
+            return 1
+        if code.startswith("en"):
+            return 2
+        return 99
+
     english = [
         transcript for transcript in tracks
-        if transcript.language_code in ("en", "en-US", "en-GB", "en-orig")
+        if _track_rank(transcript) < 99
     ]
-    return english or tracks
+    english.sort(key=_track_rank)
+    if not english:
+        raise TranscriptError(NO_CAPTIONS, NO_CAPTIONS_MESSAGE)
+    return english
 
 
 def fetch_via_transcript_api(video_id: str, url: str, title: str, uploader: str, interval: int) -> Optional[Dict[str, Any]]:
@@ -1054,40 +1235,61 @@ def _ytdlp_json3_payload(tmpdir: str, video_id: str, url: str, title: str, uploa
     return None
 
 
+def _resolve_ytdlp_bin() -> Optional[str]:
+    sibling = os.path.join(os.path.dirname(sys.executable), "yt-dlp")
+    if os.path.isfile(sibling) and os.access(sibling, os.X_OK):
+        return sibling
+    return shutil.which("yt-dlp")
+
+
+def _has_curl_cffi() -> bool:
+    try:
+        import curl_cffi  # type: ignore # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 def fetch_via_ytdlp(video_id: str, url: str, title: str, uploader: str, interval: int) -> Optional[Dict[str, Any]]:
     """
     Fallback caption download through yt-dlp.
 
     yt-dlp negotiates the YouTube signature/PO-token handshake for us. We ask
     for JSON3 first so per-word offsets survive, and keep WebVTT only as a
-    last resort. The old hard-coded `android` player client is deliberately
-    gone: current yt-dlp releases reject it for most videos.
+    last resort.
     """
+    ytdlp_bin = _resolve_ytdlp_bin()
+    if not ytdlp_bin:
+        print("[extract] ytdlp_missing", file=sys.stderr)
+        return None
+
     with tempfile.TemporaryDirectory() as tmpdir:
         output_template = os.path.join(tmpdir, "caption.%(ext)s")
         command = [
-            "yt-dlp",
+            ytdlp_bin,
             "--no-playlist",
             "--no-warnings",
             "--skip-download",
             "--write-subs",
             "--write-auto-subs",
-            "--sub-langs", "en,en-US,en-GB,en-orig",
+            "--sub-langs", "en-orig,en,en-US,en-GB",
             "--sub-format", "json3/vtt",
-            "--retries", "2",
+            "--retries", "1",
             "--socket-timeout", "8",
             "-o", output_template,
             url,
         ]
+        if _has_curl_cffi():
+            command[1:1] = ["--impersonate", "chrome"]
         if shutil.which("node"):
             command[1:1] = ["--js-runtimes", "node"]
         try:
-            subprocess.run(
+            proc = subprocess.run(
                 command,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
-                timeout=25,
+                timeout=22,
             )
         except FileNotFoundError:
             print("[extract] ytdlp_missing", file=sys.stderr)
@@ -1095,11 +1297,219 @@ def fetch_via_ytdlp(video_id: str, url: str, title: str, uploader: str, interval
         except subprocess.TimeoutExpired:
             raise TranscriptError(TIMEOUT, TIMEOUT_MESSAGE)
 
-        return _ytdlp_json3_payload(tmpdir, video_id, url, title, uploader, interval)
+        payload = _ytdlp_json3_payload(tmpdir, video_id, url, title, uploader, interval)
+        if payload:
+            return payload
+
+        err_lower = (proc.stderr or "").lower()
+        if "429" in err_lower or "too many requests" in err_lower:
+            raise TranscriptError(RATE_LIMITED, RATE_LIMITED_MESSAGE)
+        if "private video" in err_lower or "video unavailable" in err_lower:
+            raise TranscriptError(VIDEO_UNAVAILABLE, VIDEO_UNAVAILABLE_MESSAGE)
+
+        return None
+
+
+def _whisper_words_from_segments(segments: List[Any]) -> List[Dict[str, Any]]:
+    """
+    Convert faster-whisper DTW word alignments into strictly monotonic,
+    verbatim word records with sub-word token reattachment ("post" + "-mortem").
+    """
+    words: List[Dict[str, Any]] = []
+    cue_index = -1
+    prev_seg_norm = ""
+
+    for seg in segments:
+        seg_words_raw = list(getattr(seg, "words", None) or [])
+        if not seg_words_raw:
+            continue
+
+        seg_text = (getattr(seg, "text", "") or "").strip()
+        seg_norm = re.sub(r"\s+", " ", seg_text.lower())
+        seg_dur = max(0.0, float(getattr(seg, "end", 0.0)) - float(getattr(seg, "start", 0.0)))
+
+        # Drop micro-window silence repeat artifacts (e.g. 4+ words compressed into <0.35s)
+        if seg_norm and seg_norm == prev_seg_norm and seg_dur < 0.14 * max(len(seg_text.split()), 1):
+            continue
+        prev_seg_norm = seg_norm
+
+        merged_line: List[Dict[str, Any]] = []
+        for raw_w in seg_words_raw:
+            raw_token = str(getattr(raw_w, "word", "") or "")
+            if not raw_token.strip():
+                continue
+            w_start = round(max(0.0, float(getattr(raw_w, "start", 0.0))), 3)
+            w_end = round(max(w_start + 0.04, float(getattr(raw_w, "end", w_start + 0.06))), 3)
+            starts_new_word = raw_token.startswith((" ", "\t", "\n"))
+            stripped = raw_token.strip()
+
+            if merged_line and not starts_new_word:
+                # Sub-word continuation such as "-mortem", ".m.", "'s", or trailing punctuation
+                merged_line[-1]["word"] += stripped
+                merged_line[-1]["end_sec"] = max(merged_line[-1]["end_sec"], w_end)
+            else:
+                merged_line.append({
+                    "word": stripped,
+                    "start_sec": w_start,
+                    "end_sec": w_end,
+                })
+
+        if not merged_line:
+            continue
+
+        cue_index += 1
+        for idx, item in enumerate(merged_line):
+            clean = _normalize_token(item["word"]) or re.sub(r"^[^\w]+|[^\w]+$", "", item["word"].lower())
+            max_plausible_dur = max(1.15, 0.16 * max(len(clean), 2) + 0.55)
+            start_s = round(float(item["start_sec"]), 3)
+            end_s = round(float(item["end_sec"]), 3)
+            if end_s - start_s > max_plausible_dur:
+                end_s = round(start_s + max_plausible_dur, 3)
+            if end_s <= start_s:
+                end_s = round(start_s + 0.05, 3)
+
+            words.append({
+                "word": item["word"],
+                "clean": clean,
+                "start_sec": start_s,
+                "end_sec": end_s,
+                "cue_index": cue_index,
+                "cue_end": idx == len(merged_line) - 1,
+            })
+
+    # Enforce strict monotonic non-overlapping boundaries across all words
+    prev_end = 0.0
+    for idx, word in enumerate(words):
+        if word["start_sec"] < prev_end:
+            word["start_sec"] = prev_end
+        if idx + 1 < len(words) and words[idx + 1]["start_sec"] > word["start_sec"]:
+            word["end_sec"] = min(word["end_sec"], words[idx + 1]["start_sec"])
+        if word["end_sec"] <= word["start_sec"]:
+            word["end_sec"] = round(word["start_sec"] + 0.04, 3)
+        word["start_sec"] = round(word["start_sec"], 3)
+        word["end_sec"] = round(word["end_sec"], 3)
+        prev_end = word["start_sec"]
+
+    return words
+
+
+def fetch_via_audio_asr(video_id: str, url: str, title: str, uploader: str, interval: int) -> Optional[Dict[str, Any]]:
+    """
+    Rate-limit-immune acoustic fallback via googlevideo.com media CDN + local
+    deterministic CTranslate2 Whisper DTW word alignment.
+
+    Used ONLY when YouTube's `/api/timedtext` caption endpoint throttles the
+    network with HTTP 429 while the video itself is playable and English.
+    """
+    try:
+        from faster_whisper import WhisperModel  # type: ignore
+    except ImportError:
+        print("[extract] faster_whisper_unavailable", file=sys.stderr)
+        return None
+
+    ytdlp_bin = _resolve_ytdlp_bin()
+    if not ytdlp_bin:
+        return None
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_template = os.path.join(tmpdir, "audio.%(ext)s")
+        command = [
+            ytdlp_bin,
+            "--no-playlist",
+            "--no-warnings",
+            "--concurrent-fragments", "4",
+            "--socket-timeout", "10",
+            "--retries", "2",
+            "--match-filter", "duration <= 2400",
+            "-f",
+            "ba[language^=en][abr<=96]/ba[language^=en]/ba[format_id*=orig][abr<=96]/ba[format_id*=orig]/ba[abr<=96]/ba",
+            "-o",
+            output_template,
+            url,
+        ]
+        if shutil.which("node"):
+            command[1:1] = ["--js-runtimes", "node"]
+
+        dl_started = time.time()
+        try:
+            proc = subprocess.run(
+                command,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                timeout=35,
+            )
+        except subprocess.TimeoutExpired:
+            raise TranscriptError(TIMEOUT, TIMEOUT_MESSAGE)
+
+        candidates = [
+            os.path.join(tmpdir, name)
+            for name in os.listdir(tmpdir)
+            if not name.endswith(".part") and not name.endswith(".ytdl")
+        ]
+        if not candidates:
+            err_lower = (proc.stderr or "").lower()
+            if "private video" in err_lower or "video unavailable" in err_lower:
+                raise TranscriptError(VIDEO_UNAVAILABLE, VIDEO_UNAVAILABLE_MESSAGE)
+            print(f"[extract] audio_dl_empty rc={proc.returncode}", file=sys.stderr)
+            return None
+
+        audio_file = candidates[0]
+        audio_bytes = os.path.getsize(audio_file)
+        print(
+            f"[extract] audio_dl={round(time.time() - dl_started, 2)}s ({audio_bytes}B)",
+            file=sys.stderr,
+        )
+
+        # Use base.en for crisp punctuation/accuracy on clips <= ~7 min; switch
+        # to tiny.en on long-form talks so CPU alignment always finishes fast.
+        model_name = "tiny.en" if audio_bytes > 4_500_000 else "base.en"
+        cpu_threads = min(8, max(2, os.cpu_count() or 4))
+
+        asr_started = time.time()
+        try:
+            model = WhisperModel(
+                model_name,
+                device="cpu",
+                compute_type="int8",
+                cpu_threads=cpu_threads,
+                local_files_only=True,
+            )
+        except Exception:
+            model = WhisperModel(
+                model_name,
+                device="cpu",
+                compute_type="int8",
+                cpu_threads=cpu_threads,
+            )
+
+        segments_iter, _info = model.transcribe(
+            audio_file,
+            language="en",
+            beam_size=1,
+            best_of=1,
+            word_timestamps=True,
+            condition_on_previous_text=False,
+            hallucination_silence_threshold=1.0,
+            no_speech_threshold=0.6,
+            vad_filter=True,
+            vad_parameters=dict(min_silence_duration_ms=600, speech_pad_ms=150),
+        )
+        segments = list(segments_iter)
+        timed_words = _whisper_words_from_segments(segments)
+        cues = _cues_from_words(timed_words)
+        print(
+            f"[extract] audio_asr({model_name})={round(time.time() - asr_started, 2)}s "
+            f"(words={len(timed_words)})",
+            file=sys.stderr,
+        )
+        if not cues or not timed_words:
+            return None
+        return _build_payload(video_id, url, title, uploader, cues, timed_words, interval)
 
 
 def _preferred_error(*errors: Optional[BaseException]) -> TranscriptError:
-    """Pick the most actionable failure when both retrieval paths fail."""
+    """Pick the most actionable failure when retrieval paths fail."""
     candidates = [error for error in errors if error is not None]
     for error in candidates:
         if isinstance(error, TranscriptError) and error.code == VIDEO_UNAVAILABLE:
@@ -1119,9 +1529,11 @@ def fetch_youtube_transcript(url: str, interval: int = 30) -> Dict[str, Any]:
     """
     Resolve one YouTube URL into verbatim, word-timed English speech data.
 
-    Path 1 is the direct JSON3 caption API (1-3 seconds). Path 2 is yt-dlp for
-    videos where the direct API is throttled or needs a signed handshake. Both
-    paths classify failures so the studio can explain what actually happened.
+    Path 1 is the direct JSON3 caption API (1-3 seconds).
+    Path 2 is yt-dlp caption extraction when a signed handshake is needed.
+    Path 3 is googlevideo.com original-English audio + local deterministic
+    Whisper DTW word alignment when YouTube's `/api/timedtext` endpoint
+    rate-limits (HTTP 429) the caller's network IP.
     """
     video_id = extract_youtube_id(url)
     if not video_id:
@@ -1141,7 +1553,7 @@ def fetch_youtube_transcript(url: str, interval: int = 30) -> Dict[str, Any]:
         uploader = metadata.get("creator") or uploader
     print(f"[extract] oembed={round(time.time() - started_at, 2)}s", file=sys.stderr)
 
-    # 2. Direct caption API inside a hard 4s budget.
+    # 2. Direct caption API inside a hard 5s budget.
     api_started = time.time()
     api_box: Dict[str, Any] = {}
 
@@ -1157,63 +1569,332 @@ def fetch_youtube_transcript(url: str, interval: int = 30) -> Dict[str, Any]:
 
     api_thread = threading.Thread(target=_api_worker, daemon=True)
     api_thread.start()
-    api_thread.join(timeout=4.0)
+    api_thread.join(timeout=5.0)
 
     if "data" in api_box:
         print(f"[extract] api={round(time.time() - api_started, 2)}s", file=sys.stderr)
         return api_box["data"]
 
     api_error = api_box.get("error")
+    api_rate_limited = isinstance(api_error, TranscriptError) and api_error.code == RATE_LIMITED
+
     if api_error is not None:
         print(
             f"[extract] api_failed={round(time.time() - api_started, 2)}s "
             f"({type(api_error).__name__}: {getattr(api_error, 'code', 'error')})",
             file=sys.stderr,
         )
-        if isinstance(api_error, TranscriptError) and api_error.code == VIDEO_UNAVAILABLE:
+        if isinstance(api_error, TranscriptError) and api_error.code in (VIDEO_UNAVAILABLE, NO_CAPTIONS):
             raise api_error
     else:
         print(f"[extract] api_timeout={round(time.time() - api_started, 2)}s", file=sys.stderr)
 
-    # 3. yt-dlp fallback.
-    fallback_started = time.time()
+    # 3. yt-dlp caption fallback (skip hammering `/api/timedtext` again if Path 1
+    #    already received an explicit HTTP 429 rate-limit response).
     ytdlp_error: Optional[BaseException] = None
-    try:
-        result = fetch_via_ytdlp(video_id, url, title, uploader, interval)
-        print(f"[extract] ytdlp={round(time.time() - fallback_started, 2)}s", file=sys.stderr)
-        if result:
-            return result
-        ytdlp_error = TranscriptError(NO_CAPTIONS, NO_CAPTIONS_MESSAGE)
-    except TranscriptError as error:
-        print(
-            f"[extract] ytdlp_failed={round(time.time() - fallback_started, 2)}s ({error.code})",
-            file=sys.stderr,
-        )
-        ytdlp_error = error
-    except Exception as error:
-        print(
-            f"[extract] ytdlp_failed={round(time.time() - fallback_started, 2)}s "
-            f"({type(error).__name__})",
-            file=sys.stderr,
-        )
-        ytdlp_error = error
+    if not api_rate_limited:
+        fallback_started = time.time()
+        try:
+            result = fetch_via_ytdlp(video_id, url, title, uploader, interval)
+            print(f"[extract] ytdlp={round(time.time() - fallback_started, 2)}s", file=sys.stderr)
+            if result:
+                return result
+            ytdlp_error = TranscriptError(NO_CAPTIONS, NO_CAPTIONS_MESSAGE)
+        except TranscriptError as error:
+            print(
+                f"[extract] ytdlp_failed={round(time.time() - fallback_started, 2)}s ({error.code})",
+                file=sys.stderr,
+            )
+            if error.code == VIDEO_UNAVAILABLE:
+                raise error
+            ytdlp_error = error
+        except Exception as error:
+            print(
+                f"[extract] ytdlp_failed={round(time.time() - fallback_started, 2)}s "
+                f"({type(error).__name__})",
+                file=sys.stderr,
+            )
+            ytdlp_error = error
+
+    # 4. Acoustic DTW fallback when `/api/timedtext` is rate-limited / timed out.
+    should_try_audio = (
+        api_rate_limited
+        or api_error is None
+        or (isinstance(ytdlp_error, TranscriptError) and ytdlp_error.code in (RATE_LIMITED, TIMEOUT))
+    )
+    if should_try_audio:
+        try:
+            asr_result = fetch_via_audio_asr(video_id, url, title, uploader, interval)
+            if asr_result:
+                return asr_result
+        except TranscriptError as error:
+            if error.code == VIDEO_UNAVAILABLE:
+                raise error
+            ytdlp_error = error
+        except Exception as error:
+            print(f"[extract] audio_asr_failed={type(error).__name__}: {error}", file=sys.stderr)
 
     raise _preferred_error(
         api_error if isinstance(api_error, BaseException) else None,
         ytdlp_error,
     )
 
+def _whisper_transcribe_file(media_path: str, duration_hint: float) -> List[Dict[str, Any]]:
+    """Run local deterministic faster-whisper DTW alignment on any audio/video file."""
+    from faster_whisper import WhisperModel  # type: ignore
+
+    model_name = "base.en" if 0 < duration_hint <= 420 else "tiny.en"
+    cpu_threads = min(8, max(2, os.cpu_count() or 4))
+    try:
+        model = WhisperModel(model_name, device="cpu", compute_type="int8",
+                             cpu_threads=cpu_threads, local_files_only=True)
+    except Exception:
+        model = WhisperModel(model_name, device="cpu", compute_type="int8", cpu_threads=cpu_threads)
+
+    started = time.time()
+    segments_iter, _info = model.transcribe(
+        media_path,
+        language="en",
+        beam_size=1,
+        best_of=1,
+        word_timestamps=True,
+        condition_on_previous_text=False,
+        hallucination_silence_threshold=1.0,
+        no_speech_threshold=0.6,
+        vad_filter=True,
+        vad_parameters=dict(min_silence_duration_ms=600, speech_pad_ms=150),
+    )
+    words = _whisper_words_from_segments(list(segments_iter))
+    print(f"[extract] external_asr({model_name})={round(time.time() - started, 2)}s words={len(words)}",
+          file=sys.stderr)
+    return words
+
+
+def _classify_external_ytdlp_error(stderr_text: str) -> TranscriptError:
+    err = (stderr_text or "").lower()
+    if "unsupported url" in err or "no video formats found" in err or "is not a valid url" in err:
+        return TranscriptError(INVALID_URL, UNSUPPORTED_URL_MESSAGE)
+    if "drm protected" in err or "drm" in err:
+        return TranscriptError(VIDEO_UNAVAILABLE, "This video is DRM-protected and cannot be processed.")
+    if "429" in err or "too many requests" in err or "rate-limit" in err or "rate limit" in err:
+        return TranscriptError(RATE_LIMITED, "The platform is temporarily limiting requests. Please try again in a few minutes.")
+    if "timed out" in err or "timeout" in err:
+        return TranscriptError(TIMEOUT, "The platform took too long to respond. Please try again.")
+    return TranscriptError(VIDEO_UNAVAILABLE, EXTERNAL_UNAVAILABLE_MESSAGE)
+
+
+def _ytdlp_base_command(ytdlp_bin: str) -> List[str]:
+    command = [ytdlp_bin, "--no-playlist", "--no-warnings", "--socket-timeout", "15", "--retries", "2"]
+    if _has_curl_cffi():
+        command += ["--impersonate", "chrome"]
+    return command
+
+
+def fetch_external_media_transcript(url: str, interval: int, media_dir: str) -> Dict[str, Any]:
+    """
+    Universal social/video pipeline (TikTok, Instagram, X, Vimeo, Facebook,
+    Reddit, TED, Loom, Twitch, Dailymotion, direct media files, ...).
+
+    1. yt-dlp metadata probe (title, uploader, thumbnail, duration).
+    2. Download one compact progressive MP4 (<=720p) into `media_dir/<id>.mp4`
+       so the studio can stream it with HTTP Range from our own origin.
+    3. Use English subtitles when the platform exposes them; otherwise run
+       local faster-whisper word-timestamp alignment on the downloaded media.
+    """
+    info = classify_media_url(url)
+    if not info or info["source"] != "external":
+        raise TranscriptError(INVALID_URL, UNSUPPORTED_URL_MESSAGE)
+
+    media_id = info["media_id"]
+    platform = info["platform"]
+    ytdlp_bin = _resolve_ytdlp_bin()
+    if not ytdlp_bin:
+        raise TranscriptError(TIMEOUT, "The media extraction engine is not installed on this server.")
+
+    os.makedirs(media_dir, exist_ok=True)
+    started_at = time.time()
+
+    # 1. Metadata probe
+    probe_url = url
+    def _probe(target_url: str) -> subprocess.CompletedProcess:
+        try:
+            return subprocess.run(
+                _ytdlp_base_command(ytdlp_bin) + ["--dump-single-json", "--skip-download", target_url],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=45,
+            )
+        except subprocess.TimeoutExpired:
+            raise TranscriptError(TIMEOUT, "The platform took too long to respond. Please try again.")
+
+    probe = _probe(probe_url)
+    if probe.returncode != 0 and platform == "Vimeo":
+        # Vimeo's web client is login-only; the public player embed is not.
+        vimeo_match = re.search(r"vimeo\.com/(?:.*?/)?(\d{5,})", url)
+        if vimeo_match:
+            probe_url = f"https://player.vimeo.com/video/{vimeo_match.group(1)}"
+            probe = _probe(probe_url)
+    if probe.returncode != 0 or not probe.stdout.strip():
+        raise _classify_external_ytdlp_error(probe.stderr)
+    try:
+        meta = json.loads(probe.stdout)
+    except ValueError:
+        raise TranscriptError(VIDEO_UNAVAILABLE, EXTERNAL_UNAVAILABLE_MESSAGE)
+    if meta.get("_type") == "playlist":
+        entries = [e for e in (meta.get("entries") or []) if isinstance(e, dict)]
+        if not entries:
+            raise TranscriptError(INVALID_URL, UNSUPPORTED_URL_MESSAGE)
+        meta = entries[0]
+
+    duration = float(meta.get("duration") or 0)
+    if duration > EXTERNAL_MAX_DURATION_SEC:
+        raise TranscriptError(MEDIA_TOO_LONG, MEDIA_TOO_LONG_MESSAGE)
+    if meta.get("is_live"):
+        raise TranscriptError(INVALID_URL, "Live streams cannot be shadowed. Paste a recorded video instead.")
+
+    title = (meta.get("title") or meta.get("fulltitle") or "").strip() or f"{platform} Video Lesson"
+    if len(title) > 160:
+        title = title[:157].rstrip() + "..."
+    uploader = (meta.get("uploader") or meta.get("channel") or meta.get("creator")
+                or meta.get("uploader_id") or platform).strip()
+    thumbnail = meta.get("thumbnail") or ""
+    if not thumbnail and isinstance(meta.get("thumbnails"), list) and meta["thumbnails"]:
+        thumbnail = (meta["thumbnails"][-1] or {}).get("url") or ""
+    print(f"[extract] external_probe={round(time.time() - started_at, 2)}s platform={platform} dur={duration}",
+          file=sys.stderr)
+
+    # 2. Download playable media + English subtitles in a single pass
+    for stale in os.listdir(media_dir):
+        if stale.startswith(f"{media_id}.") and (stale.endswith(".part") or stale.endswith(".ytdl")):
+            try:
+                os.remove(os.path.join(media_dir, stale))
+            except OSError:
+                pass
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        command = _ytdlp_base_command(ytdlp_bin) + [
+            "--concurrent-fragments", "4",
+            "--max-filesize", "700M",
+            "-f", "bv*[height<=720]+ba/b[height<=720]/best",
+            "--merge-output-format", "mp4",
+            "--write-subs", "--write-auto-subs",
+            "--sub-langs", "en.*,en,-live_chat",
+            "--sub-format", "vtt/best",
+            "--convert-subs", "vtt",
+            "-o", os.path.join(media_dir, f"{media_id}.%(ext)s"),
+            "-o", "subtitle:" + os.path.join(tmpdir, "caption.%(ext)s"),
+            probe_url,
+        ]
+        try:
+            dl = subprocess.run(
+                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                text=True, timeout=240,
+            )
+        except subprocess.TimeoutExpired:
+            raise TranscriptError(TIMEOUT, "Downloading this video took too long. Please try a shorter clip.")
+
+        media_files = [
+            name for name in os.listdir(media_dir)
+            if name.startswith(f"{media_id}.")
+            and not name.endswith((".part", ".ytdl", ".vtt", ".json"))
+        ]
+        media_files.sort(key=lambda n: (0 if n.endswith(".mp4") else 1, n))
+        if not media_files:
+            raise _classify_external_ytdlp_error(dl.stderr)
+        media_file = media_files[0]
+        media_path = os.path.join(media_dir, media_file)
+        print(
+            f"[extract] external_download={round(time.time() - started_at, 2)}s "
+            f"file={media_file} ({os.path.getsize(media_path)}B)",
+            file=sys.stderr,
+        )
+
+        timed_words: List[Dict[str, Any]] = []
+        subtitle_file = _pick_caption_file(os.listdir(tmpdir), "vtt")
+        sub_path = os.path.join(tmpdir, subtitle_file) if subtitle_file else None
+        if not sub_path:
+            # Check if subtitle was written into media_dir directly
+            media_subs = [
+                n for n in os.listdir(media_dir)
+                if n.startswith(f"{media_id}.") and n.endswith(".vtt")
+            ]
+            if media_subs:
+                sub_path = os.path.join(media_dir, media_subs[0])
+
+        if sub_path and os.path.exists(sub_path):
+            try:
+                with open(sub_path, "r", encoding="utf-8") as handle:
+                    timed_words = _vtt_words(handle.read())
+                print(f"[extract] external_subs={os.path.basename(sub_path)} words={len(timed_words)}", file=sys.stderr)
+            except (OSError, ValueError):
+                timed_words = []
+            finally:
+                # Cleanup any loose .vtt in media_dir
+                for n in os.listdir(media_dir):
+                    if n.startswith(f"{media_id}.") and n.endswith(".vtt"):
+                        try:
+                            os.remove(os.path.join(media_dir, n))
+                        except OSError:
+                            pass
+                timed_words = []
+
+    # 3. Acoustic fallback when the platform has no English subtitle track
+    if len(timed_words) < 3:
+        try:
+            timed_words = _whisper_transcribe_file(media_path, duration)
+        except ImportError:
+            raise TranscriptError(NO_CAPTIONS, NO_CAPTIONS_MESSAGE)
+        except Exception as error:
+            print(f"[extract] external_asr_failed={type(error).__name__}: {error}", file=sys.stderr)
+            raise TranscriptError(NO_CAPTIONS, "No clear English speech could be detected in this video.")
+
+    cues = _cues_from_words(timed_words)
+    if not cues or not timed_words:
+        raise TranscriptError(NO_CAPTIONS, "No clear English speech could be detected in this video.")
+
+    payload = _build_payload(media_id, url, title, uploader, cues, timed_words, interval)
+    if duration > 0:
+        payload["duration_seconds"] = int(round(duration))
+    payload.update({
+        "source": "external",
+        "platform": platform,
+        "media_file": media_file,
+        "thumbnail_url": thumbnail,
+    })
+    return payload
+
+
+def fetch_media_transcript(url: str, interval: int = 30, media_dir: Optional[str] = None) -> Dict[str, Any]:
+    """Dispatch a YouTube URL/ID or any public social/video URL to the right pipeline."""
+    info = classify_media_url(url)
+    if not info:
+        raise TranscriptError(INVALID_URL, UNSUPPORTED_URL_MESSAGE)
+    if info["source"] == "youtube":
+        data = fetch_youtube_transcript(url, interval=interval)
+        data.setdefault("source", "youtube")
+        data.setdefault("platform", "YouTube")
+        return data
+    target_dir = media_dir or os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "media")
+    )
+    return fetch_external_media_transcript(url, interval, target_dir)
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Extract verbatim subtitles from YouTube for Accent Shadowing.")
-    parser.add_argument("url", help="YouTube video link")
+    parser = argparse.ArgumentParser(description="Extract verbatim, word-timed English speech from YouTube or any public social/video URL.")
+    parser.add_argument("url", help="YouTube, TikTok, Instagram, X, Vimeo, Facebook, Reddit, TED, Loom, Twitch, Dailymotion, or direct media link")
     parser.add_argument("--interval", type=int, default=30, help="Interval size in seconds for grouping (default: 30)")
+    parser.add_argument("--media-dir", help="Directory where downloaded non-YouTube media is cached")
+    parser.add_argument("--classify-only", action="store_true", help="Print URL classification JSON and exit")
     parser.add_argument("--output-json", help="Path to write JSON output")
     parser.add_argument("--output-txt", help="Path to write clean TXT output")
     
     args = parser.parse_args()
+
+    if args.classify_only:
+        print(json.dumps(classify_media_url(args.url)))
+        return
     
     try:
-        data = fetch_youtube_transcript(args.url, interval=args.interval)
+        data = fetch_media_transcript(args.url, interval=args.interval, media_dir=args.media_dir)
         
         if args.output_json:
             with open(args.output_json, "w", encoding="utf-8") as f:

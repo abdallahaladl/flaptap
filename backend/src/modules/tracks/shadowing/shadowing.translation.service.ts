@@ -13,6 +13,8 @@ export interface TranslationResponse {
   languageName: string;
   rtl: boolean;
   translations: Record<number, string>;
+  translatedCount: number;
+  totalSentences: number;
   fromCache: boolean;
   aiModel?: string;
 }
@@ -36,21 +38,36 @@ export class ShadowingTranslationService {
   ) {}
 
   /**
-   * Deduplicate concurrent requests for the same session + language. A quick
-   * toggle or a second tab must not trigger a second paid translation batch.
+   * Deduplicate concurrent requests for the same session + language + scope.
+   * Already-translated sentences are served from SQLite/video cache without
+   * ever re-requesting AI model quota.
    */
   async translate(
     historyId: string,
     requestedLanguage?: string,
     force = false,
+    sentenceIndices?: number[],
   ): Promise<TranslationResponse> {
     const language = getLanguage(requestedLanguage || DEFAULT_LANGUAGE);
-    const key = `${historyId}:${language.code}:${force ? 'force' : 'std'}`;
+    const cleanIndices = Array.isArray(sentenceIndices)
+      ? Array.from(new Set(sentenceIndices.map(Number).filter((n) => Number.isFinite(n) && n > 0))).sort((a, b) => a - b)
+      : [];
+    const scopeKey = cleanIndices.length > 0 ? cleanIndices.join(',') : 'all';
+    const allKey = `${historyId}:${language.code}:${force ? 'force' : 'std'}:all`;
+    const key = `${historyId}:${language.code}:${force ? 'force' : 'std'}:${scopeKey}`;
+
+    const runningAll = this.inFlight.get(allKey);
+    if (runningAll) return runningAll;
+
     const running = this.inFlight.get(key);
     if (running) return running;
 
-    const promise = this.translateInternal(historyId, language.code, force)
-      .finally(() => this.inFlight.delete(key));
+    const promise = this.translateInternal(
+      historyId,
+      language.code,
+      force,
+      cleanIndices.length > 0 ? cleanIndices : undefined,
+    ).finally(() => this.inFlight.delete(key));
     this.inFlight.set(key, promise);
     return promise;
   }
@@ -59,6 +76,7 @@ export class ShadowingTranslationService {
     historyId: string,
     requestedLanguage?: string,
     force = false,
+    sentenceIndices?: number[],
   ): Promise<TranslationResponse> {
     const item = this.historyRepo.findById(historyId);
     if (!item) {
@@ -68,11 +86,11 @@ export class ShadowingTranslationService {
     const language = getLanguage(requestedLanguage || DEFAULT_LANGUAGE);
     const languageCode = language.code;
 
-    const sentences = (item.sentences || [])
+    const allSentences = (item.sentences || [])
       .map((sentence) => ({ index: Number(sentence.index), text: sentence.text }))
       .filter((sentence) => Number.isFinite(sentence.index) && sentence.text?.trim());
 
-    if (sentences.length === 0) {
+    if (allSentences.length === 0) {
       return {
         success: true,
         historyId,
@@ -80,33 +98,51 @@ export class ShadowingTranslationService {
         languageName: language.name,
         rtl: Boolean(language.rtl),
         translations: {},
+        translatedCount: 0,
+        totalSentences: 0,
         fromCache: true,
         aiModel: this.ai.modelName,
       };
     }
 
+    const requestedSet =
+      Array.isArray(sentenceIndices) && sentenceIndices.length > 0
+        ? new Set(sentenceIndices.map(Number))
+        : null;
+    const targetSentences = requestedSet
+      ? allSentences.filter((s) => requestedSet.has(s.index))
+      : allSentences;
+
+    const cached: Record<number, string> = force
+      ? {}
+      : this.readPartialCache(item, languageCode);
+
     // English -> English is an identity target; no model call is needed.
     if (languageCode === 'en') {
-      const identity: Record<number, string> = {};
-      for (const sentence of sentences) {
-        identity[sentence.index] = this.toDisplayHtml(sentence.text, false);
+      for (const sentence of targetSentences) {
+        cached[sentence.index] = this.toDisplayHtml(sentence.text, false);
       }
-      this.persistCache(item, languageCode, identity);
+      this.persistCache(item, languageCode, cached);
       return {
         success: true,
         historyId,
         language: languageCode,
         languageName: language.name,
         rtl: false,
-        translations: identity,
+        translations: cached,
+        translatedCount: Object.keys(cached).length,
+        totalSentences: allSentences.length,
         fromCache: false,
         aiModel: this.ai.modelName,
       };
     }
 
-    const cached = force ? null : this.readCache(item, languageCode, sentences.length);
-    if (cached) {
-      this.logger.log(`Translation cache hit: ${languageCode} / ${historyId}`);
+    const missingSentences = targetSentences.filter((s) => !cached[s.index]);
+    if (missingSentences.length === 0) {
+      this.persistCache(item, languageCode, cached);
+      this.logger.log(
+        `Translation cache hit (${Object.keys(cached).length}/${allSentences.length} sentences): ${languageCode} / ${historyId}`,
+      );
       return {
         success: true,
         historyId,
@@ -114,18 +150,20 @@ export class ShadowingTranslationService {
         languageName: language.name,
         rtl: Boolean(language.rtl),
         translations: cached,
+        translatedCount: Object.keys(cached).length,
+        totalSentences: allSentences.length,
         fromCache: true,
         aiModel: this.ai.modelName,
       };
     }
 
     const startedAt = Date.now();
-    const translations = await this.translateBatches(item, sentences, language);
-    this.persistCache(item, languageCode, translations);
+    await this.translateBatches(item, missingSentences, language, languageCode, cached);
+    this.persistCache(item, languageCode, cached);
 
     this.logger.log(
-      `Translated ${Object.keys(translations).length}/${sentences.length} sentences ` +
-      `into ${languageCode} in ${Date.now() - startedAt}ms`,
+      `Translated ${missingSentences.length} new sentence(s) (${Object.keys(cached).length}/${allSentences.length} total) ` +
+        `into ${languageCode} in ${Date.now() - startedAt}ms`,
     );
 
     return {
@@ -134,7 +172,9 @@ export class ShadowingTranslationService {
       language: languageCode,
       languageName: language.name,
       rtl: Boolean(language.rtl),
-      translations,
+      translations: cached,
+      translatedCount: Object.keys(cached).length,
+      totalSentences: allSentences.length,
       fromCache: false,
       aiModel: this.ai.modelName,
     };
@@ -144,8 +184,10 @@ export class ShadowingTranslationService {
     item: HistoryItem,
     sentences: Array<{ index: number; text: string }>,
     language: ReturnType<typeof getLanguage>,
+    languageCode: string,
+    accumulatedCache: Record<number, string>,
   ): Promise<Record<number, string>> {
-    const result: Record<number, string> = {};
+    const newlyTranslated: Record<number, string> = {};
     const batches: Array<typeof sentences> = [];
 
     for (let i = 0; i < sentences.length; i += BATCH_SIZE) {
@@ -158,29 +200,38 @@ export class ShadowingTranslationService {
         group.map((batch) => this.translateBatch(item, batch, language)),
       );
 
+      let batchAdded = false;
       for (const outcome of settled) {
         if (outcome.status === 'fulfilled') {
-          Object.assign(result, outcome.value);
+          Object.assign(newlyTranslated, outcome.value);
+          Object.assign(accumulatedCache, outcome.value);
+          if (Object.keys(outcome.value).length > 0) batchAdded = true;
         } else {
           this.logger.warn(`Translation batch failed: ${outcome.reason?.message || outcome.reason}`);
         }
       }
+
+      if (batchAdded) {
+        this.persistCache(item, languageCode, accumulatedCache);
+      }
     }
 
-    const missing = sentences.filter((sentence) => !result[sentence.index]);
+    const missing = sentences.filter((sentence) => !newlyTranslated[sentence.index]);
     if (missing.length > 0 && missing.length <= BATCH_SIZE) {
       try {
-        Object.assign(result, await this.translateBatch(item, missing, language));
+        const retried = await this.translateBatch(item, missing, language);
+        Object.assign(newlyTranslated, retried);
+        Object.assign(accumulatedCache, retried);
       } catch (error: any) {
         this.logger.warn(`Translation retry failed: ${error.message}`);
       }
     }
 
-    if (Object.keys(result).length === 0) {
+    if (Object.keys(newlyTranslated).length === 0 && Object.keys(accumulatedCache).length === 0) {
       throw new Error('Translation is temporarily unavailable. Please try again.');
     }
 
-    return result;
+    return accumulatedCache;
   }
 
   private async translateBatch(
@@ -293,36 +344,55 @@ export class ShadowingTranslationService {
     return parts.join('');
   }
 
-  private readCache(
+  private readPartialCache(
     item: HistoryItem,
     languageCode: string,
-    sentenceCount: number,
-  ): Record<number, string> | null {
-    if (item.translationEngineVersion !== 4) return null;
-    const cache = item.translationsCache?.[languageCode];
-    if (!cache || typeof cache !== 'object') return null;
-
+  ): Record<number, string> {
     const normalized: Record<number, string> = {};
-    for (const [key, value] of Object.entries(cache)) {
-      const index = Number(key);
-      if (Number.isFinite(index) && typeof value === 'string' && value.trim()) {
-        normalized[index] = value;
+
+    const absorb = (map?: Record<string | number, any> | null) => {
+      if (!map || typeof map !== 'object') return;
+      for (const [key, value] of Object.entries(map)) {
+        const index = Number(key);
+        if (Number.isFinite(index) && typeof value === 'string' && value.trim()) {
+          normalized[index] = value;
+        }
+      }
+    };
+
+    if (item.translationEngineVersion === 4 || !item.translationEngineVersion) {
+      absorb(item.translationsCache?.[languageCode]);
+    }
+
+    if (Array.isArray(item.sentences)) {
+      for (const s of item.sentences) {
+        const idx = Number(s.index);
+        const val = s.translations?.[languageCode];
+        if (Number.isFinite(idx) && typeof val === 'string' && val.trim() && !normalized[idx]) {
+          normalized[idx] = val;
+        }
       }
     }
 
-    // A partial cache is a miss: translating again is better than leaving
-    // shimmer placeholders forever in the drill list.
-    return Object.keys(normalized).length >= sentenceCount ? normalized : null;
+    const videoLevel = this.historyRepo.readVideoTranslationCache(item.videoId, item.sourceUrl);
+    if (videoLevel?.[languageCode]) {
+      absorb(videoLevel[languageCode]);
+    }
+
+    return normalized;
   }
 
   private persistCache(item: HistoryItem, languageCode: string, translations: Record<number, string>): void {
     if (!item.translationsCache) item.translationsCache = {};
-    item.translationsCache[languageCode] = translations;
+    item.translationsCache[languageCode] = {
+      ...(item.translationsCache[languageCode] || {}),
+      ...translations,
+    };
     item.translationEngineVersion = 4;
 
     if (item.sentences) {
       for (const sentence of item.sentences) {
-        const translated = translations[Number(sentence.index)];
+        const translated = item.translationsCache[languageCode][Number(sentence.index)];
         if (!translated) continue;
         if (!sentence.translations) sentence.translations = {};
         sentence.translations[languageCode] = translated;
@@ -334,5 +404,6 @@ export class ShadowingTranslationService {
       sentences: item.sentences,
       translationEngineVersion: 4,
     });
+    this.historyRepo.saveVideoTranslationCache(item);
   }
 }

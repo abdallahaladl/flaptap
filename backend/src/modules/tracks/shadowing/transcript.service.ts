@@ -10,7 +10,8 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getSkillScriptPath } from '../../../core/config/paths';
+import { getPythonBinaryPath, getSkillScriptPath } from '../../../core/config/paths';
+import { classifyMediaUrl, EXTERNAL_MEDIA_ID_PATTERN } from '../../../core/media/media-url';
 
 /** Failure codes emitted by the Python helper as `FLAPTAP_ERROR:<code>:<message>`. */
 export type TranscriptErrorCode =
@@ -19,6 +20,7 @@ export type TranscriptErrorCode =
   | 'rate_limited'
   | 'timeout'
   | 'invalid_url'
+  | 'media_too_long'
   | 'unknown';
 
 const HELPER_ERROR_PATTERN = /FLAPTAP_ERROR:([a-z_]+):([^\r\n]+)/;
@@ -61,6 +63,13 @@ export interface TranscriptResult {
   cues: TranscriptCue[];
   timed_words: TimedWord[];
   full_raw_transcript: string;
+  /** `youtube` (IFrame player) or `external` (self-hosted HTML5 media). */
+  source?: 'youtube' | 'external';
+  /** Human-readable platform label (YouTube, TikTok, Instagram, X, Vimeo, ...). */
+  platform?: string;
+  /** File name of the cached playable media under `data/media/` (external only). */
+  media_file?: string;
+  thumbnail_url?: string;
 }
 
 interface TranscriptCacheFile {
@@ -71,47 +80,64 @@ interface TranscriptCacheFile {
 }
 
 /**
- * One job: turn a YouTube URL into verbatim, timestamped English speech data.
+ * One job: turn a YouTube URL or any public social/video URL into verbatim,
+ * timestamped English speech data.
  *
- * The Python helper is the only external pipeline step. It talks to YouTube's
- * caption endpoints directly and typically finishes in 2-4 seconds. It is
- * invoked with execFile (no shell) so URLs can never be interpreted as shell
- * syntax.
+ * The Python helper is the only external pipeline step. For YouTube it talks
+ * to the caption endpoints directly (typically 2-4 seconds). For TikTok,
+ * Instagram, X, Vimeo, Facebook, Reddit, TED, Loom, Twitch, Dailymotion and
+ * direct media it downloads one compact MP4 into `data/media/` and aligns
+ * subtitles or local Whisper word timestamps. It is invoked with execFile
+ * (no shell) so URLs can never be interpreted as shell syntax.
  *
  * Successful extractions are cached on disk. This keeps re-processing and
  * timing migrations instant, and gives the app a usable transcript even if
- * YouTube temporarily rate-limits a later request.
+ * a platform temporarily rate-limits a later request.
  */
 @Injectable()
 export class TranscriptService {
   private readonly logger = new Logger(TranscriptService.name);
   private readonly cacheDir = path.resolve(__dirname, '../../../../../data/transcripts');
+  readonly mediaDir = path.resolve(__dirname, '../../../../../data/media');
   private readonly cacheVersion = 2;
   private readonly cacheTtlMs = 7 * 24 * 60 * 60 * 1000;
 
   async extract(url: string, force = false): Promise<TranscriptResult> {
-    const videoId = this.extractYoutubeId(url);
+    const info = classifyMediaUrl(url);
+    const videoId = info?.mediaId || '';
+    const isExternal = info?.source === 'external';
     if (!force) {
       const cached = this.readCache(videoId);
-      if (cached) {
+      if (cached && (!isExternal || this.resolveMediaFile(videoId))) {
         this.logger.log(`Transcript cache hit for ${videoId}`);
         return cached;
       }
     }
 
     const scriptPath = getSkillScriptPath();
+    const pythonBin = getPythonBinaryPath();
+    const pythonDir = path.dirname(pythonBin);
+    const enhancedPath =
+      pythonDir && pythonDir !== '.'
+        ? `${pythonDir}${path.delimiter}${process.env.PATH || ''}`
+        : process.env.PATH || '';
     const startedAt = Date.now();
 
     let stdout = '';
     let stderr = '';
     try {
       const result = await execFileAsync(
-        'python3',
-        [scriptPath, url, '--interval', '35'],
+        pythonBin,
+        [scriptPath, url, '--interval', '35', '--media-dir', this.mediaDir],
         {
-          maxBuffer: 32 * 1024 * 1024,
-          timeout: 45000,
-          env: { ...process.env, PYTHONWARNINGS: 'ignore' },
+          maxBuffer: 48 * 1024 * 1024,
+          // External media = download + optional local Whisper alignment.
+          timeout: isExternal ? 420000 : 95000,
+          env: {
+            ...process.env,
+            PATH: enhancedPath,
+            PYTHONWARNINGS: 'ignore',
+          },
         },
       );
       stdout = result.stdout;
@@ -119,7 +145,7 @@ export class TranscriptService {
     } catch (error: any) {
       const raw = `${error?.stderr || ''}\n${error?.message || ''}`;
       const stale = this.readCache(videoId, true);
-      if (stale) {
+      if (stale && (!isExternal || this.resolveMediaFile(videoId))) {
         this.logger.warn(`Caption extraction failed; using stale transcript cache for ${videoId}.`);
         return stale;
       }
@@ -134,7 +160,9 @@ export class TranscriptService {
 
       if (error?.killed || /timed out/i.test(raw)) {
         throw new ServiceUnavailableException({
-          message: 'YouTube took too long to respond. Please try again.',
+          message: isExternal
+            ? 'Processing this video took too long. Please try a shorter clip.'
+            : 'YouTube took too long to respond. Please try again.',
           code: 'timeout',
         });
       }
@@ -164,11 +192,16 @@ export class TranscriptService {
       });
     }
 
+    if (!data.source && data.video_id && !EXTERNAL_MEDIA_ID_PATTERN.test(data.video_id)) {
+      data.source = 'youtube';
+      data.platform = data.platform || 'YouTube';
+    }
+
     // The Python helper already asks YouTube oEmbed for metadata, but a
     // transient throttle can leave it on the generic fallback. A single fast
     // retry from Node keeps the studio header accurate without delaying the
     // caption pipeline.
-    if (!data.title || data.title === 'YouTube Shadowing Session') {
+    if (data.source !== 'external' && (!data.title || data.title === 'YouTube Shadowing Session')) {
       try {
         const oembed = await fetch(
           `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${data.video_id}`)}&format=json`,
@@ -207,6 +240,8 @@ export class TranscriptService {
         return new UnprocessableEntityException(body);
       case 'invalid_url':
         return new UnprocessableEntityException(body);
+      case 'media_too_long':
+        return new UnprocessableEntityException(body);
       case 'rate_limited':
         return new ServiceUnavailableException(body);
       case 'timeout':
@@ -216,13 +251,26 @@ export class TranscriptService {
     }
   }
 
+  /**
+   * Resolve the absolute path of a cached external media file. Only
+   * `ext_<12 hex>` IDs are accepted, so path traversal is impossible.
+   */
+  public resolveMediaFile(mediaId?: string): string | null {
+    if (!mediaId || !EXTERNAL_MEDIA_ID_PATTERN.test(mediaId)) return null;
+    try {
+      if (!fs.existsSync(this.mediaDir)) return null;
+      const match = fs
+        .readdirSync(this.mediaDir)
+        .filter((name) => name.startsWith(`${mediaId}.`) && !/\.(part|ytdl|vtt|json)$/i.test(name))
+        .sort((a, b) => Number(!a.endsWith('.mp4')) - Number(!b.endsWith('.mp4')))[0];
+      return match ? path.join(this.mediaDir, match) : null;
+    } catch {
+      return null;
+    }
+  }
+
   private extractYoutubeId(url: string): string {
-    if (!url) return '';
-    const clean = url.trim();
-    if (/^[a-zA-Z0-9_-]{11}$/.test(clean)) return clean;
-    const match = clean.match(/(?:v=|\/shorts\/|\/embed\/|\/live\/|\/v\/|youtu\.be\/|\/e\/)([\w-]{11})/) ||
-      clean.match(/[?&]v=([\w-]{11})/);
-    return match ? match[1] : '';
+    return classifyMediaUrl(url)?.mediaId || '';
   }
 
   public hasCache(videoId?: string): { cached: boolean; bytes: number } {

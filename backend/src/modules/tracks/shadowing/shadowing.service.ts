@@ -21,6 +21,7 @@ import {
 } from './shadowing.translation.service';
 import { ShadowingAnalysisService } from './shadowing.analysis.service';
 import { segmentParagraphs, segmentSentences } from '../../../core/linguistics/segmentation';
+import { classifyMediaUrl, EXTERNAL_MEDIA_ID_PATTERN } from '../../../core/media/media-url';
 
 @Injectable()
 export class ShadowingService {
@@ -35,14 +36,15 @@ export class ShadowingService {
   ) {}
 
   checkExisting(url: string, scope?: RequestIdentityScope) {
-    const videoId = this.extractYoutubeId(url);
+    const info = classifyMediaUrl(url);
+    const videoId = info?.mediaId || '';
     const existing = this.historyRepo.findByUrlOrVideoId(url, videoId, scope);
     const transcriptCache = this.transcriptService.hasCache(videoId);
     if (!existing) {
       return {
         exists: transcriptCache.cached,
         id: null,
-        title: transcriptCache.cached ? 'Raw YouTube transcript cached on disk' : null,
+        title: transcriptCache.cached ? 'Raw transcript cached on disk' : null,
         transcriptCached: transcriptCache.cached,
         cacheInfo: {
           transcriptCached: transcriptCache.cached,
@@ -104,16 +106,18 @@ export class ShadowingService {
   ): Promise<HistoryItem> {
     const cleanUrl = (url || '').trim();
     if (!cleanUrl) {
-      throw new BadRequestException('A YouTube video link is required.');
+      throw new BadRequestException('A video or social media link is required.');
     }
 
-    const videoId = this.extractYoutubeId(cleanUrl);
-    if (!videoId) {
-      throw new BadRequestException('Please enter a valid YouTube video link.');
+    const info = classifyMediaUrl(cleanUrl);
+    if (!info) {
+      throw new BadRequestException('Please enter a valid video link (YouTube, TikTok, Instagram, X, Vimeo, TED, Loom, or direct media).');
     }
+    const videoId = info.mediaId;
 
     const existing = this.historyRepo.findByUrlOrVideoId(cleanUrl, videoId, scope);
-    if (existing && !force) {
+    const hasMedia = info.source !== 'external' || Boolean(this.transcriptService.resolveMediaFile(videoId));
+    if (existing && !force && hasMedia) {
       this.logger.log(`SQLite cache hit for "${existing.title}" (${videoId})`);
       return existing;
     }
@@ -147,9 +151,10 @@ export class ShadowingService {
     language?: string,
     force = false,
     scope?: RequestIdentityScope,
+    sentenceIndices?: number[],
   ): Promise<TranslationResponse> {
     this.assertOwnedLesson(historyId, scope);
-    return this.translationService.translate(historyId, language, force);
+    return this.translationService.translate(historyId, language, force, sentenceIndices);
   }
 
   analyzeLesson(historyId: string, force = false, scope?: RequestIdentityScope) {
@@ -228,10 +233,18 @@ export class ShadowingService {
     sentences: SentenceItem[],
     url: string,
   ): HistoryItem {
-    const videoId = data.video_id || this.extractYoutubeId(url);
-    const thumbnailUrl = videoId
-      ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-      : '';
+    const info = classifyMediaUrl(url);
+    const videoId = data.video_id || info?.mediaId || this.extractYoutubeId(url);
+    const isExternal =
+      data.source === 'external' ||
+      info?.source === 'external' ||
+      EXTERNAL_MEDIA_ID_PATTERN.test(videoId);
+    const platform = data.platform || info?.platform || (isExternal ? 'Web Video' : 'YouTube');
+
+    let thumbnailUrl = data.thumbnail_url || '';
+    if (!thumbnailUrl && !isExternal && videoId) {
+      thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
+    }
 
     const totalWords =
       sentences.reduce(
@@ -258,13 +271,13 @@ export class ShadowingService {
     return {
       id: uuidv4(),
       track: 'shadowing',
-      trackTitle: 'Video Lesson',
-      title: data.title || 'YouTube Video Lesson',
-      creator: data.creator || 'YouTube Creator',
+      trackTitle: isExternal ? `${platform} Lesson` : 'Video Lesson',
+      title: data.title || (isExternal ? `${platform} Video Lesson` : 'YouTube Video Lesson'),
+      creator: data.creator || (isExternal ? platform : 'YouTube Creator'),
       videoId,
       sourceUrl: url,
       thumbnailUrl,
-      accentDialect: 'Spoken English',
+      accentDialect: isExternal ? `${platform} Spoken English` : 'Spoken English',
       durationSeconds,
       pacingWpm,
       difficulty,
@@ -283,8 +296,8 @@ export class ShadowingService {
       sentences,
       studyNotes: '',
       noteMarkdown: this.historyRepo.buildCleanMarkdown(
-        data.title || 'YouTube Video Lesson',
-        data.creator || 'YouTube Creator',
+        data.title || (isExternal ? `${platform} Video Lesson` : 'YouTube Video Lesson'),
+        data.creator || (isExternal ? platform : 'YouTube Creator'),
         url,
         chunks,
       ),

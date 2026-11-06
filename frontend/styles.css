@@ -125,6 +125,7 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  overflow-x: hidden;
 }
 
 body {
@@ -326,7 +327,7 @@ mark.hl-stress {
   display: none;
 }
 
-@media (min-width: 980px) {
+@media (min-width: 1440px) {
   .brand-edition {
     display: inline-block;
   }
@@ -450,6 +451,34 @@ mark.hl-stress {
 .icon-btn svg {
   width: 16px;
   height: 16px;
+}
+
+.pwa-install-btn {
+  height: 34px;
+  padding: 0 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid #141413;
+  background: var(--vox-yellow);
+  color: var(--vox-yellow-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: transform 0.12s ease, opacity 0.15s ease;
+}
+
+.pwa-install-btn[hidden] {
+  display: none !important;
+}
+
+.pwa-install-btn:hover {
+  opacity: 0.92;
+}
+
+.pwa-install-btn:active {
+  transform: translateY(1px);
 }
 
 .account-btn {
@@ -1518,10 +1547,30 @@ button:disabled {
 }
 
 .btn-vox.active {
-  background: var(--ink);
+  background: #141413;
   color: var(--vox-yellow);
-  border-color: var(--ink);
+  border-color: #141413;
   box-shadow: none;
+}
+
+[data-theme="dark"] .btn-vox.active {
+  background: #0E0E0C;
+  color: var(--vox-yellow);
+  border: 1px solid var(--vox-yellow);
+  box-shadow: 0 0 0 1px var(--vox-yellow);
+}
+
+#wp-save-btn.active {
+  background: var(--accent-forest-wash) !important;
+  color: var(--accent-forest) !important;
+  border-color: var(--accent-forest) !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] #wp-save-btn.active {
+  background: rgba(76, 195, 129, 0.18) !important;
+  color: #4CC381 !important;
+  border-color: #4CC381 !important;
 }
 
 .account-avatar-img {
@@ -2208,7 +2257,35 @@ button:disabled {
    RESPONSIVE BREAKPOINTS
    ========================================================================== */
 
-@media (max-width: 860px) {
+@media (min-width: 1121px) and (max-width: 1440px) {
+  .nav-tab {
+    padding: 6px 9px;
+    font-size: 0.8rem;
+    gap: 5px;
+  }
+
+  .streak-pill span {
+    display: none;
+  }
+
+  .streak-pill {
+    padding: 0 8px;
+  }
+
+  .pwa-install-btn span {
+    display: none;
+  }
+
+  .pwa-install-btn {
+    padding: 0 8px;
+  }
+
+  .navbar-actions {
+    gap: 6px;
+  }
+}
+
+@media (max-width: 1120px) {
   .usage-overview-grid {
     grid-template-columns: 1fr;
   }
@@ -2221,19 +2298,21 @@ button:disabled {
     height: auto;
     padding: 10px 16px;
     flex-wrap: wrap;
+    gap: 10px;
   }
 
   .primary-nav {
     order: 3;
     width: 100%;
     overflow-x: auto;
-    justify-content: space-between;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
   }
 
   .nav-tab {
-    flex: 1;
+    flex-shrink: 0;
     justify-content: center;
-    padding: 7px 10px;
+    padding: 6px 11px;
     font-size: 0.81rem;
   }
 
@@ -2265,6 +2344,28 @@ button:disabled {
   .telemetry-cell:nth-child(2) {
     border-bottom: 1px solid var(--rule);
   }
+}
+
+.platform-chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.platform-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 99px;
+  border: 1px solid var(--rule-strong);
+  background: var(--bg-inset);
+  color: var(--ink-secondary);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }
 
 @media (prefers-reduced-motion: reduce) {

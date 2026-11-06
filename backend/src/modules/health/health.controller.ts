@@ -4,6 +4,7 @@ import { execFileSync } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { SqliteService } from '../../core/database/sqlite.service';
+import { getPythonBinaryPath } from '../../core/config/paths';
 
 @Controller()
 export class HealthController {
@@ -16,7 +17,7 @@ export class HealthController {
       return { available: true, version: this.pythonVersionCache };
     }
     try {
-      const out = execFileSync('python3', ['--version'], {
+      const out = execFileSync(getPythonBinaryPath(), ['--version'], {
         encoding: 'utf-8',
         timeout: 2000,
       }).trim();

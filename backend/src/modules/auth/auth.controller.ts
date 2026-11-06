@@ -143,7 +143,7 @@ export class AuthController {
   }
 
   @Get('google/start')
-  googleStart(
+  async googleStart(
     @Query('mode') mode: string | undefined,
     @Query('returnTo') returnTo: string | undefined,
     @Query('uiLang') uiLang: string | undefined,
@@ -152,7 +152,7 @@ export class AuthController {
     @Res() res: Response,
   ) {
     const origin = extractRequestOrigin(req);
-    const { authorizationUrl, state } = this.googleOAuth.createAuthorizationStart({
+    const { authorizationUrl, state } = await this.googleOAuth.createAuthorizationStart({
       requestOrigin: origin,
       returnTo,
       mode: mode === 'redirect' ? 'redirect' : 'popup',
@@ -163,6 +163,44 @@ export class AuthController {
     return res.redirect(302, authorizationUrl);
   }
 
+  @Get('google/handoff')
+  googleHandoff(
+    @Query('token') token: string | undefined,
+    @Query('returnTo') returnTo: string | undefined,
+    @Query('mode') mode: string | undefined,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const cleanToken = (token || '').trim();
+    const user = cleanToken ? this.authService.validateSession(cleanToken) : null;
+    const safeReturnTo = this.googleOAuth.sanitizeReturnTo(returnTo);
+    const safeMode: 'popup' | 'redirect' = mode === 'redirect' ? 'redirect' : 'popup';
+
+    if (!user || !cleanToken) {
+      return this.renderOAuthBridgeHtml(res, {
+        success: false,
+        error: 'Google sign-in handoff expired or invalid.',
+        mode: safeMode,
+        returnTo: safeReturnTo,
+      });
+    }
+
+    setSessionCookie(res, cleanToken, req);
+    const stats = this.historyRepo.getStats({ userId: user.id });
+    return this.renderOAuthBridgeHtml(res, {
+      success: true,
+      mode: safeMode,
+      returnTo: safeReturnTo,
+      payload: {
+        authenticated: true,
+        isNewUser: false,
+        user,
+        token: cleanToken,
+        stats,
+      },
+    });
+  }
+
   @Get('google/callback')
   async googleCallback(
     @Query('code') code: string | undefined,
@@ -171,7 +209,7 @@ export class AuthController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const origin = extractRequestOrigin(req);
+    const origin = extractRequestOrigin(req).replace(/\/+$/, '');
     const cookies = parseCookies(req.headers?.cookie);
     const cookieState = cookies[OAUTH_STATE_COOKIE_NAME] || null;
     clearOAuthStateCookie(res, req);
@@ -208,8 +246,15 @@ export class AuthController {
 
       setSessionCookie(res, token, req);
 
-      if (completed.mode === 'redirect') {
-        return res.redirect(302, completed.returnTo);
+      if (
+        completed.requestOrigin &&
+        completed.requestOrigin.toLowerCase() !== origin.toLowerCase()
+      ) {
+        const handoffUrl = new URL('/api/auth/google/handoff', completed.requestOrigin);
+        handoffUrl.searchParams.set('token', token);
+        handoffUrl.searchParams.set('returnTo', completed.returnTo);
+        handoffUrl.searchParams.set('mode', completed.mode);
+        return res.redirect(302, handoffUrl.toString());
       }
 
       const stats = this.historyRepo.getStats({ userId: user.id });

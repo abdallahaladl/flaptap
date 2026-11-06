@@ -1,17 +1,88 @@
 {
+  "id": "/",
   "name": "Flaptap — Spoken English Studio",
   "short_name": "Flaptap",
   "description": "Master spoken American English from real videos, interactive dialogues, and articulatory workouts with millisecond precision.",
+  "lang": "en",
+  "dir": "auto",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
   "background_color": "#F6F4EE",
   "theme_color": "#141413",
+  "categories": ["education", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
     {
       "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "540x960",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Flaptap Spoken English Studio on Android Phone"
+    },
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Flaptap Spoken English Studio on Android Tablet"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Spoken English Lessons",
+      "short_name": "Lessons",
+      "description": "Open your video shadowing library and start a new lesson",
+      "url": "/?tab=shadowing",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Interactive Dialogue",
+      "short_name": "Dialogue",
+      "description": "Practice spoken American English dialogues",
+      "url": "/?tab=street",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Pronunciation Workout",
+      "short_name": "Pronunciation",
+      "description": "Train physical mouth mechanics and IPA targets",
+      "url": "/?tab=phonetics",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

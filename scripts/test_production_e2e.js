@@ -540,7 +540,12 @@ async function runProductionE2ETest() {
       dlgLesson.sentences?.length >= 4 &&
       dlgLesson.aiAnalysis?.connectedSpeech?.length > 0 &&
       dlgLesson.aiAnalysis?.vocabulary?.length > 0,
-      'Dialogue lesson missing dynamic AI content.',
+      `Dialogue lesson missing dynamic AI content: ${JSON.stringify({
+        sentencesLen: dlgLesson.sentences?.length,
+        connLen: dlgLesson.aiAnalysis?.connectedSpeech?.length,
+        vocabLen: dlgLesson.aiAnalysis?.vocabulary?.length,
+        aiAnalysis: dlgLesson.aiAnalysis,
+      })}`,
     );
 
     const pronRes = await fetch(`${BASE_URL}/api/tracks/phonetics/drill`, {
@@ -556,7 +561,12 @@ async function runProductionE2ETest() {
       pronLesson.sentences?.length >= 4 &&
       pronLesson.aiAnalysis?.connectedSpeech?.length > 0 &&
       pronLesson.aiAnalysis?.vocabulary?.length > 0,
-      'Pronunciation workout missing dynamic AI content.',
+      `Pronunciation workout missing dynamic AI content: ${JSON.stringify({
+        sentencesLen: pronLesson.sentences?.length,
+        connLen: pronLesson.aiAnalysis?.connectedSpeech?.length,
+        vocabLen: pronLesson.aiAnalysis?.vocabulary?.length,
+        aiAnalysis: pronLesson.aiAnalysis,
+      })}`,
     );
 
     // Vocabulary SRS Save & Review + Usage Overview + Cache Clear + Full JSON Export
@@ -822,101 +832,238 @@ async function runProductionE2ETest() {
       };
     });
 
-    // --- CRITICAL REGRESSION TEST: LOOP BUTTON & ALL PLAYBACK BUTTON STATES ---
-    // Step A: Click Loop on Sentence #1
-    await page.click('[data-loop-sent="1"]');
-    const loopStepA = await page.evaluate(() => ({
-      loopIdx: window.studioState.loopSentenceIndex,
-      loop1Active: document.querySelector('[data-loop-sent="1"]')?.classList.contains('active'),
-      loop1Pressed: document.querySelector('[data-loop-sent="1"]')?.getAttribute('aria-pressed'),
-      play1Active: document.querySelector('[data-play-sent="1"]')?.classList.contains('active'),
+    // --- CRITICAL REGRESSION TEST: DECLUTTERED SENTENCE ITEMS & CENTRALIZED SIDE DECK ---
+    // Verify each sentence item has ONLY the single Play/Pause status button (loop & translate moved to side deck)
+    const iconButtonsCheck = await page.evaluate(() => ({
+      playBtnsCount: document.querySelectorAll('[data-play-sent]').length,
+      loopBtnsInCard: document.querySelectorAll('.sentence-driller-card [data-loop-sent]').length,
+      transBtnsInCard: document.querySelectorAll('.sentence-driller-card [data-translate-sent]').length,
+      deckPrevBtn: Boolean(document.getElementById('deck-prev-sent-btn')),
+      deckNextBtn: Boolean(document.getElementById('deck-next-sent-btn')),
+      deckPlayBtn: Boolean(document.getElementById('deck-play-active-btn')),
+      deckAutoFollowBtn: Boolean(document.getElementById('deck-auto-follow-btn')),
+      sideTransBtn: Boolean(document.getElementById('side-trans-active-btn')),
+      playTextLen: (document.querySelector('[data-play-sent="1"]')?.textContent || '').trim().length,
     }));
     assert(
-      loopStepA.loopIdx === 1 && loopStepA.loop1Active && loopStepA.loop1Pressed === 'true' && loopStepA.play1Active,
-      `Step A (Loop #1) failed: ${JSON.stringify(loopStepA)}`,
+      iconButtonsCheck.playBtnsCount > 0 &&
+      iconButtonsCheck.loopBtnsInCard === 0 &&
+      iconButtonsCheck.transBtnsInCard === 0 &&
+      iconButtonsCheck.deckPrevBtn &&
+      iconButtonsCheck.deckNextBtn &&
+      iconButtonsCheck.deckPlayBtn &&
+      iconButtonsCheck.deckAutoFollowBtn &&
+      iconButtonsCheck.sideTransBtn &&
+      iconButtonsCheck.playTextLen === 0,
+      `Decluttered sentence cards & centralized side deck check failed: ${JSON.stringify(iconButtonsCheck)}`,
     );
 
-    // Step B: Move to Sentence #2 (click Play on Sentence #2) -> Sentence #1 Loop MUST reset!
+    // Step A: Play/Pause button on sentence card has 2 logical states only (Play starts, Pause stops)
+    // Click 1: Click Play -> starts playing!
+    await page.click('[data-play-sent="1"]');
+    const stepAPlay = await page.evaluate(() => ({
+      loopIdx: window.studioState.loopSentenceIndex,
+      endAction: window.studioState.endAction,
+      state1: document.querySelector('[data-play-sent="1"]')?.getAttribute('data-play-state'),
+      active1: document.querySelector('[data-play-sent="1"]')?.classList.contains('active'),
+      isPlaying: window.studioState.isPlaying,
+    }));
+    assert(
+      stepAPlay.loopIdx === null &&
+      stepAPlay.endAction === 'pause' &&
+      stepAPlay.state1 === 'playing' &&
+      stepAPlay.active1 === true &&
+      stepAPlay.isPlaying === true,
+      `Step A1 (Play #1) failed: ${JSON.stringify(stepAPlay)}`,
+    );
+
+    // Click 2: Click while playing -> PAUSES! (2 states only)
+    await page.click('[data-play-sent="1"]');
+    const stepAPause = await page.evaluate(() => ({
+      loopIdx: window.studioState.loopSentenceIndex,
+      endAction: window.studioState.endAction,
+      state1: document.querySelector('[data-play-sent="1"]')?.getAttribute('data-play-state'),
+      active1: document.querySelector('[data-play-sent="1"]')?.classList.contains('active'),
+      isPlaying: window.studioState.isPlaying,
+    }));
+    assert(
+      stepAPause.state1 === 'idle' &&
+      stepAPause.active1 === false &&
+      stepAPause.isPlaying === false,
+      `Step A2 (Pause #1) failed: ${JSON.stringify(stepAPause)}`,
+    );
+
+    // Step A3: Centralized Loop flow from Side Deck
+    // Click Loop on Side Deck flow control -> activates Loop mode and plays active sentence!
+    await page.click('.flow-btn[data-end-action="loop"]');
+    await page.click('[data-play-sent="1"]');
+    const loopStepA = await page.evaluate(() => ({
+      loopIdx: window.studioState.loopSentenceIndex,
+      endAction: window.studioState.endAction,
+      isPlaying: window.studioState.isPlaying,
+      active1: document.querySelector('[data-play-sent="1"]')?.classList.contains('active'),
+    }));
+    assert(
+      loopStepA.loopIdx === 1 &&
+      loopStepA.endAction === 'loop' &&
+      loopStepA.isPlaying === true &&
+      loopStepA.active1 === true,
+      `Step A3 (Loop flow activation) failed: ${JSON.stringify(loopStepA)}`,
+    );
+
+    // Step B: Move to Sentence #2 -> Sentence #2 inherits Loop mode from active flow, and #1 resets to idle!
     await page.click('[data-play-sent="2"]');
     const loopStepB = await page.evaluate(() => ({
       loopIdx: window.studioState.loopSentenceIndex,
+      endAction: window.studioState.endAction,
       activeSent: window.studioState.activeSentence?.index,
-      loop1Active: document.querySelector('[data-loop-sent="1"]')?.classList.contains('active'),
-      loop1Pressed: document.querySelector('[data-loop-sent="1"]')?.getAttribute('aria-pressed'),
-      loop2Active: document.querySelector('[data-loop-sent="2"]')?.classList.contains('active'),
-      play1Active: document.querySelector('[data-play-sent="1"]')?.classList.contains('active'),
-      play2Active: document.querySelector('[data-play-sent="2"]')?.classList.contains('active'),
+      state1: document.querySelector('[data-play-sent="1"]')?.getAttribute('data-play-state'),
+      active1: document.querySelector('[data-play-sent="1"]')?.classList.contains('active'),
+      state2: document.querySelector('[data-play-sent="2"]')?.getAttribute('data-play-state'),
+      active2: document.querySelector('[data-play-sent="2"]')?.classList.contains('active'),
     }));
     assert(
-      loopStepB.loopIdx === null &&
+      loopStepB.loopIdx === 2 &&
+      loopStepB.endAction === 'loop' &&
       loopStepB.activeSent === 2 &&
-      loopStepB.loop1Active === false &&
-      loopStepB.loop1Pressed === 'false' &&
-      loopStepB.loop2Active === false &&
-      loopStepB.play1Active === false &&
-      loopStepB.play2Active === true,
-      `Step B (Move #1 -> #2 must clear #1 Loop & Play state) failed: ${JSON.stringify(loopStepB)}`,
+      loopStepB.state1 === 'idle' &&
+      loopStepB.active1 === false &&
+      loopStepB.state2 === 'playing' &&
+      loopStepB.active2 === true,
+      `Step B (Move #1 -> #2 must inherit Loop mode) failed: ${JSON.stringify(loopStepB)}`,
     );
 
-    // Step C: Click Loop on Sentence #2, then directly click Loop on Sentence #3 -> #2 Loop MUST clear!
-    await page.click('[data-loop-sent="2"]');
-    await page.click('[data-loop-sent="3"]');
+    // Step C: Toggle flow to Auto-Pause -> deactivates loop, then move to #3 -> #3 plays once!
+    await page.click('.flow-btn[data-end-action="pause"]');
+    await page.click('[data-play-sent="3"]');
     const loopStepC = await page.evaluate(() => ({
       loopIdx: window.studioState.loopSentenceIndex,
-      loop2Active: document.querySelector('[data-loop-sent="2"]')?.classList.contains('active'),
-      loop3Active: document.querySelector('[data-loop-sent="3"]')?.classList.contains('active'),
-      totalActiveLoops: document.querySelectorAll('[data-loop-sent].active').length,
+      endAction: window.studioState.endAction,
+      activeSent: window.studioState.activeSentence?.index,
+      state2: document.querySelector('[data-play-sent="2"]')?.getAttribute('data-play-state'),
+      state3: document.querySelector('[data-play-sent="3"]')?.getAttribute('data-play-state'),
+      isPlaying3: window.studioState.isPlaying,
+      totalActiveButtons: document.querySelectorAll('[data-play-sent].active').length,
     }));
     assert(
-      loopStepC.loopIdx === 3 && !loopStepC.loop2Active && loopStepC.loop3Active && loopStepC.totalActiveLoops === 1,
-      `Step C (Direct Loop #2 -> Loop #3 switch) failed: ${JSON.stringify(loopStepC)}`,
+      loopStepC.loopIdx === null &&
+      loopStepC.endAction === 'pause' &&
+      loopStepC.activeSent === 3 &&
+      loopStepC.state2 === 'idle' &&
+      loopStepC.state3 === 'playing' &&
+      loopStepC.isPlaying3 === true &&
+      loopStepC.totalActiveButtons === 1,
+      `Step C (Toggle Auto-Pause -> #3 plays Once) failed: ${JSON.stringify(loopStepC)}`,
     );
 
-    // Step D: Click Sentence #1 text line -> Sentence #3 Loop MUST clear!
-    await page.click('[data-line-sent="1"]');
+    // Step D: Toggle Loop ON in side deck for #3, then click Sentence #1 card -> #1 inherits Loop!
+    await page.click('.flow-btn[data-end-action="loop"]');
+    await page.click('#sent-card-1');
     const loopStepD = await page.evaluate(() => ({
       loopIdx: window.studioState.loopSentenceIndex,
-      totalActiveLoops: document.querySelectorAll('[data-loop-sent].active').length,
+      endAction: window.studioState.endAction,
+      state1: document.querySelector('[data-play-sent="1"]')?.getAttribute('data-play-state'),
+      totalActiveButtons: document.querySelectorAll('[data-play-sent].active').length,
     }));
     assert(
-      loopStepD.loopIdx === null && loopStepD.totalActiveLoops === 0,
-      `Step D (Clicking another sentence line must clear Loop) failed: ${JSON.stringify(loopStepD)}`,
+      loopStepD.loopIdx === 1 &&
+      loopStepD.endAction === 'loop' &&
+      loopStepD.state1 === 'playing' &&
+      loopStepD.totalActiveButtons === 1,
+      `Step D (Clicking sentence line inherits Loop) failed: ${JSON.stringify(loopStepD)}`,
     );
 
-    // Step E: Enable Loop on #1, then click `Auto-Pause` flow button -> Loop #1 MUST clear, and clicking Play #1 while playing toggles Pause!
-    await page.click('[data-loop-sent="1"]');
+    // Step E: Click `Auto-Pause` flow button -> switches flow to Once, and clicking #1 while playing pauses it!
     await page.click('.flow-btn[data-end-action="pause"]');
-    await page.click('[data-play-sent="1"]'); // Already playing #1 -> toggles Pause!
+    await page.click('[data-play-sent="1"]');
     const loopStepE = await page.evaluate(() => ({
       loopIdx: window.studioState.loopSentenceIndex,
-      totalActiveLoops: document.querySelectorAll('[data-loop-sent].active').length,
+      totalActiveButtons: document.querySelectorAll('[data-play-sent].active').length,
       isPlaying: window.studioState.isPlaying,
-      play1Active: document.querySelector('[data-play-sent="1"]')?.classList.contains('active'),
+      state1: document.querySelector('[data-play-sent="1"]')?.getAttribute('data-play-state'),
     }));
     assert(
       loopStepE.loopIdx === null &&
-      loopStepE.totalActiveLoops === 0 &&
+      loopStepE.totalActiveButtons === 0 &&
       loopStepE.isPlaying === false &&
-      loopStepE.play1Active === false,
-      `Step E (Flow Auto-Pause reset & Play->Pause toggle) failed: ${JSON.stringify(loopStepE)}`,
+      loopStepE.state1 === 'idle',
+      `Step E (Flow Auto-Pause reset & Pause toggle) failed: ${JSON.stringify(loopStepE)}`,
     );
-    console.log('PASS: Loop button & Play/Pause/Flow button states cleanly reset across every transition!');
+
+    // Step F: Test Natural Playback Completion and Repress (Bug fix verification)
+    // When sentence plays to end and stops naturally, it must reset to idle.
+    // When user represses that play button, it must Play Once and NEVER jump to loop!
+    await page.evaluate(() => {
+      window.studioState.endAction = 'pause';
+      window.studioState.loopSentenceIndex = null;
+      window.studioState.activeSentence = window.studioState.item.sentences[0];
+      window.studioState.isPlaying = true;
+      window.studioState.activeSentenceStep = 'playing-once';
+      window.studioState.lastSeekTime = 0;
+      window.studioState.ytPlayer.current = window.studioState.item.sentences[0].endSec;
+      window.checkSentenceDrillProgress();
+    });
+    const naturalEndCheck = await page.evaluate(() => ({
+      isPlaying: window.studioState.isPlaying,
+      activeStep: window.studioState.activeSentenceStep,
+      state1: document.querySelector('[data-play-sent="1"]')?.getAttribute('data-play-state'),
+    }));
+    assert(
+      naturalEndCheck.isPlaying === false &&
+      naturalEndCheck.activeStep === 'idle' &&
+      naturalEndCheck.state1 === 'idle',
+      `Natural end reset failed: ${JSON.stringify(naturalEndCheck)}`,
+    );
+
+    await page.click('[data-play-sent="1"]');
+    const repressCheck = await page.evaluate(() => ({
+      loopIdx: window.studioState.loopSentenceIndex,
+      endAction: window.studioState.endAction,
+      state1: document.querySelector('[data-play-sent="1"]')?.getAttribute('data-play-state'),
+      isPlaying: window.studioState.isPlaying,
+      activeStep: window.studioState.activeSentenceStep,
+    }));
+    assert(
+      repressCheck.loopIdx === null &&
+      repressCheck.endAction === 'pause' &&
+      repressCheck.state1 === 'playing' &&
+      repressCheck.isPlaying === true &&
+      repressCheck.activeStep === 'playing-once',
+      `Repress after natural stop must play once (NEVER jump to loop): ${JSON.stringify(repressCheck)}`,
+    );
+
+    // Step G: Full Item Clickable — Clicking top meta (#02 or timestamp) triggers playback!
+    await page.click('#sent-card-2 .sent-meta-left');
+    const topClickCheck = await page.evaluate(() => ({
+      activeSent: window.studioState.activeSentence?.index,
+      isPlaying: window.studioState.isPlaying,
+    }));
+    assert(
+      topClickCheck.activeSent === 2 && topClickCheck.isPlaying === true,
+      `Full item clickable failed on top meta click: ${JSON.stringify(topClickCheck)}`,
+    );
+    // Clicking top area again while playing toggles pause
+    await page.click('#sent-card-2 .sent-card-top');
+    const topPauseCheck = await page.evaluate(() => ({
+      activeSent: window.studioState.activeSentence?.index,
+      isPlaying: window.studioState.isPlaying,
+    }));
+    assert(
+      topPauseCheck.activeSent === 2 && topPauseCheck.isPlaying === false,
+      `Full item pause failed on top click: ${JSON.stringify(topPauseCheck)}`,
+    );
+    console.log('PASS: Single unified playback button, separate loop toggle & full item clickability verified!');
 
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '06-studio-shadow-light.png') });
 
-    // Flexible Video Docking: Side -> Top -> Focus -> Side (Zero Remount!)
-    await page.click('[data-layout-choice="top"]');
-    assert(
-      (await page.evaluate(() => document.getElementById('studio-main-content').getAttribute('data-layout'))) === 'top',
-      'Top layout failed.',
-    );
-    await page.click('#video-mode-toggle');
+    // Flexible Video Docking: Split (side) -> Theater (theater) -> Split (side) (Zero Remount!)
+    await page.click('[data-layout-choice="theater"]');
     await new Promise((r) => setTimeout(r, 180));
-    const focusLayout = await page.evaluate(() => {
+    const theaterLayout = await page.evaluate(() => {
       const ws = document.getElementById('studio-main-content');
       return {
         layout: ws.getAttribute('data-layout'),
-        pressed: document.getElementById('video-mode-toggle').getAttribute('aria-pressed'),
+        theaterPressed: document.querySelector('[data-layout-choice="theater"]').getAttribute('aria-pressed'),
         sidePressed: document.querySelector('[data-layout-choice="side"]').getAttribute('aria-pressed'),
         wsAlive: ws.dataset.e2eAlive,
         cardAlive: document.querySelector('.sentence-driller-card')?.dataset.e2eAlive,
@@ -924,13 +1071,13 @@ async function runProductionE2ETest() {
       };
     });
     assert(
-      focusLayout.layout === 'focus' &&
-      focusLayout.pressed === 'true' &&
-      focusLayout.sidePressed === 'false' &&
-      focusLayout.wsAlive === 'yes' &&
-      focusLayout.cardAlive === 'yes' &&
-      focusLayout.playerAlive === 'yes',
-      `Focus layout or zero-remount invariant failed: ${JSON.stringify(focusLayout)}`,
+      theaterLayout.layout === 'theater' &&
+      theaterLayout.theaterPressed === 'true' &&
+      theaterLayout.sidePressed === 'false' &&
+      theaterLayout.wsAlive === 'yes' &&
+      theaterLayout.cardAlive === 'yes' &&
+      theaterLayout.playerAlive === 'yes',
+      `Theater layout or zero-remount invariant failed: ${JSON.stringify(theaterLayout)}`,
     );
     await page.click('[data-layout-choice="side"]');
 
@@ -963,7 +1110,7 @@ async function runProductionE2ETest() {
     console.log('\n--- 4. Dynamic OpenCode Go AI Coach, Word Lookup & Save Button States ---');
     await page.click('.mode-tab-btn[data-mode="coach"]');
     await page.waitForFunction(() => !document.getElementById('coach-content-box')?.hidden, {
-      timeout: 90000,
+      timeout: 120000,
     });
     const coachStats = await page.evaluate(() => ({
       connected: document.querySelectorAll('#coach-connected-grid .coach-item-card').length,
@@ -1013,15 +1160,27 @@ async function runProductionE2ETest() {
     );
 
     // -----------------------------------------------------------------------
-    // 5. Exact Millisecond Playback Boundaries & Speed Snapping
+    // 5. Exact Millisecond Playback Boundaries & 0.05x Speed Steppers
     // -----------------------------------------------------------------------
     console.log('\n--- 5. Exact Millisecond Playback Boundaries & Speed Control ---');
     await page.evaluate(() => window.setStudioSpeed(0.85));
-    const snappedSpeed = await page.evaluate(() => ({
+    const exact005Speed = await page.evaluate(() => ({
       badge: document.getElementById('current-speed-badge')?.textContent,
       slider: document.getElementById('speed-slider')?.value,
     }));
-    assert(snappedSpeed.badge === '0.90x' && snappedSpeed.slider === '0.9', `Speed snap failed: ${JSON.stringify(snappedSpeed)}`);
+    assert(
+      exact005Speed.badge === '0.85x' && exact005Speed.slider === '0.85',
+      `0.05x speed precision failed: ${JSON.stringify(exact005Speed)}`,
+    );
+
+    // Test Steppers: [−] and [+] flanking speed badge
+    await page.click('#speed-up-btn');
+    const steppedUp = await page.evaluate(() => document.getElementById('current-speed-badge')?.textContent);
+    assert(steppedUp === '0.90x', `Step up (+0.05x) failed: expected 0.90x, got ${steppedUp}`);
+
+    await page.click('#speed-down-btn');
+    const steppedDown = await page.evaluate(() => document.getElementById('current-speed-badge')?.textContent);
+    assert(steppedDown === '0.85x', `Step down (-0.05x) failed: expected 0.85x, got ${steppedDown}`);
 
     await page.evaluate(() => window.setStudioSpeed(1.5));
     const presetSpeed = await page.evaluate(() => ({
@@ -1089,45 +1248,188 @@ async function runProductionE2ETest() {
     console.log(`PASS: Exact seek ${boundaries.seekedTo}s, onset unmute ${boundaries.unmutedAt}s, pre-boundary pause ${boundaries.pausedAt}s + Play button auto-reset`);
 
     // -----------------------------------------------------------------------
-    // 6. 170+ World Language Translation (Arabic RTL + English Identity)
+    // 6. 170+ World Language Translation (2-Trigger State Machine & Quota Lock)
     // -----------------------------------------------------------------------
-    console.log('\n--- 6. World Language Translation Deck ---');
+    console.log('\n--- 6. World Language Translation Deck (Per-Sentence + Translate All + Permanent Cache) ---');
+
     const langInfo = await page.evaluate(() => ({
+      removedCheckbox: document.getElementById('translation-toggle-checkbox') === null,
+      removedRefreshBtn: document.getElementById('trans-refresh-btn') === null,
       count: document.getElementById('trans-lang-select')?.options?.length || 0,
       first: document.getElementById('trans-lang-select')?.options?.[0]?.value,
+      second: document.getElementById('trans-lang-select')?.options?.[1]?.value,
     }));
-    assert(langInfo.count > 150 && langInfo.first === 'ar', `Language catalog check failed: ${JSON.stringify(langInfo)}`);
+    assert(
+      langInfo.removedCheckbox &&
+      langInfo.removedRefreshBtn &&
+      langInfo.count > 150 &&
+      langInfo.first === 'none' &&
+      langInfo.second === 'ar',
+      `Language catalog / removed controls check failed: ${JSON.stringify(langInfo)}`,
+    );
 
-    await page.evaluate(() => {
-      const toggle = document.getElementById('translation-toggle-checkbox');
-      toggle.checked = true;
-      toggle.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    await waitForTranslation(page);
-
-    const arTrans = await page.evaluate(() => ({
+    // 6a. Verify permanent cross-account video cache on `fixture` (`Ka0p5tUUmgg`)
+    await page.select('#trans-lang-select', 'ar');
+    const needsFixtureTranslate = await page.evaluate(
+      () => document.getElementById('trans-all-btn')?.dataset.transAllState !== 'completed',
+    );
+    if (needsFixtureTranslate) {
+      await page.click('#trans-all-btn');
+      await page.waitForFunction(
+        () => document.getElementById('trans-all-btn')?.dataset.transAllState === 'completed',
+        { timeout: 120000 },
+      );
+    }
+    const fixtureArState = await page.evaluate(() => ({
       dir: document.querySelector('.sentence-translation-text')?.getAttribute('dir'),
       filled: [...document.querySelectorAll('.sentence-translation-text')].filter((el) => {
         const txt = (el.textContent || '').trim();
-        return txt.length > 0 && txt !== '—' && txt !== '...';
+        return txt.length > 0 && !el.classList.contains('is-loading');
       }).length,
+      allBtnDisabled: document.getElementById('trans-all-btn')?.disabled,
+      allBtnState: document.getElementById('trans-all-btn')?.dataset.transAllState,
     }));
-    assert(arTrans.dir === 'rtl' && arTrans.filled === fixture.sentences.length, 'Arabic translation incomplete.');
-
-    await page.evaluate(() => {
-      const select = document.getElementById('trans-lang-select');
-      select.value = 'en';
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    await page.waitForFunction(
-      (expectedFirst) => {
-        const first = document.querySelector('.sentence-translation-text');
-        return first && first.getAttribute('dir') === 'ltr' && (first.textContent || '').trim() === expectedFirst;
-      },
-      { timeout: 30000 },
-      fixture.sentences[0].text,
+    assert(
+      fixtureArState.dir === 'rtl' &&
+      fixtureArState.filled === fixture.sentences.length &&
+      fixtureArState.allBtnDisabled === true &&
+      fixtureArState.allBtnState === 'completed',
+      `Permanent video cache on fixture failed: ${JSON.stringify(fixtureArState)}`,
     );
-    console.log(`PASS: ${langInfo.count} languages verified — Arabic RTL & English identity exact`);
+
+    // 6b. Open fresh untranslated `dlgLesson` to test full Before -> Single Sentence -> Translate Remaining -> Locked -> Reload
+    await page.goto(
+      `${BASE_URL}/studio.html?id=${encodeURIComponent(dlgLesson.id)}&mode=shadow`,
+      { waitUntil: 'domcontentloaded', timeout: 30000 },
+    );
+    await page.waitForSelector('.sentence-driller-card', { timeout: 30000 });
+    await page.waitForFunction(() => document.getElementById('loader-overlay')?.hidden === true, {
+      timeout: 30000,
+    });
+
+    // Selecting "none" hides all translation buttons and boxes without calling API
+    await page.select('#trans-lang-select', 'none');
+    const noneState = await page.evaluate(() => ({
+      allBtnHidden: document.getElementById('trans-all-btn')?.hidden,
+      visibleBoxes: [...document.querySelectorAll('.sentence-translation-box')].filter((b) => !b.hidden).length,
+    }));
+    assert(
+      noneState.allBtnHidden === true && noneState.visibleBoxes === 0,
+      `None language state failed: ${JSON.stringify(noneState)}`,
+    );
+
+    // Selecting "ar" in spinner NEVER triggers API; only shows the 2 triggers (Translate Active + Translate All)
+    await page.select('#trans-lang-select', 'ar');
+    await new Promise((r) => setTimeout(r, 250));
+    const beforeTriggerState = await page.evaluate(() => ({
+      allBtnHidden: document.getElementById('trans-all-btn')?.hidden,
+      allBtnDisabled: document.getElementById('trans-all-btn')?.disabled,
+      allBtnState: document.getElementById('trans-all-btn')?.dataset.transAllState,
+      sideActiveDisabled: document.getElementById('side-trans-active-btn')?.disabled,
+      visibleBoxes: [...document.querySelectorAll('.sentence-translation-box')].filter((b) => !b.hidden).length,
+    }));
+    assert(
+      beforeTriggerState.allBtnHidden === false &&
+      beforeTriggerState.allBtnDisabled === false &&
+      beforeTriggerState.allBtnState === 'ready' &&
+      beforeTriggerState.sideActiveDisabled === false &&
+      beforeTriggerState.visibleBoxes === 0,
+      `Before-trigger state failed (spinner must not auto-translate): ${JSON.stringify(beforeTriggerState)}`,
+    );
+
+    // 6c. Trigger 1: Click "Translate Active" button for active sentence #1
+    await page.click('#side-trans-active-btn');
+    await page.waitForFunction(
+      () => {
+        const box1 = document.querySelector('[data-trans-box="1"]');
+        const txt1 = document.querySelector('.sentence-translation-text[data-trans-sent="1"]');
+        return (
+          box1 &&
+          box1.hidden === false &&
+          txt1 &&
+          !txt1.classList.contains('is-loading') &&
+          (txt1.textContent || '').trim().length > 0
+        );
+      },
+      { timeout: 60000 },
+    );
+
+    const afterSingleState = await page.evaluate(() => ({
+      visibleBoxes: [...document.querySelectorAll('.sentence-translation-box')].filter((b) => !b.hidden).length,
+      allBtnText: document.getElementById('trans-all-btn')?.textContent?.trim() || '',
+      allBtnDisabled: document.getElementById('trans-all-btn')?.disabled,
+    }));
+    assert(
+      afterSingleState.visibleBoxes === 1 &&
+      afterSingleState.allBtnDisabled === false &&
+      afterSingleState.allBtnText.includes(String(dlgLesson.sentences.length - 1)),
+      `Single-sentence translation state failed: ${JSON.stringify(afterSingleState)}`,
+    );
+
+    // 6d. Trigger 2: Click side deck Translate All (Translate Remaining) button
+    await page.click('#trans-all-btn');
+    await page.waitForFunction(
+      (total) => {
+        const allBtn = document.getElementById('trans-all-btn');
+        const filledBoxes = [...document.querySelectorAll('.sentence-translation-text')].filter((el) => {
+          const txt = (el.textContent || '').trim();
+          return txt.length > 0 && !el.classList.contains('is-loading');
+        }).length;
+        return (
+          allBtn &&
+          allBtn.disabled === true &&
+          allBtn.dataset.transAllState === 'completed' &&
+          filledBoxes === total
+        );
+      },
+      { timeout: 90000 },
+      dlgLesson.sentences.length,
+    );
+
+    // 6e. Reload the page -> verify all translations load in 0ms from SQLite cache with buttons locked!
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForSelector('.sentence-driller-card', { timeout: 30000 });
+    await page.waitForFunction(() => document.getElementById('loader-overlay')?.hidden === true, {
+      timeout: 30000,
+    });
+    const afterReloadState = await page.evaluate(() => ({
+      dir: document.querySelector('.sentence-translation-text')?.getAttribute('dir'),
+      filled: [...document.querySelectorAll('.sentence-translation-text')].filter((el) => {
+        const txt = (el.textContent || '').trim();
+        return txt.length > 0 && !el.classList.contains('is-loading');
+      }).length,
+      allBtnDisabled: document.getElementById('trans-all-btn')?.disabled,
+      allBtnState: document.getElementById('trans-all-btn')?.dataset.transAllState,
+    }));
+    assert(
+      afterReloadState.dir === 'rtl' &&
+      afterReloadState.filled === dlgLesson.sentences.length &&
+      afterReloadState.allBtnDisabled === true &&
+      afterReloadState.allBtnState === 'completed',
+      `Post-reload SQLite translation cache lock failed: ${JSON.stringify(afterReloadState)}`,
+    );
+
+    // Return to primary video `fixture` for Section 7
+    await page.goto(
+      `${BASE_URL}/studio.html?id=${encodeURIComponent(fixture.id)}&mode=shadow`,
+      { waitUntil: 'domcontentloaded', timeout: 30000 },
+    );
+    await page.waitForSelector('.sentence-driller-card', { timeout: 30000 });
+    await page.waitForFunction(() => document.getElementById('loader-overlay')?.hidden === true, {
+      timeout: 30000,
+    });
+
+    const persistedLesson = await fetch(`${BASE_URL}/api/history/${encodeURIComponent(dlgLesson.id)}`, {
+      headers: authHeadersA,
+    }).then((r) => r.json());
+    assert(
+      persistedLesson.translationsCache?.ar &&
+      Object.keys(persistedLesson.translationsCache.ar).length === dlgLesson.sentences.length,
+      'Permanent SQLite translation cache did not persist all sentences.',
+    );
+    console.log(
+      `PASS: ${langInfo.count} options verified — 2-Trigger State Machine (Per-Sentence + Translate All), Quota Lock & Permanent SQLite/Video Cache verified!`,
+    );
 
     // -----------------------------------------------------------------------
     // 7. SQLite Notes Persistence, Session Completion, Export & Mobile 390px
@@ -1169,6 +1471,19 @@ async function runProductionE2ETest() {
     const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
     assert(mobileOverflow <= 4, `Horizontal overflow on 390px mobile: +${mobileOverflow}px`);
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '11-studio-mobile.png') });
+
+    // Verify PWA Manifest, Service Worker & Chromium Installability
+    const cdpSession = await page.target().createCDPSession();
+    const appManifest = await cdpSession.send('Page.getAppManifest');
+    const installErrors = await cdpSession.send('Page.getInstallabilityErrors');
+    assert(appManifest.url.endsWith('/manifest.json'), `Manifest URL missing: ${appManifest.url}`);
+    assert(
+      !installErrors.installabilityErrors || installErrors.installabilityErrors.length === 0,
+      `PWA installability errors detected: ${JSON.stringify(installErrors.installabilityErrors)}`,
+    );
+    const pwaOriginRes = await fetch(`${BASE_URL}/api/pwa/origin`).then((r) => r.json());
+    assert(pwaOriginRes && typeof pwaOriginRes.port === 'number', 'Missing /api/pwa/origin response');
+    console.log('PASS: Android/Tablet PWA Manifest, Service Worker & Chromium Installability (0 errors)');
 
     const appConsoleErrors = consoleErrors.filter(
       (txt) => !/youtube|ytimg|googlevideo|ERR_BLOCKED|Failed to load resource|401 \(Unauthorized\)|404 \(Not Found\)/i.test(txt),

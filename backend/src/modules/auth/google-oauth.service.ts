@@ -41,6 +41,7 @@ const OAUTH_STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 export class GoogleOAuthService {
   private readonly logger = new Logger(GoogleOAuthService.name);
   private jwksCache: { keys: JwkRsaKey[]; expiresAt: number } | null = null;
+  private redirectProbeCache = new Map<string, { allowed: boolean; expiresAt: number }>();
 
   constructor(private readonly sqlite: SqliteService) {}
 
@@ -95,16 +96,67 @@ export class GoogleOAuthService {
     return `${cleanOrigin}/api/auth/google/callback`;
   }
 
+  public async probeRedirectUriAllowed(redirectUri: string): Promise<boolean> {
+    if (!this.clientId) return false;
+    const now = Date.now();
+    const cached = this.redirectProbeCache.get(redirectUri);
+    if (cached && cached.expiresAt > now) {
+      return cached.allowed;
+    }
+    try {
+      const u = new URL(this.authEndpoint);
+      u.searchParams.set('client_id', this.clientId);
+      u.searchParams.set('redirect_uri', redirectUri);
+      u.searchParams.set('response_type', 'code');
+      u.searchParams.set('scope', 'openid email profile');
+      const res = await fetch(u.toString(), {
+        method: 'GET',
+        redirect: 'manual',
+        signal: AbortSignal.timeout(3500),
+      });
+      const loc = (res.headers.get('location') || '').toLowerCase();
+      const isMismatch =
+        loc.includes('redirect_uri_mismatch') ||
+        loc.includes('oauth/error') ||
+        loc.includes('autherror=');
+      const allowed = !isMismatch && (res.status === 302 || res.status === 303 || res.status === 200);
+      this.redirectProbeCache.set(redirectUri, {
+        allowed,
+        expiresAt: now + (allowed ? 10 * 60 * 1000 : 25 * 1000),
+      });
+      return allowed;
+    } catch {
+      return true;
+    }
+  }
+
+  public async resolveSmartRedirectUri(requestOrigin: string): Promise<string> {
+    const primary = this.resolveRedirectUri(requestOrigin);
+    if (primary.startsWith('http://localhost:')) {
+      return primary;
+    }
+    const allowed = await this.probeRedirectUriAllowed(primary);
+    if (allowed) {
+      return primary;
+    }
+    const port = process.env.PORT || '3333';
+    const localhostFallback = `http://localhost:${port}/api/auth/google/callback`;
+    this.logger.log(
+      `Origin redirect_uri (${primary}) not yet authorized in Google Cloud Console; using authorized fallback (${localhostFallback}).`,
+    );
+    return localhostFallback;
+  }
+
   /**
    * Starts a standards-compliant OAuth 2.0 Authorization Code + PKCE (S256) flow.
    */
-  public createAuthorizationStart(params: {
+  public async createAuthorizationStart(params: {
     requestOrigin: string;
     returnTo?: string;
     mode?: 'popup' | 'redirect';
     uiLanguage?: string;
     nativeLanguage?: string;
-  }): { authorizationUrl: string; state: string } {
+  }): Promise<{ authorizationUrl: string; state: string }> {
     if (!this.clientId || !this.clientSecret) {
       throw new ServiceUnavailableException({
         code: 'google_oauth_not_configured',
@@ -131,6 +183,14 @@ export class GoogleOAuthService {
     const mode = params.mode === 'redirect' ? 'redirect' : 'popup';
     const uiLanguage = (params.uiLanguage || 'en').trim().slice(0, 12) || 'en';
     const nativeLanguage = (params.nativeLanguage || 'ar').trim().slice(0, 12) || 'ar';
+    const cleanOrigin = (params.requestOrigin || 'http://localhost:3333').replace(/\/+$/, '');
+    const redirectUri = await this.resolveSmartRedirectUri(cleanOrigin);
+
+    const statePayload = JSON.stringify({
+      returnTo: safeReturnTo,
+      requestOrigin: cleanOrigin,
+      redirectUri,
+    });
 
     this.sqlite.db
       .prepare(`
@@ -138,9 +198,8 @@ export class GoogleOAuthService {
           state, code_verifier, return_to, mode, ui_language, native_language, expires_at, created_at
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `)
-      .run(state, codeVerifier, safeReturnTo, mode, uiLanguage, nativeLanguage, expiresIso, nowIso);
+      .run(state, codeVerifier, statePayload, mode, uiLanguage, nativeLanguage, expiresIso, nowIso);
 
-    const redirectUri = this.resolveRedirectUri(params.requestOrigin);
     const url = new URL(this.authEndpoint);
     url.searchParams.set('client_id', this.clientId);
     url.searchParams.set('redirect_uri', redirectUri);
@@ -171,6 +230,7 @@ export class GoogleOAuthService {
   }): Promise<{
     profile: VerifiedGoogleProfile;
     returnTo: string;
+    requestOrigin: string;
     mode: 'popup' | 'redirect';
     uiLanguage: string;
     nativeLanguage: string;
@@ -207,7 +267,24 @@ export class GoogleOAuthService {
       throw new UnauthorizedException('Google OAuth login session expired. Please try again.');
     }
 
-    const redirectUri = this.resolveRedirectUri(params.requestOrigin);
+    let parsedReturnTo = '/';
+    let savedRequestOrigin = (params.requestOrigin || 'http://localhost:3333').replace(/\/+$/, '');
+    let redirectUri = this.resolveRedirectUri(params.requestOrigin);
+
+    const rawReturnTo = String(row.return_to || '/');
+    if (rawReturnTo.startsWith('{')) {
+      try {
+        const meta = JSON.parse(rawReturnTo);
+        parsedReturnTo = this.sanitizeReturnTo(meta.returnTo);
+        if (meta.requestOrigin) savedRequestOrigin = String(meta.requestOrigin).replace(/\/+$/, '');
+        if (meta.redirectUri) redirectUri = String(meta.redirectUri);
+      } catch {
+        parsedReturnTo = this.sanitizeReturnTo(rawReturnTo);
+      }
+    } else {
+      parsedReturnTo = this.sanitizeReturnTo(rawReturnTo);
+    }
+
     const body = new URLSearchParams({
       client_id: this.clientId,
       client_secret: this.clientSecret,
@@ -242,7 +319,8 @@ export class GoogleOAuthService {
     const profile = await this.verifyIdToken(idToken);
     return {
       profile,
-      returnTo: this.sanitizeReturnTo(String(row.return_to || '/')),
+      returnTo: parsedReturnTo,
+      requestOrigin: savedRequestOrigin,
       mode: row.mode === 'redirect' ? 'redirect' : 'popup',
       uiLanguage: String(row.ui_language || 'en'),
       nativeLanguage: String(row.native_language || 'ar'),

@@ -152,7 +152,12 @@ export function isTrueSentenceTerminal(rawWord: string, nextRawWord?: string): b
   if (/[?!]$/.test(strippedQuotes)) return true;
 
   // Period checks:
+  // "No." is an abbreviation for "Number" only before digits ("No. 5");
+  // before words ("No. I can't...") it is a complete spoken sentence.
   const lower = strippedQuotes.toLowerCase();
+  if (lower === 'no.') {
+    return !(nextRawWord && /^\d/.test(nextRawWord.trim()));
+  }
   if (ABBREVIATIONS.has(lower)) return false;
 
   // Single-letter initial like "A." or "J." followed by a capitalized surname
@@ -271,6 +276,12 @@ function segmentPunctuatedStream(words: SegWord[]): SegWord[][] {
       continue;
     }
 
+    // Break across long dramatic silences or musical interludes (>= 2.5s gap)
+    if (next.start - word.end >= 2.5 && !NON_TERMINAL_WORDS.has(word.clean)) {
+      flush();
+      continue;
+    }
+
     // Safety valve ONLY for rare unpunctuated run-on passages (> 42 words without a period)
     if (current.length >= 42) {
       const endsMajorClause = /[;:\u2014\u2013]$/.test(word.text) ||
@@ -291,8 +302,10 @@ function segmentPunctuatedStream(words: SegWord[]): SegWord[][] {
   const refined: SegWord[][] = [];
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
-    if (seg.length === 1 && refined.length > 0 && refined[refined.length - 1].length <= 10) {
-      refined[refined.length - 1].push(...seg);
+    const prev = refined.length > 0 ? refined[refined.length - 1] : null;
+    const gapFromPrev = prev ? seg[0].start - prev[prev.length - 1].end : Infinity;
+    if (seg.length === 1 && prev && prev.length <= 10 && gapFromPrev < 1.0) {
+      prev.push(...seg);
     } else {
       refined.push(seg);
     }

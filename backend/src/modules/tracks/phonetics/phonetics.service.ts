@@ -145,18 +145,24 @@ export class PhoneticsService {
     }
 
     const annotations: HighlightAnnotation[] = [
-      ...(payload.connectedSpeech || []).map((c) => ({
-        phrase: c.exactPhrase,
-        category: 'connected' as const,
-      })),
-      ...(payload.expressions || []).map((e) => ({
-        phrase: e.phrase,
-        category: 'expression' as const,
-      })),
-      ...(payload.vocabulary || []).map((v) => ({
-        phrase: v.term,
-        category: 'vocab' as const,
-      })),
+      ...((payload.connectedSpeech || (payload as any).connected_speech || []) as any[])
+        .map((c) => ({
+          phrase: String(c?.exactPhrase || c?.phrase || c?.exact_phrase || '').trim(),
+          category: 'connected' as const,
+        }))
+        .filter((a) => a.phrase),
+      ...((payload.expressions || []) as any[])
+        .map((e) => ({
+          phrase: String(e?.phrase || e?.exactPhrase || '').trim(),
+          category: 'expression' as const,
+        }))
+        .filter((a) => a.phrase),
+      ...((payload.vocabulary || (payload as any).keyVocabulary || (payload as any).key_vocabulary || []) as any[])
+        .map((v) => ({
+          phrase: String(v?.term || v?.word || '').trim(),
+          category: 'vocab' as const,
+        }))
+        .filter((a) => a.phrase),
     ];
 
     let cursor = 0;
@@ -201,33 +207,42 @@ export class PhoneticsService {
             ? payload.focusTips.slice(0, 3)
             : ['Keep jaw tension low and let unstressed syllables reduce cleanly toward schwa /ə/.'],
       },
-      connectedSpeech: (payload.connectedSpeech || [])
-        .filter((c) => c?.exactPhrase)
-        .map((c) => ({
-          exactPhrase: c.exactPhrase,
-          spokenIpa: c.spokenIpa || '',
-          phenomenon: c.phenomenon || 'Articulatory Mechanics',
-          mechanics: c.mechanics || '',
-          sentenceIndex: locateIndex(c.exactPhrase, c.sentenceIndex),
-        })),
-      expressions: (payload.expressions || [])
-        .filter((e) => e?.phrase)
-        .map((e) => ({
-          phrase: e.phrase,
-          meaning: e.meaning || '',
-          register: e.register || 'Spoken Drill',
-          usageNote: e.usageNote || '',
-          sentenceIndex: locateIndex(e.phrase, e.sentenceIndex),
-        })),
-      vocabulary: (payload.vocabulary || [])
-        .filter((v) => v?.term)
-        .map((v) => ({
-          term: v.term,
-          ipa: v.ipa || '',
-          partOfSpeech: v.partOfSpeech || 'target',
-          definition: v.definition || '',
-          sentenceIndex: locateIndex(v.term, v.sentenceIndex),
-        })),
+      connectedSpeech: ((payload.connectedSpeech || (payload as any).connected_speech || []) as any[])
+        .filter((c) => Boolean(c?.exactPhrase || c?.phrase || c?.exact_phrase))
+        .map((c) => {
+          const phrase = String(c.exactPhrase || c.phrase || c.exact_phrase || '').trim();
+          return {
+            exactPhrase: phrase,
+            spokenIpa: c.spokenIpa || c.spoken_ipa || c.ipa || '',
+            phenomenon: c.phenomenon || 'Articulatory Mechanics',
+            mechanics: c.mechanics || '',
+            sentenceIndex: locateIndex(phrase, c.sentenceIndex || c.sentence_index),
+          };
+        }),
+      expressions: ((payload.expressions || []) as any[])
+        .filter((e) => Boolean(e?.phrase || e?.exactPhrase))
+        .map((e) => {
+          const phrase = String(e.phrase || e.exactPhrase || '').trim();
+          return {
+            phrase,
+            meaning: e.meaning || '',
+            register: e.register || 'Spoken Drill',
+            usageNote: e.usageNote || e.usage_note || '',
+            sentenceIndex: locateIndex(phrase, e.sentenceIndex || e.sentence_index),
+          };
+        }),
+      vocabulary: ((payload.vocabulary || (payload as any).keyVocabulary || (payload as any).key_vocabulary || []) as any[])
+        .filter((v) => Boolean(v?.term || v?.word))
+        .map((v) => {
+          const term = String(v.term || v.word || '').trim();
+          return {
+            term,
+            ipa: v.ipa || '',
+            partOfSpeech: v.partOfSpeech || v.part_of_speech || 'target',
+            definition: v.definition || '',
+            sentenceIndex: locateIndex(term, v.sentenceIndex || v.sentence_index),
+          };
+        }),
     };
 
     const slug = (payload.title || cleanTopic)

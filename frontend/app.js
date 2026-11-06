@@ -804,13 +804,25 @@
 
     if (state.googleAuth.enabled) {
       if (setupCard) setupCard.hidden = true;
+      const isMobileOrStandalone =
+        /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent || '') ||
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+        window.navigator.standalone === true ||
+        window.innerWidth <= 900;
+
       const params = new URLSearchParams({
-        mode: 'popup',
+        mode: isMobileOrStandalone ? 'redirect' : 'popup',
         uiLang: state.uiLang,
         nativeLang: localStorage.getItem('flaptap_trans_lang') || 'ar',
         returnTo: window.location.pathname + window.location.search,
       });
       const startUrl = `/api/auth/google/start?${params.toString()}`;
+
+      if (isMobileOrStandalone) {
+        window.location.href = startUrl;
+        return;
+      }
+
       const width = 520;
       const height = 650;
       const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));

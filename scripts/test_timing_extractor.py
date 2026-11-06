@@ -230,6 +230,62 @@ def test_primary_api_path():
     print("✅ Primary JSON3 path — payload, sentences, and cues assembled")
 
 
+def test_whisper_word_alignment():
+    import types
+
+    seg1 = types.SimpleNamespace(
+        start=85.58,
+        end=99.0,
+        text=" Got that 6 p.m. post-mortem planning.",
+        words=[
+            types.SimpleNamespace(word=" Got", start=85.58, end=85.74),
+            types.SimpleNamespace(word=" that", start=85.74, end=85.94),
+            types.SimpleNamespace(word=" 6", start=85.94, end=86.30),
+            types.SimpleNamespace(word=" p", start=86.30, end=86.48),
+            types.SimpleNamespace(word=".m.", start=86.48, end=86.72),
+            types.SimpleNamespace(word=" post", start=86.88, end=87.00),
+            types.SimpleNamespace(word="-mortem", start=87.00, end=87.34),
+            types.SimpleNamespace(word=" planning.", start=87.34, end=99.00),
+        ],
+    )
+    # Micro-duplicate hallucination segment (<0.14s per word with identical text)
+    seg2_dup = types.SimpleNamespace(
+        start=99.02,
+        end=99.20,
+        text=" Got that 6 p.m. post-mortem planning.",
+        words=[
+            types.SimpleNamespace(word=" Got", start=99.02, end=99.20),
+        ],
+    )
+    words = extractor._whisper_words_from_segments([seg1, seg2_dup])
+    tokens = [w["word"] for w in words]
+    assert tokens == ["Got", "that", "6", "p.m.", "post-mortem", "planning."], tokens
+    # Trailing silence tail (87.34 -> 99.00) must be clamped to plausible speech duration
+    assert words[-1]["end_sec"] - words[-1]["start_sec"] <= 2.2, words[-1]
+    for idx, w in enumerate(words):
+        assert w["end_sec"] > w["start_sec"], w
+        if idx > 0:
+            assert w["start_sec"] >= words[idx - 1]["end_sec"] - 0.001, (words[idx - 1], w)
+    print("✅ Whisper DTW fallback — sub-word tokens merged, silence tails clamped")
+
+
+def test_english_track_filtering():
+    import types
+
+    en_auto = types.SimpleNamespace(language_code="en", is_generated=True)
+    en_orig = types.SimpleNamespace(language_code="en-orig", is_generated=True)
+    ar_auto = types.SimpleNamespace(language_code="ar", is_generated=True)
+    ranked = extractor._english_tracks([ar_auto, en_auto, en_orig])
+    assert [t.language_code for t in ranked] == ["en-orig", "en"]
+
+    try:
+        extractor._english_tracks([ar_auto])
+        raise AssertionError("Expected NO_CAPTIONS when no English track exists")
+    except extractor.TranscriptError as err:
+        assert err.code == extractor.NO_CAPTIONS
+    print("✅ English track ranking — prefers en-orig and rejects non-English-only tracks")
+
+
 if __name__ == "__main__":
     test_json3_words()
     test_alignment()
@@ -238,4 +294,6 @@ if __name__ == "__main__":
     test_error_classification()
     test_ytdlp_payload_parsing()
     test_primary_api_path()
+    test_whisper_word_alignment()
+    test_english_track_filtering()
     print("🎉 Timing extractor tests passed")
