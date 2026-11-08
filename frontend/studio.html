@@ -96,18 +96,29 @@
         </div>
       </div>
 
-      <div class="studio-toolbar">
-        <!-- Ergonomic Video Docking Switcher (Split | Theater) — Zero Remount -->
+      <!-- Ergonomic Video Docking Switcher (Transcript 25/75 | Theater 75/25) — Zero Remount -->
+      <div class="studio-center-dock">
         <div class="layout-switcher" role="group" aria-label="Video docking layout">
-          <button type="button" class="layout-btn active" data-layout-choice="side" aria-pressed="true" title="Split Screen: Video deck beside transcript">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="11" y1="4" x2="11" y2="20"></line></svg>
-            <span data-i18n="layoutSide">Split</span>
+          <button type="button" class="layout-btn active" data-layout-choice="side" aria-pressed="true" title="Transcript Focus (25% Video · 75% Sentences)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+              <line x1="8" y1="4" x2="8" y2="20"></line>
+            </svg>
+            <span data-i18n="layoutSide">Transcript</span>
+            <span class="layout-pill-ratio">25/75</span>
           </button>
-          <button type="button" class="layout-btn" data-layout-choice="theater" aria-pressed="false" title="Theater Mode: Wide cinema stage above transcript">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="11" rx="2"></rect><rect x="6" y="17" width="12" height="3" rx="1"></rect></svg>
+          <button type="button" class="layout-btn" data-layout-choice="theater" aria-pressed="false" title="Theater Cinema (75% Video · 25% Sentences)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+              <line x1="16" y1="4" x2="16" y2="20"></line>
+            </svg>
             <span data-i18n="layoutTheater">Theater</span>
+            <span class="layout-pill-ratio">75/25</span>
           </button>
         </div>
+      </div>
+
+      <div class="studio-toolbar">
 
         <button type="button" class="btn-secondary" id="download-obsidian-btn" title="Export Markdown study sheet">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -304,26 +315,32 @@
         <!-- 170+ World Language Translation Console in Side Deck -->
         <div id="translation-control-deck" class="deck-panel translation-deck-panel">
           <div class="deck-panel-head">
-            <span class="deck-panel-label" data-i18n="translationLangLabel">Translation</span>
+            <span class="deck-panel-label" data-i18n="translationLangLabel">Language</span>
             <span id="side-trans-status-text" class="trans-status ltr-num" aria-live="polite">—</span>
           </div>
           <div class="side-trans-row">
-            <select id="trans-lang-select" class="trans-lang-select" aria-label="Translation target language"></select>
+            <div class="trans-select-wrapper">
+              <select id="trans-lang-select" class="trans-lang-select" aria-label="Translation target language"></select>
+              <span class="trans-select-chevron" aria-hidden="true">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </span>
+            </div>
           </div>
           <div class="side-trans-actions">
-            <button type="button" class="btn-secondary side-trans-btn" id="side-trans-active-btn" title="Translate active sentence (T)">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path></svg>
-              <span>Translate Active</span>
+            <button type="button" class="btn-secondary side-trans-btn trans-active-btn" id="side-trans-active-btn" title="Translate active sentence (T)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>
+              <span id="side-trans-active-btn-label" data-i18n="translateActiveBtn">Translate Active</span>
             </button>
-            <button type="button" class="btn-secondary side-trans-btn" id="trans-all-btn" data-translate-all title="Translate all sentences in lesson">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>
-              <span id="side-trans-all-btn-label">Translate All</span>
+            <button type="button" class="btn-secondary side-trans-btn trans-all-btn" id="trans-all-btn" data-translate-all title="Translate all sentences in lesson">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>
+              <span id="side-trans-all-btn-label" data-i18n="translateAllBtn">Translate All</span>
             </button>
           </div>
           <div class="side-trans-toggle-row">
-            <label class="toggle-pill-label">
-              <input type="checkbox" id="side-trans-visibility-toggle" checked />
-              <span>Show translations</span>
+            <label class="toggle-pill-label" for="side-trans-visibility-toggle">
+              <input type="checkbox" id="side-trans-visibility-toggle" class="trans-switch-input" checked />
+              <span class="trans-switch-track" aria-hidden="true"><span class="trans-switch-thumb"></span></span>
+              <span class="trans-switch-label" data-i18n="showTranslationsLabel">Show translations</span>
             </label>
           </div>
         </div>
@@ -334,61 +351,65 @@
           <span><kbd class="kbd-chip">L</kbd> <span data-i18n="keyLoop">Loop</span></span>
           <span><kbd class="kbd-chip">T</kbd> <span>Translate</span></span>
           <span><kbd class="kbd-chip">F</kbd> <span>Follow</span></span>
+          <span><kbd class="kbd-chip">V</kbd> <span data-i18n="keyLayout">Layout</span></span>
         </div>
       </div>
     </aside>
 
     <!-- Primary Scalable Learning Workspace -->
     <section class="studio-canvas" aria-label="Learning modes">
-      <!-- Primary Learning Modes Rail (0ms switching, zero reload) -->
-      <nav class="primary-modes-bar" role="tablist" aria-label="Learning modes">
-        <button type="button" class="mode-tab-btn active" data-mode="shadow" role="tab" aria-selected="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
-          <span data-i18n="modeShadow">Shadow</span>
-          <span class="mode-badge ltr-num" id="badge-sentences-count">0</span>
-        </button>
+      <!-- Sticky Canvas Header Dock (Pins Mode Tabs + Highlight Legend Together) -->
+      <header class="canvas-header-dock">
+        <!-- Primary Learning Modes Rail (0ms switching, zero reload) -->
+        <nav class="primary-modes-bar" role="tablist" aria-label="Learning modes">
+          <button type="button" class="mode-tab-btn active" data-mode="shadow" role="tab" aria-selected="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+            <span data-i18n="modeShadow">Shadow</span>
+            <span class="mode-badge ltr-num" id="badge-sentences-count">0</span>
+          </button>
 
-        <button type="button" class="mode-tab-btn" data-mode="read" role="tab" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
-          <span data-i18n="modeRead">Read</span>
-          <span class="mode-badge ltr-num" id="badge-paragraphs-count">0</span>
-        </button>
+          <button type="button" class="mode-tab-btn" data-mode="read" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
+            <span data-i18n="modeRead">Read</span>
+            <span class="mode-badge ltr-num" id="badge-paragraphs-count">0</span>
+          </button>
 
-        <button type="button" class="mode-tab-btn" data-mode="listen" role="tab" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
-          <span data-i18n="modeListen">Listen</span>
-        </button>
+          <button type="button" class="mode-tab-btn" data-mode="listen" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
+            <span data-i18n="modeListen">Listen</span>
+          </button>
 
-        <button type="button" class="mode-tab-btn" data-mode="coach" role="tab" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
-          <span data-i18n="modeCoach">Coach</span>
-          <span class="mode-badge ltr-num" id="badge-coach-count" hidden>0</span>
-        </button>
+          <button type="button" class="mode-tab-btn" data-mode="coach" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+            <span data-i18n="modeCoach">Coach</span>
+            <span class="mode-badge ltr-num" id="badge-coach-count" hidden>0</span>
+          </button>
 
-        <button type="button" class="mode-tab-btn" data-mode="notes" role="tab" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
-          <span data-i18n="modeNotes">Notes</span>
-        </button>
-      </nav>
+          <button type="button" class="mode-tab-btn" data-mode="notes" role="tab" aria-selected="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+            <span data-i18n="modeNotes">Notes</span>
+          </button>
+        </nav>
 
-      <!-- Verbatim Highlight Legend & Word Click Hint -->
-      <div id="transcript-legend-strip" class="legend-strip">
-        <div class="legend-items">
-          <span class="legend-swatch">
-            <span class="swatch-box" style="background: var(--hl-connected-bg); border-bottom: 2px solid var(--hl-connected-line);"></span>
-            <span data-i18n="legendConnected">Connected Speech</span>
-          </span>
-          <span class="legend-swatch">
-            <span class="swatch-box" style="background: var(--hl-expression-bg); border-bottom: 2px solid var(--hl-expression-line);"></span>
-            <span data-i18n="legendExpressions">Expressions</span>
-          </span>
-          <span class="legend-swatch">
-            <span class="swatch-box" style="background: var(--hl-vocab-bg); border-bottom: 2px dashed var(--hl-vocab-line);"></span>
-            <span data-i18n="legendVocab">Key Vocabulary</span>
-          </span>
+        <!-- Verbatim Highlight Legend & Word Click Hint -->
+        <div id="transcript-legend-strip" class="legend-strip">
+          <div class="legend-items">
+            <span class="legend-swatch">
+              <span class="swatch-box" style="background: var(--hl-connected-bg); border-bottom: 2px solid var(--hl-connected-line);"></span>
+              <span data-i18n="legendConnected">Connected Speech</span>
+            </span>
+            <span class="legend-swatch">
+              <span class="swatch-box" style="background: var(--hl-expression-bg); border-bottom: 2px solid var(--hl-expression-line);"></span>
+              <span data-i18n="legendExpressions">Expressions</span>
+            </span>
+            <span class="legend-swatch">
+              <span class="swatch-box" style="background: var(--hl-vocab-bg); border-bottom: 2px dashed var(--hl-vocab-line);"></span>
+              <span data-i18n="legendVocab">Key Vocabulary</span>
+            </span>
+          </div>
+          <span data-i18n="clickWordTip">Tip: Click any word for contextual definition</span>
         </div>
-        <span data-i18n="clickWordTip">Tip: Click any word for contextual definition</span>
-      </div>
+      </header>
 
       <!-- MODE PANEL 1: SHADOW (Sentence Drill) -->
       <div id="mode-panel-shadow">

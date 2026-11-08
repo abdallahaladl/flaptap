@@ -221,14 +221,57 @@ export function segmentSentences(data: TranscriptResult): SentenceItem[] {
   const sentences: SentenceItem[] = [];
   let previousEnd = 0;
 
-  for (const seg of rawSegments) {
+  for (let i = 0; i < rawSegments.length; i++) {
+    const seg = rawSegments[i];
     if (seg.length === 0) continue;
     const text = seg.map((w) => w.text).join(' ').replace(/\s+/g, ' ').trim();
     if (!text) continue;
 
     let startSec = seg[0].start;
     if (startSec < previousEnd) startSec = previousEnd;
-    let endSec = seg[seg.length - 1].end;
+
+    const lastWordEnd = seg[seg.length - 1].end;
+
+    // Look ahead to find the earliest onset of the subsequent sentence segment
+    let nextStartSec: number | null = null;
+    for (let j = i + 1; j < rawSegments.length; j++) {
+      if (rawSegments[j].length > 0) {
+        nextStartSec = rawSegments[j][0].start;
+        break;
+      }
+    }
+
+    let endSec = lastWordEnd;
+    if (nextStartSec !== null && nextStartSec > lastWordEnd) {
+      const gap = nextStartSec - lastWordEnd;
+      // Acoustic decay absorption with strict lead-out silence margin:
+      // Leave at least 100ms - 180ms of dead silence before nextStartSec so that
+      // asynchronous player pause latency (60-100ms) NEVER leaks the initial letter
+      // or sound of the subsequent sentence.
+      if (gap >= 0.36) {
+        // Generous inter-sentence pause: allow natural spoken decay (up to 420ms)
+        // while guaranteeing >= 180ms silence cushion before the next sentence.
+        const safeTail = Math.min(0.42, gap - 0.18);
+        endSec = lastWordEnd + safeTail;
+      } else if (gap >= 0.22) {
+        // Medium pause: guarantee >= 160ms silence cushion
+        const safeTail = Math.max(0, gap - 0.16);
+        endSec = lastWordEnd + safeTail;
+      } else if (gap >= 0.12) {
+        // Tight pause: guarantee >= 100ms silence cushion
+        const safeTail = Math.max(0, gap - 0.10);
+        endSec = lastWordEnd + safeTail;
+      } else {
+        // Direct spoken continuation (gap < 120ms): clamp strictly to last word boundary
+        endSec = lastWordEnd;
+      }
+      // Absolute mathematical guarantee: never closer than 100ms to nextStartSec
+      endSec = Math.min(endSec, nextStartSec - 0.10);
+    } else if (nextStartSec === null) {
+      // Final sentence in the transcript: allow 0.30s natural decay
+      endSec = lastWordEnd + 0.30;
+    }
+
     if (endSec <= startSec) endSec = startSec + 0.5;
 
     startSec = roundMs(startSec);

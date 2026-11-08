@@ -42,9 +42,8 @@
 
 - Prefer YouTube JSON3 per-word `tOffsetMs` values over interpolation.
 - Store and compare start/end times at **millisecond precision** (3 decimals).
-- Seek to `startSec` exactly (no `-50ms` lead-in).
-- Mute during asynchronous seek and unmute at first-word onset.
-- Stop before the last word's boundary (`endSec - 12ms`) so the next word's onset never bleeds in.
+- Ensure sentence `endSec` absorbs the natural spoken acoustic release and decay tail (up to +420ms into any inter-sentence pause) while strictly bounding at least 50ms before the subsequent sentence onset.
+- Play through the sentence's full acoustic decay without mid-syllable clipping or premature truncation.
 - Preserve verbatim text character-for-character across all `<mark>` highlights (`highlightsAreVerbatim`).
 
 ### Caption Failure Contract
@@ -76,8 +75,25 @@
 - Minimal, paper-tactile (`#F6F4EE` / `#FCFBF7` newsprint + `#141413` ink + `#FFF04B` Vox highlighter yellow) Light Mode and matte carbon (`#121210` / `#191916`) Dark Mode.
 - Authored 1.5px stroke SVG icons everywhere — zero emojis, zero static example chips under inputs, zero purple AI gradients.
 - English (`en`, LTR) default UI with multi-language support (`ar` RTL, `es`, `fr`, `de`, `tr`).
-- Flexible video docking (`Side` | `Top` | `Focus`) and scalable primary Studio learning modes (`Shadow` | `Read` | `Listen` | `Coach` | `Notes`) switch in 0ms client-side without reloading the page or remounting the YouTube player.
+- Flexible video docking: **Transcript** (25% Video Stage · 75% Sentence Learning Canvas) and **Theater** (75% Video Cinema Stage · 25% Compact Sentence Rail), and scalable primary Studio learning modes (`Shadow` | `Read` | `Listen` | `Coach` | `Notes`) switch in 0ms client-side without reloading the page or remounting the YouTube player.
 - Timestamp and IPA spans enforce `direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums`.
+
+### Independent Dual-Pane Studio Scrolling Law (Strict Invariant)
+
+- **Desktop Viewport Lock (> 768px):** Viewport is fixed (`html:has(.studio-body), .studio-body { height: 100dvh; overflow: hidden; }`). The topbar is fixed (`flex-shrink: 0`).
+- **Strict Dual-Pane Scroll Isolation:** Media Deck (`.studio-deck`) and Primary Learning Canvas (`.studio-canvas`) MUST scroll as completely isolated, independent scroll containers (`height: 100%; max-height: 100%; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;`).
+- **Zero Cross-Pane Displacement:** Scrolling through sentences, transcripts, notes, or controls on either pane MUST NEVER scroll or displace the other pane or the outer window (`window.scrollY` remains 0 at all times).
+- **Mobile Graceful Degradation (<= 768px):** Viewport and workspace revert to standard document flow (`height: auto; overflow-y: auto;`) for native single-column phone ergonomics.
+- **Future AI Agent Invariant:** Future AI agents and developers are strictly forbidden from removing independent pane scrolling or reverting the Studio desktop workspace to window-level scrolling.
+
+### Theater Mode Under-Video Controller Symmetry Law
+
+- In Theater mode (`data-layout="theater"` / `data-layout="focus"`), `.deck-controls-stack` MUST format as a 2-column balanced grid (`display: grid; grid-template-columns: 1fr 1fr; gap: 12px;`) to completely eliminate all blank void space beneath the video stage.
+- Row 1: `Master Transport` (Col 1) and `Sentence Flow` (Col 2).
+- Row 2: `Playback Speed` (Col 1) and `Voice Comparison` (Col 2).
+- Row 3: `Language Console` (`.translation-deck-panel`) spanning full width (`grid-column: 1 / -1`).
+- Row 4: `Shortcuts Strip` (`.shortcuts-strip`) spanning full width (`grid-column: 1 / -1`).
+- Future AI agents must never collapse controls into a single left-aligned column with an empty right-hand void in Theater mode.
 
 ---
 

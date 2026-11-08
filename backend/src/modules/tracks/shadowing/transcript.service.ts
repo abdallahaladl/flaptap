@@ -98,17 +98,14 @@ interface TranscriptCacheFile {
 export class TranscriptService {
   private readonly logger = new Logger(TranscriptService.name);
   private readonly cacheDir = path.resolve(__dirname, '../../../../../data/transcripts');
-  readonly mediaDir = path.resolve(__dirname, '../../../../../data/media');
   private readonly cacheVersion = 2;
   private readonly cacheTtlMs = 7 * 24 * 60 * 60 * 1000;
 
   async extract(url: string, force = false): Promise<TranscriptResult> {
-    const info = classifyMediaUrl(url);
-    const videoId = info?.mediaId || '';
-    const isExternal = info?.source === 'external';
+    const videoId = this.extractYoutubeId(url);
     if (!force) {
       const cached = this.readCache(videoId);
-      if (cached && (!isExternal || this.resolveMediaFile(videoId))) {
+      if (cached) {
         this.logger.log(`Transcript cache hit for ${videoId}`);
         return cached;
       }
@@ -128,11 +125,10 @@ export class TranscriptService {
     try {
       const result = await execFileAsync(
         pythonBin,
-        [scriptPath, url, '--interval', '35', '--media-dir', this.mediaDir],
+        [scriptPath, url, '--interval', '35'],
         {
-          maxBuffer: 48 * 1024 * 1024,
-          // External media = download + optional local Whisper alignment.
-          timeout: isExternal ? 420000 : 95000,
+          maxBuffer: 32 * 1024 * 1024,
+          timeout: 45000,
           env: {
             ...process.env,
             PATH: enhancedPath,
@@ -145,7 +141,7 @@ export class TranscriptService {
     } catch (error: any) {
       const raw = `${error?.stderr || ''}\n${error?.message || ''}`;
       const stale = this.readCache(videoId, true);
-      if (stale && (!isExternal || this.resolveMediaFile(videoId))) {
+      if (stale) {
         this.logger.warn(`Caption extraction failed; using stale transcript cache for ${videoId}.`);
         return stale;
       }
@@ -160,9 +156,7 @@ export class TranscriptService {
 
       if (error?.killed || /timed out/i.test(raw)) {
         throw new ServiceUnavailableException({
-          message: isExternal
-            ? 'Processing this video took too long. Please try a shorter clip.'
-            : 'YouTube took too long to respond. Please try again.',
+          message: 'YouTube took too long to respond. Please try again.',
           code: 'timeout',
         });
       }
@@ -192,20 +186,18 @@ export class TranscriptService {
       });
     }
 
-    if (!data.source && data.video_id && !EXTERNAL_MEDIA_ID_PATTERN.test(data.video_id)) {
-      data.source = 'youtube';
-      data.platform = data.platform || 'YouTube';
-    }
+    data.source = 'youtube';
+    data.platform = 'YouTube';
 
     // The Python helper already asks YouTube oEmbed for metadata, but a
     // transient throttle can leave it on the generic fallback. A single fast
     // retry from Node keeps the studio header accurate without delaying the
     // caption pipeline.
-    if (data.source !== 'external' && (!data.title || data.title === 'YouTube Shadowing Session')) {
+    if (!data.title || data.title === 'YouTube Shadowing Session') {
       try {
         const oembed = await fetch(
           `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${data.video_id}`)}&format=json`,
-          { signal: AbortSignal.timeout(5000) },
+          { signal: AbortSignal.timeout(4000) },
         );
         if (oembed.ok) {
           const meta: any = await oembed.json();
@@ -240,8 +232,6 @@ export class TranscriptService {
         return new UnprocessableEntityException(body);
       case 'invalid_url':
         return new UnprocessableEntityException(body);
-      case 'media_too_long':
-        return new UnprocessableEntityException(body);
       case 'rate_limited':
         return new ServiceUnavailableException(body);
       case 'timeout':
@@ -251,26 +241,13 @@ export class TranscriptService {
     }
   }
 
-  /**
-   * Resolve the absolute path of a cached external media file. Only
-   * `ext_<12 hex>` IDs are accepted, so path traversal is impossible.
-   */
-  public resolveMediaFile(mediaId?: string): string | null {
-    if (!mediaId || !EXTERNAL_MEDIA_ID_PATTERN.test(mediaId)) return null;
-    try {
-      if (!fs.existsSync(this.mediaDir)) return null;
-      const match = fs
-        .readdirSync(this.mediaDir)
-        .filter((name) => name.startsWith(`${mediaId}.`) && !/\.(part|ytdl|vtt|json)$/i.test(name))
-        .sort((a, b) => Number(!a.endsWith('.mp4')) - Number(!b.endsWith('.mp4')))[0];
-      return match ? path.join(this.mediaDir, match) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  private extractYoutubeId(url: string): string {
-    return classifyMediaUrl(url)?.mediaId || '';
+  public extractYoutubeId(url: string): string {
+    if (!url) return '';
+    const clean = url.trim();
+    if (/^[a-zA-Z0-9_-]{11}$/.test(clean)) return clean;
+    const match = clean.match(/(?:v=|\/shorts\/|\/embed\/|\/live\/|\/v\/|youtu\.be\/|\/e\/)([\w-]{11})/) ||
+      clean.match(/[?&]v=([\w-]{11})/);
+    return match ? match[1] : '';
   }
 
   public hasCache(videoId?: string): { cached: boolean; bytes: number } {

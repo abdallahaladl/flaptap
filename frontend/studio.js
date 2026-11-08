@@ -19,11 +19,11 @@
   const LOOP_ICON_SVG =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 2 21 6 17 10"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 22 3 18 7 14"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>';
   const TRANSLATE_ICON_SVG =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>';
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>';
   const SPINNER_ICON_SVG =
-    '<svg class="trans-spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>';
+    '<svg class="trans-spin-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>';
   const CHECK_ICON_SVG =
-    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
 
   const I18N = {
     en: {
@@ -32,10 +32,11 @@
       backToLibrary: 'Back to Library',
       tryAgain: 'Try Again',
       libraryBack: 'Library',
-      layoutSide: 'Split',
+      layoutSide: 'Transcript',
       layoutTheater: 'Theater',
       layoutTop: 'Top',
       layoutFocus: 'Focus',
+      keyLayout: 'Layout',
       masterTransportLabel: 'Master Transport',
       signIn: 'Sign in',
       exportMd: 'Export .md',
@@ -64,6 +65,10 @@
       modeNotes: 'Notes',
       translationLangLabel: 'Language',
       transLangNone: 'None (Off)',
+      translateActiveBtn: 'Translate Active',
+      activeDoneBtn: 'Active Done',
+      activeSentenceDoneHint: 'Active sentence is translated and saved permanently',
+      showTranslationsLabel: 'Show translations',
       translateSentenceBtn: 'Translate',
       translateAllBtn: 'Translate All',
       translateRemainingBtn: 'Translate Remaining',
@@ -128,10 +133,11 @@
       backToLibrary: 'العودة للمكتبة',
       tryAgain: 'إعادة المحاولة',
       libraryBack: 'المكتبة',
-      layoutSide: 'تقسيم',
+      layoutSide: 'تفريغ',
       layoutTheater: 'مسرح',
       layoutTop: 'علوي',
       layoutFocus: 'تركيز',
+      keyLayout: 'تخطيط العرض',
       masterTransportLabel: 'التحكم الرئيسي',
       signIn: 'تسجيل الدخول',
       exportMd: 'تصدير .md',
@@ -160,6 +166,10 @@
       modeNotes: 'الملاحظات',
       translationLangLabel: 'اللغة',
       transLangNone: 'بدون ترجمة (إيقاف)',
+      translateActiveBtn: 'ترجمة الجملة',
+      activeDoneBtn: 'تمت ترجمة الجملة',
+      activeSentenceDoneHint: 'الجملة الحالية مترجمة ومحفوظة نهائياً',
+      showTranslationsLabel: 'إظهار الترجمة',
       translateSentenceBtn: 'ترجمة',
       translateAllBtn: 'ترجمة الكل',
       translateRemainingBtn: 'ترجمة المتبقي',
@@ -227,6 +237,10 @@
       modeNotes: 'Notas',
       translationLangLabel: 'Idioma',
       transLangNone: 'Ninguno (Desactivado)',
+      translateActiveBtn: 'Traducir activa',
+      activeDoneBtn: 'Activa lista',
+      activeSentenceDoneHint: 'La frase activa está traducida y guardada',
+      showTranslationsLabel: 'Mostrar traducciones',
       translateSentenceBtn: 'Traducir',
       translateAllBtn: 'Traducir todo',
       translateRemainingBtn: 'Traducir restantes',
@@ -243,6 +257,10 @@
       modeNotes: 'Notes',
       translationLangLabel: 'Langue',
       transLangNone: 'Aucun (Désactivé)',
+      translateActiveBtn: 'Traduire active',
+      activeDoneBtn: 'Active faite',
+      activeSentenceDoneHint: 'La phrase active est traduite et enregistrée',
+      showTranslationsLabel: 'Afficher les traductions',
       translateSentenceBtn: 'Traduire',
       translateAllBtn: 'Tout traduire',
       translateRemainingBtn: 'Traduire le reste',
@@ -259,6 +277,10 @@
       modeNotes: 'Notizen',
       translationLangLabel: 'Sprache',
       transLangNone: 'Keine (Aus)',
+      translateActiveBtn: 'Aktiv übersetzen',
+      activeDoneBtn: 'Aktiv fertig',
+      activeSentenceDoneHint: 'Aktiver Satz ist übersetzt und gespeichert',
+      showTranslationsLabel: 'Übersetzungen anzeigen',
       translateSentenceBtn: 'Übersetzen',
       translateAllBtn: 'Alle übersetzen',
       translateRemainingBtn: 'Restliche übersetzen',
@@ -275,6 +297,10 @@
       modeNotes: 'Notlar',
       translationLangLabel: 'Dil',
       transLangNone: 'Yok (Kapalı)',
+      translateActiveBtn: 'Aktifi Çevir',
+      activeDoneBtn: 'Aktif Tamam',
+      activeSentenceDoneHint: 'Aktif cümle çevrildi ve kaydedildi',
+      showTranslationsLabel: 'Çevirileri göster',
       translateSentenceBtn: 'Çevir',
       translateAllBtn: 'Tümünü Çevir',
       translateRemainingBtn: 'Kalanları Çevir',
@@ -531,6 +557,47 @@
       btn.classList.toggle('active', isSelected);
       btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
     });
+
+    // 9. Side Translation Active Sentence Button Sync
+    syncActiveSentenceTranslationBtn();
+  }
+
+  function syncActiveSentenceTranslationBtn() {
+    const sideActiveBtn = document.getElementById('side-trans-active-btn');
+    if (!sideActiveBtn || !studioState.item) return;
+    const langCode = studioState.translationLang || 'ar';
+    if (langCode === 'none') {
+      sideActiveBtn.disabled = true;
+      sideActiveBtn.classList.remove('is-completed', 'is-loading');
+      sideActiveBtn.title = t('translationOffHint');
+      sideActiveBtn.innerHTML = `${TRANSLATE_ICON_SVG}<span>${escapeHtml(t('translateActiveBtn'))}</span>`;
+      return;
+    }
+
+    const sentences = studioState.item.sentences || [];
+    const langMap = getLangTranslationMap(langCode);
+    const inFlightSet = studioState.translatingSentencesByLang[langCode] || new Set();
+    const isTranslatingAll = Boolean(studioState.translatingAllByLang[langCode]);
+    const activeIdx = studioState.activeSentence?.index || 1;
+    const activeHasTrans = Boolean(langMap[activeIdx]);
+    const isActiveLoading = !activeHasTrans && (isTranslatingAll || inFlightSet.has(activeIdx));
+
+    sideActiveBtn.classList.remove('is-loading', 'is-completed');
+    if (isActiveLoading) {
+      sideActiveBtn.disabled = true;
+      sideActiveBtn.classList.add('is-loading');
+      sideActiveBtn.title = t('translatingShort');
+      sideActiveBtn.innerHTML = `${SPINNER_ICON_SVG}<span>${escapeHtml(t('translatingShort'))}</span>`;
+    } else if (activeHasTrans) {
+      sideActiveBtn.disabled = true;
+      sideActiveBtn.classList.add('is-completed');
+      sideActiveBtn.title = t('activeSentenceDoneHint');
+      sideActiveBtn.innerHTML = `${CHECK_ICON_SVG}<span>${escapeHtml(t('activeDoneBtn'))}</span>`;
+    } else {
+      sideActiveBtn.disabled = isTranslatingAll;
+      sideActiveBtn.title = 'Translate active sentence (T)';
+      sideActiveBtn.innerHTML = `${TRANSLATE_ICON_SVG}<span>${escapeHtml(t('translateActiveBtn'))}</span>`;
+    }
   }
 
   function setSentenceLoop(indexOrNull) {
@@ -615,6 +682,7 @@
   }
 
   window.setStudioLayout = setStudioLayout;
+  window.switchStudioLayout = setStudioLayout;
 
   /* ========================================================================
      SCALABLE PRIMARY LEARNING MODES (0ms Switch, Zero Page Reload)
@@ -1128,9 +1196,9 @@
     }
 
     // Playback Boundary Law:
-    // 1. Seek to exact `startSec` (zero fixed -50ms lead-in)
+    // 1. Seek to exact `startSec`
     // 2. Mute during asynchronous seek, unmute at word onset
-    // 3. Stop at `endSec - 12ms` before next word's onset
+    // 3. Play through natural sentence acoustic decay before pausing/looping
     studioState.awaitingOnsetUnmute = true;
     studioState.lastSeekTime = Date.now();
 
@@ -1559,14 +1627,16 @@
     const activeIdx = studioState.activeSentence?.index || 1;
     const activeHasTrans = Boolean(langMap[activeIdx]);
 
-    if (sideActiveBtn) {
-      sideActiveBtn.disabled = activeHasTrans || inFlightSet.has(activeIdx) || isTranslatingAll;
-      sideActiveBtn.title = activeHasTrans ? 'Active sentence already translated' : 'Translate active sentence (T)';
-    }
+    syncActiveSentenceTranslationBtn();
 
     if (sideStatusEl) {
+      sideStatusEl.classList.remove('is-complete', 'is-translating');
       if (isTranslatingAll) {
+        sideStatusEl.classList.add('is-translating');
         sideStatusEl.textContent = `${langName} · Translating...`;
+      } else if (totalSentences > 0 && translatedCount >= totalSentences) {
+        sideStatusEl.classList.add('is-complete');
+        sideStatusEl.textContent = `${langName} · ${totalSentences}/${totalSentences}`;
       } else if (translatedCount > 0) {
         sideStatusEl.textContent = `${langName} · ${translatedCount}/${totalSentences}`;
       } else {
@@ -2945,6 +3015,10 @@
         }
         syncAutoFollowButtonDom();
         syncFloatingJumpButton();
+      } else if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault();
+        const nextLayout = studioState.layout === 'theater' ? 'side' : 'theater';
+        setStudioLayout(nextLayout);
       }
     });
 

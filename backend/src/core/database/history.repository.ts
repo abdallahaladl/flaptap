@@ -138,7 +138,6 @@ export type CacheClearScope = 'all' | 'coach' | 'translations' | 'transcript';
 export class HistoryRepository {
   private readonly logger = new Logger(HistoryRepository.name);
   private readonly transcriptCacheDir = path.resolve(__dirname, '../../../../data/transcripts');
-  private readonly mediaDir = path.resolve(__dirname, '../../../../data/media');
 
   constructor(private readonly sqlite: SqliteService) {
     this.backfillCacheMetadataColumns();
@@ -168,23 +167,6 @@ export class HistoryRepository {
           }
         } catch {
           // Ignore malformed legacy row
-        }
-      }
-      const translatedRows = this.sqlite.db
-        .prepare(
-          `SELECT id, payload_json FROM lessons WHERE video_id IS NOT NULL AND video_id != '' AND cached_langs != '' LIMIT 250`,
-        )
-        .all() as Array<Record<string, any>>;
-
-      for (const tr of translatedRows) {
-        try {
-          const parsed: HistoryItem = JSON.parse(String(tr.payload_json));
-          parsed.id = String(tr.id);
-          if (parsed.videoId && parsed.translationsCache && Object.keys(parsed.translationsCache).length > 0) {
-            this.saveVideoTranslationCache(parsed);
-          }
-        } catch {
-          // Ignore malformed row
         }
       }
     } catch {
@@ -296,19 +278,9 @@ export class HistoryRepository {
     if (!videoId) return { cached: false, bytes: 0 };
     try {
       const file = path.join(this.transcriptCacheDir, `${videoId}.json`);
-      let bytes = 0;
-      let cached = false;
-      if (fs.existsSync(file)) {
-        cached = true;
-        bytes += fs.statSync(file).size;
-      }
-      if (videoId.startsWith('ext_') && fs.existsSync(this.mediaDir)) {
-        const matches = fs.readdirSync(this.mediaDir).filter((n) => n.startsWith(`${videoId}.`));
-        for (const m of matches) {
-          bytes += fs.statSync(path.join(this.mediaDir, m)).size;
-        }
-      }
-      return { cached, bytes };
+      if (!fs.existsSync(file)) return { cached: false, bytes: 0 };
+      const st = fs.statSync(file);
+      return { cached: true, bytes: st.size };
     } catch {
       return { cached: false, bytes: 0 };
     }
@@ -316,223 +288,13 @@ export class HistoryRepository {
 
   private deleteTranscriptCacheFile(videoId?: string): boolean {
     if (!videoId) return false;
-    let deleted = false;
     try {
       const file = path.join(this.transcriptCacheDir, `${videoId}.json`);
-      if (fs.existsSync(file)) {
-        fs.unlinkSync(file);
-        deleted = true;
-      }
-      if (videoId.startsWith('ext_') && fs.existsSync(this.mediaDir)) {
-        const matches = fs.readdirSync(this.mediaDir).filter((n) => n.startsWith(`${videoId}.`));
-        for (const m of matches) {
-          try {
-            fs.unlinkSync(path.join(this.mediaDir, m));
-            deleted = true;
-          } catch {}
-        }
-      }
-      return deleted;
-    } catch {
-      return deleted;
-    }
-  }
-
-  private getVideoTranslationCacheFile(videoId?: string): string | null {
-    const clean = (videoId || '').trim();
-    if (!clean) return null;
-    return path.join(this.transcriptCacheDir, `${clean}.translations.json`);
-  }
-
-  private deleteVideoTranslationCacheFile(videoId?: string): boolean {
-    const file = this.getVideoTranslationCacheFile(videoId);
-    if (!file) return false;
-    try {
       if (!fs.existsSync(file)) return false;
       fs.unlinkSync(file);
       return true;
     } catch {
       return false;
-    }
-  }
-
-  public mergeTranslationsIntoItem(
-    item: HistoryItem,
-    sourceCache?: Record<string, Record<number, string>> | null,
-  ): boolean {
-    if (!sourceCache || typeof sourceCache !== 'object') return false;
-    if (!item.translationsCache) item.translationsCache = {};
-
-    let changed = false;
-    for (const [langCode, langMap] of Object.entries(sourceCache)) {
-      if (!langMap || typeof langMap !== 'object') continue;
-      if (!item.translationsCache[langCode]) {
-        item.translationsCache[langCode] = {};
-      }
-      for (const [rawIdx, rawHtml] of Object.entries(langMap)) {
-        const idx = Number(rawIdx);
-        if (!Number.isFinite(idx) || typeof rawHtml !== 'string' || !rawHtml.trim()) continue;
-        if (item.translationsCache[langCode][idx] !== rawHtml) {
-          item.translationsCache[langCode][idx] = rawHtml;
-          changed = true;
-        }
-      }
-    }
-
-    if (Array.isArray(item.sentences)) {
-      for (const sentence of item.sentences) {
-        const sIdx = Number(sentence.index);
-        for (const [langCode, langMap] of Object.entries(item.translationsCache)) {
-          const val = langMap?.[sIdx];
-          if (!val) continue;
-          if (!sentence.translations) sentence.translations = {};
-          if (sentence.translations[langCode] !== val) {
-            sentence.translations[langCode] = val;
-            changed = true;
-          }
-        }
-      }
-    }
-
-    if (changed) {
-      item.translationEngineVersion = 4;
-    }
-    return changed;
-  }
-
-  /**
-   * Read permanent video-level translations across on-disk translation memory
-   * and any SQLite lesson rows for the same YouTube video or source URL.
-   */
-  public readVideoTranslationCache(
-    videoId?: string,
-    sourceUrl?: string,
-  ): Record<string, Record<number, string>> {
-    const merged: Record<string, Record<number, string>> = {};
-    const absorb = (candidate?: Record<string, Record<number, string>> | null) => {
-      if (!candidate || typeof candidate !== 'object') return;
-      for (const [lang, map] of Object.entries(candidate)) {
-        if (!map || typeof map !== 'object') continue;
-        if (!merged[lang]) merged[lang] = {};
-        for (const [k, v] of Object.entries(map)) {
-          const idx = Number(k);
-          if (Number.isFinite(idx) && typeof v === 'string' && v.trim() && !merged[lang][idx]) {
-            merged[lang][idx] = v;
-          }
-        }
-      }
-    };
-
-    const file = this.getVideoTranslationCacheFile(videoId);
-    if (file && fs.existsSync(file)) {
-      try {
-        const raw = JSON.parse(fs.readFileSync(file, 'utf-8'));
-        absorb(raw?.translationsCache || raw);
-      } catch {
-        // Ignore malformed file
-      }
-    }
-
-    const cleanVid = (videoId || '').trim().toLowerCase();
-    const cleanUrl = (sourceUrl || '').trim().toLowerCase();
-    try {
-      let rows: Array<Record<string, any>> = [];
-      if (cleanVid) {
-        rows = this.sqlite.db
-          .prepare(
-            `SELECT payload_json FROM lessons WHERE LOWER(video_id) = ? AND cached_langs != '' ORDER BY updated_at DESC LIMIT 10`,
-          )
-          .all(cleanVid) as Array<Record<string, any>>;
-      } else if (cleanUrl) {
-        rows = this.sqlite.db
-          .prepare(
-            `SELECT payload_json FROM lessons WHERE LOWER(source_url) = ? AND cached_langs != '' ORDER BY updated_at DESC LIMIT 10`,
-          )
-          .all(cleanUrl) as Array<Record<string, any>>;
-      }
-      for (const r of rows) {
-        try {
-          const parsed: HistoryItem = JSON.parse(String(r.payload_json));
-          if (parsed.segmentationVersion === 2 && parsed.translationsCache) {
-            absorb(parsed.translationsCache);
-          }
-        } catch {
-          // Ignore malformed row
-        }
-      }
-    } catch {
-      // Non-fatal
-    }
-
-    return merged;
-  }
-
-  /**
-   * Persist translations permanently for this video on disk and across any
-   * matching SQLite lesson rows so translations survive refreshes, sign-outs,
-   * re-logins, and re-opening the video forever without burning AI quota.
-   */
-  public saveVideoTranslationCache(item: HistoryItem): void {
-    if (!item.translationsCache || Object.keys(item.translationsCache).length === 0) return;
-
-    const existingVideoCache = this.readVideoTranslationCache(item.videoId, item.sourceUrl);
-    this.mergeTranslationsIntoItem(item, existingVideoCache);
-
-    const file = this.getVideoTranslationCacheFile(item.videoId);
-    if (file) {
-      try {
-        fs.mkdirSync(this.transcriptCacheDir, { recursive: true });
-        fs.writeFileSync(
-          file,
-          JSON.stringify(
-            {
-              videoId: item.videoId,
-              sourceUrl: item.sourceUrl,
-              translationEngineVersion: 4,
-              updatedAt: new Date().toISOString(),
-              translationsCache: item.translationsCache,
-            },
-            null,
-            2,
-          ),
-          'utf-8',
-        );
-      } catch (err: any) {
-        this.logger.warn(`Failed to write video translation cache for ${item.videoId}: ${err.message}`);
-      }
-    }
-
-    const cleanVid = (item.videoId || '').trim().toLowerCase();
-    const cleanUrl = (item.sourceUrl || '').trim().toLowerCase();
-    if (!cleanVid && !cleanUrl) return;
-
-    try {
-      const rows = cleanVid
-        ? (this.sqlite.db
-            .prepare(`SELECT * FROM lessons WHERE LOWER(video_id) = ? AND id != ?`)
-            .all(cleanVid, item.id) as Array<Record<string, any>>)
-        : (this.sqlite.db
-            .prepare(`SELECT * FROM lessons WHERE LOWER(source_url) = ? AND id != ?`)
-            .all(cleanUrl, item.id) as Array<Record<string, any>>);
-
-      for (const row of rows) {
-        try {
-          const sibling: HistoryItem = JSON.parse(String(row.payload_json));
-          sibling.id = String(row.id);
-          sibling.userId = row.user_id ? String(row.user_id) : null;
-          sibling.guestToken = row.guest_token ? String(row.guest_token) : null;
-          if (sibling.segmentationVersion === 2 && this.mergeTranslationsIntoItem(sibling, item.translationsCache)) {
-            this.insertOrReplaceRow(sibling, {
-              userId: sibling.userId,
-              guestToken: sibling.guestToken,
-            });
-          }
-        } catch {
-          // Ignore malformed sibling row
-        }
-      }
-    } catch {
-      // Non-fatal
     }
   }
 
@@ -551,52 +313,6 @@ export class HistoryRepository {
       payload.chunksCount = Number(row.chunks_count ?? payload.chunks?.length ?? 0);
       payload.createdAt = String(row.created_at || payload.createdAt);
       payload.updatedAt = String(row.updated_at || payload.updatedAt || payload.createdAt);
-
-      if (
-        payload.track === 'shadowing' &&
-        payload.segmentationVersion !== 2 &&
-        payload.videoId
-      ) {
-        const cacheFile = path.join(this.transcriptCacheDir, `${payload.videoId}.json`);
-        if (fs.existsSync(cacheFile)) {
-          try {
-            const cached = JSON.parse(fs.readFileSync(cacheFile, 'utf-8'));
-            if (cached?.data?.timed_words?.length) {
-              payload.sentences = segmentSentences(cached.data);
-              payload.chunks = segmentParagraphs(payload.sentences);
-              payload.sentencesCount = payload.sentences.length;
-              payload.chunksCount = payload.chunks.length;
-              payload.segmentationVersion = 2;
-              payload.timingVersion = 2;
-              payload.translationsCache = {};
-              this.insertOrReplaceRow(payload, {
-                userId: payload.userId,
-                guestToken: payload.guestToken,
-              });
-            }
-          } catch {
-            // Keep stored payload
-          }
-        }
-      }
-
-      if (payload.track === 'shadowing' && payload.segmentationVersion === 2 && payload.videoId) {
-        const file = this.getVideoTranslationCacheFile(payload.videoId);
-        if (file && fs.existsSync(file)) {
-          try {
-            const raw = JSON.parse(fs.readFileSync(file, 'utf-8'));
-            if (this.mergeTranslationsIntoItem(payload, raw?.translationsCache || raw)) {
-              this.insertOrReplaceRow(payload, {
-                userId: payload.userId,
-                guestToken: payload.guestToken,
-              });
-            }
-          } catch {
-            // Ignore malformed translation cache file
-          }
-        }
-      }
-
       return payload;
     } catch (error: any) {
       this.logger.warn(`Corrupt lesson row ${row?.id}: ${error.message}`);
@@ -834,34 +550,22 @@ export class HistoryRepository {
       (item.id ? this.findById(item.id, scope) : undefined) ||
       this.findByUrlOrVideoId(item.sourceUrl, item.videoId, scope);
 
-    const videoSavedTranslations =
-      item.track === 'shadowing'
-        ? this.readVideoTranslationCache(item.videoId, item.sourceUrl)
-        : {};
-
     if (existing) {
       item.id = existing.id;
       item.userId = existing.userId ?? scope?.userId ?? null;
       item.createdAt = existing.createdAt;
       item.completedDrills = Math.max(item.completedDrills || 0, existing.completedDrills || 0);
       item.studyNotes = item.studyNotes || existing.studyNotes || '';
-      if (!item.aiAnalysis && existing.aiAnalysis && existing.segmentationVersion === item.segmentationVersion) {
+      if (!item.aiAnalysis && existing.aiAnalysis) {
         item.aiAnalysis = existing.aiAnalysis;
         item.analysisStatus = existing.analysisStatus;
       }
-      if (existing.translationsCache && existing.segmentationVersion === item.segmentationVersion) {
-        this.mergeTranslationsIntoItem(item, existing.translationsCache);
-      }
-      if (Object.keys(videoSavedTranslations).length > 0) {
-        this.mergeTranslationsIntoItem(item, videoSavedTranslations);
+      if (!item.translationsCache && existing.translationsCache) {
+        item.translationsCache = existing.translationsCache;
       }
       this.insertOrReplaceRow(item, scope);
       this.logger.log(`Updated lesson in SQLite: ${item.title} (${item.id})`);
       return item;
-    }
-
-    if (Object.keys(videoSavedTranslations).length > 0) {
-      this.mergeTranslationsIntoItem(item, videoSavedTranslations);
     }
 
     this.insertOrReplaceRow(item, scope);
@@ -961,16 +665,6 @@ export class HistoryRepository {
         ...s,
         translations: {},
       }));
-      if (item.videoId) {
-        const otherWithTrans = this.sqlite.db
-          .prepare(
-            `SELECT COUNT(*) AS cnt FROM lessons WHERE LOWER(video_id) = ? AND id != ? AND cached_langs != ''`,
-          )
-          .get(item.videoId.toLowerCase(), item.id) as Record<string, any> | undefined;
-        if (!Number(otherWithTrans?.cnt)) {
-          this.deleteVideoTranslationCacheFile(item.videoId);
-        }
-      }
     }
 
     if ((cacheScope === 'transcript' || cacheScope === 'all') && item.videoId) {

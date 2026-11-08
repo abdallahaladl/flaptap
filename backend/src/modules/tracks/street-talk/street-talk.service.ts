@@ -264,16 +264,20 @@ export class StreetTalkService {
           `Extract 4 to 6 real American connected speech phenomena (e.g. Flap-T, linking, vowel reduction, elision) from these sentences:\n${numberedLines}\n\nReturn strictly JSON: { "connectedSpeech": [{ "exactPhrase": "verbatim substring from sentences", "spokenIpa": "/IPA/", "phenomenon": "e.g. Flap-T & Linking", "mechanics": "mouth instructions", "sentenceIndex": 1 }] }`,
           { temperature: 0.2, maxTokens: 1500, timeoutMs: 25000, json: true },
         );
-        if (Array.isArray(secondary?.connectedSpeech) && secondary.connectedSpeech.length > 0) {
-          aiAnalysis.connectedSpeech = secondary.connectedSpeech
-            .filter((c) => Boolean(c?.exactPhrase))
-            .map((c) => ({
-              exactPhrase: String(c.exactPhrase).trim(),
-              spokenIpa: c.spokenIpa || '',
-              phenomenon: c.phenomenon || 'Connected Speech',
-              mechanics: c.mechanics || '',
-              sentenceIndex: locateIndex(c.exactPhrase, c.sentenceIndex),
-            }));
+        const secondaryConn = ((secondary?.connectedSpeech || (secondary as any)?.connected_speech || []) as any[]);
+        if (Array.isArray(secondaryConn) && secondaryConn.length > 0) {
+          aiAnalysis.connectedSpeech = secondaryConn
+            .filter((c) => Boolean(c?.exactPhrase || c?.phrase || c?.exact_phrase))
+            .map((c) => {
+              const phrase = String(c.exactPhrase || c.phrase || c.exact_phrase || '').trim();
+              return {
+                exactPhrase: phrase,
+                spokenIpa: c.spokenIpa || c.spoken_ipa || c.ipa || '',
+                phenomenon: c.phenomenon || 'Connected Speech',
+                mechanics: c.mechanics || '',
+                sentenceIndex: locateIndex(phrase, c.sentenceIndex || c.sentence_index),
+              };
+            });
         }
       } catch (err: any) {
         this.logger.warn(`Secondary connected speech extraction fallback failed: ${err?.message}`);

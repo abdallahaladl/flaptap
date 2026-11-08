@@ -374,11 +374,6 @@ export class ShadowingTranslationService {
       }
     }
 
-    const videoLevel = this.historyRepo.readVideoTranslationCache(item.videoId, item.sourceUrl);
-    if (videoLevel?.[languageCode]) {
-      absorb(videoLevel[languageCode]);
-    }
-
     return normalized;
   }
 
@@ -404,6 +399,5 @@ export class ShadowingTranslationService {
       sentences: item.sentences,
       translationEngineVersion: 4,
     });
-    this.historyRepo.saveVideoTranslationCache(item);
   }
 }

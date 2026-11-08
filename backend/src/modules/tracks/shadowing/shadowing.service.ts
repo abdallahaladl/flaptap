@@ -36,15 +36,14 @@ export class ShadowingService {
   ) {}
 
   checkExisting(url: string, scope?: RequestIdentityScope) {
-    const info = classifyMediaUrl(url);
-    const videoId = info?.mediaId || '';
+    const videoId = this.extractYoutubeId(url);
     const existing = this.historyRepo.findByUrlOrVideoId(url, videoId, scope);
     const transcriptCache = this.transcriptService.hasCache(videoId);
     if (!existing) {
       return {
         exists: transcriptCache.cached,
         id: null,
-        title: transcriptCache.cached ? 'Raw transcript cached on disk' : null,
+        title: transcriptCache.cached ? 'Raw YouTube transcript cached on disk' : null,
         transcriptCached: transcriptCache.cached,
         cacheInfo: {
           transcriptCached: transcriptCache.cached,
@@ -106,18 +105,16 @@ export class ShadowingService {
   ): Promise<HistoryItem> {
     const cleanUrl = (url || '').trim();
     if (!cleanUrl) {
-      throw new BadRequestException('A video or social media link is required.');
+      throw new BadRequestException('A YouTube video link is required.');
     }
 
-    const info = classifyMediaUrl(cleanUrl);
-    if (!info) {
-      throw new BadRequestException('Please enter a valid video link (YouTube, TikTok, Instagram, X, Vimeo, TED, Loom, or direct media).');
+    const videoId = this.extractYoutubeId(cleanUrl);
+    if (!videoId) {
+      throw new BadRequestException('Please enter a valid YouTube video link.');
     }
-    const videoId = info.mediaId;
 
     const existing = this.historyRepo.findByUrlOrVideoId(cleanUrl, videoId, scope);
-    const hasMedia = info.source !== 'external' || Boolean(this.transcriptService.resolveMediaFile(videoId));
-    if (existing && !force && hasMedia) {
+    if (existing && !force) {
       this.logger.log(`SQLite cache hit for "${existing.title}" (${videoId})`);
       return existing;
     }
@@ -233,18 +230,10 @@ export class ShadowingService {
     sentences: SentenceItem[],
     url: string,
   ): HistoryItem {
-    const info = classifyMediaUrl(url);
-    const videoId = data.video_id || info?.mediaId || this.extractYoutubeId(url);
-    const isExternal =
-      data.source === 'external' ||
-      info?.source === 'external' ||
-      EXTERNAL_MEDIA_ID_PATTERN.test(videoId);
-    const platform = data.platform || info?.platform || (isExternal ? 'Web Video' : 'YouTube');
-
-    let thumbnailUrl = data.thumbnail_url || '';
-    if (!thumbnailUrl && !isExternal && videoId) {
-      thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-    }
+    const videoId = data.video_id || this.extractYoutubeId(url);
+    const thumbnailUrl = videoId
+      ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+      : '';
 
     const totalWords =
       sentences.reduce(
@@ -271,13 +260,13 @@ export class ShadowingService {
     return {
       id: uuidv4(),
       track: 'shadowing',
-      trackTitle: isExternal ? `${platform} Lesson` : 'Video Lesson',
-      title: data.title || (isExternal ? `${platform} Video Lesson` : 'YouTube Video Lesson'),
-      creator: data.creator || (isExternal ? platform : 'YouTube Creator'),
+      trackTitle: 'Video Lesson',
+      title: data.title || 'YouTube Video Lesson',
+      creator: data.creator || 'YouTube Creator',
       videoId,
       sourceUrl: url,
       thumbnailUrl,
-      accentDialect: isExternal ? `${platform} Spoken English` : 'Spoken English',
+      accentDialect: 'Spoken English',
       durationSeconds,
       pacingWpm,
       difficulty,
@@ -296,8 +285,8 @@ export class ShadowingService {
       sentences,
       studyNotes: '',
       noteMarkdown: this.historyRepo.buildCleanMarkdown(
-        data.title || (isExternal ? `${platform} Video Lesson` : 'YouTube Video Lesson'),
-        data.creator || (isExternal ? platform : 'YouTube Creator'),
+        data.title || 'YouTube Video Lesson',
+        data.creator || 'YouTube Creator',
         url,
         chunks,
       ),
