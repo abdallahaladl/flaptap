@@ -1056,13 +1056,31 @@ html:has(.studio-body),
   background: currentColor;
 }
 
-.sent-translate-btn {
+.sent-translate-btn,
+.sent-trans-btn {
   width: 28px;
   height: 28px;
 }
 
-.sent-translate-btn.is-loading svg {
+.sent-translate-btn.is-loading,
+.sent-trans-btn.is-loading {
+  cursor: wait;
+}
+
+.sent-translate-btn.is-loading svg,
+.sent-trans-btn.is-loading svg {
   animation: transSpin 0.9s linear infinite;
+}
+
+.sent-trans-btn.is-translated {
+  color: var(--ink);
+}
+
+.sent-trans-btn.active,
+.sent-trans-btn.is-translated.active {
+  background: var(--ink);
+  color: var(--bg-sheet);
+  border-color: var(--ink);
 }
 
 .sent-action-btn svg {
@@ -1933,10 +1951,14 @@ html[lang="ar"] .trans-select-chevron {
 }
 
 .side-trans-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   margin-bottom: 0;
+}
+
+.side-trans-actions .side-trans-btn {
+  width: 100%;
 }
 
 .side-trans-btn {
@@ -1984,8 +2006,7 @@ html[lang="ar"] .trans-select-chevron {
 
 /* Completed badge state: overrides button:disabled opacity */
 .side-trans-btn.is-completed,
-#trans-all-btn.is-completed,
-#side-trans-active-btn.is-completed {
+#trans-all-btn.is-completed {
   opacity: 1 !important;
   cursor: default !important;
   pointer-events: auto !important;
@@ -1996,15 +2017,13 @@ html[lang="ar"] .trans-select-chevron {
 }
 
 .side-trans-btn.is-completed svg,
-#trans-all-btn.is-completed svg,
-#side-trans-active-btn.is-completed svg {
+#trans-all-btn.is-completed svg {
   color: var(--accent-forest) !important;
   stroke: var(--accent-forest) !important;
 }
 
 .side-trans-btn.is-loading,
-#trans-all-btn.is-loading,
-#side-trans-active-btn.is-loading {
+#trans-all-btn.is-loading {
   opacity: 0.92 !important;
   cursor: wait !important;
   background: var(--bg-paper) !important;

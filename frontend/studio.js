@@ -558,46 +558,6 @@
       btn.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
     });
 
-    // 9. Side Translation Active Sentence Button Sync
-    syncActiveSentenceTranslationBtn();
-  }
-
-  function syncActiveSentenceTranslationBtn() {
-    const sideActiveBtn = document.getElementById('side-trans-active-btn');
-    if (!sideActiveBtn || !studioState.item) return;
-    const langCode = studioState.translationLang || 'ar';
-    if (langCode === 'none') {
-      sideActiveBtn.disabled = true;
-      sideActiveBtn.classList.remove('is-completed', 'is-loading');
-      sideActiveBtn.title = t('translationOffHint');
-      sideActiveBtn.innerHTML = `${TRANSLATE_ICON_SVG}<span>${escapeHtml(t('translateActiveBtn'))}</span>`;
-      return;
-    }
-
-    const sentences = studioState.item.sentences || [];
-    const langMap = getLangTranslationMap(langCode);
-    const inFlightSet = studioState.translatingSentencesByLang[langCode] || new Set();
-    const isTranslatingAll = Boolean(studioState.translatingAllByLang[langCode]);
-    const activeIdx = studioState.activeSentence?.index || 1;
-    const activeHasTrans = Boolean(langMap[activeIdx]);
-    const isActiveLoading = !activeHasTrans && (isTranslatingAll || inFlightSet.has(activeIdx));
-
-    sideActiveBtn.classList.remove('is-loading', 'is-completed');
-    if (isActiveLoading) {
-      sideActiveBtn.disabled = true;
-      sideActiveBtn.classList.add('is-loading');
-      sideActiveBtn.title = t('translatingShort');
-      sideActiveBtn.innerHTML = `${SPINNER_ICON_SVG}<span>${escapeHtml(t('translatingShort'))}</span>`;
-    } else if (activeHasTrans) {
-      sideActiveBtn.disabled = true;
-      sideActiveBtn.classList.add('is-completed');
-      sideActiveBtn.title = t('activeSentenceDoneHint');
-      sideActiveBtn.innerHTML = `${CHECK_ICON_SVG}<span>${escapeHtml(t('activeDoneBtn'))}</span>`;
-    } else {
-      sideActiveBtn.disabled = isTranslatingAll;
-      sideActiveBtn.title = 'Translate active sentence (T)';
-      sideActiveBtn.innerHTML = `${TRANSLATE_ICON_SVG}<span>${escapeHtml(t('translateActiveBtn'))}</span>`;
-    }
   }
 
   function setSentenceLoop(indexOrNull) {
@@ -815,6 +775,14 @@
           const baseHtml = s.highlightedHtml || escapeHtml(s.text);
           const interactiveHtml = decorateClickableWords(baseHtml, s.index);
 
+          const langCode = studioState.translationLang || 'ar';
+          const langMap = getLangTranslationMap(langCode);
+          const hasTrans = Boolean(langMap[s.index] && String(langMap[s.index]).trim());
+          const inFlightSet = studioState.translatingSentencesByLang[langCode] || new Set();
+          const isTranslatingAll = Boolean(studioState.translatingAllByLang[langCode]);
+          const isSentLoading = !hasTrans && (isTranslatingAll || inFlightSet.has(s.index));
+          const isBoxVisible = hasTrans && Boolean(studioState.showTranslations);
+
           return `
             <article
               id="sent-card-${s.index}"
@@ -827,6 +795,18 @@
                   <span class="sent-time-badge">${escapeHtml(s.timeRange || '')}</span>
                 </div>
                 <div class="sent-actions-right">
+                  <button
+                    type="button"
+                    class="sent-action-btn sent-icon-btn sent-trans-btn ${hasTrans ? 'is-translated' : ''} ${isBoxVisible ? 'active' : ''} ${isSentLoading ? 'is-loading' : ''}"
+                    data-trans-btn-sent="${s.index}"
+                    data-trans-state="${hasTrans ? 'translated' : (isSentLoading ? 'loading' : 'idle')}"
+                    aria-pressed="${isBoxVisible ? 'true' : 'false'}"
+                    title="${isSentLoading ? escapeHtml(t('translatingShort')) : (hasTrans ? (isBoxVisible ? 'Hide translation' : 'Show translation') : 'Translate sentence')}"
+                    aria-label="${isSentLoading ? escapeHtml(t('translatingShort')) : (hasTrans ? (isBoxVisible ? 'Hide translation' : 'Show translation') : 'Translate sentence')}"
+                    ${isSentLoading ? 'disabled' : ''}
+                  >
+                    ${isSentLoading ? SPINNER_ICON_SVG : TRANSLATE_ICON_SVG}
+                  </button>
                   <button
                     type="button"
                     class="sent-action-btn sent-icon-btn sent-play-btn ${isThisPlaying ? 'active is-playing' : ''}"
@@ -1242,8 +1222,42 @@
     syncPlaybackButtonsDom();
   }
 
+  function handleSentenceTranslateButtonClick(idx) {
+    const sIdx = Number(idx);
+    if (!Number.isFinite(sIdx) || sIdx <= 0) return;
+
+    let langCode = studioState.translationLang || 'ar';
+    if (langCode === 'none') {
+      langCode = 'ar';
+      studioState.translationLang = 'ar';
+      const select = document.getElementById('trans-lang-select');
+      if (select) select.value = 'ar';
+    }
+
+    const langMap = getLangTranslationMap(langCode);
+    const hasTrans = Boolean(langMap[sIdx] && String(langMap[sIdx]).trim());
+
+    if (hasTrans) {
+      // Already translated: toggle visibility of this sentence translation box without API calls
+      const box = document.querySelector(`[data-trans-box="${sIdx}"]`);
+      const transBtn = document.querySelector(`[data-trans-btn-sent="${sIdx}"]`);
+      if (box) {
+        box.hidden = !box.hidden;
+        if (transBtn) {
+          transBtn.classList.toggle('active', !box.hidden);
+          transBtn.setAttribute('aria-pressed', !box.hidden ? 'true' : 'false');
+          transBtn.title = !box.hidden ? 'Hide translation' : 'Show translation';
+        }
+      }
+    } else {
+      // Not translated yet: trigger single sentence translation
+      translateSingleSentence(sIdx);
+    }
+  }
+
   window.handleSentencePlayButtonClick = handleSentencePlayButtonClick;
   window.handleSentenceLoopButtonClick = handleSentenceLoopButtonClick;
+  window.handleSentenceTranslateButtonClick = handleSentenceTranslateButtonClick;
 
   function startPlaybackTicker() {
     if (studioState.playbackTicker) {
@@ -1561,11 +1575,16 @@
       if (sideStatusEl) {
         sideStatusEl.textContent = 'Off';
       }
-      if (sideActiveBtn) {
-        sideActiveBtn.disabled = true;
-      }
       document.querySelectorAll('.sentence-translation-box').forEach((box) => {
         box.hidden = true;
+      });
+      document.querySelectorAll('[data-trans-btn-sent]').forEach((btn) => {
+        btn.disabled = true;
+        btn.classList.remove('is-loading', 'is-translated', 'active');
+        btn.setAttribute('aria-pressed', 'false');
+        btn.innerHTML = TRANSLATE_ICON_SVG;
+        btn.title = t('translationOffHint');
+        btn.dataset.transState = 'off';
       });
       return;
     }
@@ -1591,6 +1610,7 @@
 
       const box = document.querySelector(`[data-trans-box="${idx}"]`);
       const textEl = document.querySelector(`.sentence-translation-text[data-trans-sent="${idx}"]`);
+      const transBtn = document.querySelector(`[data-trans-btn-sent="${idx}"]`);
 
       if (hasTrans) {
         if (box) {
@@ -1621,13 +1641,44 @@
           textEl.textContent = '';
         }
       }
+
+      if (transBtn) {
+        if (isSentLoading) {
+          transBtn.disabled = true;
+          transBtn.classList.remove('is-translated', 'active');
+          transBtn.classList.add('is-loading');
+          transBtn.innerHTML = SPINNER_ICON_SVG;
+          transBtn.title = t('translatingShort');
+          transBtn.setAttribute('aria-label', t('translatingShort'));
+          transBtn.setAttribute('aria-pressed', 'false');
+          transBtn.dataset.transState = 'loading';
+        } else if (hasTrans) {
+          transBtn.disabled = false;
+          transBtn.classList.remove('is-loading');
+          transBtn.classList.add('is-translated');
+          const isBoxVisible = Boolean(box && !box.hidden);
+          transBtn.classList.toggle('active', isBoxVisible);
+          transBtn.setAttribute('aria-pressed', isBoxVisible ? 'true' : 'false');
+          transBtn.innerHTML = TRANSLATE_ICON_SVG;
+          const hint = isBoxVisible ? 'Hide translation' : 'Show translation';
+          transBtn.title = hint;
+          transBtn.setAttribute('aria-label', hint);
+          transBtn.dataset.transState = 'translated';
+        } else {
+          transBtn.disabled = isTranslatingAll;
+          transBtn.classList.remove('is-loading', 'is-translated', 'active');
+          transBtn.setAttribute('aria-pressed', 'false');
+          transBtn.innerHTML = TRANSLATE_ICON_SVG;
+          transBtn.title = `Translate sentence #${idx}`;
+          transBtn.setAttribute('aria-label', `Translate sentence #${idx}`);
+          transBtn.dataset.transState = 'idle';
+        }
+      }
     }
 
     const untranslatedCount = Math.max(0, totalSentences - translatedCount);
     const activeIdx = studioState.activeSentence?.index || 1;
     const activeHasTrans = Boolean(langMap[activeIdx]);
-
-    syncActiveSentenceTranslationBtn();
 
     if (sideStatusEl) {
       sideStatusEl.classList.remove('is-complete', 'is-translating');
@@ -1702,6 +1753,8 @@
 
     const langMap = getLangTranslationMap(langCode);
     if (langMap[idx]) {
+      const box = document.querySelector(`[data-trans-box="${idx}"]`);
+      if (box) box.hidden = false;
       syncTranslationUiState();
       return;
     }
@@ -1727,6 +1780,8 @@
       });
       studioState.translationRtl = Boolean(res.rtl);
       mergeTranslationsIntoStudioState(langCode, res.translations || {});
+      const box = document.querySelector(`[data-trans-box="${idx}"]`);
+      if (box) box.hidden = false;
     } catch (error) {
       showToast(error.message);
     } finally {
@@ -2715,8 +2770,16 @@
       }
     }, { passive: true });
 
-    // Shadow Mode Sentence Interactions (Play/Pause, Click Word, Click Card)
+    // Shadow Mode Sentence Interactions (Play/Pause, Translate, Click Word, Click Card)
     document.getElementById('subview-sentences-list')?.addEventListener('click', (e) => {
+      const transBtn = e.target.closest('[data-trans-btn-sent]');
+      if (transBtn) {
+        e.stopPropagation();
+        const idx = Number(transBtn.dataset.transBtnSent);
+        handleSentenceTranslateButtonClick(idx);
+        return;
+      }
+
       const playBtn = e.target.closest('[data-play-sent]');
       if (playBtn) {
         e.stopPropagation();
@@ -2769,11 +2832,6 @@
       studioState.translationLang = e.target.value || 'none';
       localStorage.setItem('flaptap_trans_lang', studioState.translationLang);
       syncTranslationUiState();
-    });
-
-    document.getElementById('side-trans-active-btn')?.addEventListener('click', () => {
-      const curr = studioState.activeSentence?.index || 1;
-      translateSingleSentence(curr);
     });
 
     document.getElementById('trans-all-btn')?.addEventListener('click', (e) => {
@@ -3004,7 +3062,7 @@
       } else if (e.key === 't' || e.key === 'T') {
         if (studioState.mode === 'shadow' && studioState.translationLang !== 'none') {
           e.preventDefault();
-          translateSingleSentence(currIdx);
+          handleSentenceTranslateButtonClick(currIdx);
         }
       } else if (e.key === 'f' || e.key === 'F') {
         e.preventDefault();

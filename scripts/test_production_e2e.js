@@ -837,7 +837,7 @@ async function runProductionE2ETest() {
     const iconButtonsCheck = await page.evaluate(() => ({
       playBtnsCount: document.querySelectorAll('[data-play-sent]').length,
       loopBtnsInCard: document.querySelectorAll('.sentence-driller-card [data-loop-sent]').length,
-      transBtnsInCard: document.querySelectorAll('.sentence-driller-card [data-translate-sent]').length,
+      transBtnsInCard: document.querySelectorAll('.sentence-driller-card [data-trans-btn-sent]').length,
       deckPrevBtn: Boolean(document.getElementById('deck-prev-sent-btn')),
       deckNextBtn: Boolean(document.getElementById('deck-next-sent-btn')),
       deckPlayBtn: Boolean(document.getElementById('deck-play-active-btn')),
@@ -848,12 +848,12 @@ async function runProductionE2ETest() {
     assert(
       iconButtonsCheck.playBtnsCount > 0 &&
       iconButtonsCheck.loopBtnsInCard === 0 &&
-      iconButtonsCheck.transBtnsInCard === 0 &&
+      iconButtonsCheck.transBtnsInCard > 0 &&
       iconButtonsCheck.deckPrevBtn &&
       iconButtonsCheck.deckNextBtn &&
       iconButtonsCheck.deckPlayBtn &&
       iconButtonsCheck.deckAutoFollowBtn &&
-      iconButtonsCheck.sideTransBtn &&
+      !iconButtonsCheck.sideTransBtn &&
       iconButtonsCheck.playTextLen === 0,
       `Decluttered sentence cards & centralized side deck check failed: ${JSON.stringify(iconButtonsCheck)}`,
     );
@@ -1325,20 +1325,20 @@ async function runProductionE2ETest() {
       allBtnHidden: document.getElementById('trans-all-btn')?.hidden,
       allBtnDisabled: document.getElementById('trans-all-btn')?.disabled,
       allBtnState: document.getElementById('trans-all-btn')?.dataset.transAllState,
-      sideActiveDisabled: document.getElementById('side-trans-active-btn')?.disabled,
+      transBtnSent1: Boolean(document.querySelector('[data-trans-btn-sent="1"]')),
       visibleBoxes: [...document.querySelectorAll('.sentence-translation-box')].filter((b) => !b.hidden).length,
     }));
     assert(
       beforeTriggerState.allBtnHidden === false &&
       beforeTriggerState.allBtnDisabled === false &&
       beforeTriggerState.allBtnState === 'ready' &&
-      beforeTriggerState.sideActiveDisabled === false &&
+      beforeTriggerState.transBtnSent1 === true &&
       beforeTriggerState.visibleBoxes === 0,
       `Before-trigger state failed (spinner must not auto-translate): ${JSON.stringify(beforeTriggerState)}`,
     );
 
-    // 6c. Trigger 1: Click "Translate Active" button for active sentence #1
-    await page.click('#side-trans-active-btn');
+    // 6c. Trigger 1: Click translation button on sentence #1
+    await page.click('[data-trans-btn-sent="1"]');
     await page.waitForFunction(
       () => {
         const box1 = document.querySelector('[data-trans-box="1"]');
