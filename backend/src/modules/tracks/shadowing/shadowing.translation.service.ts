@@ -244,35 +244,65 @@ export class ShadowingTranslationService {
       source[String(sentence.index)] = sentence.text;
     }
 
+    const isArabic = language.code === 'ar';
     const systemPrompt = [
-      `You are a professional literary and media translator working into ${language.name} (${language.native}).`,
-      `You are a native ${language.name} speaker with deep knowledge of spoken English and of how real people actually talk.`,
+      `You are an elite audiovisual subtitle translator and localization specialist working into ${language.name} (${language.native}).`,
+      `You specialize in translating real spoken dialogue and video transcripts into natural, fluid, and authentic ${language.name} subtitles according to professional streaming standards (e.g. Netflix Timed Text guidelines).`,
       '',
-      'Translate each English sentence with these absolute rules:',
-      `1. ACCURACY FIRST: carry the complete meaning of the sentence into ${language.name}. Never add, omit, soften, explain, summarize, merge, or split information.`,
-      `2. NATURAL TARGET LANGUAGE: write idiomatic ${language.name} that a native speaker would actually say, with the same tone, register, and intent as the speaker. Never translate word-for-word or produce stiff textbook calques.`,
-      `3. STANDARD LANGUAGE: use clear, widely understood standard ${language.name}. Do not switch to a regional dialect or slang unless the source itself is slang that must be mirrored.`,
-      '4. KEEP THESE IN THEIR ORIGINAL ENGLISH / LATIN FORM, exactly as spoken, without translating or transliterating them:',
-      '   - personal names, characters, creators, brands, companies, products, apps, handles, URLs, emails, file paths;',
-      '   - technical, scientific, medical, legal, financial, software and startup terms, acronyms (AI, API, GPU, SaaS), code identifiers and commands, when the target language has no natural everyday equivalent;',
-      '   - English words the speaker deliberately said in English, and titles of works;',
-      '   - numbers, units, and symbols.',
-      '   If a standard, widely used equivalent genuinely exists in the target language, use that equivalent instead.',
-      '5. Do not wrap preserved English terms in punctuation or quotes unless the source did.',
-      '6. Preserve the sentence ids exactly. Return only a JSON object of this shape:',
-      '   {"translations":{"<id>":"<translation>","<id>":"<translation>"}}',
-      '7. Every value must be one plain string. Never return objects, arrays, notes, markdown, or the English source.',
+      '### Audiovisual Subtitle Translation Rules:',
+      `1. COMMUNICATIVE INTENT OVER LITERAL WORDS: Subtitles represent real spoken dialogue. Always translate the speaker's intended meaning, emotion, and pragmatic nuance. NEVER translate word-for-word or produce wooden textbook calques.`,
+      '2. CONTEXTUAL & PRAGMATIC EQUIVALENCE:',
+      '   - Translate phrasal verbs, idioms, spoken colloquialisms, and discourse markers by their actual communicative meaning in the scene (e.g. "cut it out", "hang on", "no way", "cranked it", "blew me away", "called it off").',
+      '   - Use the surrounding dialogue context to accurately resolve pronoun antecedents (who/what "it", "they", "he", "she", "this" refers to), tense, and speaker intent.',
+      `3. NATURAL TARGET-LANGUAGE REGISTER: Write natural, idiomatic ${language.name} that sounds authentic when spoken aloud and is effortless to read on screen at normal viewing speed.`,
+      ...(isArabic
+        ? [
+            '   - In Arabic: Use clear, natural Contemporary Standard Arabic (فصحى معاصرة). Prefer active, fluent phrasing over stiff, bureaucratic calques (avoid clumsy passive calques like overusing "تم ... من قِبل" or "قام بـ"). Match grammatical gender, dual/plural forms, and verb conjugations accurately based on who is speaking and who is addressed in the dialogue context.',
+          ]
+        : []),
+      '4. PRESERVE TECHNICAL TERMS & PROPER NOUNS IN ORIGINAL LATIN SCRIPT:',
+      '   - Keep personal names, brands, companies, products, apps, URLs, file paths, and titles in their original Latin spelling.',
+      '   - Keep software, tech, and engineering terms, programming languages, commands, and acronyms (e.g. AI, API, LLM, GPU, Docker, React, CSS) in Latin script when the target language has no universally accepted native everyday equivalent.',
+      '   - Numbers, standard units, and mathematical symbols remain as numbers/units.',
+      '5. PUNCTUATION & FORMATTING:',
+      '   - Output clean subtitle text without explanatory parentheticals, translator notes, or added editorial commentary.',
+      '   - Do not enclose preserved Latin terms in quotes or brackets unless the original speech did.',
+      '6. STRICT OUTPUT CONTRACT:',
+      '   - Return ONLY a valid JSON object matching this schema:',
+      '     {"translations": {"<sentence_id>": "<translated_text>"}}',
+      '   - Translate ONLY the requested target sentences. Do not translate the surrounding reference context lines.',
+      '   - Every value must be a single plain string containing that sentence\'s subtitle.',
     ].join('\n');
 
-    const context = [
-      `Video title: ${item.title || 'Untitled'}`,
-      `Creator: ${item.creator || 'Unknown'}`,
-      `Source language: English (spoken YouTube speech)`,
-      `Target language: ${language.name} (${language.native})`,
+    const contextLines: string[] = [
+      '### Video Overview',
+      `- Title: ${item.title || 'Untitled'}`,
+      `- Creator / Channel: ${item.creator || 'Unknown'}`,
+      `- Source Language: English (spoken YouTube dialogue)`,
+      `- Target Language: ${language.name} (${language.native})`,
+    ];
+
+    if (item.aiAnalysis?.overview?.summary) {
+      contextLines.push(`- Topic & Context: ${item.aiAnalysis.overview.summary}`);
+    }
+
+    const allSentences = (item.sentences || [])
+      .map((s) => ({ index: Number(s.index), text: s.text }))
+      .filter((s) => Number.isFinite(s.index) && s.text?.trim());
+
+    const dialogueContext = this.buildSurroundingDialogueContext(allSentences, batch);
+    if (dialogueContext) {
+      contextLines.push('', dialogueContext);
+    }
+
+    contextLines.push(
       '',
-      'Translate every item below. Preserve the numeric keys:',
+      '### Target Sentences to Translate',
+      'Translate the following sentences into natural subtitles. Preserve the numeric ID keys exactly in the JSON output:',
       JSON.stringify(source, null, 2),
-    ].join('\n');
+    );
+
+    const context = contextLines.join('\n');
 
     const data = await this.ai.chatJson<Record<string, any>>(systemPrompt, context, {
       temperature: 0.15,
@@ -297,6 +327,57 @@ export class ShadowingTranslationService {
     }
 
     return out;
+  }
+
+  /**
+   * Provide surrounding dialogue lines from the video/dialogue transcript
+   * to resolve pronoun antecedents, situational context, tone, and flow.
+   */
+  private buildSurroundingDialogueContext(
+    allSentences: Array<{ index: number; text: string }>,
+    batch: Array<{ index: number; text: string }>,
+  ): string {
+    if (!allSentences || allSentences.length === 0) return '';
+
+    const sentenceMap = new Map<number, string>();
+    for (const s of allSentences) {
+      if (s && Number.isFinite(s.index) && s.text?.trim()) {
+        sentenceMap.set(s.index, s.text.trim());
+      }
+    }
+
+    const batchIndices = new Set(batch.map((b) => b.index));
+    const contextIndices = new Set<number>();
+
+    // For every sentence in the batch, gather up to 3 preceding and 2 following sentences
+    // that are NOT in the batch itself to provide local dialogue continuity.
+    for (const item of batch) {
+      const idx = item.index;
+      for (let p = Math.max(1, idx - 3); p < idx; p++) {
+        if (!batchIndices.has(p) && sentenceMap.has(p)) {
+          contextIndices.add(p);
+        }
+      }
+      for (let f = idx + 1; f <= idx + 2; f++) {
+        if (!batchIndices.has(f) && sentenceMap.has(f)) {
+          contextIndices.add(f);
+        }
+      }
+    }
+
+    if (contextIndices.size === 0) return '';
+
+    const sortedContext = Array.from(contextIndices).sort((a, b) => a - b);
+    const lines = sortedContext.map(
+      (idx) => `- Line #${idx}: "${sentenceMap.get(idx)}"`,
+    );
+
+    return [
+      '### Surrounding Dialogue Flow & Narrative Context',
+      'The following lines from the video/dialogue are provided strictly for conversational context, pronoun/subject resolution, emotional tone, and narrative flow.',
+      'DO NOT translate these context lines, and do NOT include their keys in the JSON output:',
+      ...lines,
+    ].join('\n');
   }
 
   /**
@@ -360,7 +441,7 @@ export class ShadowingTranslationService {
       }
     };
 
-    if (item.translationEngineVersion === 4 || !item.translationEngineVersion) {
+    if (item.translationEngineVersion === 5 || item.translationEngineVersion === 4 || !item.translationEngineVersion) {
       absorb(item.translationsCache?.[languageCode]);
     }
 
@@ -383,7 +464,7 @@ export class ShadowingTranslationService {
       ...(item.translationsCache[languageCode] || {}),
       ...translations,
     };
-    item.translationEngineVersion = 4;
+    item.translationEngineVersion = 5;
 
     if (item.sentences) {
       for (const sentence of item.sentences) {
@@ -397,7 +478,7 @@ export class ShadowingTranslationService {
     this.historyRepo.update(item.id, {
       translationsCache: item.translationsCache,
       sentences: item.sentences,
-      translationEngineVersion: 4,
+      translationEngineVersion: 5,
     });
   }
 }
