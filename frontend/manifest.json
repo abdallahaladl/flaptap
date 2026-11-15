@@ -67,21 +67,28 @@
       "name": "Spoken English Lessons",
       "short_name": "Lessons",
       "description": "Open your video shadowing library and start a new lesson",
-      "url": "/?tab=shadowing",
+      "url": "/",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Interactive Dialogue",
       "short_name": "Dialogue",
       "description": "Practice spoken American English dialogues",
-      "url": "/?tab=street",
+      "url": "/dialogue",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Pronunciation Workout",
       "short_name": "Pronunciation",
       "description": "Train physical mouth mechanics and IPA targets",
-      "url": "/?tab=phonetics",
+      "url": "/pronunciation",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Learning Library",
+      "short_name": "Library",
+      "description": "Generate and browse natural American English expressions",
+      "url": "/library",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]

@@ -2,28 +2,20 @@
 
 > **MANDATORY CONSTITUTIONAL LAW FOR FLAPTAP**
 >
-> Cognitive linguistic work is performed **only** by the configured AI model, reached through the single OpenCode Go transport (`backend/src/core/ai/ai.client.ts`). There is no agent adapter layer, no model routing cascade, no CLI agent, and **zero static regex wordlists** pretending to do linguistic extraction. Application code handles deterministic plumbing: caption extraction, full-sentence & cohesive-paragraph timing alignment, relational SQLite persistence, authentication, and editorial rendering.
+> Cognitive linguistic work is performed **only** by configured AI models reached directly over HTTPS APIs (`AiProvidersModule` / `backend/src/core/ai/ai.client.ts`). There is **no CLI agent layer** and **zero static regex wordlists** pretending to do linguistic extraction. Application code handles deterministic plumbing: caption extraction, full-sentence & cohesive-paragraph timing alignment, encrypted BYOK vaulting, modular client/server URL routing, relational SQLite persistence, authentication, and editorial rendering.
 
 ---
 
-## 1. AI Transport: One Client, One Model
+## 1. AI Transport: Direct Multi-Provider APIs & Shared Selector
 
-1. **OpenCode Go only**
-   - Every AI call goes exclusively through `backend/src/core/ai/ai.client.ts`.
-   - Provider endpoint: `https://opencode.ai/inference/go/openai/v1` (OpenAI-compatible).
-   - Default model: **DeepSeek V4.1 Flash** (`deepseek-v4.1-flash`).
-   - Configuration lives in `.env`:
-     ```env
-     OPENCODE_GO_API_KEY=...
-     OPENCODE_GO_MODEL=deepseek-v4.1-flash
-     OPENCODE_GO_BASE_URL=https://opencode.ai/inference/go/openai/v1
-     ```
-   - `OPENCODE_GO_API_KEY` must never be committed. `.env` is git-ignored.
-2. **No agent layer & no static linguistic fallbacks**
-   - Do not add CLI agent adapters or UI model pickers.
-   - Connected speech, expressions/idioms, contextual vocabulary, prosody coaching, word lookup, translation, dialogue generation, and pronunciation workouts are 100% model-authored via engineered prompts. Never reintroduce hardcoded regex tables or `0` counter badges.
-3. **Reasoning off for interactive latency**
-   - Every request sets `reasoning_effort: "none"` for fast interactive responses.
+1. **Unified Direct API Transport (`AiProvidersModule` + `AiClient`)**
+   - AI-powered workspace generators (`LearningLibrary`, `TechLinguist`) execute through [`AiProvidersService`](file:///Users/abdallah/workspace/flaptap/backend/src/modules/ai-providers/ai-providers.service.ts), supporting live `/models` probing, `models.dev` capability enrichment, streaming SSE with intra-key transient `429`/timeout failover, and per-user AES-256-GCM BYOK keys alongside `.env` system keys (`OPENCODE_GO_API_KEY`, etc.).
+   - Studio sentence pipelines (`ShadowingAnalysisService`, `ShadowingTranslationService`, `StreetTalkService`, `PhoneticsService`, `WordLookupService`) use [`AiClient`](file:///Users/abdallah/workspace/flaptap/backend/src/core/ai/ai.client.ts) (`reasoning_effort: "none"` for sub-second interactive Studio responsiveness).
+   - `.env` and personal BYOK keys must never be committed or exposed in client-accessible responses outside authenticated masked previews (`sk-••••abcd`).
+2. **One Reusable Selector UI & Zero CLI Agent Bloat**
+   - Every AI-configurable feature MUST mount the single shared frontend module [`FlaptapAiSelector`](file:///Users/abdallah/workspace/flaptap/frontend/ai-provider-selector.js) rather than inventing a parallel provider/model picker.
+   - Never reintroduce slow/hanging CLI agent adapters (`opencode-cli`, `claude-cli`, `antigravity-cli`) or static regex wordlists.
+   - Connected speech, expressions/idioms, contextual vocabulary, prosody coaching, word lookup, translation, dialogue generation, and pronunciation workouts are 100% model-authored via engineered prompts.
 
 ---
 
@@ -58,9 +50,9 @@
 ## 3. Relational Persistence, Authentication, Caching & Performance
 
 1. **Built-in SQLite WAL Engine (`node:sqlite`) & Strict Account Isolation**
-   - `SqliteService` manages `data/flaptap.sqlite` (`users`, `auth_sessions`, `oauth_states`, `lessons`, `vocabulary_items`, `practice_logs`) using Node's native `node:sqlite` (`DatabaseSync`, zero native compilation dependencies).
+   - `SqliteService` manages `data/flaptap.sqlite` (`users`, `auth_sessions`, `lessons`, `vocabulary_items`, `practice_logs`) using Node's native `node:sqlite` (`DatabaseSync`, zero native compilation dependencies).
    - **Zero Benefit Before Sign-In:** All UI sections and inputs are browseable by visitors, but every value-producing action prompts the user to sign in or create an account **before execution** (preserving and auto-resuming their pending action) and every protected backend route enforces `requireAuthenticatedUser` (`401 auth_required`) with strict `WHERE user_id = ?` isolation.
-   - `AuthService` + `GoogleOAuthService` provide real Google OAuth 2.0 Authorization Code + PKCE (`S256`) and native `node:crypto` RS256 OIDC JWKS verification alongside `scrypt` email/password accounts, `HttpOnly` session cookies + Bearer tokens, active session revocation, password management, and full account deletion.
+   - `AuthService` provides `scrypt` email/password accounts, `HttpOnly` session cookies + Bearer tokens, active session revocation, password management, and full account deletion.
    - `HistoryRepository` & `VocabularyService` power the **History, Caching & Usage Control Center** (per-lesson & global cache clearing across transcripts/coach/translations, cache-bypass `force` re-extraction, progress reset, bulk operations, activity log controls, full JSON account export) and spaced active-recall flashcards (`mastery_level` 0–4).
 2. **Instant Video Open Path**
    - `POST /api/tracks/shadowing/process` performs caption extraction + deterministic full-sentence/paragraph segmentation + SQLite save and returns immediately.
@@ -75,8 +67,33 @@
 - Minimal, paper-tactile (`#F6F4EE` / `#FCFBF7` newsprint + `#141413` ink + `#FFF04B` Vox highlighter yellow) Light Mode and matte carbon (`#121210` / `#191916`) Dark Mode.
 - Authored 1.5px stroke SVG icons everywhere — zero emojis, zero static example chips under inputs, zero purple AI gradients.
 - English (`en`, LTR) default UI with multi-language support (`ar` RTL, `es`, `fr`, `de`, `tr`).
-- Flexible video docking: **Transcript** (25% Video Stage · 75% Sentence Learning Canvas) and **Theater** (75% Video Cinema Stage · 25% Compact Sentence Rail), and scalable primary Studio learning modes (`Shadow` | `Read` | `Listen` | `Coach` | `Notes`) switch in 0ms client-side without reloading the page or remounting the YouTube player.
+- Flexible video docking: **Transcript** (35% Video Stage · 65% Sentence Learning Canvas) and **Theater** (65% Video Cinema Stage · 35% Compact Sentence Rail), and scalable primary Studio learning modes (`Shadow` | `Read` | `Listen` | `Coach` | `Notes`) switch in 0ms client-side without reloading the page or remounting the YouTube player.
 - Timestamp and IPA spans enforce `direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums`.
+
+### Reserved Completion Green Law (Strict Invariant)
+
+- **Green is the completion channel — nothing else.** `--status-success` and its wash/border are reserved exclusively for checked, done, completed, mastered, or confirmed-success states.
+- A completed item repaints every decorative accent it owns — row hue, index tag, title highlight, example stickers, note edge — in grades of green; unchecking restores its original non-green accents.
+- Decorative accents, category/register tags, row color cycles, highlight washes, charts, and general emphasis MUST use Vox yellow, cobalt, or vermilion — never green. If an element is green, it must answer "is this done?".
+- Theming tokens such as `--accent-forest` are forbidden for decoration; never reintroduce a green accent simply to add color variety.
+- Status indicators that mean "live / healthy / info" use `--status-info` (blue), not green; green stays exclusive to completion.
+
+### Modular Feature Architecture, Dedicated URL Routing & Primary Navigation Law (Mandatory)
+
+1. **Dedicated Page URL & Refresh Persistence (No Home-URL Trapping)**
+   - Every top-level feature MUST own a dedicated clean URL route (`/feature`) and meaningful sub-routes (`/feature/subview`, `/feature/item/:id`) rather than toggling hidden DOM panels on `/`.
+   - Any new feature route MUST be registered in **both**:
+     1. Backend static/HTML route manifest (`backend/src/core/config/frontend-routes.ts`) so direct loads and hard refreshes (`Cmd+R` / `F5`) return `200 OK` while keeping `/api/*` strictly isolated.
+     2. Frontend History API router (`frontend/router.js`, `FlaptapRouter`) handling `pushState` / `replaceState`, `popstate` (Back/Forward), document `<title>`, breadcrumbs, and sub-route query/path restoration.
+   - Any multi-view feature (`LearningLibrary`, `TechLexicon`, `Vocabulary`, `History`) MUST synchronize sub-views/filters via `FlaptapRouter.updateSubroute(...)` so refreshing mid-workflow keeps the user on that exact view instead of snapping back to `/`.
+   - Always reference stylesheets and scripts in HTML templates with root-relative paths (`/styles.css`, `/feature.js`) so nested feature sub-routes resolve static assets accurately on hard refresh.
+2. **Modular Feature Encapsulation (Zero Monolith Dumping)**
+   - Every new feature MUST ship as an isolated backend module (`backend/src/modules/<feature>/`) AND isolated frontend module (`frontend/<feature>.js` + optional `frontend/<feature>.css`) interacting with the shell exclusively through `FlaptapWorkspace`, `FlaptapRouter`, `FlaptapAiSelector`, and `FlaptapWordLookup`.
+   - Future AI agents are forbidden from embedding large feature implementations inside `frontend/app.js` or creating duplicate settings/provider pickers.
+3. **Left Primary Sidebar Navigation & Minimal Topbar Law**
+   - Primary site navigation lives exclusively inside the Left Primary Sidebar Navigation Rail (`.app-sidebar`), organized by domain group (`Studio`, `Knowledge`, `Workspace`) with keyboard-accessible collapse (`Cmd+B`) and mobile off-canvas drawer (`<= 960px`).
+   - Future AI agents are strictly forbidden from adding horizontal navigation tabs back into the top bar (`.workspace-topbar`). The top bar is reserved exclusively for mobile menu trigger, contextual page breadcrumb, and global utilities (streak, UI language, light/dark toggle, install, account).
+   - Remove redundant jump links and legacy hidden DOM duplicates—each navigation action has one authoritative location.
 
 ### Independent Dual-Pane Studio Scrolling Law (Strict Invariant)
 
@@ -89,8 +106,8 @@
 ### Theater Mode Under-Video Controller Symmetry Law
 
 - In Theater mode (`data-layout="theater"` / `data-layout="focus"`), `.deck-controls-stack` MUST format as a 2-column balanced grid (`display: grid; grid-template-columns: 1fr 1fr; gap: 12px;`) to completely eliminate all blank void space beneath the video stage.
-- Row 1: `Master Transport` (Col 1) and `Sentence Flow` (Col 2).
-- Row 2: `Playback Speed` (Col 1) and `Voice Comparison` (Col 2).
+- Row 1: `Master Transport` (Col 1) and `Playback Speed` (Col 2).
+- Row 2: `Voice Comparison` (Col 1) and `Sentence Flow` (Col 2).
 - Row 3: `Language Console` (`.translation-deck-panel`) spanning full width (`grid-column: 1 / -1`).
 - Row 4: `Shortcuts Strip` (`.shortcuts-strip`) spanning full width (`grid-column: 1 / -1`).
 - Future AI agents must never collapse controls into a single left-aligned column with an empty right-hand void in Theater mode.

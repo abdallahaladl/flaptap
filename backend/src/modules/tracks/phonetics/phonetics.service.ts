@@ -76,49 +76,21 @@ export class PhoneticsService {
 
     const systemPrompt = [
       'You are a master phonetician and American English pronunciation coach.',
-      'Design a physically actionable spoken articulatory workout (IPA, tongue placement, jaw height, voicing, airflow, linking).',
-      'Every top-level field in the requested JSON schema (title, accentProfile, cefrLevel, pacingWpm, summary, focusTips, sentences, connectedSpeech, expressions, vocabulary) is MANDATORY and must be populated with non-empty arrays.',
-      'Return ONLY a single valid JSON object with no markdown fences and no commentary.',
+      'Design an articulatory workout (5-7 natural drill sentences, 7-16 words each ending with proper punctuation, no emojis/markdown).',
+      'Every exactPhrase, phrase, and term MUST appear verbatim inside its referenced 1-based sentenceIndex.',
+      'MANDATORY: Include 4-6 connectedSpeech, 3-5 expressions, and 4-6 vocabulary items (never omit any array).',
+      'Keep fields crisp: summary 1-2 short sentences, mechanics <=12 words, usageNote <=12 words, definition <=10 words.',
+      'Output ONLY compact single-line JSON:',
+      '{"title":"3-6 word title","accentProfile":"articulatory focus","cefrLevel":"C1","pacingWpm":130,"summary":"concise summary","focusTips":["tip 1","tip 2"],"sentences":["Drill 1.","Drill 2."],"connectedSpeech":[{"exactPhrase":"verbatim target phrase","spokenIpa":"/IPA/","phenomenon":"mechanism","mechanics":"<=12 words tongue/jaw cue","sentenceIndex":1}],"expressions":[{"phrase":"verbatim phrase","meaning":"<=10 words","register":"Conversational","usageNote":"<=12 words","sentenceIndex":1}],"vocabulary":[{"term":"verbatim word","ipa":"/IPA/","partOfSpeech":"word class","definition":"<=10 words","sentenceIndex":1}]}',
     ].join('\n');
 
-    const userPrompt = [
-      `Create an American English pronunciation workout targeting: "${cleanTopic}"`,
-      '',
-      'Return strictly this JSON schema (all keys required):',
-      '{',
-      '  "title": "Clean editorial workout title (3-6 words, no emojis)",',
-      '  "accentProfile": "Articulatory focus label, e.g. Alveolar Flap-T & Rhotic Linking",',
-      '  "cefrLevel": "C1",',
-      '  "pacingWpm": 130,',
-      '  "summary": "2 concise sentences explaining the physical mouth mechanics trained in this workout.",',
-      '  "focusTips": ["Physical tongue/jaw tip 1", "Airflow/rhythm tip 2"],',
-      '  "sentences": [',
-      '    "Complete natural spoken drill sentence 1 rich in the target sound.",',
-      '    "Complete natural spoken drill sentence 2 rich in the target sound."',
-      '  ],',
-      '  "connectedSpeech": [',
-      '    { "exactPhrase": "exact target phrase from sentence", "spokenIpa": "/General American IPA/", "phenomenon": "specific articulatory mechanism", "mechanics": "exact tongue, jaw, and vocal fold instruction", "sentenceIndex": 1 }',
-      '  ],',
-      '  "expressions": [',
-      '    { "phrase": "exact natural phrase from sentences", "meaning": "meaning in context", "register": "Conversational", "usageNote": "prosody and stress pattern", "sentenceIndex": 1 }',
-      '  ],',
-      '  "vocabulary": [',
-      '    { "term": "exact target word from sentences", "ipa": "/IPA/", "partOfSpeech": "word class", "definition": "meaning & phonetic value", "sentenceIndex": 1 }',
-      '  ]',
-      '}',
-      '',
-      'Rules:',
-      '1. Write 5 to 7 complete, natural spoken English drill sentences (each 7 to 16 words) ending with proper punctuation.',
-      '2. Every exactPhrase, phrase, and term MUST appear verbatim inside the referenced sentenceIndex (1-based).',
-      '3. MUST include 4-6 items in connectedSpeech, 3-5 items in expressions, and 4-6 items in vocabulary (never omit any of these three arrays).',
-      '4. Never include emojis or markdown.',
-    ].join('\n');
+    const userPrompt = `Create an American English pronunciation workout targeting: "${cleanTopic}". Compact JSON only.`;
 
     const startedAt = Date.now();
     const payload = await this.ai.chatJson<PhoneticsWorkoutPayload>(systemPrompt, userPrompt, {
-      temperature: 0.45,
-      maxTokens: 3500,
-      timeoutMs: 45000,
+      temperature: 0.4,
+      maxTokens: 2200,
+      timeoutMs: 30000,
       json: true,
     });
 

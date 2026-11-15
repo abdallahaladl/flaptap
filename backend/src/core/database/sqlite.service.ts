@@ -75,17 +75,6 @@ export class SqliteService implements OnModuleDestroy {
 
       CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id);
 
-      CREATE TABLE IF NOT EXISTS oauth_states (
-        state TEXT PRIMARY KEY,
-        code_verifier TEXT NOT NULL,
-        return_to TEXT NOT NULL DEFAULT '/',
-        mode TEXT NOT NULL DEFAULT 'popup',
-        ui_language TEXT NOT NULL DEFAULT 'en',
-        native_language TEXT NOT NULL DEFAULT 'ar',
-        expires_at TEXT NOT NULL,
-        created_at TEXT NOT NULL
-      );
-
       CREATE TABLE IF NOT EXISTS lessons (
         id TEXT PRIMARY KEY,
         user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
@@ -104,6 +93,7 @@ export class SqliteService implements OnModuleDestroy {
         sentences_count INTEGER NOT NULL DEFAULT 0,
         chunks_count INTEGER NOT NULL DEFAULT 0,
         completed_drills INTEGER NOT NULL DEFAULT 0,
+        is_completed INTEGER NOT NULL DEFAULT 0,
         study_notes TEXT NOT NULL DEFAULT '',
         analysis_status TEXT NOT NULL DEFAULT 'pending',
         cached_langs TEXT NOT NULL DEFAULT '',
@@ -128,10 +118,12 @@ export class SqliteService implements OnModuleDestroy {
         ipa TEXT NOT NULL DEFAULT '',
         part_of_speech TEXT NOT NULL DEFAULT '',
         definition TEXT NOT NULL,
+        general_translation TEXT NOT NULL DEFAULT '',
         translation TEXT NOT NULL DEFAULT '',
         context_sentence TEXT NOT NULL DEFAULT '',
         timestamp_sec REAL NOT NULL DEFAULT 0,
         mastery_level INTEGER NOT NULL DEFAULT 0,
+        is_completed INTEGER NOT NULL DEFAULT 0,
         next_review_at TEXT NOT NULL,
         created_at TEXT NOT NULL
       );
@@ -152,9 +144,131 @@ export class SqliteService implements OnModuleDestroy {
 
       CREATE INDEX IF NOT EXISTS idx_practice_user_date ON practice_logs(user_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_practice_guest_date ON practice_logs(guest_token, created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS tech_linguist_extractions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+        guest_token TEXT,
+        extraction_mode TEXT NOT NULL DEFAULT 'comprehensive',
+        title TEXT NOT NULL,
+        creator TEXT NOT NULL DEFAULT '',
+        summary TEXT NOT NULL DEFAULT '',
+        source_url TEXT NOT NULL,
+        agent_id TEXT NOT NULL,
+        agent_name TEXT NOT NULL,
+        model_name TEXT NOT NULL,
+        reasoning_level TEXT NOT NULL,
+        execution_time_ms INTEGER NOT NULL DEFAULT 0,
+        vocab_count INTEGER NOT NULL DEFAULT 0,
+        idioms_count INTEGER NOT NULL DEFAULT 0,
+        patterns_count INTEGER NOT NULL DEFAULT 0,
+        vocab_items_json TEXT NOT NULL DEFAULT '[]',
+        idiom_items_json TEXT NOT NULL DEFAULT '[]',
+        patterns_json TEXT NOT NULL DEFAULT '[]',
+        full_transcript TEXT NOT NULL DEFAULT '',
+        is_completed INTEGER NOT NULL DEFAULT 0,
+        completion_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_tech_linguist_user ON tech_linguist_extractions(user_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_tech_linguist_guest ON tech_linguist_extractions(guest_token, created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS learning_library_batches (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        domain_id TEXT NOT NULL,
+        category_filter TEXT NOT NULL DEFAULT 'all',
+        focus_topic TEXT NOT NULL DEFAULT '',
+        requested_count INTEGER NOT NULL DEFAULT 8,
+        generated_count INTEGER NOT NULL DEFAULT 0,
+        skipped_duplicates_count INTEGER NOT NULL DEFAULT 0,
+        agent_id TEXT NOT NULL,
+        agent_name TEXT NOT NULL,
+        model_name TEXT NOT NULL,
+        variant_name TEXT NOT NULL DEFAULT '',
+        execution_time_ms INTEGER NOT NULL DEFAULT 0,
+        fallback_from TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ll_batches_user_created
+        ON learning_library_batches(user_id, domain_id, created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS learning_library_items (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        batch_id TEXT REFERENCES learning_library_batches(id) ON DELETE SET NULL,
+        domain_id TEXT NOT NULL,
+        category_id TEXT NOT NULL,
+        category_label TEXT NOT NULL,
+        expression TEXT NOT NULL,
+        canonical_key TEXT NOT NULL,
+        slug_key TEXT NOT NULL,
+        token_signature TEXT NOT NULL DEFAULT '',
+        register TEXT NOT NULL DEFAULT '',
+        tone TEXT NOT NULL DEFAULT '',
+        level TEXT NOT NULL DEFAULT '',
+        ipa TEXT NOT NULL DEFAULT '',
+        spoken_form TEXT NOT NULL DEFAULT '',
+        phonetic_breakdown TEXT NOT NULL DEFAULT '',
+        core_meaning TEXT NOT NULL,
+        localized_meaning TEXT NOT NULL DEFAULT '',
+        target_language TEXT NOT NULL DEFAULT 'ar',
+        textbook_equivalent TEXT NOT NULL DEFAULT '',
+        native_context TEXT NOT NULL DEFAULT '',
+        mistakes_to_avoid TEXT NOT NULL DEFAULT '',
+        variations_json TEXT NOT NULL DEFAULT '[]',
+        combinations_json TEXT NOT NULL DEFAULT '[]',
+        usage_patterns_json TEXT NOT NULL DEFAULT '[]',
+        examples_json TEXT NOT NULL DEFAULT '[]',
+        related_json TEXT NOT NULL DEFAULT '[]',
+        search_blob TEXT NOT NULL DEFAULT '',
+        is_favorite INTEGER NOT NULL DEFAULT 0,
+        is_completed INTEGER NOT NULL DEFAULT 0,
+        mastery_status TEXT NOT NULL DEFAULT 'new',
+        review_count INTEGER NOT NULL DEFAULT 0,
+        user_notes TEXT NOT NULL DEFAULT '',
+        agent_name TEXT NOT NULL DEFAULT '',
+        model_name TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_ll_items_unique_canonical
+        ON learning_library_items(user_id, domain_id, canonical_key);
+      CREATE INDEX IF NOT EXISTS idx_ll_items_slug
+        ON learning_library_items(user_id, domain_id, slug_key);
+      CREATE INDEX IF NOT EXISTS idx_ll_items_user_domain_cat
+        ON learning_library_items(user_id, domain_id, category_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_ll_items_user_mastery
+        ON learning_library_items(user_id, domain_id, mastery_status, is_favorite);
+
+      CREATE TABLE IF NOT EXISTS user_ai_keys (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        provider_id TEXT NOT NULL,
+        label TEXT NOT NULL DEFAULT '',
+        encrypted_key TEXT NOT NULL,
+        key_mask TEXT NOT NULL,
+        key_fingerprint TEXT NOT NULL,
+        base_url TEXT NOT NULL DEFAULT '',
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_user_ai_keys_user
+        ON user_ai_keys(user_id, created_at DESC);
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_user_ai_keys_unique_fp
+        ON user_ai_keys(user_id, key_fingerprint);
     `);
 
     // Idempotent schema migrations for pre-existing databases
+    this.ensureColumn('vocabulary_items', 'general_translation', "TEXT NOT NULL DEFAULT ''");
+    this.ensureColumn('tech_linguist_extractions', 'extraction_mode', "TEXT NOT NULL DEFAULT 'comprehensive'");
+    this.ensureColumn('tech_linguist_extractions', 'creator', "TEXT NOT NULL DEFAULT ''");
+    this.ensureColumn('tech_linguist_extractions', 'summary', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('users', 'google_sub', 'TEXT');
     this.ensureColumn('users', 'avatar_url', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('users', 'auth_provider', "TEXT NOT NULL DEFAULT 'email'");
@@ -169,6 +283,11 @@ export class SqliteService implements OnModuleDestroy {
 
     this.ensureColumn('lessons', 'cached_langs', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('lessons', 'ai_insights_count', 'INTEGER NOT NULL DEFAULT 0');
+    this.ensureColumn('lessons', 'is_completed', 'INTEGER NOT NULL DEFAULT 0');
+    this.ensureColumn('vocabulary_items', 'is_completed', 'INTEGER NOT NULL DEFAULT 0');
+    this.ensureColumn('learning_library_items', 'is_completed', 'INTEGER NOT NULL DEFAULT 0');
+    this.ensureColumn('tech_linguist_extractions', 'is_completed', 'INTEGER NOT NULL DEFAULT 0');
+    this.ensureColumn('tech_linguist_extractions', 'completion_json', "TEXT NOT NULL DEFAULT '{}'");
 
     this.db.exec(`
       CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub

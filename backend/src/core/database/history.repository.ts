@@ -50,6 +50,8 @@ export interface ExpressionEntry {
   meaning: string;
   register: string;
   usageNote: string;
+  /** General American IPA for the phrase, when the analysis model supplies it. */
+  ipa?: string;
   sentenceIndex: number;
 }
 
@@ -59,6 +61,20 @@ export interface VocabularyCoachEntry {
   partOfSpeech: string;
   definition: string;
   sentenceIndex: number;
+}
+
+/**
+ * Model-authored localized meanings for every AI Coach item, keyed by language
+ * code and tied to the analysis version that produced them.
+ */
+export interface CoachGlossBundle {
+  language: string;
+  engineVersion: number;
+  analysisStamp: string;
+  aiModel: string;
+  updatedAt: string;
+  /** `<kind>:<arrayIndex>` -> localized gloss for that Coach card. */
+  entries: Record<string, string>;
 }
 
 export interface AiCoachAnalysis {
@@ -105,6 +121,7 @@ export interface HistoryItem {
   chunksCount: number;
   analysisStatus?: 'pending' | 'ready';
   aiAnalysis?: AiCoachAnalysis;
+  coachGlosses?: Record<string, CoachGlossBundle>;
   stats: {
     totalWords: number;
     sentencesCount: number;
@@ -125,11 +142,35 @@ export interface HistoryItem {
   createdAt: string;
   updatedAt?: string;
   completedDrills: number;
+  isCompleted?: boolean;
+  completionProgress?: LessonCompletionProgress;
+}
+
+export type LessonCompletionSubject =
+  | 'sentences'
+  | 'paragraphs'
+  | 'listen'
+  | 'coachConnected'
+  | 'coachExpressions'
+  | 'coachVocabulary';
+
+export interface LessonCompletionProgress {
+  sentences?: number[];
+  paragraphs?: number[];
+  listen?: number[];
+  coachConnected?: number[];
+  coachExpressions?: number[];
+  coachVocabulary?: number[];
 }
 
 export type HistorySummary = Omit<
   HistoryItem,
-  'chunks' | 'sentences' | 'noteMarkdown' | 'translationsCache' | 'aiAnalysis'
+  | 'chunks'
+  | 'sentences'
+  | 'noteMarkdown'
+  | 'translationsCache'
+  | 'aiAnalysis'
+  | 'completionProgress'
 >;
 
 export type CacheClearScope = 'all' | 'coach' | 'translations' | 'transcript';
@@ -306,6 +347,11 @@ export class HistoryRepository {
       payload.userId = row.user_id ? String(row.user_id) : null;
       payload.guestToken = row.guest_token ? String(row.guest_token) : null;
       payload.completedDrills = Number(row.completed_drills ?? payload.completedDrills ?? 0);
+      payload.isCompleted = Boolean(row.is_completed ?? payload.isCompleted);
+      payload.completionProgress =
+        payload.completionProgress && typeof payload.completionProgress === 'object'
+          ? payload.completionProgress
+          : {};
       payload.studyNotes = String(row.study_notes ?? payload.studyNotes ?? '');
       payload.analysisStatus = (row.analysis_status as 'pending' | 'ready') || payload.analysisStatus || 'pending';
       payload.cefrLevel = String(row.cefr_level ?? payload.cefrLevel ?? '');
@@ -368,9 +414,9 @@ export class HistoryRepository {
         INSERT INTO lessons (
           id, user_id, guest_token, track, video_id, source_url, title, creator,
           thumbnail_url, accent_dialect, duration_seconds, pacing_wpm, difficulty,
-          cefr_level, sentences_count, chunks_count, completed_drills, study_notes,
+          cefr_level, sentences_count, chunks_count, completed_drills, is_completed, study_notes,
           analysis_status, cached_langs, ai_insights_count, payload_json, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           user_id = COALESCE(excluded.user_id, lessons.user_id),
           guest_token = CASE WHEN COALESCE(excluded.user_id, lessons.user_id) IS NOT NULL THEN NULL ELSE COALESCE(excluded.guest_token, lessons.guest_token) END,
@@ -388,6 +434,7 @@ export class HistoryRepository {
           sentences_count = excluded.sentences_count,
           chunks_count = excluded.chunks_count,
           completed_drills = excluded.completed_drills,
+          is_completed = excluded.is_completed,
           study_notes = excluded.study_notes,
           analysis_status = excluded.analysis_status,
           cached_langs = excluded.cached_langs,
@@ -413,6 +460,7 @@ export class HistoryRepository {
         sentencesCount,
         chunksCount,
         Number(item.completedDrills) || 0,
+        item.isCompleted ? 1 : 0,
         item.studyNotes || '',
         analysisStatus,
         cachedLangs,
@@ -435,7 +483,7 @@ export class HistoryRepository {
       SELECT
         id, user_id, guest_token, track, video_id, source_url, title, creator,
         thumbnail_url, accent_dialect, duration_seconds, pacing_wpm, difficulty,
-        cefr_level, sentences_count, chunks_count, completed_drills, study_notes,
+        cefr_level, sentences_count, chunks_count, completed_drills, is_completed, study_notes,
         analysis_status, cached_langs, ai_insights_count,
         LENGTH(payload_json) AS payload_bytes,
         created_at, updated_at
@@ -503,6 +551,7 @@ export class HistoryRepository {
         createdAt: String(row.created_at),
         updatedAt: String(row.updated_at),
         completedDrills: Number(row.completed_drills) || 0,
+        isCompleted: Boolean(row.is_completed),
       };
     });
   }
@@ -562,6 +611,9 @@ export class HistoryRepository {
       }
       if (!item.translationsCache && existing.translationsCache) {
         item.translationsCache = existing.translationsCache;
+      }
+      if (!item.coachGlosses && existing.coachGlosses) {
+        item.coachGlosses = existing.coachGlosses;
       }
       this.insertOrReplaceRow(item, scope);
       this.logger.log(`Updated lesson in SQLite: ${item.title} (${item.id})`);
@@ -647,8 +699,14 @@ export class HistoryRepository {
 
     if (cacheScope === 'coach' || cacheScope === 'all') {
       delete item.aiAnalysis;
+      delete item.coachGlosses;
       item.analysisStatus = 'pending';
       item.cefrLevel = '';
+      if (item.completionProgress) {
+        delete item.completionProgress.coachConnected;
+        delete item.completionProgress.coachExpressions;
+        delete item.completionProgress.coachVocabulary;
+      }
       item.sentences = (item.sentences || []).map((s) => ({
         ...s,
         highlightedHtml: escapeTranscriptHtml(s.text),
@@ -709,6 +767,8 @@ export class HistoryRepository {
     if (!item) return undefined;
 
     item.completedDrills = 0;
+    item.isCompleted = false;
+    item.completionProgress = {};
     if (options.clearNotes) {
       item.studyNotes = '';
     }
@@ -729,6 +789,61 @@ export class HistoryRepository {
     }
 
     return this.findSummaries(undefined, scope).find((s) => s.id === id);
+  }
+
+  setLessonCompleted(
+    id: string,
+    isCompleted: boolean,
+    scope?: RequestIdentityScope,
+  ): HistorySummary | undefined {
+    const item = this.findById(id, scope);
+    if (!item) return undefined;
+
+    item.isCompleted = Boolean(isCompleted);
+    this.insertOrReplaceRow(item, scope);
+    return this.findSummaries(undefined, scope).find((s) => s.id === id);
+  }
+
+  setLessonItemCompletion(
+    id: string,
+    subject: LessonCompletionSubject,
+    index: number,
+    completed: boolean,
+    scope?: RequestIdentityScope,
+  ):
+    | {
+        id: string;
+        subject: LessonCompletionSubject;
+        completionProgress: LessonCompletionProgress;
+      }
+    | undefined {
+    const item = this.findById(id, scope);
+    if (!item) return undefined;
+
+    const progress: LessonCompletionProgress = { ...(item.completionProgress || {}) };
+    const existing = new Set<number>(
+      Array.isArray(progress[subject])
+        ? progress[subject]!
+            .map((n) => Number(n))
+            .filter((n) => Number.isInteger(n) && n >= 0)
+        : [],
+    );
+
+    if (completed) {
+      existing.add(index);
+    } else {
+      existing.delete(index);
+    }
+
+    progress[subject] = Array.from(existing).sort((a, b) => a - b);
+    item.completionProgress = progress;
+    this.insertOrReplaceRow(item, scope);
+
+    return {
+      id: item.id,
+      subject,
+      completionProgress: item.completionProgress,
+    };
   }
 
   bulkManage(

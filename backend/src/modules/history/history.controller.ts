@@ -6,13 +6,18 @@ import {
   Get,
   NotFoundException,
   Param,
+  Patch,
   Post,
   Put,
   Query,
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { CacheClearScope, HistoryRepository } from '../../core/database/history.repository';
+import {
+  CacheClearScope,
+  HistoryRepository,
+  LessonCompletionSubject,
+} from '../../core/database/history.repository';
 import { AuthService } from '../auth/auth.service';
 import { requireAuthenticatedUser } from '../auth/auth.request';
 
@@ -133,6 +138,69 @@ export class HistoryController {
       id: updated.id,
       studyNotes: updated.studyNotes,
       noteMarkdown: updated.noteMarkdown,
+    };
+  }
+
+  @Patch(':id/complete')
+  setLessonCompleted(
+    @Param('id') id: string,
+    @Body() body: { completed?: boolean },
+    @Req() req: Request,
+  ) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    if (typeof body?.completed !== 'boolean') {
+      throw new BadRequestException('Field "completed" must be a boolean.');
+    }
+    const summary = this.historyRepo.setLessonCompleted(id, body.completed, identity);
+    if (!summary) throw new NotFoundException(`Lesson "${id}" not found`);
+    return {
+      success: true,
+      isCompleted: Boolean(summary.isCompleted),
+      item: summary,
+    };
+  }
+
+  @Patch(':id/item-completion')
+  setLessonItemCompletion(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      subject?: LessonCompletionSubject;
+      index?: number;
+      completed?: boolean;
+    },
+    @Req() req: Request,
+  ) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    const validSubjects: LessonCompletionSubject[] = [
+      'sentences',
+      'paragraphs',
+      'listen',
+      'coachConnected',
+      'coachExpressions',
+      'coachVocabulary',
+    ];
+    if (!body?.subject || !validSubjects.includes(body.subject)) {
+      throw new BadRequestException('Invalid completion subject.');
+    }
+    const idx = Number(body.index);
+    if (!Number.isInteger(idx) || idx < 0) {
+      throw new BadRequestException('Field "index" must be a non-negative integer.');
+    }
+    if (typeof body.completed !== 'boolean') {
+      throw new BadRequestException('Field "completed" must be a boolean.');
+    }
+    const updated = this.historyRepo.setLessonItemCompletion(
+      id,
+      body.subject,
+      idx,
+      body.completed,
+      identity,
+    );
+    if (!updated) throw new NotFoundException(`Lesson "${id}" not found`);
+    return {
+      success: true,
+      ...updated,
     };
   }
 

@@ -4,7 +4,7 @@ import { DEFAULT_LANGUAGE, getLanguage } from '../../../core/ai/languages';
 import { HistoryRepository, HistoryItem } from '../../../core/database/history.repository';
 
 const BATCH_SIZE = 20;
-const MAX_PARALLEL_BATCHES = 2;
+const MAX_PARALLEL_BATCHES = 4;
 
 export interface TranslationResponse {
   success: boolean;
@@ -246,44 +246,24 @@ export class ShadowingTranslationService {
 
     const isArabic = language.code === 'ar';
     const systemPrompt = [
-      `You are an elite audiovisual subtitle translator and localization specialist working into ${language.name} (${language.native}).`,
-      `You specialize in translating real spoken dialogue and video transcripts into natural, fluid, and authentic ${language.name} subtitles according to professional streaming standards (e.g. Netflix Timed Text guidelines).`,
-      '',
-      '### Audiovisual Subtitle Translation Rules:',
-      `1. COMMUNICATIVE INTENT OVER LITERAL WORDS: Subtitles represent real spoken dialogue. Always translate the speaker's intended meaning, emotion, and pragmatic nuance. NEVER translate word-for-word or produce wooden textbook calques.`,
-      '2. CONTEXTUAL & PRAGMATIC EQUIVALENCE:',
-      '   - Translate phrasal verbs, idioms, spoken colloquialisms, and discourse markers by their actual communicative meaning in the scene (e.g. "cut it out", "hang on", "no way", "cranked it", "blew me away", "called it off").',
-      '   - Use the surrounding dialogue context to accurately resolve pronoun antecedents (who/what "it", "they", "he", "she", "this" refers to), tense, and speaker intent.',
-      `3. NATURAL TARGET-LANGUAGE REGISTER: Write natural, idiomatic ${language.name} that sounds authentic when spoken aloud and is effortless to read on screen at normal viewing speed.`,
+      `You are an elite audiovisual subtitle translator working into ${language.name} (${language.native}).`,
+      'RULES:',
+      '1. COMMUNICATIVE INTENT: Translate natural spoken intent, idioms, and phrasal verbs contextually (never wooden word-for-word calques); resolve pronouns from surrounding dialogue.',
       ...(isArabic
         ? [
-            '   - In Arabic: Use clear, natural Contemporary Standard Arabic (فصحى معاصرة). Prefer active, fluent phrasing over stiff, bureaucratic calques (avoid clumsy passive calques like overusing "تم ... من قِبل" or "قام بـ"). Match grammatical gender, dual/plural forms, and verb conjugations accurately based on who is speaking and who is addressed in the dialogue context.',
+            '2. ARABIC STYLE: Clear Contemporary Standard Arabic (فصحى معاصرة), active fluent phrasing (avoid passive calques like "تم ... من قِبل"), matching speaker/addressee gender & number.',
           ]
         : []),
-      '4. PRESERVE TECHNICAL TERMS & PROPER NOUNS IN ORIGINAL LATIN SCRIPT:',
-      '   - Keep personal names, brands, companies, products, apps, URLs, file paths, and titles in their original Latin spelling.',
-      '   - Keep software, tech, and engineering terms, programming languages, commands, and acronyms (e.g. AI, API, LLM, GPU, Docker, React, CSS) in Latin script when the target language has no universally accepted native everyday equivalent.',
-      '   - Numbers, standard units, and mathematical symbols remain as numbers/units.',
-      '5. PUNCTUATION & FORMATTING:',
-      '   - Output clean subtitle text without explanatory parentheticals, translator notes, or added editorial commentary.',
-      '   - Do not enclose preserved Latin terms in quotes or brackets unless the original speech did.',
-      '6. STRICT OUTPUT CONTRACT:',
-      '   - Return ONLY a valid JSON object matching this schema:',
-      '     {"translations": {"<sentence_id>": "<translated_text>"}}',
-      '   - Translate ONLY the requested target sentences. Do not translate the surrounding reference context lines.',
-      '   - Every value must be a single plain string containing that sentence\'s subtitle.',
+      '3. PRESERVE LATIN TERMS: Keep proper nouns, brands, URLs, numbers, and tech/dev terms & acronyms (AI, API, LLM, GPU, Docker, React, CSS) in Latin script without added quotes/brackets.',
+      '4. OUTPUT: Compact JSON only (no translator notes, no context lines): {"translations":{"<id>":"<subtitle>"}}',
     ].join('\n');
 
     const contextLines: string[] = [
-      '### Video Overview',
-      `- Title: ${item.title || 'Untitled'}`,
-      `- Creator / Channel: ${item.creator || 'Unknown'}`,
-      `- Source Language: English (spoken YouTube dialogue)`,
-      `- Target Language: ${language.name} (${language.native})`,
+      `Title: ${item.title || 'Untitled'} | Creator: ${item.creator || 'Unknown'} | Target: ${language.name} (${language.native})`,
     ];
 
     if (item.aiAnalysis?.overview?.summary) {
-      contextLines.push(`- Topic & Context: ${item.aiAnalysis.overview.summary}`);
+      contextLines.push(`Topic: ${item.aiAnalysis.overview.summary}`);
     }
 
     const allSentences = (item.sentences || [])
@@ -297,17 +277,16 @@ export class ShadowingTranslationService {
 
     contextLines.push(
       '',
-      '### Target Sentences to Translate',
-      'Translate the following sentences into natural subtitles. Preserve the numeric ID keys exactly in the JSON output:',
-      JSON.stringify(source, null, 2),
+      'Target Sentences (preserve exact numeric keys):',
+      JSON.stringify(source),
     );
 
     const context = contextLines.join('\n');
 
     const data = await this.ai.chatJson<Record<string, any>>(systemPrompt, context, {
       temperature: 0.15,
-      maxTokens: Math.min(6000, 800 + batch.length * 220),
-      timeoutMs: 60000,
+      maxTokens: Math.min(4800, 500 + batch.length * 160),
+      timeoutMs: 32000,
       json: true,
     });
 

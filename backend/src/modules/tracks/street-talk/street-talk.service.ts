@@ -76,50 +76,21 @@ export class StreetTalkService {
 
     const systemPrompt = [
       'You are an expert American English dialogue writer, applied linguist, and prosody coach.',
-      'Author a natural, realistic spoken American English dialogue for the requested real-life scenario.',
-      'Every top-level field in the requested JSON schema (title, speakerStyle, cefrLevel, pacingWpm, summary, focusTips, sentences, connectedSpeech, expressions, vocabulary) is MANDATORY and must be populated with non-empty arrays.',
-      'CRITICAL: You MUST include 4 to 6 items in "connectedSpeech", 4 to 6 items in "expressions", and 4 to 6 items in "vocabulary". NEVER return empty arrays for any of these fields.',
-      'Return ONLY a single valid JSON object with no markdown fences and no commentary.',
+      'Author a natural, realistic spoken American English dialogue (6-8 sentences, 7-18 words each, ending with . ? !, no speaker labels or emojis).',
+      'Every exactPhrase, phrase, and term MUST appear verbatim inside its referenced 1-based sentenceIndex.',
+      'MANDATORY: Populate 4-6 connectedSpeech, 4-6 expressions, and 4-6 vocabulary items (never empty).',
+      'Keep fields crisp: summary 1-2 short sentences, mechanics <=12 words, usageNote <=12 words, definition <=10 words.',
+      'Output ONLY compact single-line JSON (no markdown fences, no pretty-print whitespace):',
+      '{"title":"3-6 word title","speakerStyle":"cadence label","cefrLevel":"B2","pacingWpm":165,"summary":"concise summary","focusTips":["tip 1","tip 2"],"sentences":["Sentence 1.","Sentence 2."],"connectedSpeech":[{"exactPhrase":"2-4 word verbatim substring","spokenIpa":"/IPA/","phenomenon":"Flap-T | Linking | Schwa Reduction","mechanics":"<=12 words","sentenceIndex":1}],"expressions":[{"phrase":"verbatim idiom/phrasal","meaning":"<=10 words","register":"Conversational","usageNote":"<=12 words","sentenceIndex":1}],"vocabulary":[{"term":"verbatim word","ipa":"/IPA/","partOfSpeech":"verb","definition":"<=10 words","sentenceIndex":1}]}',
     ].join('\n');
 
-    const userPrompt = [
-      `Create an interactive spoken American English dialogue lesson for: "${cleanScenario}"`,
-      '',
-      'Return strictly this JSON schema (all keys required):',
-      '{',
-      '  "title": "Clean editorial title (3-6 words, no emojis)",',
-      '  "speakerStyle": "Short cadence description, e.g. Natural Workplace Conversational",',
-      '  "cefrLevel": "B2",',
-      '  "pacingWpm": 165,',
-      '  "summary": "2 concise sentences explaining the situation and communicative goal.",',
-      '  "focusTips": ["Actionable delivery tip 1", "Actionable rhythm/linking tip 2"],',
-      '  "sentences": [',
-      '    "Complete natural spoken English sentence 1 without speaker labels or quotes.",',
-      '    "Complete natural spoken English sentence 2 without speaker labels or quotes."',
-      '  ],',
-      '  "connectedSpeech": [',
-      '    { "exactPhrase": "exact 2-4 word substring from sentences", "spokenIpa": "/IPA/", "phenomenon": "Flap-T / Linking / Schwa Reduction", "mechanics": "mouth & tongue placement", "sentenceIndex": 1 }',
-      '  ],',
-      '  "expressions": [',
-      '    { "phrase": "exact idiom, phrasal verb, or expression from sentences", "meaning": "plain meaning", "register": "Conversational", "usageNote": "when and how Americans use it", "sentenceIndex": 1 }',
-      '  ],',
-      '  "vocabulary": [',
-      '    { "term": "exact word/term from sentences", "ipa": "/IPA/", "partOfSpeech": "verb", "definition": "contextual meaning", "sentenceIndex": 1 }',
-      '  ]',
-      '}',
-      '',
-      'Rules:',
-      '1. Author 6 to 8 complete spoken sentences (each 7 to 18 words). Every sentence must end with proper punctuation (. ? !).',
-      '2. Every exactPhrase, phrase, and term MUST appear verbatim inside the referenced sentenceIndex (1-based).',
-      '3. MANDATORY: Include 4-6 items in connectedSpeech (Flap-T, consonant linking, schwa reduction, elision), 4-6 items in expressions, and 4-6 items in vocabulary. NEVER return empty arrays.',
-      '4. Never include emojis, stage directions, or speaker prefixes like "Speaker A:".',
-    ].join('\n');
+    const userPrompt = `Create an interactive spoken American English dialogue lesson for: "${cleanScenario}". Compact JSON only.`;
 
     const startedAt = Date.now();
     const payload = await this.ai.chatJson<DialoguePayload>(systemPrompt, userPrompt, {
       temperature: 0.25,
-      maxTokens: 3500,
-      timeoutMs: 45000,
+      maxTokens: 2200,
+      timeoutMs: 30000,
       json: true,
     });
 
@@ -248,72 +219,69 @@ export class StreetTalkService {
         }),
     };
 
-    if (aiAnalysis.connectedSpeech.length === 0) {
-      try {
-        const numberedLines = sentences.map((s) => `[${s.index}] ${s.text}`).join('\n');
-        const secondary = await this.ai.chatJson<{
-          connectedSpeech: Array<{
-            exactPhrase: string;
-            spokenIpa: string;
-            phenomenon: string;
-            mechanics: string;
-            sentenceIndex: number;
-          }>;
-        }>(
-          'You are an expert American English phonetician and prosody coach. Return ONLY a single valid JSON object with a "connectedSpeech" array.',
-          `Extract 4 to 6 real American connected speech phenomena (e.g. Flap-T, linking, vowel reduction, elision) from these sentences:\n${numberedLines}\n\nReturn strictly JSON: { "connectedSpeech": [{ "exactPhrase": "verbatim substring from sentences", "spokenIpa": "/IPA/", "phenomenon": "e.g. Flap-T & Linking", "mechanics": "mouth instructions", "sentenceIndex": 1 }] }`,
-          { temperature: 0.2, maxTokens: 1500, timeoutMs: 25000, json: true },
-        );
-        const secondaryConn = ((secondary?.connectedSpeech || (secondary as any)?.connected_speech || []) as any[]);
-        if (Array.isArray(secondaryConn) && secondaryConn.length > 0) {
-          aiAnalysis.connectedSpeech = secondaryConn
-            .filter((c) => Boolean(c?.exactPhrase || c?.phrase || c?.exact_phrase))
-            .map((c) => {
-              const phrase = String(c.exactPhrase || c.phrase || c.exact_phrase || '').trim();
-              return {
-                exactPhrase: phrase,
-                spokenIpa: c.spokenIpa || c.spoken_ipa || c.ipa || '',
-                phenomenon: c.phenomenon || 'Connected Speech',
-                mechanics: c.mechanics || '',
-                sentenceIndex: locateIndex(phrase, c.sentenceIndex || c.sentence_index),
-              };
-            });
-        }
-      } catch (err: any) {
-        this.logger.warn(`Secondary connected speech extraction fallback failed: ${err?.message}`);
-      }
-    }
+    if (aiAnalysis.connectedSpeech.length === 0 || aiAnalysis.vocabulary.length === 0) {
+      const numberedLines = sentences.map((s) => `[${s.index}] ${s.text}`).join('\n');
+      const fallbackJobs: Array<Promise<void>> = [];
 
-    if (aiAnalysis.vocabulary.length === 0) {
-      try {
-        const numberedLines = sentences.map((s) => `[${s.index}] ${s.text}`).join('\n');
-        const secondary = await this.ai.chatJson<{
-          vocabulary: Array<{
-            term: string;
-            ipa: string;
-            partOfSpeech: string;
-            definition: string;
-            sentenceIndex: number;
-          }>;
-        }>(
-          'You are an expert English vocabulary coach. Extract 4 to 6 key vocabulary words from these sentences. Return ONLY a single valid JSON object.',
-          `Sentences:\n${numberedLines}\n\nReturn strictly JSON: { "vocabulary": [{ "term": "verbatim word from sentences", "ipa": "/IPA/", "partOfSpeech": "noun/verb/adj", "definition": "plain meaning", "sentenceIndex": 1 }] }`,
-          { temperature: 0.2, maxTokens: 1500, timeoutMs: 25000, json: true },
+      if (aiAnalysis.connectedSpeech.length === 0) {
+        fallbackJobs.push(
+          this.ai
+            .chatJson<{ connectedSpeech: any[] }>(
+              'You are an expert American English phonetician. Return ONLY compact JSON.',
+              `Extract 4-6 connected speech items from:\n${numberedLines}\nJSON: {"connectedSpeech":[{"exactPhrase":"verbatim substring","spokenIpa":"/IPA/","phenomenon":"Flap-T & Linking","mechanics":"<=12 words","sentenceIndex":1}]}`,
+              { temperature: 0.2, maxTokens: 1100, timeoutMs: 20000, json: true },
+            )
+            .then((secondary) => {
+              const secondaryConn = secondary?.connectedSpeech || (secondary as any)?.connected_speech || [];
+              if (Array.isArray(secondaryConn) && secondaryConn.length > 0) {
+                aiAnalysis.connectedSpeech = secondaryConn
+                  .filter((c) => Boolean(c?.exactPhrase || c?.phrase || c?.exact_phrase))
+                  .map((c) => {
+                    const phrase = String(c.exactPhrase || c.phrase || c.exact_phrase || '').trim();
+                    return {
+                      exactPhrase: phrase,
+                      spokenIpa: c.spokenIpa || c.spoken_ipa || c.ipa || '',
+                      phenomenon: c.phenomenon || 'Connected Speech',
+                      mechanics: c.mechanics || '',
+                      sentenceIndex: locateIndex(phrase, c.sentenceIndex || c.sentence_index),
+                    };
+                  });
+              }
+            })
+            .catch((err: any) => {
+              this.logger.warn(`Secondary connected speech fallback failed: ${err?.message}`);
+            }),
         );
-        if (Array.isArray(secondary?.vocabulary) && secondary.vocabulary.length > 0) {
-          aiAnalysis.vocabulary = secondary.vocabulary
-            .filter((v) => Boolean(v?.term))
-            .map((v) => ({
-              term: String(v.term).trim(),
-              ipa: v.ipa || '',
-              partOfSpeech: v.partOfSpeech || 'word',
-              definition: v.definition || '',
-              sentenceIndex: locateIndex(v.term, v.sentenceIndex),
-            }));
-        }
-      } catch (err: any) {
-        this.logger.warn(`Secondary vocabulary extraction fallback failed: ${err?.message}`);
       }
+
+      if (aiAnalysis.vocabulary.length === 0) {
+        fallbackJobs.push(
+          this.ai
+            .chatJson<{ vocabulary: any[] }>(
+              'You are an expert English vocabulary coach. Return ONLY compact JSON.',
+              `Extract 4-6 key vocabulary words from:\n${numberedLines}\nJSON: {"vocabulary":[{"term":"verbatim word","ipa":"/IPA/","partOfSpeech":"noun/verb/adj","definition":"<=10 words","sentenceIndex":1}]}`,
+              { temperature: 0.2, maxTokens: 1100, timeoutMs: 20000, json: true },
+            )
+            .then((secondary) => {
+              if (Array.isArray(secondary?.vocabulary) && secondary.vocabulary.length > 0) {
+                aiAnalysis.vocabulary = secondary.vocabulary
+                  .filter((v) => Boolean(v?.term))
+                  .map((v) => ({
+                    term: String(v.term).trim(),
+                    ipa: v.ipa || '',
+                    partOfSpeech: v.partOfSpeech || 'word',
+                    definition: v.definition || '',
+                    sentenceIndex: locateIndex(v.term, v.sentenceIndex),
+                  }));
+              }
+            })
+            .catch((err: any) => {
+              this.logger.warn(`Secondary vocabulary fallback failed: ${err?.message}`);
+            }),
+        );
+      }
+
+      await Promise.all(fallbackJobs);
     }
 
     // Refresh annotations across sentences and paragraphs so highlights reflect finalized analysis

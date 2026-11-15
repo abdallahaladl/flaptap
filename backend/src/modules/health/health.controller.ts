@@ -1,8 +1,6 @@
 import { Controller, Get, Res, HttpStatus } from '@nestjs/common';
 import { Response } from 'express';
 import { execFileSync } from 'child_process';
-import * as fs from 'fs';
-import * as path from 'path';
 import { SqliteService } from '../../core/database/sqlite.service';
 import { getPythonBinaryPath } from '../../core/config/paths';
 
@@ -44,15 +42,6 @@ export class HealthController {
     const isHealthy = sqliteHealthy;
 
     const memory = process.memoryUsage();
-    let publicUrl: string | null = null;
-    try {
-      const urlFile = path.resolve(process.cwd(), 'data/PUBLIC_URL.txt');
-      if (fs.existsSync(urlFile)) {
-        publicUrl = fs.readFileSync(urlFile, 'utf-8').trim() || null;
-      } else if (process.env.DOMAIN && process.env.DOMAIN !== 'flaptap.example.com') {
-        publicUrl = `https://${process.env.DOMAIN.replace(/^https?:\/\//, '')}`;
-      }
-    } catch {}
 
     return {
       healthy: isHealthy,
@@ -60,8 +49,7 @@ export class HealthController {
         status: isHealthy ? 'ok' : 'degraded',
         timestamp: new Date().toISOString(),
         uptime_seconds: Math.floor(process.uptime()),
-        environment: process.env.NODE_ENV || 'production',
-        public_url: publicUrl,
+        environment: process.env.NODE_ENV || 'development',
         checks: {
           database: {
             status: sqliteHealthy ? 'healthy' : 'unhealthy',

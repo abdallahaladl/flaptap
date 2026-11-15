@@ -2,7 +2,7 @@
 <html lang="en" dir="ltr" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Flaptap Studio — Spoken English Lesson</title>
   <meta name="description" content="Interactive spoken English shadowing studio with millisecond-precision sentence loops, AI prosody coaching, and contextual vocabulary." />
   <meta name="theme-color" content="#141413" />
@@ -16,21 +16,7 @@
   <meta name="apple-mobile-web-app-title" content="Flaptap" />
   <script>
     (function () {
-      var isLocalLoopback =
-        location.hostname === 'localhost' ||
-        location.hostname === '127.0.0.1' ||
-        location.hostname === '[::1]';
-      if (!window.isSecureContext && location.protocol === 'http:' && !isLocalLoopback && location.search.indexOf('lan=1') === -1) {
-        fetch('/api/pwa/origin', { cache: 'no-store' })
-          .then(function (r) { return r.json(); })
-          .then(function (d) {
-            if (d && d.httpsOrigin) {
-              location.replace(d.httpsOrigin + location.pathname + location.search + location.hash);
-            }
-          })
-          .catch(function () {});
-      }
-      if ('serviceWorker' in navigator) {
+      if ('serviceWorker' in navigator && (window.isSecureContext || location.hostname === 'localhost')) {
         navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
       }
       window.__deferredPwaPrompt = null;
@@ -54,8 +40,8 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="studio.css" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/studio.css" />
 </head>
 <body class="studio-body">
   <!-- Compositor-Only Loading & Error Overlay -->
@@ -96,45 +82,37 @@
         </div>
       </div>
 
-      <!-- Ergonomic Video Docking Switcher (Transcript 25/75 | Theater 75/25) — Zero Remount -->
+      <!-- Ergonomic Video Docking Switcher (Transcript 35/65 | Theater 65/35) — Zero Remount -->
       <div class="studio-center-dock">
         <div class="layout-switcher" role="group" aria-label="Video docking layout">
-          <button type="button" class="layout-btn active" data-layout-choice="side" aria-pressed="true" title="Transcript Focus (25% Video · 75% Sentences)">
+          <button type="button" class="layout-btn active" data-layout-choice="side" aria-pressed="true" title="Transcript Focus (35% Video · 65% Sentences)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-              <line x1="8" y1="4" x2="8" y2="20"></line>
+              <line x1="9" y1="4" x2="9" y2="20"></line>
             </svg>
             <span data-i18n="layoutSide">Transcript</span>
-            <span class="layout-pill-ratio">25/75</span>
+            <span class="layout-pill-ratio">35/65</span>
           </button>
-          <button type="button" class="layout-btn" data-layout-choice="theater" aria-pressed="false" title="Theater Cinema (75% Video · 25% Sentences)">
+          <button type="button" class="layout-btn" data-layout-choice="theater" aria-pressed="false" title="Theater Cinema (65% Video · 35% Sentences)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-              <line x1="16" y1="4" x2="16" y2="20"></line>
+              <line x1="15" y1="4" x2="15" y2="20"></line>
             </svg>
             <span data-i18n="layoutTheater">Theater</span>
-            <span class="layout-pill-ratio">75/25</span>
+            <span class="layout-pill-ratio">65/35</span>
           </button>
         </div>
       </div>
 
       <div class="studio-toolbar">
 
-        <button type="button" class="btn-secondary" id="download-obsidian-btn" title="Export Markdown study sheet">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-          <span data-i18n="exportMd">Export .md</span>
+        <button type="button" class="icon-action" id="download-markdown-btn" title="Export Markdown study sheet" aria-label="Export Markdown study sheet">
+          <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#download"></use></svg>
         </button>
 
-        <button type="button" class="btn-vox" style="height: 36px; padding: 0 13px; font-size: 0.82rem;" id="complete-drill-btn">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg>
-          <span data-i18n="completeSession">Complete</span>
-          <span id="drill-counter-badge" class="ltr-num" style="padding: 0 5px; border-radius: 99px; background: rgba(20,20,19,0.12); font-size: 0.74rem;">0</span>
+        <button type="button" class="studio-complete-btn" id="complete-drill-btn" title="Record completed practice session" aria-label="Record completed practice session">
+          <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#circle-check"></use></svg>
+          <span id="drill-counter-badge" class="studio-complete-count ltr-num">0</span>
         </button>
 
         <select id="studio-ui-lang-select" class="ui-lang-select" aria-label="Interface language">
@@ -176,7 +154,120 @@
     <aside class="studio-deck" aria-label="Media and voice controls">
       <div class="player-frame-card">
         <div class="video-aspect-box" id="video-stage-container">
-          <div id="studio-youtube-player"></div>
+          <div class="video-zoom-viewport" id="video-zoom-viewport">
+            <div class="video-zoom-stage" id="video-zoom-stage">
+              <div id="studio-youtube-player"></div>
+            </div>
+
+            <!-- Interactive Gesture Surface (Captures wheel, pinch, drag to pan, double-click focus) -->
+            <div class="video-zoom-surface" id="video-zoom-surface" tabindex="0" role="region" aria-label="Interactive video zoom and pan stage" title="Pinch or wheel to zoom, drag to pan, double-click to focus mouth"></div>
+
+            <!-- Autofocus / Focal Pulse Ring -->
+            <div class="video-focal-ring" id="video-focal-ring" aria-hidden="true" hidden></div>
+
+            <!-- Single-Click Action Flash (Play / Pause Indicator) -->
+            <div class="video-action-flash" id="video-action-flash" aria-hidden="true" hidden></div>
+
+            <!-- Floating Pro Zoom HUD Overlay -->
+            <div class="video-zoom-hud" id="video-zoom-hud" role="toolbar" aria-label="Video zoom and focus controls">
+              <!-- Mini Radar / Viewfinder (appears when zoomed) -->
+              <div class="video-zoom-radar" id="video-zoom-radar" title="Mini-map: Click or drag to pan viewport" hidden>
+                <div class="video-zoom-radar-window" id="video-zoom-radar-window"></div>
+              </div>
+
+              <!-- Main HUD Bar -->
+              <div class="video-zoom-hud-bar">
+                <button type="button" class="video-zoom-btn" id="video-zoom-out-btn" title="Zoom out (-)" aria-label="Zoom out">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+
+                <div class="video-zoom-level-wrapper">
+                  <button type="button" class="video-zoom-level-pill ltr-num" id="video-zoom-level-pill" aria-expanded="false" aria-haspopup="true" title="Zoom level (Click to customize)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <span id="video-zoom-val-text">100%</span>
+                  </button>
+
+                  <!-- Dropdown Menu / Slider Card -->
+                  <div class="video-zoom-popover" id="video-zoom-popover" hidden>
+                    <div class="zoom-popover-header">
+                      <span class="zoom-popover-title">Video Focus & Zoom</span>
+                      <span class="zoom-popover-val ltr-num" id="zoom-popover-val">100%</span>
+                    </div>
+
+                    <div class="zoom-slider-row">
+                      <input type="range" id="video-zoom-slider" class="video-zoom-range" min="100" max="500" step="5" value="100" aria-label="Zoom percentage" />
+                    </div>
+
+                    <div class="zoom-presets-row">
+                      <button type="button" class="zoom-preset-chip" data-zoom="100">1x</button>
+                      <button type="button" class="zoom-preset-chip" data-zoom="150">1.5x</button>
+                      <button type="button" class="zoom-preset-chip" data-zoom="200">2x</button>
+                      <button type="button" class="zoom-preset-chip" data-zoom="300">3x</button>
+                      <button type="button" class="zoom-preset-chip" data-zoom="400">4x</button>
+                    </div>
+
+                    <div class="zoom-focal-row">
+                      <button type="button" class="zoom-focal-btn" id="zoom-focal-mouth-btn" title="Focus directly on speaker's mouth for pronunciation & shadowing">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M4 12c2.5-3 6-3 8-1 2-2 5.5-2 8 1-2.5 4-6 5-8 5s-5.5-1-8-5z"></path>
+                        </svg>
+                        <span>Focus Mouth (2.2x)</span>
+                      </button>
+                      <button type="button" class="zoom-focal-btn" id="zoom-focal-face-btn" title="Focus on face & expressions">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <circle cx="12" cy="8" r="4"></circle>
+                          <path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"></path>
+                        </svg>
+                        <span>Focus Face (1.8x)</span>
+                      </button>
+                    </div>
+
+                    <div class="zoom-hints-row">
+                      <span class="zoom-hint-line">💡 <strong>Pinch</strong> on trackpad or <strong>Wheel</strong> to zoom</span>
+                      <span class="zoom-hint-line">✋ <strong>Drag</strong> to pan • <strong>Double-click</strong> mouth to zoom</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button type="button" class="video-zoom-btn" id="video-zoom-in-btn" title="Zoom in (+)" aria-label="Zoom in">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                  </svg>
+                </button>
+
+                <!-- Quick One-Click Mouth Focus Button -->
+                <button type="button" class="video-zoom-btn video-zoom-mouth-quick-btn" id="video-zoom-mouth-quick-btn" title="Quick Focus Mouth (2.2x)">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 12c2.5-3 6-3 8-1 2-2 5.5-2 8 1-2.5 4-6 5-8 5s-5.5-1-8-5z"></path>
+                  </svg>
+                  <span class="quick-btn-text">Mouth</span>
+                </button>
+
+                <!-- Reset Button (shown when zoom > 100%) -->
+                <button type="button" class="video-zoom-btn video-zoom-reset-btn" id="video-zoom-reset-btn" title="Reset Zoom to 100% (0)" hidden>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                  </svg>
+                  <span class="quick-btn-text">Reset</span>
+                </button>
+
+                <!-- Pass-Through to Native YouTube Controls Toggle -->
+                <button type="button" class="video-zoom-btn video-zoom-passthrough-btn" id="video-zoom-passthrough-btn" title="Toggle between Zoom/Pan mode and Native YouTube controls" aria-pressed="false">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
           <div id="tts-audio-stage" class="tts-audio-stage" hidden>
             <span class="tts-stage-tag" id="tts-stage-tag">Spoken Audio Deck</span>
             <p class="tts-active-quote" id="tts-active-quote">Select any sentence to play spoken American English audio.</p>
@@ -185,79 +276,148 @@
         </div>
       </div>
 
-      <div class="deck-controls-stack">
-        <!-- Master Transport & Active Sentence Deck -->
-        <div class="deck-panel master-transport-panel">
-          <div class="deck-panel-head">
-            <span class="deck-panel-label" data-i18n="masterTransportLabel">Master Transport</span>
-            <span id="active-sentence-time-badge" class="sent-time-badge ltr-num">—</span>
-          </div>
-          <div class="master-transport-row">
-            <button type="button" class="transport-btn" id="deck-prev-sent-btn" title="Previous Sentence (←)">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="19 20 9 12 19 4 19 20"></polygon>
-                <line x1="5" y1="19" x2="5" y2="5"></line>
-              </svg>
-              <span data-i18n="prevBtn">Prev</span>
+      <!-- Unified Single Horizontal Control Row (Consistent Across All Devices & Layouts) -->
+      <div class="studio-control-bar-host">
+      <div id="studio-control-bar" class="studio-control-bar" role="toolbar" aria-label="Playback and study controls" dir="ltr">
+        <button type="button" class="scb-btn" id="deck-prev-sent-btn" title="Previous Sentence (Shift+Left)" aria-label="Previous Sentence">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="19 20 9 12 19 4 19 20"></polygon>
+            <line x1="5" y1="19" x2="5" y2="5"></line>
+          </svg>
+        </button>
+
+        <button type="button" class="scb-btn" id="deck-seek-back-btn" title="Rewind 1.5s (Left Arrow)" aria-label="Rewind 1.5 seconds">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+            <path d="M3 3v5h5"></path>
+            <path d="M12 8.5v7"></path>
+            <path d="M9.5 11l2.5-2.5"></path>
+          </svg>
+        </button>
+
+        <button type="button" class="scb-btn scb-btn--primary" id="deck-play-active-btn" title="Play / Pause Active Sentence (Space)" aria-label="Play / Pause" aria-pressed="false">
+          <svg id="deck-play-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <svg id="deck-pause-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" hidden aria-hidden="true">
+            <rect x="6" y="4" width="4" height="16"></rect>
+            <rect x="14" y="4" width="4" height="16"></rect>
+          </svg>
+        </button>
+
+        <button type="button" class="scb-btn" id="deck-replay-sent-btn" title="Replay current sentence from start (R)" aria-label="Replay current sentence">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="1 4 1 10 7 10"></polyline>
+            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+          </svg>
+        </button>
+
+        <button type="button" class="scb-btn" id="deck-seek-fwd-btn" title="Forward 1.5s (Right Arrow)" aria-label="Forward 1.5 seconds">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 12a9 9 0 1 1-3-6.7L21 8"></path>
+            <path d="M21 3v5h-5"></path>
+            <path d="M12 8.5v7"></path>
+            <path d="M14.5 11L12 8.5"></path>
+          </svg>
+        </button>
+
+        <button type="button" class="scb-btn" id="deck-next-sent-btn" title="Next Sentence (Shift+Right)" aria-label="Next Sentence">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="5 4 15 12 5 20 5 4"></polygon>
+            <line x1="19" y1="5" x2="19" y2="19"></line>
+          </svg>
+        </button>
+
+        <span class="scb-sep" aria-hidden="true"></span>
+
+        <button type="button" class="scb-btn" id="studio-flow-btn" data-end-action="pause" aria-label="Sentence Flow: Auto-Pause" title="Sentence Flow: Auto-Pause (click to cycle)" aria-pressed="false"></button>
+
+        <button type="button" class="scb-btn scb-btn--speed ltr-num" id="speed-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="speed-popover" title="Playback Speed">
+          <span id="scb-speed-value">1.00x</span>
+        </button>
+
+        <button type="button" class="scb-btn active" id="deck-auto-follow-btn" aria-pressed="true" title="Auto-Follow active sentence (F)" aria-label="Auto-Follow active sentence">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="9"></circle>
+            <circle cx="12" cy="12" r="2.5" fill="currentColor"></circle>
+            <line x1="12" y1="2" x2="12" y2="5"></line>
+            <line x1="12" y1="19" x2="12" y2="22"></line>
+          </svg>
+        </button>
+
+        <span class="scb-sep" aria-hidden="true"></span>
+
+        <button type="button" class="scb-btn" id="record-toggle-btn" aria-pressed="false" title="Record your voice" aria-label="Record your voice">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" x2="12" y1="19" y2="22"></line>
+          </svg>
+        </button>
+
+        <button type="button" class="scb-btn scb-btn--voice" id="voice-menu-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="voice-popover" title="Voice playback &amp; A/B comparison" aria-label="Voice playback and comparison">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+            <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+          </svg>
+          <span class="scb-dot-indicator" id="scb-voice-dot" hidden></span>
+        </button>
+
+        <button type="button" class="scb-btn scb-btn--trans" id="trans-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="translation-control-deck" title="Translation settings (T)" aria-label="Translation settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m5 8 6 6"></path>
+            <path d="m4 14 6-6 2-3"></path>
+            <path d="M2 5h12"></path>
+            <path d="M7 2h1"></path>
+            <path d="m22 22-5-10-5 10"></path>
+            <path d="M14 18h6"></path>
+          </svg>
+          <span class="scb-lang-tag ltr-num" id="scb-trans-lang-badge">AR</span>
+        </button>
+
+        <button type="button" class="scb-btn scb-btn--shortcuts" id="shortcuts-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="shortcuts-popover" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </button>
+      </div>
+      </div>
+
+      <!-- Calm Desktop Active-Sentence Preview Card (Keeps active line visible under video when scrolling Coach/Read/Notes) -->
+      <div id="deck-live-subtitle" class="deck-live-subtitle" hidden>
+        <div class="deck-live-meta">
+          <span class="deck-live-num ltr-num" id="deck-live-num">#01</span>
+          <span class="deck-live-time ltr-num" id="deck-live-time">00:00.000</span>
+        </div>
+        <p class="deck-live-quote" id="deck-live-quote"></p>
+        <p class="deck-live-trans" id="deck-live-trans" dir="rtl" hidden></p>
+      </div>
+
+      <!-- Compact Live Recording Strip (Visible ONLY while recording) -->
+      <div id="rec-live-floating" class="rec-live-floating" hidden>
+        <span class="rec-live-dot"></span>
+        <span class="rec-live-label" data-i18n="recRecording">Recording...</span>
+        <span id="rec-live-timer" class="rec-timer-badge ltr-num">00:00</span>
+        <div class="rec-vu-meter" style="flex: 1;"><div id="rec-live-vu-fill" class="rec-vu-fill" style="width: 0%;"></div></div>
+      </div>
+
+      <!-- Floating Popover 1: Speed Control -->
+      <div id="speed-popover" class="scb-popover deck-panel speed-panel" role="dialog" aria-label="Playback Speed" hidden>
+        <div class="deck-panel-head">
+          <span class="deck-panel-label" data-i18n="playbackSpeedLabel">Playback Speed</span>
+          <div class="speed-stepper-cluster">
+            <button type="button" class="speed-step-btn" id="speed-down-btn" aria-label="Decrease speed by 0.05x" title="Decrease speed (-0.05x)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
-            <button type="button" class="transport-btn primary-transport-btn" id="deck-play-active-btn" title="Play / Pause Active Sentence (Space)">
-              <svg id="deck-play-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="5 3 19 12 5 21 5 3"></polygon>
-              </svg>
-              <svg id="deck-pause-icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" hidden>
-                <rect x="6" y="4" width="4" height="16"></rect>
-                <rect x="14" y="4" width="4" height="16"></rect>
-              </svg>
-              <span id="deck-play-btn-text">Play #01</span>
-            </button>
-            <button type="button" class="transport-btn" id="deck-next-sent-btn" title="Next Sentence (→)">
-              <span data-i18n="nextBtn">Next</span>
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <polygon points="5 4 15 12 5 20 5 4"></polygon>
-                <line x1="19" y1="5" x2="19" y2="19"></line>
-              </svg>
-            </button>
-          </div>
-          <div class="transport-sub-row">
-            <button type="button" class="auto-follow-toggle-btn active" id="deck-auto-follow-btn" aria-pressed="true" title="Auto-scroll to current spoken sentence in real time">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"></circle>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              <span id="deck-auto-follow-text">Auto-Follow: <strong>ON</strong></span>
-            </button>
-            <button type="button" class="jump-active-link" id="deck-jump-active-btn" title="Jump to current active sentence">
-              <span>Jump to Active</span>
+            <span id="current-speed-badge" class="speed-badge ltr-num">1.00x</span>
+            <button type="button" class="speed-step-btn" id="speed-up-btn" aria-label="Increase speed by 0.05x" title="Increase speed (+0.05x)">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
             </button>
           </div>
         </div>
-
-        <!-- Sentence Playback Flow -->
-        <div class="deck-panel">
-          <div class="deck-panel-head">
-            <span class="deck-panel-label" data-i18n="playbackFlowLabel">Sentence Flow</span>
-          </div>
-          <div class="flow-segmented" role="group" aria-label="End of sentence action">
-            <button type="button" class="flow-btn active" data-end-action="pause" aria-pressed="true" data-i18n="flowPause">Auto-Pause</button>
-            <button type="button" class="flow-btn" data-end-action="loop" aria-pressed="false" data-i18n="flowLoop">Loop</button>
-            <button type="button" class="flow-btn" data-end-action="continue" aria-pressed="false" data-i18n="flowContinue">Continuous</button>
-          </div>
-        </div>
-
-        <!-- Precision Speed Control with Flanking Steppers -->
-        <div class="deck-panel">
-          <div class="deck-panel-head">
-            <span class="deck-panel-label" data-i18n="playbackSpeedLabel">Playback Speed</span>
-            <div class="speed-stepper-cluster">
-              <button type="button" class="speed-step-btn" id="speed-down-btn" aria-label="Decrease speed by 0.05x" title="Decrease speed (-0.05x)">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              </button>
-              <span id="current-speed-badge" class="speed-badge ltr-num">1.00x</span>
-              <button type="button" class="speed-step-btn" id="speed-up-btn" aria-label="Increase speed by 0.05x" title="Increase speed (+0.05x)">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              </button>
-            </div>
-          </div>
+        <div class="speed-controls-row">
           <input
             type="range"
             id="speed-slider"
@@ -278,73 +438,74 @@
             <button type="button" class="speed-tick" data-speed="2">2.00x</button>
           </div>
         </div>
+      </div>
 
-        <!-- Voice Comparison & Articulatory Audit -->
-        <div class="deck-panel">
-          <div class="deck-panel-head">
-            <span class="deck-panel-label" data-i18n="voiceRecorderLabel">Voice Comparison</span>
+      <!-- Floating Popover 2: Voice Comparison -->
+      <div id="voice-popover" class="scb-popover deck-panel voice-panel" role="dialog" aria-label="Voice Comparison" hidden>
+        <div class="deck-panel-head">
+          <span class="deck-panel-label" data-i18n="voiceRecorderLabel">Voice Comparison</span>
+          <div class="rec-head-meta">
+            <span id="rec-timer-badge" class="rec-timer-badge ltr-num" hidden>00:00</span>
             <span id="rec-status-label" class="rec-status-pill ltr-num" data-i18n="recReady">Ready</span>
           </div>
-          <div class="recorder-row">
-            <button type="button" class="rec-btn" id="record-toggle-btn">
-              <span class="rec-dot"></span>
-              <span id="record-btn-text" data-i18n="recordVoice">Record Voice</span>
-            </button>
-            <span id="rec-timer-badge" class="rec-timer-badge ltr-num" hidden>00:00</span>
-          </div>
-          <div id="rec-vu-meter" class="rec-vu-meter" hidden>
-            <div id="rec-vu-fill" class="rec-vu-fill" style="width: 0%;"></div>
-          </div>
-          <div class="voice-compare-actions" id="voice-compare-actions">
-            <button type="button" class="btn-secondary compare-btn" id="replay-original-btn" title="Replay speaker's sentence">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-              <span data-i18n="hearSpeaker">Speaker</span>
-            </button>
-            <button type="button" class="btn-secondary compare-btn" id="replay-recording-btn" disabled title="Replay your recorded take">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-              <span>Your Voice</span>
-            </button>
-            <button type="button" class="btn-vox compare-btn" id="ab-compare-btn" disabled title="Play Speaker then Your Voice sequentially">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
-              <span>A/B Compare</span>
-            </button>
-          </div>
-          <audio id="recorded-audio-player" class="rec-audio-player" controls hidden></audio>
         </div>
+        <div class="recorder-actions-row">
+          <button type="button" class="btn-secondary compare-btn" id="replay-recording-btn" disabled title="Replay your recorded take">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <span>Your Voice</span>
+          </button>
+          <button type="button" class="btn-vox compare-btn" id="ab-compare-btn" disabled title="Play Speaker then Your Voice sequentially">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
+            <span>A/B Compare</span>
+          </button>
+          <button type="button" id="replay-original-btn" style="display: none;" aria-hidden="true"></button>
+        </div>
+        <div id="rec-vu-meter" class="rec-vu-meter" hidden>
+          <div id="rec-vu-fill" class="rec-vu-fill" style="width: 0%;"></div>
+        </div>
+        <audio id="recorded-audio-player" class="rec-audio-player" controls hidden></audio>
+      </div>
 
-        <!-- 170+ World Language Translation Console in Side Deck -->
-        <div id="translation-control-deck" class="deck-panel translation-deck-panel">
-          <div class="deck-panel-head">
-            <span class="deck-panel-label" data-i18n="translationLangLabel">Language</span>
-            <span id="side-trans-status-text" class="trans-status ltr-num" aria-live="polite">—</span>
-          </div>
-          <div class="side-trans-row">
+      <!-- Floating Popover 3: 170+ World Language Translation Console -->
+      <div id="translation-control-deck" class="scb-popover deck-panel translation-deck-panel" role="dialog" aria-label="Translation Console" hidden>
+        <div class="trans-toolbar-row">
+          <div class="trans-toolbar-select-group">
+            <label class="deck-panel-label" for="trans-lang-select" data-i18n="translationLangLabel">Language</label>
             <div class="trans-select-wrapper">
               <select id="trans-lang-select" class="trans-lang-select" aria-label="Translation target language"></select>
               <span class="trans-select-chevron" aria-hidden="true">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
               </span>
             </div>
           </div>
-          <div class="side-trans-actions">
+          <div class="trans-toolbar-actions-group">
             <button type="button" class="btn-secondary side-trans-btn trans-all-btn" id="trans-all-btn" data-translate-all title="Translate all sentences in lesson">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>
               <span id="side-trans-all-btn-label" data-i18n="translateAllBtn">Translate All</span>
             </button>
-          </div>
-          <div class="side-trans-toggle-row">
-            <label class="toggle-pill-label" for="side-trans-visibility-toggle">
+            <label class="toggle-pill-label" for="side-trans-visibility-toggle" title="Toggle visibility of translated subtitles">
               <input type="checkbox" id="side-trans-visibility-toggle" class="trans-switch-input" checked />
               <span class="trans-switch-track" aria-hidden="true"><span class="trans-switch-thumb"></span></span>
-              <span class="trans-switch-label" data-i18n="showTranslationsLabel">Show translations</span>
+              <span class="trans-switch-label" data-i18n="showTranslationsLabel">Show</span>
             </label>
+            <span id="side-trans-status-text" class="trans-status ltr-num" aria-live="polite">—</span>
           </div>
         </div>
+      </div>
 
-        <div class="shortcuts-strip" aria-label="Keyboard shortcuts">
+      <!-- Floating Popover 4: Keyboard Shortcuts -->
+      <div id="shortcuts-popover" class="scb-popover deck-panel shortcuts-popover" role="dialog" aria-label="Keyboard shortcuts" hidden>
+        <div class="deck-panel-head">
+          <span class="deck-panel-label">Keyboard Shortcuts</span>
+        </div>
+        <div class="shortcuts-strip">
           <span><kbd class="kbd-chip">Space</kbd> <span data-i18n="keyPlay">Play/Pause</span></span>
-          <span><kbd class="kbd-chip">←</kbd> <kbd class="kbd-chip">→</kbd> <span data-i18n="keyPrevNext">Prev/Next</span></span>
+          <span><kbd class="kbd-chip">R</kbd> <span data-i18n="keyReplay">Replay</span></span>
+          <span><kbd class="kbd-chip">←</kbd><kbd class="kbd-chip">→</kbd> <span data-i18n="keySeek">Seek ±1.5s</span></span>
+          <span><kbd class="kbd-chip">↑</kbd><kbd class="kbd-chip">↓</kbd> <span data-i18n="keyPrevNext">Prev/Next</span></span>
           <span><kbd class="kbd-chip">L</kbd> <span data-i18n="keyLoop">Loop</span></span>
+          <span><kbd class="kbd-chip">Z</kbd> <span>Mouth</span></span>
+          <span><kbd class="kbd-chip">+/-</kbd> <span>Zoom</span></span>
           <span><kbd class="kbd-chip">T</kbd> <span>Translate</span></span>
           <span><kbd class="kbd-chip">F</kbd> <span>Follow</span></span>
           <span><kbd class="kbd-chip">V</kbd> <span data-i18n="keyLayout">Layout</span></span>
@@ -353,9 +514,9 @@
     </aside>
 
     <!-- Primary Scalable Learning Workspace -->
-    <section class="studio-canvas" aria-label="Learning modes">
-      <!-- Sticky Canvas Header Dock (Pins Mode Tabs + Highlight Legend Together) -->
-      <header class="canvas-header-dock">
+    <section class="studio-canvas" data-active-mode="shadow" aria-label="Learning modes">
+      <!-- Sticky Canvas Header Dock (Mode Tabs + Highlight Legend + Live Progress, Filter & Jump) -->
+      <header class="canvas-header-dock" id="canvas-header-dock">
         <!-- Primary Learning Modes Rail (0ms switching, zero reload) -->
         <nav class="primary-modes-bar" role="tablist" aria-label="Learning modes">
           <button type="button" class="mode-tab-btn active" data-mode="shadow" role="tab" aria-selected="true">
@@ -403,27 +564,66 @@
               <span data-i18n="legendVocab">Key Vocabulary</span>
             </span>
           </div>
-          <span data-i18n="clickWordTip">Tip: Click any word for contextual definition</span>
+          <span class="legend-word-tip" data-i18n="clickWordTip">Tip: Click any word for contextual definition</span>
+        </div>
+
+        <!-- Permanently Sticky Subject Progress, Completion Filter & Active Jump Bar -->
+        <div id="canvas-progress-dock" class="canvas-progress-dock">
+          <div class="canvas-progress-bars">
+            <div id="studio-shadow-progress-bar" class="subject-progress-bar studio-progress-strip" data-for-mode="shadow" hidden></div>
+            <div id="studio-read-progress-bar" class="subject-progress-bar studio-progress-strip" data-for-mode="read" hidden></div>
+            <div id="studio-listen-progress-bar" class="subject-progress-bar studio-progress-strip" data-for-mode="listen" hidden></div>
+            <div id="studio-coach-progress-bar" class="subject-progress-bar studio-progress-strip" data-for-mode="coach" hidden></div>
+          </div>
+          <div class="canvas-progress-actions">
+            <div class="studio-comp-filter" role="group" aria-label="Filter items by completion">
+              <button type="button" class="comp-filter-pill active" data-studio-comp-filter="all" aria-pressed="true" aria-label="Show all items" title="Show all items">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#layers"></use></svg>
+              </button>
+              <button type="button" class="comp-filter-pill" data-studio-comp-filter="remaining" aria-pressed="false" aria-label="Show remaining items" title="Show remaining items">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#circle-dashed"></use></svg>
+              </button>
+              <button type="button" class="comp-filter-pill" data-studio-comp-filter="completed" aria-pressed="false" aria-label="Show completed items" title="Show completed items">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#circle-check"></use></svg>
+              </button>
+            </div>
+            <button type="button" id="canvas-active-jump-btn" class="canvas-jump-btn" title="Jump to active line" aria-label="Jump to active line">
+              <span class="canvas-jump-dot" aria-hidden="true"></span>
+              <span id="canvas-active-jump-num" class="ltr-num">#01</span>
+            </button>
+          </div>
         </div>
       </header>
 
       <!-- MODE PANEL 1: SHADOW (Sentence Drill) -->
       <div id="mode-panel-shadow">
         <div id="subview-sentences-list" class="sentences-list"></div>
+        <div id="shadow-filter-empty" class="studio-filter-empty" hidden>
+          <p class="studio-filter-empty-text" data-filter-empty-msg></p>
+          <button type="button" class="btn-secondary studio-filter-reset-btn" data-studio-reset-filter data-i18n="showAllItemsBtn">Show All</button>
+        </div>
       </div>
 
       <!-- MODE PANEL 2: READ (Cohesive Editorial Paragraphs) -->
       <div id="mode-panel-read" style="display: none;">
         <div id="subview-chunks-list" class="editorial-article-view"></div>
+        <div id="read-filter-empty" class="studio-filter-empty" hidden>
+          <p class="studio-filter-empty-text" data-filter-empty-msg></p>
+          <button type="button" class="btn-secondary studio-filter-reset-btn" data-studio-reset-filter data-i18n="showAllItemsBtn">Show All</button>
+        </div>
       </div>
 
       <!-- MODE PANEL 3: LISTEN (Active Cloze Dictation) -->
       <div id="mode-panel-listen" class="dictation-view" style="display: none;">
         <div class="dictation-toolbar">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <button type="button" class="btn-secondary" id="dict-prev-btn">← <span data-i18n="prevBtn">Prev</span></button>
+            <button type="button" class="icon-action icon-action--sm" id="dict-prev-btn" aria-label="Previous sentence" title="Previous sentence">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#chevron-left"></use></svg>
+            </button>
             <span id="dict-progress-label" class="ltr-num" style="font-family: var(--font-mono); font-size: 0.82rem; padding: 0 6px;">1 / 1</span>
-            <button type="button" class="btn-secondary" id="dict-next-btn"><span data-i18n="nextBtn">Next</span> →</button>
+            <button type="button" class="icon-action icon-action--sm" id="dict-next-btn" aria-label="Next sentence" title="Next sentence">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#chevron-right"></use></svg>
+            </button>
           </div>
 
           <div class="filter-pills">
@@ -436,17 +636,33 @@
         <div class="dictation-card">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
             <span id="dict-time-badge" class="sent-time-badge">00:00.000</span>
-            <button type="button" class="btn-vox" style="height: 34px; padding: 0 14px; font-size: 0.81rem;" id="dict-play-btn">
-              <span data-i18n="playClipBtn">Play Sentence</span>
-            </button>
+            <div style="display: inline-flex; align-items: center; gap: 8px;">
+              <button type="button" class="item-check-btn" id="dict-check-complete-btn" aria-pressed="false" aria-label="Mark done" title="Mark done">
+                <svg class="chk-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line class="chk-dash" x1="6.5" y1="12" x2="17.5" y2="12"></line>
+                  <polyline class="chk-tick" points="19.5 7 9.5 17 4.5 12"></polyline>
+                </svg>
+                <span id="dict-complete-label" class="visually-hidden">Mark done</span>
+              </button>
+              <button type="button" class="icon-action" id="dict-play-btn" aria-label="Play sentence" title="Play sentence">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#play"></use></svg>
+                <span class="dict-play-label visually-hidden">Play sentence</span>
+              </button>
+            </div>
           </div>
 
           <div id="dictation-sentence-area" class="dictation-sentence-Area"></div>
 
           <div class="dictation-controls-row">
             <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn-primary" style="height: 36px; padding: 0 16px; font-size: 0.84rem;" id="dict-check-btn" data-i18n="checkAnswerBtn">Check Answer</button>
-              <button type="button" class="btn-secondary" id="dict-reveal-btn" data-i18n="revealBtn">Reveal</button>
+              <button type="button" class="btn-primary" style="height: 36px; padding: 0 16px; font-size: 0.84rem;" id="dict-check-btn">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#check"></use></svg>
+                <span data-i18n="checkAnswerBtn">Check Answer</span>
+              </button>
+              <button type="button" class="btn-secondary" id="dict-reveal-btn">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#eye"></use></svg>
+                <span data-i18n="revealBtn">Reveal</span>
+              </button>
             </div>
             <span id="dict-feedback-text" style="font-size: 0.85rem; font-weight: 600;"></span>
           </div>
@@ -457,54 +673,123 @@
       <div id="mode-panel-coach" class="coach-view" style="display: none;">
         <div id="coach-loading-box" class="empty-ledger">
           <div class="loader-spinner" style="margin-bottom: 12px;"></div>
-          <h3 data-i18n="coachAnalyzingTitle">Analyzing speaker prosody &amp; connected speech...</h3>
+          <h2 class="section-heading" style="font-size: 1.08rem;" data-i18n="coachAnalyzingTitle">Analyzing speaker prosody &amp; connected speech...</h2>
           <p data-i18n="coachAnalyzingDesc">Extracting verbatim reductions, expressions, and contextual vocabulary for this lesson.</p>
+          <div class="coach-skeleton" aria-hidden="true">
+            <span class="coach-skeleton-card">
+              <span class="coach-skeleton-line is-title"></span>
+              <span class="coach-skeleton-line"></span>
+              <span class="coach-skeleton-line is-short"></span>
+            </span>
+            <span class="coach-skeleton-card">
+              <span class="coach-skeleton-line is-title"></span>
+              <span class="coach-skeleton-line"></span>
+              <span class="coach-skeleton-line is-short"></span>
+            </span>
+          </div>
         </div>
 
         <div id="coach-error-box" class="empty-ledger" hidden>
-          <h3 id="coach-error-title">Analysis unavailable</h3>
+          <h2 id="coach-error-title" class="section-heading" style="font-size: 1.08rem;">Analysis unavailable</h2>
           <p id="coach-error-msg" style="margin-bottom: 14px;"></p>
           <button type="button" class="btn-vox" style="height: 36px; padding: 0 16px;" id="coach-retry-btn" data-i18n="tryAgain">Try Again</button>
         </div>
 
         <div id="coach-content-box" hidden>
-          <div class="coach-brief-card" style="margin-bottom: 24px;">
-            <div class="coach-brief-top">
-              <div>
-                <span class="desk-kicker" style="margin-bottom: 4px;" data-i18n="prosodyBriefKicker">Speaker &amp; Prosody Brief</span>
-                <h2 id="coach-style-heading" class="coach-style-title">Natural American Cadence</h2>
-              </div>
-              <div style="display: flex; align-items: center; gap: 8px;">
-                <span id="coach-cefr-stamp" class="cefr-pill ltr-num" style="font-size: 0.78rem; padding: 2px 8px;">B2</span>
-                <button type="button" class="btn-secondary" style="height: 30px; padding: 0 10px; font-size: 0.76rem;" id="coach-refresh-btn" data-i18n="refreshAnalysis">Refresh</button>
-              </div>
+          <div class="coach-brief-card">
+            <div class="coach-brief-main">
+              <span class="desk-kicker coach-brief-kicker" data-i18n="prosodyBriefKicker">Speaker &amp; Prosody Brief</span>
+              <h2 id="coach-style-heading" class="coach-style-title">Natural American Cadence</h2>
+              <p id="coach-summary-text" class="coach-summary-text"></p>
             </div>
-            <p id="coach-summary-text" class="coach-summary-text"></p>
-            <ul id="coach-tips-list" class="coach-tips-list"></ul>
+            <div class="coach-brief-side">
+              <span class="coach-cefr-box">
+                <span class="coach-cefr-label">CEFR</span>
+                <span id="coach-cefr-stamp" class="cefr-pill ltr-num">B2</span>
+              </span>
+              <button type="button" class="icon-action icon-action--sm coach-refresh-btn" id="coach-refresh-btn" aria-label="Refresh analysis" title="Refresh analysis">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#refresh"></use></svg>
+              </button>
+            </div>
+            <div class="coach-focus-block">
+              <span class="coach-focus-kicker" data-i18n="coachFocusTips">Practice focus</span>
+              <ul id="coach-tips-list" class="coach-tips-list"></ul>
+            </div>
+            <p class="coach-selection-hint">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 7V5a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v2"></path>
+                <path d="M12 4v16"></path>
+                <path d="M9 20h6"></path>
+              </svg>
+              <span data-i18n="coachSelectionHint">Click any word or select any text for instant contextual translation.</span>
+            </p>
           </div>
 
-          <div style="margin-bottom: 26px;">
-            <h3 class="coach-section-title">
-              <span data-i18n="coachConnectedHeading">Connected Speech &amp; Mouth Mechanics</span>
-              <span id="coach-connected-count" class="section-count ltr-num">0</span>
-            </h3>
-            <div id="coach-connected-grid" class="coach-cards-grid"></div>
-          </div>
+          <section class="coach-section coach-section--connected" id="coach-section-connected" data-coach-section="connected" aria-labelledby="coach-connected-title">
+            <div class="coach-section-head">
+              <span class="coach-section-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12h2"></path>
+                  <path d="M7 8v8"></path>
+                  <path d="M11 5v14"></path>
+                  <path d="M15 9v6"></path>
+                  <path d="M19 11v2"></path>
+                </svg>
+              </span>
+              <div class="coach-section-titles">
+                <h3 id="coach-connected-title" class="coach-section-title">
+                  <span data-i18n="coachConnectedHeading">Connected Speech &amp; Mouth Mechanics</span>
+                </h3>
+                <p class="coach-section-sub" data-i18n="coachConnectedSub">Linking, flapping, reductions, and elision in real speech.</p>
+              </div>
+              <span id="coach-connected-count" class="coach-count-pill ltr-num" aria-label="Connected speech items">0</span>
+            </div>
+            <div id="studio-coach-connected-progress-bar" class="subject-progress-bar studio-progress-strip" hidden></div>
+            <div id="coach-connected-grid" class="coach-list"></div>
+          </section>
 
-          <div style="margin-bottom: 26px;">
-            <h3 class="coach-section-title">
-              <span data-i18n="coachExpressionsHeading">Expressions, Phrasal Verbs &amp; Idioms</span>
-              <span id="coach-expressions-count" class="section-count ltr-num">0</span>
-            </h3>
-            <div id="coach-expressions-grid" class="coach-cards-grid"></div>
-          </div>
+          <section class="coach-section coach-section--expression" id="coach-section-expression" data-coach-section="expression" aria-labelledby="coach-expression-title">
+            <div class="coach-section-head">
+              <span class="coach-section-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                </svg>
+              </span>
+              <div class="coach-section-titles">
+                <h3 id="coach-expression-title" class="coach-section-title">
+                  <span data-i18n="coachExpressionsHeading">Expressions, Phrasal Verbs &amp; Idioms</span>
+                </h3>
+                <p class="coach-section-sub" data-i18n="coachExpressionsSub">Idioms, phrasal verbs, and slang worth reusing.</p>
+              </div>
+              <span id="coach-expressions-count" class="coach-count-pill ltr-num" aria-label="Expression items">0</span>
+            </div>
+            <div id="studio-coach-expressions-progress-bar" class="subject-progress-bar studio-progress-strip" hidden></div>
+            <div id="coach-expressions-grid" class="coach-list"></div>
+          </section>
 
-          <div>
-            <h3 class="coach-section-title">
-              <span data-i18n="coachVocabHeading">Key Contextual Vocabulary</span>
-              <span id="coach-vocab-count" class="section-count ltr-num">0</span>
-            </h3>
-            <div id="coach-vocab-grid" class="coach-cards-grid"></div>
+          <section class="coach-section coach-section--vocabulary" id="coach-section-vocabulary" data-coach-section="vocabulary" aria-labelledby="coach-vocabulary-title">
+            <div class="coach-section-head">
+              <span class="coach-section-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                </svg>
+              </span>
+              <div class="coach-section-titles">
+                <h3 id="coach-vocabulary-title" class="coach-section-title">
+                  <span data-i18n="coachVocabHeading">Key Contextual Vocabulary</span>
+                </h3>
+                <p class="coach-section-sub" data-i18n="coachVocabSub">High-value words in this speaker's voice.</p>
+              </div>
+              <span id="coach-vocab-count" class="coach-count-pill ltr-num" aria-label="Vocabulary items">0</span>
+            </div>
+            <div id="studio-coach-vocab-progress-bar" class="subject-progress-bar studio-progress-strip" hidden></div>
+            <div id="coach-vocab-grid" class="coach-list"></div>
+          </section>
+
+          <div id="coach-filter-empty" class="studio-filter-empty" hidden>
+            <p class="studio-filter-empty-text" data-filter-empty-msg></p>
+            <button type="button" class="btn-secondary studio-filter-reset-btn" data-studio-reset-filter data-i18n="showAllItemsBtn">Show All</button>
           </div>
         </div>
       </div>
@@ -533,20 +818,37 @@
     <div class="word-popover-head">
       <div>
         <span id="wp-term" class="word-popover-term"></span>
-        <span id="wp-ipa" class="vocab-ipa ltr-num" style="margin-inline-start: 8px;"></span>
+        <span id="wp-ipa" class="vocab-ipa ltr-num word-popover-ipa"></span>
       </div>
       <div style="display: flex; align-items: center; gap: 6px;">
         <span id="wp-pos" class="vocab-pos"></span>
+        <button type="button" class="ft-copy-btn icon-action icon-action--xs" data-copy-source="#wp-term" data-copy-state="idle" aria-label="Copy" title="Copy">
+          <span class="ft-copy-glyph is-copy" aria-hidden="true"><svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#copy"></use></svg></span>
+          <span class="ft-copy-glyph is-check" aria-hidden="true"><svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#check"></use></svg></span>
+        </button>
         <button type="button" class="icon-btn" style="width: 26px; height: 26px;" id="wp-close-btn" aria-label="Close definition">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
       </div>
     </div>
-    <p id="wp-def" class="vocab-def" style="margin-bottom: 6px;"></p>
-    <p id="wp-trans" style="font-weight: 700; font-size: 0.94rem; margin-bottom: 6px;"></p>
+    <p id="wp-def" class="vocab-def" style="margin-bottom: 8px;"></p>
+    <div id="wp-general-trans-wrap" class="wp-trans-block wp-general-block" hidden>
+      <span class="wp-sense-label">General</span>
+      <p id="wp-general-trans" class="word-popover-general-trans"></p>
+    </div>
+    <div id="wp-context-trans-wrap" class="wp-trans-block">
+      <span id="wp-context-sense-label" class="wp-sense-label is-context" hidden>In context</span>
+      <p id="wp-trans" class="word-popover-trans" style="font-weight: 700; font-size: 0.94rem; margin-bottom: 0;"></p>
+    </div>
     <p id="wp-tip" style="font-size: 0.8rem; color: var(--ink-muted); margin-bottom: 12px;"></p>
-    <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
-      <button type="button" class="btn-secondary" style="height: 32px; font-size: 0.78rem;" id="wp-play-btn" data-i18n="playClipBtn">Play Sentence</button>
+    <div class="word-popover-actions">
+      <div class="word-popover-action-group">
+        <button type="button" class="btn-secondary" style="height: 32px; font-size: 0.78rem;" id="wp-play-btn" data-i18n="playClipBtn">Play Sentence</button>
+        <button type="button" class="btn-secondary" style="height: 32px; font-size: 0.78rem;" id="wp-speak-btn" hidden>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          <span>Pronounce</span>
+        </button>
+      </div>
       <button type="button" class="btn-vox" style="height: 32px; padding: 0 13px; font-size: 0.79rem;" id="wp-save-btn" data-i18n="saveToVocabBtn">+ Save to Vocabulary</button>
     </div>
   </div>
@@ -562,6 +864,9 @@
     <span>Jump to <strong id="floating-jump-sent-num" class="ltr-num">#01</strong></span>
   </button>
 
-  <script src="studio.js"></script>
+  <script defer src="/icon.js"></script>
+  <script defer src="/copy.js"></script>
+  <script defer src="/word-lookup.js"></script>
+  <script defer src="/studio.js"></script>
 </body>
 </html>

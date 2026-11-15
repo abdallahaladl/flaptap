@@ -70,6 +70,34 @@ const CLAUSE_STARTERS = new Set([
   'let', "let's", 'when', 'if', 'what', 'why', 'how', 'no', 'don\'t', 'never',
 ]);
 
+/**
+ * Coordinating conjunctions, subordinating conjunctions, and discourse connectors
+ * that can initiate an independent or subordinate clause in spoken English.
+ */
+const INDEPENDENT_CLAUSE_STARTERS = new Set([
+  'and', 'but', 'so', 'yet', 'or', 'nor',
+  'because', 'although', 'though', 'while', 'whereas', 'since',
+  'meaning', 'when', 'if', 'where', 'after', 'before',
+  'however', 'instead', 'unfortunately', 'fortunately', 'actually', 'basically', 'now', 'well', 'let\'s',
+]);
+
+/** Subject pronouns and deictics that begin a clause when following a comma or pause. */
+const PRONOUN_CLAUSE_STARTERS = new Set([
+  'i', "i'm", "i've", "i'll", 'you', "you're", 'we', "we're", 'they', "they're",
+  'he', 'she', 'it', "it's", 'there', "there's", 'here', "here's",
+]);
+
+export function formatSentenceText(rawText: string): string {
+  let text = (rawText || '').trim();
+  if (!text) return '';
+  text = text.replace(/[,;:]+$/, '.');
+  if (!/[.?!][)"'\u201d\u2019]*$/.test(text)) {
+    text = text + '.';
+  }
+  text = text.replace(/^(\s*(?:\[[^\]]+\]\s*|["'(\[])*\s*)([a-z])/, (_m, p, l) => p + l.toUpperCase());
+  return text;
+}
+
 const PARAGRAPH_TRANSITION_PATTERNS = [
   /^(now|so|but|however|meanwhile|ultimately|finally|first|second|third|next|instead|unfortunately|fortunately|in fact|for example|on the other hand)\b/i,
   /^(here's|here is|let's|the problem is|the truth is|the first|the second|the third|another|one of the)\b/i,
@@ -189,16 +217,97 @@ function estimatePauseAfter(words: SegWord[], i: number): number {
 }
 
 /**
+ * Splits a long grammatical sentence into bite-sized, rhythmically cohesive
+ * units suitable for verbatim shadowing (typically 1.5–5.0 seconds / 4–14 words).
+ *
+ * Guarantees:
+ * - If the sentence is already short (<= 5.8s and <= 15 words), it is NOT split.
+ * - Sub-segments NEVER cut inside tight noun/prepositional phrases or end on NON_TERMINAL_WORDS.
+ * - Minimum segment size: >= 4 words (or >= 1.5s).
+ * - Minimum remaining tail: >= 3 words (or >= 1.2s), avoiding dangling stubs.
+ * - Split points prioritize punctuation junctures (commas with conjunctions or list items,
+ *   semicolons, colons, dashes), strong conjunctions, and acoustic breath pauses.
+ */
+function splitLongSentence(words: SegWord[]): SegWord[][] {
+  if (words.length === 0) return [];
+  const totalDur = words[words.length - 1].end - words[0].start;
+  if (totalDur <= 5.8 && words.length <= 15) {
+    return [words];
+  }
+
+  const chunks: SegWord[][] = [];
+  let startIdx = 0;
+
+  for (let i = 0; i < words.length - 1; i++) {
+    const word = words[i];
+    const next = words[i + 1];
+    const currentCount = i - startIdx + 1;
+    const remainingCount = words.length - (i + 1);
+    const currentDur = word.end - words[startIdx].start;
+    const remainingDur = words[words.length - 1].end - next.start;
+
+    // Minimum chunk and remaining tail thresholds
+    if (currentCount < 4 || currentDur < 1.5) continue;
+    if (remainingCount < 3 || remainingDur < 1.2) continue;
+
+    // Never cut on a non-terminal word (articles, prepositions, modals, etc.)
+    if (NON_TERMINAL_WORDS.has(word.clean)) continue;
+    // Never cut between identical repeated words ("really really")
+    if (word.clean === next.clean) continue;
+
+    const pause = Math.max(0, next.start - word.end);
+    const nextContinues = PHRASE_CONTINUATION_NEXT.has(next.clean);
+    // Avoid detaching trailing prepositions without clear silence
+    if (nextContinues && pause < 0.35 && currentCount < 10) continue;
+
+    const hasPunctuation = /[,;:\u2014\u2013]$/.test(word.text);
+    const isIndepClause = INDEPENDENT_CLAUSE_STARTERS.has(next.clean);
+    const isPronounClause = PRONOUN_CLAUSE_STARTERS.has(next.clean);
+
+    let cut = false;
+    if (hasPunctuation) {
+      // Split at comma/semicolon when starting a clause or after reasonable chunk size
+      if (isIndepClause || isPronounClause || currentCount >= 5 || currentDur >= 2.4) {
+        cut = true;
+      }
+    } else {
+      // Unpunctuated phrase break: require strong clause starters or clear acoustic pauses
+      if (isIndepClause && (currentCount >= 7 || currentDur >= 2.8)) {
+        cut = true;
+      } else if (isPronounClause && (pause >= 0.15 || currentCount >= 8) && (currentDur >= 3.0 || currentCount >= 8)) {
+        cut = true;
+      } else if (pause >= 0.30 && (currentDur >= 3.0 || currentCount >= 8)) {
+        cut = true;
+      } else if (currentDur >= 5.8 || currentCount >= 18) {
+        cut = true;
+      }
+    }
+
+    if (cut) {
+      chunks.push(words.slice(startIdx, i + 1));
+      startIdx = i + 1;
+    }
+  }
+
+  if (startIdx < words.length) {
+    chunks.push(words.slice(startIdx));
+  }
+
+  return chunks;
+}
+
+/**
  * Builds complete, natural spoken sentences from word-level timings.
  *
  * Guarantee:
- * - On punctuated transcripts: cuts strictly at real sentence endings (`.`, `?`, `!`).
- *   NEVER cuts mid-sentence on caption cue boundaries, commas, or 11-word limits.
+ * - On punctuated transcripts: extracts true sentences and divides long multi-clause
+ *   run-ons into rhythmically bite-sized shadowing units (1.5–5.0s) at natural clause,
+ *   list, or breath boundaries.
  * - On unpunctuated ASR auto-captions: combines acoustic phrase-final pause
  *   detection with syntactic completeness checks so sentences end cleanly at
  *   clause boundaries without dangling function words.
  * - Every word is preserved verbatim in exact contiguous order with 3-decimal
- *   millisecond timestamps.
+ *   millisecond timestamps and proper sentence punctuation.
  */
 export function segmentSentences(data: TranscriptResult): SentenceItem[] {
   const words = normalizeWords(data);
@@ -224,13 +333,16 @@ export function segmentSentences(data: TranscriptResult): SentenceItem[] {
   for (let i = 0; i < rawSegments.length; i++) {
     const seg = rawSegments[i];
     if (seg.length === 0) continue;
-    const text = seg.map((w) => w.text).join(' ').replace(/\s+/g, ' ').trim();
-    if (!text) continue;
+    const rawText = seg.map((w) => w.text).join(' ').replace(/\s+/g, ' ').trim();
+    if (!rawText) continue;
+    const text = formatSentenceText(rawText);
 
     let startSec = seg[0].start;
     if (startSec < previousEnd) startSec = previousEnd;
 
-    const lastWordEnd = seg[seg.length - 1].end;
+    const lastWord = seg[seg.length - 1];
+    const lastWordStart = lastWord.start;
+    const lastWordEnd = lastWord.end;
 
     // Look ahead to find the earliest onset of the subsequent sentence segment
     let nextStartSec: number | null = null;
@@ -242,33 +354,26 @@ export function segmentSentences(data: TranscriptResult): SentenceItem[] {
     }
 
     let endSec = lastWordEnd;
-    if (nextStartSec !== null && nextStartSec > lastWordEnd) {
-      const gap = nextStartSec - lastWordEnd;
-      // Acoustic decay absorption with strict lead-out silence margin:
-      // Leave at least 100ms - 180ms of dead silence before nextStartSec so that
-      // asynchronous player pause latency (60-100ms) NEVER leaks the initial letter
-      // or sound of the subsequent sentence.
-      if (gap >= 0.36) {
-        // Generous inter-sentence pause: allow natural spoken decay (up to 420ms)
-        // while guaranteeing >= 180ms silence cushion before the next sentence.
-        const safeTail = Math.min(0.42, gap - 0.18);
-        endSec = lastWordEnd + safeTail;
-      } else if (gap >= 0.22) {
-        // Medium pause: guarantee >= 160ms silence cushion
-        const safeTail = Math.max(0, gap - 0.16);
-        endSec = lastWordEnd + safeTail;
-      } else if (gap >= 0.12) {
-        // Tight pause: guarantee >= 100ms silence cushion
-        const safeTail = Math.max(0, gap - 0.10);
-        endSec = lastWordEnd + safeTail;
+    if (nextStartSec !== null) {
+      const cleanLen = lastWord.clean ? lastWord.clean.length : 4;
+      // Acoustic articulation duration for the final word phonemes + natural release tail
+      const minArticDur = 0.12 + 0.035 * Math.min(Math.max(cleanLen, 2), 12);
+      const naturalWordEnd = roundMs(lastWordStart + minArticDur + 0.06);
+      const baseWordEnd = Math.max(lastWordEnd, naturalWordEnd);
+
+      if (nextStartSec > baseWordEnd) {
+        const availablePause = nextStartSec - baseWordEnd;
+        // Allow natural spoken acoustic release decay (up to 350ms) into inter-sentence silence
+        const safeTail = Math.min(0.35, availablePause * 0.5);
+        endSec = baseWordEnd + safeTail;
       } else {
-        // Direct spoken continuation (gap < 120ms): clamp strictly to last word boundary
-        endSec = lastWordEnd;
+        endSec = baseWordEnd;
       }
-      // Absolute mathematical guarantee: never closer than 100ms to nextStartSec
-      endSec = Math.min(endSec, nextStartSec - 0.10);
-    } else if (nextStartSec === null) {
-      // Final sentence in the transcript: allow 0.30s natural decay
+
+      // Absolute Playback Boundary Law guarantee: strictly bound at least 50ms before next sentence onset
+      endSec = Math.min(endSec, nextStartSec - 0.05);
+    } else {
+      // Final sentence in the transcript: allow 0.30s natural acoustic decay
       endSec = lastWordEnd + 0.30;
     }
 
@@ -294,12 +399,12 @@ export function segmentSentences(data: TranscriptResult): SentenceItem[] {
 }
 
 function segmentPunctuatedStream(words: SegWord[]): SegWord[][] {
-  const segments: SegWord[][] = [];
+  const preliminary: SegWord[][] = [];
   let current: SegWord[] = [];
 
   const flush = () => {
     if (current.length > 0) {
-      segments.push(current);
+      preliminary.push(current);
       current = [];
     }
   };
@@ -324,37 +429,31 @@ function segmentPunctuatedStream(words: SegWord[]): SegWord[][] {
       flush();
       continue;
     }
-
-    // Safety valve ONLY for rare unpunctuated run-on passages (> 42 words without a period)
-    if (current.length >= 42) {
-      const endsMajorClause = /[;:\u2014\u2013]$/.test(word.text) ||
-        (/,$/.test(word.text) && /^(and|but|so|because|however|while|whereas)$/i.test(next.clean));
-      if (endsMajorClause && !NON_TERMINAL_WORDS.has(word.clean)) {
-        flush();
-      } else if (current.length >= 58 && !NON_TERMINAL_WORDS.has(word.clean)) {
-        flush();
-      }
-    }
   }
 
   flush();
 
-  // Only merge a 1-word isolated interjection (e.g. "Right." or "Yeah.") if it
-  // naturally attaches to a short adjacent sentence; keep genuine 2+ word sentences
-  // ("I know it." / "It's not worth it.") intact as complete sentences.
-  const refined: SegWord[][] = [];
-  for (let i = 0; i < segments.length; i++) {
-    const seg = segments[i];
-    const prev = refined.length > 0 ? refined[refined.length - 1] : null;
+  // Merge 1-word isolated interjections (e.g. "Right." or "Yeah.") if adjacent to short sentence
+  const merged: SegWord[][] = [];
+  for (let i = 0; i < preliminary.length; i++) {
+    const seg = preliminary[i];
+    const prev = merged.length > 0 ? merged[merged.length - 1] : null;
     const gapFromPrev = prev ? seg[0].start - prev[prev.length - 1].end : Infinity;
     if (seg.length === 1 && prev && prev.length <= 10 && gapFromPrev < 1.0) {
       prev.push(...seg);
     } else {
-      refined.push(seg);
+      merged.push(seg);
     }
   }
 
-  return refined;
+  // Split any long sentences into bite-sized, rhythmically cohesive shadowing units
+  const finalSegments: SegWord[][] = [];
+  for (const sentenceWords of merged) {
+    const subSegments = splitLongSentence(sentenceWords);
+    finalSegments.push(...subSegments);
+  }
+
+  return finalSegments;
 }
 
 function segmentUnpunctuatedStream(words: SegWord[]): SegWord[][] {
@@ -380,7 +479,7 @@ function segmentUnpunctuatedStream(words: SegWord[]): SegWord[][] {
 
     const count = current.length;
     const remaining = words.length - (i + 1);
-    if (count < 7 || remaining < 4) continue;
+    if (count < 4 || remaining < 3) continue;
 
     // Never end a sentence on a dangling function/modifier word
     if (NON_TERMINAL_WORDS.has(word.clean)) continue;
@@ -388,30 +487,26 @@ function segmentUnpunctuatedStream(words: SegWord[]): SegWord[][] {
     if (next.clean === word.clean) continue;
 
     const pause = estimatePauseAfter(words, i);
-    const nextStartsClause = CLAUSE_STARTERS.has(next.clean);
+    const nextStartsClause = CLAUSE_STARTERS.has(next.clean) || INDEPENDENT_CLAUSE_STARTERS.has(next.clean);
     const nextContinuesPhrase = PHRASE_CONTINUATION_NEXT.has(next.clean);
 
-    // Avoid detaching a trailing prepositional modifier ("rules | for the next 2 minutes")
-    // unless there is a very clear silence gap (>= 0.55s).
-    if (nextContinuesPhrase && pause < 0.55 && count < 24) {
+    if (nextContinuesPhrase && pause < 0.40 && count < 14) {
       continue;
     }
 
     let shouldCut = false;
 
-    if (pause >= 0.42 && nextStartsClause && count >= 7) {
+    if (pause >= 0.35 && nextStartsClause && count >= 5) {
       shouldCut = true;
-    } else if (pause >= 0.52 && count >= 8) {
+    } else if (pause >= 0.45 && count >= 6) {
       shouldCut = true;
-    } else if (pause >= 0.24 && nextStartsClause && count >= 11) {
+    } else if (pause >= 0.18 && nextStartsClause && count >= 8) {
       shouldCut = true;
-    } else if (count >= 16 && nextStartsClause && pause >= 0.12) {
+    } else if (count >= 11 && (nextStartsClause || pause >= 0.10)) {
       shouldCut = true;
-    } else if (count >= 22 && nextStartsClause) {
+    } else if (count >= 14 && !nextContinuesPhrase) {
       shouldCut = true;
-    } else if (count >= 28 && !nextContinuesPhrase) {
-      shouldCut = true;
-    } else if (count >= 34) {
+    } else if (count >= 17) {
       shouldCut = true;
     }
 

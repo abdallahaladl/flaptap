@@ -8,16 +8,12 @@ import {
 import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { SqliteService } from '../../core/database/sqlite.service';
-import { VerifiedGoogleProfile } from './google-oauth.service';
 
 export interface UserProfile {
   id: string;
   email: string;
   name: string;
-  avatarUrl: string;
-  authProvider: 'email' | 'google' | 'email+google';
   hasPassword: boolean;
-  emailVerified: boolean;
   nativeLanguage: string;
   uiLanguage: string;
   dailyGoalMinutes: number;
@@ -29,12 +25,10 @@ export interface UserProfile {
 export interface SessionClientMeta {
   userAgent?: string;
   ipAddress?: string;
-  authMethod?: 'email' | 'google';
 }
 
 export interface ActiveSessionInfo {
   sessionId: string;
-  authMethod: string;
   userAgent: string;
   ipAddress: string;
   lastActiveAt: string;
@@ -103,23 +97,11 @@ export class AuthService {
   private rowToUser(row: Record<string, any> | undefined): UserProfile | null {
     if (!row) return null;
     const storedHash = String(row.password_hash || '');
-    const hasPassword = this.hasUsablePassword(storedHash);
-    const hasGoogle = Boolean(row.google_sub);
-    const provider: UserProfile['authProvider'] =
-      hasPassword && hasGoogle
-        ? 'email+google'
-        : hasGoogle
-          ? 'google'
-          : 'email';
-
     return {
       id: String(row.id),
       email: String(row.email),
       name: String(row.name),
-      avatarUrl: String(row.avatar_url || ''),
-      authProvider: provider,
-      hasPassword,
-      emailVerified: Boolean(row.email_verified) || hasGoogle,
+      hasPassword: this.hasUsablePassword(storedHash),
       nativeLanguage: String(row.native_language || 'ar'),
       uiLanguage: String(row.ui_language || 'en'),
       dailyGoalMinutes: Number(row.daily_goal_minutes) || 15,
@@ -145,15 +127,40 @@ export class AuthService {
     }
 
     const existing = this.sqlite.db
-      .prepare('SELECT id, google_sub, password_hash FROM users WHERE email = ?')
+      .prepare('SELECT id, password_hash FROM users WHERE email = ?')
       .get(email) as Record<string, any> | undefined;
     if (existing) {
-      if (existing.google_sub && !this.hasUsablePassword(String(existing.password_hash || ''))) {
-        throw new ConflictException(
-          'This email is already registered with Google Sign-In. Continue with Google to access your account.',
-        );
+      if (this.hasUsablePassword(String(existing.password_hash || ''))) {
+        throw new ConflictException('An account with this email already exists. Please sign in instead.');
       }
-      throw new ConflictException('An account with this email already exists. Please sign in instead.');
+
+      // Upgrade a legacy passwordless account to email+password without losing existing lessons
+      const existingId = String(existing.id);
+      const now = new Date().toISOString();
+      const passwordHash = this.hashPassword(password);
+      const nativeLanguage = (input.nativeLanguage || 'ar').trim() || 'ar';
+      const uiLanguage = (input.uiLanguage || 'en').trim() || 'en';
+      this.sqlite.db
+        .prepare(`
+          UPDATE users
+          SET name = ?,
+              password_hash = ?,
+              native_language = ?,
+              ui_language = ?,
+              auth_provider = 'email',
+              last_login_at = ?
+          WHERE id = ?
+        `)
+        .run(name, passwordHash, nativeLanguage, uiLanguage, now, existingId);
+
+      if (input.guestToken) {
+        this.claimGuestData(input.guestToken, existingId);
+      }
+
+      const token = this.createSession(existingId, meta);
+      const user = this.getUserById(existingId)!;
+      this.logger.log(`Set email password for existing user account: ${email}`);
+      return { user, token };
     }
 
     const userId = uuidv4();
@@ -176,7 +183,7 @@ export class AuthService {
       this.claimGuestData(input.guestToken, userId);
     }
 
-    const token = this.createSession(userId, { ...meta, authMethod: 'email' });
+    const token = this.createSession(userId, meta);
     const user = this.getUserById(userId)!;
     this.logger.log(`Registered user account: ${email}`);
     return { user, token };
@@ -199,9 +206,9 @@ export class AuthService {
     }
 
     const storedHash = String(row.password_hash || '');
-    if (!this.hasUsablePassword(storedHash) && row.google_sub) {
+    if (!this.hasUsablePassword(storedHash)) {
       throw new UnauthorizedException(
-        'This account uses Google Sign-In. Click "Continue with Google" to sign in.',
+        'This account does not have a password yet. Switch to "Create account" with this email to set a password.',
       );
     }
 
@@ -217,125 +224,10 @@ export class AuthService {
       this.claimGuestData(input.guestToken, userId);
     }
 
-    const token = this.createSession(userId, { ...meta, authMethod: 'email' });
+    const token = this.createSession(userId, meta);
     return {
       user: this.getUserById(userId)!,
       token,
-    };
-  }
-
-  /**
-   * Signs in or creates a real user account from a cryptographically verified
-   * Google OIDC profile, automatically linking existing verified email accounts.
-   */
-  authenticateWithGoogle(
-    profile: VerifiedGoogleProfile,
-    options?: {
-      uiLanguage?: string;
-      nativeLanguage?: string;
-      guestToken?: string;
-      meta?: SessionClientMeta;
-    },
-  ): { user: UserProfile; token: string; isNewUser: boolean } {
-    const now = new Date().toISOString();
-    const bySub = this.sqlite.db
-      .prepare('SELECT * FROM users WHERE google_sub = ?')
-      .get(profile.sub) as Record<string, any> | undefined;
-
-    if (bySub) {
-      const userId = String(bySub.id);
-      this.sqlite.db
-        .prepare(`
-          UPDATE users
-          SET avatar_url = CASE WHEN ? != '' THEN ? ELSE avatar_url END,
-              email_verified = 1,
-              last_login_at = ?
-          WHERE id = ?
-        `)
-        .run(profile.picture, profile.picture, now, userId);
-
-      if (options?.guestToken) {
-        this.claimGuestData(options.guestToken, userId);
-      }
-
-      const token = this.createSession(userId, { ...options?.meta, authMethod: 'google' });
-      return {
-        user: this.getUserById(userId)!,
-        token,
-        isNewUser: false,
-      };
-    }
-
-    const byEmail = this.sqlite.db
-      .prepare('SELECT * FROM users WHERE email = ?')
-      .get(profile.email) as Record<string, any> | undefined;
-
-    if (byEmail) {
-      const userId = String(byEmail.id);
-      const hasPass = this.hasUsablePassword(String(byEmail.password_hash || ''));
-      const nextProvider = hasPass ? 'email+google' : 'google';
-
-      this.sqlite.db
-        .prepare(`
-          UPDATE users
-          SET google_sub = ?,
-              avatar_url = CASE WHEN ? != '' THEN ? ELSE avatar_url END,
-              auth_provider = ?,
-              email_verified = 1,
-              last_login_at = ?
-          WHERE id = ?
-        `)
-        .run(profile.sub, profile.picture, profile.picture, nextProvider, now, userId);
-
-      if (options?.guestToken) {
-        this.claimGuestData(options.guestToken, userId);
-      }
-
-      const token = this.createSession(userId, { ...options?.meta, authMethod: 'google' });
-      this.logger.log(`Linked Google identity to existing account: ${profile.email}`);
-      return {
-        user: this.getUserById(userId)!,
-        token,
-        isNewUser: false,
-      };
-    }
-
-    // Create brand-new user account backed by Google OIDC
-    const userId = uuidv4();
-    const nativeLanguage = (options?.nativeLanguage || 'ar').trim() || 'ar';
-    const uiLanguage = (options?.uiLanguage || 'en').trim() || 'en';
-
-    this.sqlite.db
-      .prepare(`
-        INSERT INTO users (
-          id, email, name, password_hash, native_language, ui_language,
-          daily_goal_minutes, streak_days, last_practice_date,
-          google_sub, avatar_url, auth_provider, email_verified, last_login_at, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 15, 0, NULL, ?, ?, 'google', 1, ?, ?)
-      `)
-      .run(
-        userId,
-        profile.email,
-        profile.name || profile.email.split('@')[0],
-        OAUTH_ONLY_PASSWORD_SENTINEL,
-        nativeLanguage,
-        uiLanguage,
-        profile.sub,
-        profile.picture || '',
-        now,
-        now,
-      );
-
-    if (options?.guestToken) {
-      this.claimGuestData(options.guestToken, userId);
-    }
-
-    const token = this.createSession(userId, { ...options?.meta, authMethod: 'google' });
-    this.logger.log(`Created new Google user account: ${profile.email}`);
-    return {
-      user: this.getUserById(userId)!,
-      token,
-      isNewUser: true,
     };
   }
 
@@ -360,7 +252,6 @@ export class AuthService {
       return null;
     }
 
-    // Throttle last_active_at writes to at most once every 2 minutes
     const prevActive = String(session.last_active_at || '');
     if (!prevActive || Date.now() - new Date(prevActive).getTime() > 120_000) {
       this.sqlite.db
@@ -425,11 +316,10 @@ export class AuthService {
     }
 
     const nextHash = this.hashPassword(newPassword);
-    const nextProvider = row.google_sub ? 'email+google' : 'email';
 
     this.sqlite.db
-      .prepare('UPDATE users SET password_hash = ?, auth_provider = ? WHERE id = ?')
-      .run(nextHash, nextProvider, userId);
+      .prepare("UPDATE users SET password_hash = ?, auth_provider = 'email' WHERE id = ?")
+      .run(nextHash, userId);
 
     if (currentSessionToken) {
       this.revokeOtherSessions(userId, currentSessionToken);
@@ -442,14 +332,13 @@ export class AuthService {
     const currentHash = currentSessionToken ? this.hashSessionToken(currentSessionToken) : '';
     const nowIso = new Date().toISOString();
 
-    // Clean expired sessions for this user
     this.sqlite.db
       .prepare('DELETE FROM auth_sessions WHERE user_id = ? AND expires_at <= ?')
       .run(userId, nowIso);
 
     const rows = this.sqlite.db
       .prepare(
-        `SELECT token_hash, session_id, auth_method, user_agent, ip_address, last_active_at, created_at, expires_at
+        `SELECT token_hash, session_id, user_agent, ip_address, last_active_at, created_at, expires_at
          FROM auth_sessions WHERE user_id = ? ORDER BY created_at DESC`,
       )
       .all(userId) as Array<Record<string, any>>;
@@ -458,7 +347,6 @@ export class AuthService {
       const isCurrent = String(r.token_hash) === currentHash;
       return {
         sessionId: String(r.session_id || String(r.token_hash).slice(0, 16)),
-        authMethod: String(r.auth_method || 'email'),
         userAgent: String(r.user_agent || 'Browser session'),
         ipAddress: String(r.ip_address || ''),
         lastActiveAt: String(r.last_active_at || r.created_at),
@@ -491,7 +379,7 @@ export class AuthService {
     this.logger.log(`Deleted user account and cascaded data: ${userId}`);
   }
 
-  private createSession(userId: string, meta?: SessionClientMeta): string {
+  public createSession(userId: string, meta?: SessionClientMeta): string {
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = this.hashSessionToken(rawToken);
     const sessionId = tokenHash.slice(0, 16);
@@ -503,7 +391,7 @@ export class AuthService {
       .prepare(`
         INSERT INTO auth_sessions (
           token_hash, session_id, user_id, user_agent, ip_address, auth_method, last_active_at, expires_at, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, 'email', ?, ?, ?)
       `)
       .run(
         tokenHash,
@@ -511,7 +399,6 @@ export class AuthService {
         userId,
         (meta?.userAgent || '').slice(0, 240),
         (meta?.ipAddress || '').slice(0, 64),
-        meta?.authMethod || 'email',
         nowIso,
         expiresAt,
         nowIso,

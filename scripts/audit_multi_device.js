@@ -191,12 +191,26 @@ async function runDeviceAudit() {
                   });
                 }
 
-                // Check button clickability & overlap
+                // Check button clickability, overlap, and unified single-row control bar invariant
                 const masterPlay = document.getElementById('deck-play-active-btn');
                 const masterPlayVisible = masterPlay ? masterPlay.getBoundingClientRect().height > 0 : false;
+                const bar = document.getElementById('studio-control-bar');
+                const barBtns = Array.from(bar?.querySelectorAll('.scb-btn') || []).filter(
+                  (b) => getComputedStyle(b).display !== 'none',
+                );
+                const tops = barBtns.map((b) => Math.round(b.getBoundingClientRect().top));
+                const bottoms = barBtns.map((b) => Math.round(b.getBoundingClientRect().bottom));
+                const barHeight = bottoms.length ? Math.max(...bottoms) - Math.min(...tops) : 999;
+                const barOverflow = bar ? bar.scrollWidth - bar.clientWidth : 999;
 
-                return { diff, culprits: culprits.slice(0, 5), masterPlayVisible };
+                return { diff, culprits: culprits.slice(0, 5), masterPlayVisible, barHeight, barOverflow };
               });
+
+              if (check.barHeight > 44 || check.barOverflow > 2 || !check.masterPlayVisible) {
+                const barIssue = `studio.html [${vp.name}] [layout:${layout}] [mode:${mode}] [${theme}] [${lang}] control bar failed single-row/overflow invariant: height=${check.barHeight}px, overflow=${check.barOverflow}px, playVisible=${check.masterPlayVisible}`;
+                console.error(`❌ ${barIssue}`);
+                issues.push(barIssue);
+              }
 
               if (check.diff > 2) {
                 const issueMsg = `studio.html [${vp.name}] [layout:${layout}] [mode:${mode}] [${theme}] [${lang}] overflow: +${check.diff}px (Culprits: ${JSON.stringify(check.culprits)})`;

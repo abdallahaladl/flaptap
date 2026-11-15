@@ -20,7 +20,7 @@ import socket
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 # Hard ceiling for every network operation in this helper.
 socket.setdefaulttimeout(8)
@@ -209,6 +209,90 @@ def extract_timed_words(cues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return timed_words
 
 
+def parse_json3_events(events: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Parses native YouTube JSON3 caption events into deduplicated cues and exact
+    per-word timed_words with monotonic millisecond precision.
+    """
+    timed_words = []
+    cues = []
+
+    def clean_token(token: str) -> str:
+        return re.sub(r'^[^\w\']+|[^\w\']+$', '', token.lower())
+
+    for ev in events:
+        t_start = ev.get('tStartMs', 0) / 1000.0
+        d_dur = ev.get('dDurationMs', 0) / 1000.0
+        segs = ev.get('segs', [])
+        if not segs:
+            continue
+
+        cue_text_parts = []
+        event_words = []
+
+        for s in segs:
+            utf8 = s.get('utf8', '')
+            if not utf8:
+                continue
+            cleaned = utf8.replace('\n', ' ')
+            tokens = cleaned.strip().split()
+            if not tokens:
+                continue
+
+            offset = s.get('tOffsetMs', 0) / 1000.0
+            w_start = round(t_start + offset, 3)
+
+            for idx, tok in enumerate(tokens):
+                cue_text_parts.append(tok)
+                tok_start = w_start if idx == 0 else round(w_start + idx * 0.12, 3)
+                event_words.append({
+                    'word': tok,
+                    'clean': clean_token(tok),
+                    'start_sec': tok_start,
+                })
+
+        if not event_words:
+            continue
+
+        cue_text = ' '.join(cue_text_parts).strip()
+        if not cue_text:
+            continue
+
+        cue_idx = len(cues)
+        cue_end = round(max(t_start + d_dur, event_words[-1]['start_sec'] + 0.25), 3)
+
+        cues.append({
+            'start': format_seconds_str(t_start),
+            'end': format_seconds_str(cue_end),
+            'start_sec': t_start,
+            'end_sec': cue_end,
+            'text': cue_text,
+        })
+
+        for i, w in enumerate(event_words):
+            w['cue_index'] = cue_idx
+            w['cue_end'] = (i == len(event_words) - 1)
+            timed_words.append(w)
+
+    timed_words.sort(key=lambda w: w['start_sec'])
+
+    deduped_words = []
+    for w in timed_words:
+        if deduped_words and deduped_words[-1]['word'] == w['word'] and abs(deduped_words[-1]['start_sec'] - w['start_sec']) < 0.01:
+            continue
+        deduped_words.append(w)
+
+    for i in range(len(deduped_words)):
+        w = deduped_words[i]
+        if i + 1 < len(deduped_words):
+            next_start = deduped_words[i + 1]['start_sec']
+            w['end_sec'] = round(max(w['start_sec'] + 0.05, next_start), 3)
+        else:
+            w['end_sec'] = round(w['start_sec'] + 0.35, 3)
+
+    return cues, deduped_words
+
+
 def group_cues_into_sentences(cues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Groups cues into clean, bite-sized shadowable sentences.
@@ -383,18 +467,60 @@ def fetch_youtube_transcript(url: str, interval: int = 30) -> Dict[str, Any]:
         from youtube_transcript_api import YouTubeTranscriptApi
         api = YouTubeTranscriptApi()
 
-        transcripts = None
+        tr = None
         try:
-            transcripts = api.fetch(video_id)
-        except Exception:
-            # Fall back to listing transcripts to find exact English track
+            t_list = api.list(video_id)
             try:
-                t_list = api.list(video_id)
-                try:
-                    tr = t_list.find_manually_created_transcript(['en', 'en-US', 'en-GB', 'en-orig'])
-                except Exception:
-                    tr = t_list.find_generated_transcript(['en', 'en-US', 'en-GB', 'en-orig'])
+                tr = t_list.find_manually_created_transcript(['en', 'en-US', 'en-GB', 'en-orig'])
+            except Exception:
+                tr = t_list.find_generated_transcript(['en', 'en-US', 'en-GB', 'en-orig'])
+        except Exception:
+            tr = None
+
+        # Prefer per-word JSON3 timedtext track directly from YouTube
+        if tr and getattr(tr, '_url', None):
+            try:
+                timedtext_url = tr._url
+                if '&fmt=' not in timedtext_url:
+                    timedtext_url += '&fmt=json3'
+                else:
+                    timedtext_url = re.sub(r'&fmt=[^&]+', '&fmt=json3', timedtext_url)
+                req = urllib.request.Request(timedtext_url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=5) as resp:
+                    json3_payload = json.loads(resp.read().decode("utf-8"))
+                    events = json3_payload.get("events", [])
+                    if events:
+                        cues, timed_words = parse_json3_events(events)
+                        if cues and timed_words:
+                            grouped_chunks = group_cues_by_interval(cues, interval_sec=interval)
+                            sentences = group_cues_into_sentences(cues)
+                            full_text = " ".join(c["text"] for c in cues)
+                            duration = int(cues[-1]["end_sec"]) if cues else 180
+                            return {
+                                "title": title,
+                                "creator": uploader,
+                                "url": url,
+                                "video_id": video_id,
+                                "duration_seconds": duration,
+                                "total_cues": len(cues),
+                                "chunks": grouped_chunks,
+                                "sentences": sentences,
+                                "cues": cues,
+                                "timed_words": timed_words,
+                                "full_raw_transcript": full_text,
+                            }
+            except Exception:
+                pass
+
+        transcripts = None
+        if tr:
+            try:
                 transcripts = tr.fetch()
+            except Exception:
+                transcripts = None
+        if not transcripts:
+            try:
+                transcripts = api.fetch(video_id)
             except Exception:
                 transcripts = None
 
@@ -467,7 +593,7 @@ def fetch_youtube_transcript(url: str, interval: int = 30) -> Dict[str, Any]:
             "--write-subs",
             "--write-auto-subs",
             "--sub-langs", "en-orig,en-US,en",
-            "--sub-format", "vtt",
+            "--sub-format", "json3/vtt",
             "-o", f"{sub_prefix}.%(ext)s",
             url,
         ]
@@ -481,6 +607,38 @@ def fetch_youtube_transcript(url: str, interval: int = 30) -> Dict[str, Any]:
             )
         except subprocess.TimeoutExpired:
             raise TranscriptError(TIMEOUT, TIMEOUT_MESSAGE)
+
+        json3_files = [f for f in os.listdir(tmpdir) if f.endswith(".json3")]
+        if json3_files:
+            json3_files.sort(key=lambda name: (
+                0 if "en-orig" in name else (1 if "en-US" in name else 2)
+            ))
+            try:
+                with open(os.path.join(tmpdir, json3_files[0]), "r", encoding="utf-8") as jf:
+                    j_data = json.load(jf)
+                    events = j_data.get("events", [])
+                    if events:
+                        cues, timed_words = parse_json3_events(events)
+                        if cues and timed_words:
+                            grouped_chunks = group_cues_by_interval(cues, interval_sec=interval)
+                            sentences = group_cues_into_sentences(cues)
+                            full_text = " ".join(c["text"] for c in cues)
+                            duration = int(cues[-1]["end_sec"]) if cues else 180
+                            return {
+                                "title": title,
+                                "creator": uploader,
+                                "url": url,
+                                "video_id": video_id,
+                                "duration_seconds": duration,
+                                "total_cues": len(cues),
+                                "chunks": grouped_chunks,
+                                "sentences": sentences,
+                                "cues": cues,
+                                "timed_words": timed_words,
+                                "full_raw_transcript": full_text,
+                            }
+            except Exception:
+                pass
 
         vtt_files = [f for f in os.listdir(tmpdir) if f.endswith(".vtt")]
         if not vtt_files:

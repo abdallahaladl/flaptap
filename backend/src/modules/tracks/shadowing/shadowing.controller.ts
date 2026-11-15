@@ -26,6 +26,7 @@ export class DefineWordDto {
   word: string;
   sentenceIndex?: number;
   language?: string;
+  lookupScope?: 'word' | 'phrase' | 'sentence';
 }
 
 @Controller('api/tracks/shadowing')
@@ -69,6 +70,12 @@ export class ShadowingController {
     return this.shadowingService.analyzeLesson(dto?.historyId, Boolean(dto?.force), identity);
   }
 
+  @Post('coach-glosses')
+  coachGlosses(@Body() dto: AnalyzeLessonDto, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return this.shadowingService.coachGlosses(dto?.historyId, Boolean(dto?.force), identity);
+  }
+
   @Post('define-word')
   defineWord(@Body() dto: DefineWordDto, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
@@ -77,6 +84,7 @@ export class ShadowingController {
       dto?.word,
       dto?.sentenceIndex,
       dto?.language,
+      dto?.lookupScope,
       identity,
     );
   }

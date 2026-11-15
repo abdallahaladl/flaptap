@@ -2,7 +2,7 @@
 <html lang="en" dir="ltr" data-theme="light">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Flaptap — Spoken English Studio</title>
   <meta name="description" content="Master spoken English from real videos, interactive dialogues, and articulatory workouts with millisecond precision." />
   <meta name="theme-color" content="#141413" />
@@ -22,21 +22,7 @@
   <meta name="apple-mobile-web-app-title" content="Flaptap" />
   <script>
     (function () {
-      var isLocalLoopback =
-        location.hostname === 'localhost' ||
-        location.hostname === '127.0.0.1' ||
-        location.hostname === '[::1]';
-      if (!window.isSecureContext && location.protocol === 'http:' && !isLocalLoopback && location.search.indexOf('lan=1') === -1) {
-        fetch('/api/pwa/origin', { cache: 'no-store' })
-          .then(function (r) { return r.json(); })
-          .then(function (d) {
-            if (d && d.httpsOrigin) {
-              location.replace(d.httpsOrigin + location.pathname + location.search + location.hash);
-            }
-          })
-          .catch(function () {});
-      }
-      if ('serviceWorker' in navigator) {
+      if ('serviceWorker' in navigator && (window.isSecureContext || location.hostname === 'localhost')) {
         navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function () {});
       }
       window.__deferredPwaPrompt = null;
@@ -97,113 +83,189 @@
       } catch (e) {}
     })();
   </script>
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/learning-library.css" />
 </head>
 <body>
-  <!-- Editorial Masthead Navbar -->
-  <header class="navbar" role="banner">
-    <div class="navbar-inner">
-      <a href="/" class="brand-link" aria-label="Flaptap Home">
-        <span class="brand-mark" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-            <rect width="32" height="32" rx="7" fill="var(--ink)"/>
-            <path d="M6.5 8.75C6.5 7.7835 7.2835 7 8.25 7H15.5C16.4665 7 17.25 7.7835 17.25 8.75C17.25 9.7165 16.4665 10.5 15.5 10.5H10V14.25H13.75C14.7165 14.25 15.5 15.0335 15.5 16C15.5 16.9665 14.7165 17.75 13.75 17.75H10V23.25C10 24.2165 9.2165 25 8.25 25C7.2835 25 6.5 24.2165 6.5 23.25V8.75Z" fill="var(--bg-sheet)"/>
-            <rect x="17.8" y="12" width="3.1" height="8" rx="1.55" fill="var(--vox-yellow)"/>
-            <rect x="22.4" y="8.5" width="3.1" height="15" rx="1.55" fill="var(--vox-yellow)"/>
-          </svg>
-        </span>
-        <span class="brand-wordmark">Flaptap</span>
-        <span class="brand-edition" data-i18n="brandEdition">Spoken English Studio</span>
-      </a>
+  <div class="app-shell">
+    <!-- Mobile Sidebar Drawer Backdrop -->
+    <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
 
-      <nav class="primary-nav" role="tablist" aria-label="Workspace Sections">
-        <button type="button" class="nav-tab active" data-section="lessons" role="tab" aria-selected="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-          </svg>
-          <span data-i18n="navLessons">Lessons</span>
-        </button>
-        <button type="button" class="nav-tab" data-section="dialogue" role="tab" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          </svg>
-          <span data-i18n="navDialogue">Dialogue</span>
-        </button>
-        <button type="button" class="nav-tab" data-section="pronunciation" role="tab" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-            <line x1="12" x2="12" y1="19" y2="22"></line>
-          </svg>
-          <span data-i18n="navPronunciation">Pronunciation</span>
-        </button>
-        <button type="button" class="nav-tab" data-section="vocabulary" role="tab" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-            <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
-          </svg>
-          <span data-i18n="navVocabulary">Vocabulary</span>
-          <span class="nav-count-pill" id="nav-vocab-badge" hidden>0</span>
-        </button>
-        <button type="button" class="nav-tab" data-section="history" role="tab" aria-selected="false">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-            <path d="M3 3v5h5"></path>
-            <path d="M12 7v5l4 2"></path>
-          </svg>
-          <span data-i18n="navHistory">History &amp; Usage</span>
-        </button>
-      </nav>
+    <!-- Primary Left Navigation Rail -->
+    <aside id="app-sidebar" class="app-sidebar" aria-label="Primary Navigation">
+      <div class="sidebar-header">
+        <a href="/" class="brand-link" data-route-section="lessons" aria-label="Flaptap Home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+              <rect width="32" height="32" rx="7" fill="var(--ink)"/>
+              <path d="M6.5 8.75C6.5 7.7835 7.2835 7 8.25 7H15.5C16.4665 7 17.25 7.7835 17.25 8.75C17.25 9.7165 16.4665 10.5 15.5 10.5H10V14.25H13.75C14.7165 14.25 15.5 15.0335 15.5 16C15.5 16.9665 14.7165 17.75 13.75 17.75H10V23.25C10 24.2165 9.2165 25 8.25 25C7.2835 25 6.5 24.2165 6.5 23.25V8.75Z" fill="var(--bg-sheet)"/>
+              <rect x="17.8" y="12" width="3.1" height="8" rx="1.55" fill="var(--vox-yellow)"/>
+              <rect x="22.4" y="8.5" width="3.1" height="15" rx="1.55" fill="var(--vox-yellow)"/>
+            </svg>
+          </span>
+          <span class="brand-wordmark">Flaptap</span>
+        </a>
 
-      <div class="navbar-actions">
-        <div class="streak-pill" id="header-streak-pill" title="Practice streak">
+        <button type="button" class="icon-btn sidebar-close-btn" id="sidebar-close-btn" aria-label="Close navigation drawer">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
-          <span><strong class="ltr-num" id="header-streak-count">0</strong> <span data-i18n="streakUnit">day streak</span></span>
-        </div>
-
-        <select id="ui-lang-select" class="ui-lang-select" aria-label="Interface language">
-          <option value="en">EN</option>
-          <option value="ar">AR</option>
-          <option value="es">ES</option>
-          <option value="fr">FR</option>
-          <option value="de">DE</option>
-          <option value="tr">TR</option>
-        </select>
-
-        <button type="button" class="icon-btn" id="theme-toggle-btn" aria-label="Toggle color theme" title="Switch Light / Dark mode">
-          <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" hidden>
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
-          </svg>
-          <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
-          </svg>
-        </button>
-
-        <button type="button" class="pwa-install-btn" id="pwa-install-btn" hidden aria-label="Install Flaptap App" title="Install Flaptap as an app">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-            <polyline points="7 10 12 15 17 10"></polyline>
-            <line x1="12" y1="15" x2="12" y2="3"></line>
-          </svg>
-          <span>Install App</span>
-        </button>
-
-        <button type="button" class="account-btn" id="open-account-btn">
-          <svg id="account-guest-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
-          <img id="account-avatar-img" class="account-avatar-img" alt="" hidden />
-          <span class="account-avatar" id="account-avatar" hidden>A</span>
-          <span id="account-btn-label" data-i18n="signIn">Sign in</span>
         </button>
       </div>
-    </div>
-  </header>
 
-  <main class="workspace-main">
+      <nav class="sidebar-nav" aria-label="Workspace Sections">
+        <div class="sidebar-group">
+          <div class="sidebar-group-label">Studio</div>
+          <a href="/" class="sidebar-nav-link active" data-route-section="lessons" aria-current="page" title="Video Lessons">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="5 3 19 12 5 21 5 3"></polygon>
+            </svg>
+            <span class="sidebar-link-text" data-i18n="navLessons">Lessons</span>
+          </a>
+          <a href="/dialogue" class="sidebar-nav-link" data-route-section="dialogue" title="Conversational Dialogue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span class="sidebar-link-text" data-i18n="navDialogue">Dialogue</span>
+          </a>
+          <a href="/pronunciation" class="sidebar-nav-link" data-route-section="pronunciation" title="Pronunciation Lab">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" x2="12" y1="19" y2="22"></line>
+            </svg>
+            <span class="sidebar-link-text" data-i18n="navPronunciation">Pronunciation</span>
+          </a>
+        </div>
+
+        <div class="sidebar-group">
+          <div class="sidebar-group-label">Knowledge</div>
+          <a href="/library" class="sidebar-nav-link" data-route-section="learning-library" title="Learning Library">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+              <path d="M8 7h8"></path>
+              <path d="M8 11h6"></path>
+            </svg>
+            <span class="sidebar-link-text" data-i18n="navLearningLibrary">Learning Library</span>
+            <span class="nav-count-pill" id="nav-ll-badge" hidden>0</span>
+          </a>
+          <a href="/lexicon" class="sidebar-nav-link" data-route-section="tech-linguist" title="Tech Lexicon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+              <polyline points="2 17 12 22 22 17"></polyline>
+              <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+            <span class="sidebar-link-text" data-i18n="navTechLinguist">Tech Lexicon</span>
+          </a>
+          <a href="/vocabulary" class="sidebar-nav-link" data-route-section="vocabulary" title="Vocabulary Vault">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+            </svg>
+            <span class="sidebar-link-text" data-i18n="navVocabulary">Vocabulary</span>
+            <span class="nav-count-pill" id="nav-vocab-badge" hidden>0</span>
+          </a>
+        </div>
+
+        <div class="sidebar-group">
+          <div class="sidebar-group-label">Workspace</div>
+          <a href="/history" class="sidebar-nav-link" data-route-section="history" title="History & Usage">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+              <path d="M3 3v5h5"></path>
+              <path d="M12 7v5l4 2"></path>
+            </svg>
+            <span class="sidebar-link-text" data-i18n="navHistory">History &amp; Usage</span>
+          </a>
+        </div>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button type="button" class="sidebar-utility-btn" id="sidebar-ai-keys-btn" title="Configure AI Provider API Keys">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+          </svg>
+          <span class="sidebar-link-text">AI Keys &amp; Models</span>
+        </button>
+        <div class="sidebar-edition-note" data-i18n="brandEdition">Spoken English Studio</div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Column -->
+    <div class="app-main-column">
+      <header class="workspace-topbar" role="banner">
+        <div class="workspace-topbar-inner">
+          <div class="topbar-left">
+            <button type="button" class="icon-btn mobile-nav-btn" id="mobile-nav-btn" aria-label="Open navigation menu" aria-expanded="false">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+            <button type="button" class="icon-btn sidebar-collapse-btn" id="sidebar-collapse-btn" aria-label="Toggle sidebar rail" aria-expanded="true" title="Collapse sidebar (Cmd+B)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                <line x1="9" y1="4" x2="9" y2="20"></line>
+              </svg>
+            </button>
+            <div class="topbar-breadcrumb" id="topbar-breadcrumb" aria-label="Current page location">
+              <span class="crumb-group">Studio</span>
+              <span class="crumb-sep" aria-hidden="true">/</span>
+              <span class="crumb-current">Lessons</span>
+            </div>
+          </div>
+
+          <div class="navbar-actions">
+            <div class="streak-pill" id="header-streak-pill" title="Practice streak">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <span><strong class="ltr-num" id="header-streak-count">0</strong> <span data-i18n="streakUnit">day streak</span></span>
+            </div>
+
+            <select id="ui-lang-select" class="ui-lang-select" aria-label="Interface language">
+              <option value="en">EN</option>
+              <option value="ar">AR</option>
+              <option value="es">ES</option>
+              <option value="fr">FR</option>
+              <option value="de">DE</option>
+              <option value="tr">TR</option>
+            </select>
+
+            <button type="button" class="icon-btn" id="theme-toggle-btn" aria-label="Toggle color theme" title="Switch Light / Dark mode">
+              <svg id="theme-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" hidden>
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+              </svg>
+              <svg id="theme-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+              </svg>
+            </button>
+
+            <button type="button" class="pwa-install-btn" id="pwa-install-btn" hidden aria-label="Install Flaptap App" title="Install Flaptap as an app">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="7 10 12 15 17 10"></polyline>
+                <line x1="12" y1="15" x2="12" y2="3"></line>
+              </svg>
+              <span>Install App</span>
+            </button>
+
+            <button type="button" class="account-btn" id="open-account-btn">
+              <svg id="account-guest-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <img id="account-avatar-img" class="account-avatar-img" alt="" hidden />
+              <span class="account-avatar" id="account-avatar" hidden>A</span>
+              <span id="account-btn-label" data-i18n="signIn">Sign in</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main class="workspace-main">
     <!-- SECTION 1: VIDEO LESSONS & LIBRARY -->
     <section id="section-lessons">
       <div class="editorial-desk">
@@ -316,10 +378,22 @@
 
         <div class="library-controls">
           <div class="filter-pills" role="tablist" aria-label="Filter library">
-            <button type="button" class="filter-pill active" data-filter="all" aria-selected="true" data-i18n="filterAll">All</button>
-            <button type="button" class="filter-pill" data-filter="shadowing" aria-selected="false" data-i18n="filterVideos">Videos</button>
-            <button type="button" class="filter-pill" data-filter="street_talk" aria-selected="false" data-i18n="filterDialogues">Dialogues</button>
-            <button type="button" class="filter-pill" data-filter="phonetics" aria-selected="false" data-i18n="filterPronunciation">Pronunciation</button>
+            <button type="button" class="filter-pill active" data-filter="all" aria-selected="true">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#layers"></use></svg>
+              <span data-i18n="filterAll">All</span>
+            </button>
+            <button type="button" class="filter-pill" data-filter="shadowing" aria-selected="false">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#monitor"></use></svg>
+              <span data-i18n="filterVideos">Videos</span>
+            </button>
+            <button type="button" class="filter-pill" data-filter="street_talk" aria-selected="false">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#message-square"></use></svg>
+              <span data-i18n="filterDialogues">Dialogues</span>
+            </button>
+            <button type="button" class="filter-pill" data-filter="phonetics" aria-selected="false">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#audio-lines"></use></svg>
+              <span data-i18n="filterPronunciation">Pronunciation</span>
+            </button>
           </div>
 
           <label class="search-box">
@@ -335,20 +409,13 @@
             />
           </label>
 
-          <button type="button" class="btn-secondary btn-xs" id="manage-history-jump-btn">
-            <span data-i18n="manageHistoryCacheBtn">History &amp; Cache</span>
-          </button>
-
-          <button type="button" class="btn-danger-ghost" id="clear-library-btn" hidden>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="3 6 5 6 21 6"></polyline>
-              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-            </svg>
-            <span data-i18n="clearLibraryBtn">Clear Library</span>
+          <button type="button" class="icon-action" id="clear-library-btn" hidden aria-label="Clear library" title="Clear library">
+            <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
           </button>
         </div>
       </div>
 
+      <div id="lessons-progress-bar" class="subject-progress-bar" hidden></div>
       <div id="history-grid" class="history-grid"></div>
       <div id="library-empty-state" class="empty-ledger" hidden>
         <h3 data-i18n="emptyLibraryTitle">Your library is ready</h3>
@@ -399,6 +466,21 @@
           </button>
         </form>
       </div>
+
+      <div id="dialogue-library-shelf" style="margin-top: 28px;">
+        <div class="library-header">
+          <div class="library-title-group">
+            <h2 class="section-heading">Your Dialogues</h2>
+            <span class="section-count ltr-num" id="dialogue-count-label">0</span>
+          </div>
+        </div>
+        <div id="dialogue-progress-bar" class="subject-progress-bar" hidden></div>
+        <div id="dialogue-history-grid" class="history-grid"></div>
+        <div id="dialogue-empty-state" class="empty-ledger" hidden>
+          <h3>No custom dialogues yet</h3>
+          <p>Describe any workplace or everyday scenario above to generate your first dialogue lesson.</p>
+        </div>
+      </div>
     </section>
 
     <!-- SECTION 3: CUSTOM PRONUNCIATION WORKOUT GENERATOR -->
@@ -437,6 +519,21 @@
           </button>
         </form>
       </div>
+
+      <div id="pronunciation-library-shelf" style="margin-top: 28px;">
+        <div class="library-header">
+          <div class="library-title-group">
+            <h2 class="section-heading">Your Pronunciation Workouts</h2>
+            <span class="section-count ltr-num" id="pronunciation-count-label">0</span>
+          </div>
+        </div>
+        <div id="pronunciation-progress-bar" class="subject-progress-bar" hidden></div>
+        <div id="pronunciation-history-grid" class="history-grid"></div>
+        <div id="pronunciation-empty-state" class="empty-ledger" hidden>
+          <h3>No pronunciation workouts yet</h3>
+          <p>Enter any phonetic sound, linking pattern, or prosody focus above to create your first articulatory drill.</p>
+        </div>
+      </div>
     </section>
 
     <!-- SECTION 4: VOCABULARY VAULT & FLASHCARDS -->
@@ -452,9 +549,18 @@
 
         <div class="library-controls">
           <div class="filter-pills" role="tablist">
-            <button type="button" class="filter-pill active" data-vocab-filter="all" aria-selected="true" data-i18n="vocabFilterAll">All</button>
-            <button type="button" class="filter-pill" data-vocab-filter="due" aria-selected="false" data-i18n="vocabFilterDue">Due for Review</button>
-            <button type="button" class="filter-pill" data-vocab-filter="mastered" aria-selected="false" data-i18n="vocabFilterMastered">Mastered</button>
+            <button type="button" class="filter-pill active" data-vocab-filter="all" aria-selected="true">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#layers"></use></svg>
+              <span data-i18n="vocabFilterAll">All</span>
+            </button>
+            <button type="button" class="filter-pill" data-vocab-filter="due" aria-selected="false">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#clock"></use></svg>
+              <span data-i18n="vocabFilterDue">Due for Review</span>
+            </button>
+            <button type="button" class="filter-pill" data-vocab-filter="mastered" aria-selected="false">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#target"></use></svg>
+              <span data-i18n="vocabFilterMastered">Mastered</span>
+            </button>
           </div>
 
           <label class="search-box">
@@ -466,6 +572,7 @@
           </label>
 
           <button type="button" class="btn-vox" style="height: 36px; padding: 0 14px; font-size: 0.83rem;" id="toggle-flashcards-btn" aria-expanded="false">
+            <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#sparkles"></use></svg>
             <span data-i18n="practiceFlashcardsBtn">Practice Flashcards</span>
           </button>
         </div>
@@ -475,7 +582,15 @@
       <div id="flashcard-stage" class="flashcard-stage" hidden>
         <div class="flashcard-topbar">
           <span id="flashcard-progress-text" class="ltr-num">Card 1 / 1</span>
-          <button type="button" class="btn-secondary" style="height: 28px; padding: 0 10px; font-size: 0.76rem;" id="close-flashcards-btn" data-i18n="closeBtn">Close</button>
+          <div class="flashcard-topbar-actions">
+            <button type="button" class="item-check-btn" id="fc-complete-toggle-btn" aria-pressed="false" aria-label="Mark done" title="Mark done">
+              <svg class="chk-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line class="chk-dash" x1="6.5" y1="12" x2="17.5" y2="12"></line><polyline class="chk-tick" points="19.5 7 9.5 17 4.5 12"></polyline></svg>
+              <span id="fc-complete-label" class="visually-hidden">Done</span>
+            </button>
+            <button type="button" class="icon-action icon-action--sm" id="close-flashcards-btn" aria-label="Close flashcards" title="Close flashcards">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#x"></use></svg>
+            </button>
+          </div>
         </div>
         <div class="flashcard-card" id="flashcard-card" tabindex="0" role="button" aria-label="Flip flashcard">
           <div class="flashcard-term" id="fc-term"></div>
@@ -483,7 +598,14 @@
           <div class="flashcard-context" id="fc-context"></div>
           <div class="flashcard-answer" id="fc-answer" hidden>
             <div class="flashcard-def" id="fc-def"></div>
-            <div class="flashcard-trans" id="fc-trans"></div>
+            <div class="flashcard-trans-block is-general" id="fc-general-trans-wrap" hidden>
+              <span class="sense-badge">General</span>
+              <div class="flashcard-general-trans" id="fc-general-trans" dir="auto"></div>
+            </div>
+            <div class="flashcard-trans-block is-context">
+              <span class="sense-badge is-context" id="fc-context-sense-label" hidden>In context</span>
+              <div class="flashcard-trans" id="fc-trans" dir="auto"></div>
+            </div>
           </div>
           <div id="fc-flip-hint" style="margin-top: 14px; font-size: 0.78rem; color: var(--ink-muted);" data-i18n="clickToReveal">Click to reveal meaning</div>
         </div>
@@ -494,6 +616,7 @@
         </div>
       </div>
 
+      <div id="vocab-progress-bar" class="subject-progress-bar" hidden></div>
       <div id="vocab-grid" class="vocab-grid"></div>
       <div id="vocab-empty-state" class="empty-ledger" hidden>
         <h3 data-i18n="emptyVocabTitle">No saved words yet</h3>
@@ -522,22 +645,11 @@
         </div>
 
         <div class="library-controls">
-          <button type="button" class="btn-secondary" id="refresh-usage-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-              <path d="M3 3v5h5"></path>
-              <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
-              <path d="M16 16h5v5"></path>
-            </svg>
-            <span data-i18n="refreshBtn">Refresh</span>
+          <button type="button" class="icon-action" id="refresh-usage-btn" aria-label="Refresh usage data" title="Refresh usage data">
+            <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#refresh"></use></svg>
           </button>
-          <button type="button" class="btn-vox" style="height: 36px; padding: 0 14px; font-size: 0.83rem;" id="export-account-json-btn">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="7 10 12 15 17 10"></polyline>
-              <line x1="12" y1="15" x2="12" y2="3"></line>
-            </svg>
-            <span data-i18n="exportBackupBtn">Export Full Backup (.json)</span>
+          <button type="button" class="icon-action icon-action--accent" id="export-account-json-btn" aria-label="Export full account backup (.json)" title="Export full account backup (.json)">
+            <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#file-code"></use></svg>
           </button>
         </div>
       </div>
@@ -652,12 +764,26 @@
             <span data-i18n="cacheControlsDesc">Clear cached AI layers to force fresh generation without losing your lessons or notes, or wipe specific datasets.</span>
           </div>
           <div class="cache-command-buttons">
-            <button type="button" class="btn-secondary btn-xs" data-clear-global-cache="translations" data-i18n="clearTransCacheBtn">Clear Translation Caches</button>
-            <button type="button" class="btn-secondary btn-xs" data-clear-global-cache="coach" data-i18n="clearCoachCacheBtn">Clear AI Coach Caches</button>
-            <button type="button" class="btn-secondary btn-xs" data-clear-global-cache="transcripts" data-i18n="clearTranscriptCacheBtn">Clear Transcript Caches</button>
-            <button type="button" class="btn-secondary btn-xs" data-clear-global-cache="all" data-i18n="clearAllCachesBtn">Clear All Caches</button>
-            <button type="button" class="btn-danger-ghost btn-xs" id="clear-all-vocab-btn" data-i18n="clearVocabVaultBtn">Clear Vocabulary</button>
-            <button type="button" class="btn-danger-ghost btn-xs" id="clear-entire-history-btn" data-i18n="clearEntireHistoryBtn">Delete All Lessons</button>
+            <button type="button" class="icon-action icon-action--sm" data-clear-global-cache="translations" aria-label="Clear translation caches" title="Clear translation caches">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#languages"></use></svg>
+            </button>
+            <button type="button" class="icon-action icon-action--sm" data-clear-global-cache="coach" aria-label="Clear AI Coach caches" title="Clear AI Coach caches">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#sparkles"></use></svg>
+            </button>
+            <button type="button" class="icon-action icon-action--sm" data-clear-global-cache="transcripts" aria-label="Clear transcript caches" title="Clear transcript caches">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#file-text"></use></svg>
+            </button>
+            <button type="button" class="icon-action icon-action--sm" data-clear-global-cache="all" aria-label="Clear all caches" title="Clear all caches">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#database"></use></svg>
+            </button>
+            <button type="button" class="btn-danger-ghost btn-xs" id="clear-all-vocab-btn">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#bookmark"></use></svg>
+              <span data-i18n="clearVocabVaultBtn">Clear Vocabulary</span>
+            </button>
+            <button type="button" class="btn-danger-ghost btn-xs" id="clear-entire-history-btn">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
+              <span data-i18n="clearEntireHistoryBtn">Delete All Lessons</span>
+            </button>
           </div>
         </div>
 
@@ -671,10 +797,22 @@
 
             <div class="library-controls">
               <div class="filter-pills" role="tablist">
-                <button type="button" class="filter-pill active" data-ledger-track="all" aria-selected="true" data-i18n="filterAll">All</button>
-                <button type="button" class="filter-pill" data-ledger-track="shadowing" aria-selected="false" data-i18n="filterVideos">Videos</button>
-                <button type="button" class="filter-pill" data-ledger-track="street_talk" aria-selected="false" data-i18n="filterDialogues">Dialogues</button>
-                <button type="button" class="filter-pill" data-ledger-track="phonetics" aria-selected="false" data-i18n="filterPronunciation">Pronunciation</button>
+                <button type="button" class="filter-pill active" data-ledger-track="all" aria-selected="true">
+                  <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#layers"></use></svg>
+                  <span data-i18n="filterAll">All</span>
+                </button>
+                <button type="button" class="filter-pill" data-ledger-track="shadowing" aria-selected="false">
+                  <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#monitor"></use></svg>
+                  <span data-i18n="filterVideos">Videos</span>
+                </button>
+                <button type="button" class="filter-pill" data-ledger-track="street_talk" aria-selected="false">
+                  <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#message-square"></use></svg>
+                  <span data-i18n="filterDialogues">Dialogues</span>
+                </button>
+                <button type="button" class="filter-pill" data-ledger-track="phonetics" aria-selected="false">
+                  <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#audio-lines"></use></svg>
+                  <span data-i18n="filterPronunciation">Pronunciation</span>
+                </button>
               </div>
 
               <select id="ledger-cache-filter" class="ui-lang-select" aria-label="Filter by cache status">
@@ -709,12 +847,19 @@
               <span class="section-count ltr-num" id="ledger-selected-count">(0 selected)</span>
             </label>
             <div class="bulk-buttons-group">
-              <button type="button" class="btn-secondary btn-xs" id="bulk-clear-cache-btn" disabled data-i18n="bulkClearCacheBtn">Clear Selected Caches</button>
-              <button type="button" class="btn-secondary btn-xs" id="bulk-reset-progress-btn" disabled data-i18n="bulkResetProgressBtn">Reset Selected Progress</button>
-              <button type="button" class="btn-danger-ghost btn-xs" id="bulk-delete-btn" disabled data-i18n="bulkDeleteBtn">Delete Selected</button>
+              <button type="button" class="icon-action icon-action--sm" id="bulk-clear-cache-btn" disabled aria-label="Clear selected caches" title="Clear selected caches">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#database"></use></svg>
+              </button>
+              <button type="button" class="icon-action icon-action--sm" id="bulk-reset-progress-btn" disabled aria-label="Reset selected progress" title="Reset selected progress">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#rotate-ccw"></use></svg>
+              </button>
+              <button type="button" class="icon-action icon-action--sm is-danger" id="bulk-delete-btn" disabled aria-label="Delete selected lessons" title="Delete selected lessons">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
+              </button>
             </div>
           </div>
 
+          <div id="history-ledger-progress-bar" class="subject-progress-bar" hidden></div>
           <div id="history-ledger-list" class="history-ledger-list"></div>
           <div id="history-ledger-empty" class="empty-ledger" hidden>
             <h3 data-i18n="emptyHistoryTitle">No matching lessons in history</h3>
@@ -729,7 +874,9 @@
               <h2 class="section-heading" data-i18n="activityLogHeading">Practice Activity Timeline</h2>
               <span class="section-count ltr-num" id="activity-count-label">0</span>
             </div>
-            <button type="button" class="btn-danger-ghost btn-xs" id="clear-activity-log-btn" hidden data-i18n="clearActivityBtn">Clear Activity Log</button>
+            <button type="button" class="icon-action icon-action--sm is-danger" id="clear-activity-log-btn" hidden aria-label="Clear activity log" title="Clear activity log">
+            <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
+          </button>
           </div>
           <div id="activity-timeline-list" class="activity-timeline-list"></div>
           <div id="activity-empty-state" class="empty-ledger" hidden>
@@ -739,9 +886,638 @@
         </div>
       </div>
     </section>
-  </main>
 
-  <!-- Account, Google OAuth & Security Slide-Over Drawer -->
+    <!-- SECTION 6: TECH LEXICON (SOFTWARE & AI SPOKEN LEXICON) -->
+    <section id="section-tech-linguist" hidden>
+      <div class="editorial-desk lexicon-desk">
+        <!-- Feature Header -->
+        <header class="lexicon-header">
+          <div class="lexicon-header-main">
+            <div class="desk-kicker">
+              <span class="desk-kicker-mark"></span>
+              <span data-i18n="techLinguistKicker">Software &amp; AI Engineering Lexicon</span>
+            </div>
+            <h1 class="desk-headline lexicon-headline" data-i18n="techLinguistHeadline">
+              Tech <span class="vox-underline">Lexicon</span> Studio
+            </h1>
+            <p class="desk-subcopy lexicon-subcopy" data-i18n="techLinguistSubcopy">
+              Autonomous speech-to-text audit, interactive engineering vocabulary &amp; idiom tables with click-any-word contextual translation, and native communication mental models—all inside one study studio.
+            </p>
+          </div>
+
+          <!-- Feature Internal View Switcher (Segmented Sub-navigation) -->
+          <nav class="lexicon-view-nav" role="tablist" aria-label="Tech Lexicon Views">
+            <button type="button" class="lexicon-view-tab active" id="view-tab-extract" data-lexicon-view="extract" role="tab" aria-selected="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              <span>Extractor Studio</span>
+            </button>
+            <button type="button" class="lexicon-view-tab" id="view-tab-note" data-lexicon-view="note" role="tab" aria-selected="false" hidden>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              <span id="lexicon-nav-note-label">Active Study Note</span>
+            </button>
+            <button type="button" class="lexicon-view-tab" id="view-tab-library" data-lexicon-view="library" role="tab" aria-selected="false">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              <span>Study Library</span>
+              <span class="lexicon-badge-pill" id="lexicon-library-count">0</span>
+            </button>
+          </nav>
+        </header>
+
+        <!-- ========================================== -->
+        <!-- VIEW 1: EXTRACTOR STUDIO                   -->
+        <!-- ========================================== -->
+        <div id="lexicon-view-extract" class="lexicon-view-panel">
+          <div class="lexicon-studio-card">
+            <!-- Studio Card Top: Mode Selector & Samples -->
+            <div class="studio-card-toolbar">
+              <div class="linguist-source-tabs" role="tablist">
+                <button type="button" class="linguist-tab-btn active" id="tab-src-url" data-tab="url">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                  <span>YouTube / Media URL</span>
+                </button>
+                <button type="button" class="linguist-tab-btn" id="tab-src-text" data-tab="text">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                  <span>Raw Transcript / Notes</span>
+                </button>
+              </div>
+
+              <div class="linguist-demo-chips">
+                <span class="demo-chip-label">Quick sample:</span>
+                <button type="button" class="demo-chip" id="demo-chip-nyc-tech">
+                  <span>NYC Tech Boom</span>
+                </button>
+                <button type="button" class="demo-chip" id="demo-chip-grok-tech">
+                  <span>Grok 4.7 Regression</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- URL Input Mode -->
+            <div id="linguist-input-url-panel" class="linguist-input-panel">
+              <div class="command-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+                <input
+                  type="url"
+                  id="linguist-url-input"
+                  class="command-input"
+                  placeholder="Paste YouTube tech talk, podcast, or developer interview URL..."
+                  autocomplete="off"
+                />
+                <button type="button" class="command-quick-btn" id="linguist-paste-btn" title="Paste from clipboard">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                  <span>Paste</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Raw Text Input Mode -->
+            <div id="linguist-input-text-panel" class="linguist-input-panel" hidden>
+              <textarea
+                id="linguist-raw-text-input"
+                class="linguist-textarea"
+                rows="6"
+                placeholder="Paste raw transcript, meeting notes, podcast dialogue, or interview transcript here..."
+              ></textarea>
+            </div>
+
+            <!-- Inline Error Banner (Non-blocking, elegant alternative to native alert) -->
+            <div id="linguist-inline-error" class="lexicon-inline-error" hidden>
+              <div class="inline-err-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              </div>
+              <div class="inline-err-content">
+                <div class="inline-err-title" id="inline-err-title">Extraction Error</div>
+                <div class="inline-err-msg" id="inline-err-msg">An unexpected error occurred.</div>
+              </div>
+              <div class="inline-err-actions" id="inline-err-actions">
+                <button type="button" class="btn-micro" id="btn-err-retry-fallback">Retry with Fallback</button>
+                <button type="button" class="btn-micro-ghost" id="btn-err-dismiss">Dismiss</button>
+              </div>
+            </div>
+
+            <!-- Modular Extraction Mode Selector -->
+            <div class="lexicon-mode-selector" id="lexicon-mode-selector" role="radiogroup" aria-label="Extraction Mode">
+              <button type="button" class="lexicon-mode-card active" id="mode-card-comprehensive" data-extraction-mode="comprehensive" role="radio" aria-checked="true">
+                <div class="mode-card-top">
+                  <span class="mode-card-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                    <span>Full Studio Lexicon</span>
+                  </span>
+                  <span class="mode-card-pill">4 Tabs</span>
+                </div>
+                <p class="mode-card-desc">Complete study breakdown: vocabulary, idioms &amp; slang, developer thought patterns, and full interactive transcript.</p>
+              </button>
+
+              <button type="button" class="lexicon-mode-card" id="mode-card-advanced-native" data-extraction-mode="advanced_native" role="radio" aria-checked="false">
+                <div class="mode-card-top">
+                  <span class="mode-card-title">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    <span>Native Elite</span>
+                  </span>
+                  <span class="mode-card-pill is-elite">2 Tabs · Zero Duplicates</span>
+                </div>
+                <p class="mode-card-desc">Tight advanced-only filter: hard words &amp; verbs (Tab 1) + street slang, abbreviations &amp; pro idioms across any field (Tab 2).</p>
+              </button>
+            </div>
+
+            <!-- Shared Reusable Dynamic API Provider, Live Model & Thinking Selector -->
+            <div id="linguist-ai-selector-mount"></div>
+          </div>
+
+          <!-- Progress Pipeline Indicator -->
+          <div class="linguist-progress-card" id="linguist-progress" hidden>
+            <div class="progress-spinner-row">
+              <div class="editor-spinner"></div>
+              <span class="progress-title" id="linguist-progress-status">Initializing extraction pipeline...</span>
+            </div>
+            <div class="progress-steps-list">
+              <div class="pstep" id="pstep-1">
+                <span class="pstep-num">1</span>
+                <span>Fetching caption stream &amp; media metadata</span>
+              </div>
+              <div class="pstep" id="pstep-2">
+                <span class="pstep-num">2</span>
+                <span>Autonomous ASR error detection &amp; punctuation repair</span>
+              </div>
+              <div class="pstep" id="pstep-3">
+                <span class="pstep-num">3</span>
+                <span>Executing AI cognitive extraction (Tech Vocab &amp; Idioms)</span>
+              </div>
+              <div class="pstep" id="pstep-4">
+                <span class="pstep-num">4</span>
+                <span>Building interactive web study studio &amp; saving to your library</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Shelf: Recent Study Extractions (Inline below studio) -->
+          <div class="lexicon-recent-shelf">
+            <div class="recent-shelf-head">
+              <div class="telemetry-label">Recently Extracted Study Notes</div>
+              <button type="button" class="btn-link" id="btn-jump-to-library">
+                <span>Browse Full Study Library (<span id="recent-total-count">0</span>) &rarr;</span>
+              </button>
+            </div>
+            <div id="lex-recent-progress-bar" class="subject-progress-bar" hidden></div>
+            <div class="recent-notes-row" id="lexicon-recent-row">
+              <!-- Dynamically populated 3 cards -->
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- VIEW 2: ACTIVE STUDY NOTE READER           -->
+        <!-- ========================================== -->
+        <div id="lexicon-view-note" class="lexicon-view-panel" hidden>
+          <div id="linguist-results-card" class="linguist-results-card" hidden>
+            <!-- Results Sticky Header & Action Cluster -->
+            <div class="results-head">
+              <div class="results-head-lead">
+                <div class="results-breadcrumbs">
+                  <button type="button" class="btn-back-crumb" id="btn-back-to-extract">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    <span>Extractor</span>
+                  </button>
+                  <span class="crumb-sep">/</span>
+                  <span class="crumb-current" id="res-channel-badge">Tech Media</span>
+                </div>
+                <h2 class="results-title" id="res-title">Extracted Study Note</h2>
+                <div class="results-meta-strip">
+                  <span class="meta-tag mode-tag" id="res-mode-badge">4-Tab Studio</span>
+                  <span class="meta-tag" id="res-agent-badge">Agent: OpenCode</span>
+                  <span class="meta-tag" id="res-model-badge">Model: deepseek-v4.1-flash</span>
+                  <span class="meta-tag" id="res-time-badge">Time: 1.4s</span>
+                  <span class="meta-tag highlight" id="res-count-badge">40 Items Extracted</span>
+                </div>
+              </div>
+
+              <!-- In-App Web Study Controls -->
+              <div class="results-action-buttons">
+                <div class="lexicon-lang-pill" title="Target language for click-any-word contextual lookup">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>
+                  <select id="lexicon-lookup-lang" aria-label="Word lookup translation language">
+                    <option value="ar">Arabic</option>
+                  </select>
+                </div>
+                <button type="button" class="btn-vox btn-sm" id="res-save-all-vocab-btn" title="Save all extracted terms into your Flaptap Vocabulary Flashcards">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                  <span>+ Save All to Flashcards</span>
+                </button>
+                <button type="button" class="btn-secondary btn-sm" id="btn-open-video-lesson" hidden title="Open full video playback studio with timestamps">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  <span>Train in Video Studio</span>
+                </button>
+                <button type="button" class="btn-secondary btn-sm" id="res-copy-md-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  <span>Copy Study Notes</span>
+                </button>
+                <button type="button" class="btn-secondary btn-sm" id="btn-note-new-extract" title="Extract another video">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  <span>New</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Executive Summary + Interactive Word Lookup Cue -->
+            <div class="lexicon-summary-banner" id="res-summary-card" hidden>
+              <div class="summary-kicker">Executive Takeaway</div>
+              <p class="summary-body" id="res-summary-text"></p>
+            </div>
+
+            <div class="lexicon-interaction-hint">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              <span id="res-interaction-hint-text"><strong>Interactive Studio:</strong> Click any English word in vocabulary tables, idioms, thought patterns, or transcript for instant contextual definition, IPA pronunciation, and translation.</span>
+            </div>
+
+            <!-- Study Tracks Tabs Bar with In-Note Search -->
+            <div class="note-track-nav-row">
+              <div class="results-tab-bar" role="tablist">
+                <button type="button" class="res-tab-btn active" data-tab="vocab">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+                  <span><span id="res-vocab-label">Tech Vocab</span> (<span id="res-vocab-num">0</span>)</span>
+                </button>
+                <button type="button" class="res-tab-btn" data-tab="idioms">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                  <span><span id="res-idioms-label">Idioms &amp; Slang</span> (<span id="res-idioms-num">0</span>)</span>
+                </button>
+                <button type="button" class="res-tab-btn" data-tab="patterns">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                  <span>Thought Patterns (<span id="res-patterns-num">0</span>)</span>
+                </button>
+                <button type="button" class="res-tab-btn" data-tab="transcript">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                  <span>Interactive Transcript (<span id="res-transcript-num">0</span>)</span>
+                </button>
+              </div>
+
+              <!-- In-Note Instant Search -->
+              <div class="note-search-wrap" id="note-search-container">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input
+                  type="search"
+                  id="lexicon-table-search"
+                  class="note-search-input"
+                  placeholder="Filter study note..."
+                  aria-label="Filter items in this study note"
+                />
+              </div>
+            </div>
+
+            <!-- Track 1: Tech Vocabulary / Advanced Words & Verbs Table -->
+            <div id="res-panel-vocab" class="results-panel">
+              <div id="lex-vocab-progress-bar" class="subject-progress-bar" hidden></div>
+              <div class="lexicon-category-filters" id="lexicon-category-filters"></div>
+              <div class="linguist-table-wrap">
+                <table class="linguist-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 68px; text-align: center;">#</th>
+                      <th style="width: 44%;" id="res-vocab-col-header">Word / Phrase (Click any word for context)</th>
+                      <th>Meaning (General &amp; Context)</th>
+                      <th style="width: 112px; text-align: right;">Practice</th>
+                    </tr>
+                  </thead>
+                  <tbody id="res-vocab-tbody">
+                    <!-- Dynamically populated -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Track 2: Idioms, Expressions & Street Slang Table -->
+            <div id="res-panel-idioms" class="results-panel" hidden>
+              <div id="lex-idioms-progress-bar" class="subject-progress-bar" hidden></div>
+              <div class="lexicon-category-filters" id="lexicon-idiom-category-filters"></div>
+              <div class="linguist-table-wrap">
+                <table class="linguist-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 68px; text-align: center;">#</th>
+                      <th style="width: 44%;" id="res-idioms-col-header">Idiom / Expression (Click any word for context)</th>
+                      <th>Meaning (General &amp; Context)</th>
+                      <th style="width: 112px; text-align: right;">Practice</th>
+                    </tr>
+                  </thead>
+                  <tbody id="res-idioms-tbody">
+                    <!-- Dynamically populated -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Track 3: Thought Patterns -->
+            <div id="res-panel-patterns" class="results-panel" hidden>
+              <div id="lex-patterns-progress-bar" class="subject-progress-bar" hidden></div>
+              <div class="patterns-grid" id="res-patterns-container">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+
+            <!-- Track 4: Interactive Segmented Transcript -->
+            <div id="res-panel-transcript" class="results-panel" hidden>
+              <div id="lex-transcript-progress-bar" class="subject-progress-bar" hidden></div>
+              <div class="transcript-audited-wrap">
+                <div class="transcript-meta-header">
+                  <span>Audited speech stream with ASR punctuation repair — click any word for contextual translation &amp; pronunciation</span>
+                </div>
+                <div class="lexicon-transcript-sentences" id="res-full-transcript"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- VIEW 3: STUDY LIBRARY & HISTORY            -->
+        <!-- ========================================== -->
+        <div id="lexicon-view-library" class="lexicon-view-panel" hidden>
+          <div class="library-panel-card">
+            <div class="library-top-bar">
+              <div>
+                <h3 class="library-title">Study Library &amp; Extractions</h3>
+                <p class="library-sub">Browse, study interactively, filter, and manage all your technical language extractions.</p>
+              </div>
+              <div class="library-actions">
+                <button type="button" class="btn-secondary btn-sm" id="linguist-refresh-history-btn">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                  <span>Refresh</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Search and Filter Bar -->
+            <div class="library-search-strip">
+              <div class="command-input-wrap">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input
+                  type="search"
+                  id="lexicon-library-search"
+                  class="command-input"
+                  placeholder="Search saved notes by title, video URL, or agent..."
+                  autocomplete="off"
+                />
+              </div>
+              <div class="library-stats-chips">
+                <span class="stat-chip"><strong id="lib-stat-notes">0</strong> Notes</span>
+                <span class="stat-chip"><strong id="lib-stat-terms">0</strong> Terms</span>
+                <span class="stat-chip"><strong id="lib-stat-idioms">0</strong> Idioms</span>
+              </div>
+            </div>
+
+            <!-- Notes Grid -->
+            <div id="lex-library-progress-bar" class="subject-progress-bar" hidden></div>
+            <div class="library-notes-grid" id="lexicon-library-grid">
+              <!-- Dynamically rendered note cards -->
+            </div>
+
+            <!-- Empty State -->
+            <div class="library-empty" id="lexicon-library-empty" hidden>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+              <h4>No notes found</h4>
+              <p>Try a different search query or extract a new video.</p>
+              <button type="button" class="btn-vox btn-sm" id="btn-empty-extract">Go to Extractor</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 7: LEARNING LIBRARY (CENTRALIZED EDITORIAL WORKSPACE) -->
+    <section id="section-learning-library" hidden>
+      <div class="editorial-desk ll-command-desk">
+        <div class="ll-desk-top">
+          <div class="desk-kicker" style="margin-bottom: 0;">
+            <span class="desk-kicker-mark"></span>
+            <span id="ll-domain-kicker">Natural American English · Learning Library</span>
+          </div>
+          <div class="filter-pills ll-domain-pills" id="ll-domain-pills" role="group" aria-label="Learning Domain"></div>
+        </div>
+
+        <h1 class="desk-headline" id="ll-domain-headline" style="margin-top: 12px;">
+          Build your living <span class="vox-underline">Natural American English</span> library.
+        </h1>
+        <p class="desk-subcopy" id="ll-domain-subcopy">
+          Authentic fillers, discourse markers, connected speech, and modern expressions—generated on demand and saved to your personal study library.
+        </p>
+
+        <form class="command-form ll-command-form" id="ll-generate-form" novalidate>
+          <div class="command-input-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+              <path d="M8 7h8"></path>
+              <path d="M8 11h6"></path>
+            </svg>
+            <input
+              type="text"
+              id="ll-focus-topic-input"
+              class="command-input"
+              placeholder="Optional situation or topic (e.g. catching up with friends, tech standups)..."
+              autocomplete="off"
+            />
+          </div>
+          <button type="submit" class="btn-vox" id="ll-generate-btn">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            <span id="ll-generate-btn-label">Generate 8 Expressions</span>
+          </button>
+        </form>
+
+        <!-- Streamlined Generation Controls -->
+        <div class="ll-options-row">
+          <div class="ll-option-group">
+            <span class="ll-option-label">Items</span>
+            <div class="ll-count-pills" id="ll-count-pills"></div>
+            <input type="number" id="ll-count-input" class="ll-custom-count-input ltr-num" min="1" max="25" value="8" aria-label="Custom item count" />
+          </div>
+
+          <div class="ll-option-group">
+            <label class="ll-option-label" for="ll-gen-category-select">Category</label>
+            <select id="ll-gen-category-select" class="ll-compact-select"></select>
+          </div>
+
+          <div class="ll-option-group">
+            <label class="ll-option-label" for="ll-register-select">Register</label>
+            <select id="ll-register-select" class="ll-compact-select"></select>
+          </div>
+
+          <div class="ll-option-group">
+            <label class="ll-option-label" for="ll-target-lang-select">Meaning</label>
+            <select id="ll-target-lang-select" class="ll-compact-select">
+              <option value="ar">Arabic (العربية)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Inline Non-blocking Error Banner -->
+        <div id="ll-inline-error" class="lexicon-inline-error" style="margin-top: 14px;" hidden>
+          <div class="inline-err-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          </div>
+          <div class="inline-err-content">
+            <div class="inline-err-title" id="ll-inline-err-title">Generation Error</div>
+            <div class="inline-err-msg" id="ll-inline-err-msg">Unable to generate expressions.</div>
+          </div>
+          <div class="inline-err-actions">
+            <button type="button" class="btn-micro" id="ll-btn-err-retry">Retry</button>
+            <button type="button" class="btn-micro-ghost" id="ll-btn-err-dismiss">Dismiss</button>
+          </div>
+        </div>
+
+        <!-- Compact Reusable AI Provider, Model & Thinking Selector -->
+        <div id="ll-ai-selector-mount"></div>
+      </div>
+
+      <!-- Streaming Generation Progress Card -->
+      <div id="ll-progress-card" class="ll-progress-card" style="margin-bottom: 24px;" hidden>
+        <div class="ll-progress-top">
+          <div class="ll-progress-head-left">
+            <div class="editor-spinner" aria-hidden="true"></div>
+            <div>
+              <div class="ll-progress-title" id="ll-progress-title">Generating unique expressions...</div>
+              <div class="ll-progress-sub" id="ll-progress-sub">Checking against your saved library to avoid duplicates.</div>
+            </div>
+          </div>
+          <div class="ll-progress-head-right">
+            <span class="ll-progress-counter ltr-num" id="ll-progress-counter">0 / 8 saved</span>
+            <span class="ll-progress-elapsed ltr-num" id="ll-progress-elapsed">0.0s</span>
+            <button type="button" class="btn-secondary btn-xs" id="ll-cancel-btn">Cancel</button>
+          </div>
+        </div>
+        <div class="ll-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="ll-progress-bar-role">
+          <div class="ll-progress-fill" id="ll-progress-fill" style="width: 6%;"></div>
+        </div>
+      </div>
+
+      <!-- Practice Telemetry Ledger (Matches Lessons .telemetry-strip) -->
+      <div class="telemetry-strip" aria-label="Learning Library overview">
+        <div class="telemetry-cell">
+          <span class="telemetry-label">Saved Expressions</span>
+          <span class="telemetry-value ltr-num" id="ll-stat-total">0</span>
+        </div>
+        <div class="telemetry-cell">
+          <span class="telemetry-label">Completed</span>
+          <span class="telemetry-value ltr-num" id="ll-stat-completed">0</span>
+        </div>
+        <div class="telemetry-cell">
+          <span class="telemetry-label">Favorites</span>
+          <span class="telemetry-value ltr-num" id="ll-stat-favorites">0</span>
+        </div>
+        <div class="telemetry-cell">
+          <span class="telemetry-label">Progress</span>
+          <span class="telemetry-value ltr-num" id="ll-stat-progress">0%</span>
+        </div>
+      </div>
+
+      <!-- Centralized Expression Library (Matches Lessons .library-header + .subject-progress-bar + grid) -->
+      <div id="ll-library-shelf">
+        <div class="library-header">
+          <div class="library-title-group">
+            <h2 class="section-heading" id="ll-library-heading">Expression Library</h2>
+            <span class="section-count ltr-num" id="ll-library-count-label">0</span>
+          </div>
+
+          <div class="library-controls" id="ll-library-controls">
+            <div class="filter-pills" role="tablist" aria-label="Filter by completion">
+              <button type="button" class="filter-pill active" data-ll-mastery-filter="all" aria-selected="true">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#layers"></use></svg>
+                <span>All</span>
+              </button>
+              <button type="button" class="filter-pill" data-ll-mastery-filter="pending" aria-selected="false">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#circle-dashed"></use></svg>
+                <span>To Study</span>
+              </button>
+              <button type="button" class="filter-pill" data-ll-mastery-filter="completed" aria-selected="false">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#circle-check"></use></svg>
+                <span>Completed</span>
+              </button>
+              <button type="button" class="filter-pill" data-ll-mastery-filter="favorites" aria-selected="false">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#star"></use></svg>
+                <span>Favorites</span>
+              </button>
+            </div>
+
+            <select id="ll-browse-category-select" class="ll-compact-select" aria-label="Filter by category"></select>
+            <select id="ll-browse-register-select" class="ll-compact-select" aria-label="Filter by register"></select>
+            <select id="ll-browse-sort-select" class="ll-compact-select" aria-label="Sort library">
+              <option value="newest">Newest</option>
+              <option value="alphabetical">A–Z</option>
+              <option value="mastery">To Study First</option>
+            </select>
+
+            <label class="search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="search" id="ll-browse-search-input" placeholder="Search expressions..." />
+            </label>
+
+            <button type="button" class="ll-toggle-btn" id="ll-recall-toggle-btn" title="Hide meanings to practice active recall">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              <span>Recall</span>
+            </button>
+
+            <div class="filter-pills" role="group" aria-label="View mode">
+              <button type="button" class="filter-pill active" id="ll-view-table-btn" aria-pressed="true">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#list"></use></svg>
+                <span>Table</span>
+              </button>
+              <button type="button" class="filter-pill" id="ll-view-cards-btn" aria-pressed="false">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#layout-grid"></use></svg>
+                <span>Cards</span>
+              </button>
+            </div>
+
+            <div class="ll-more-wrap" id="ll-more-menu-wrap">
+              <button type="button" class="btn-secondary btn-xs" id="ll-more-menu-btn" aria-haspopup="menu" aria-expanded="false" aria-label="Library actions" title="Export or clear library">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+              </button>
+              <div class="ll-more-menu" id="ll-more-menu" role="menu" hidden>
+                <button type="button" class="ll-more-item" id="ll-export-md-btn" role="menuitem">Export Markdown (.md)</button>
+                <button type="button" class="ll-more-item" id="ll-export-json-btn" role="menuitem">Export JSON (.json)</button>
+                <div class="ll-more-divider"></div>
+                <button type="button" class="ll-more-item is-danger" id="ll-clear-domain-btn" role="menuitem">Clear Domain Library</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Newly Generated Highlight Banner -->
+        <div id="ll-latest-batch-banner" class="ll-batch-banner" hidden>
+          <div class="ll-batch-banner-lead">
+            <div class="ll-batch-banner-title" id="ll-latest-batch-title">Added new expressions</div>
+            <div class="ll-batch-banner-meta" id="ll-latest-batch-meta"></div>
+          </div>
+          <button type="button" class="btn-micro-ghost" id="ll-dismiss-batch-banner">Dismiss</button>
+        </div>
+
+        <div id="ll-browse-progress-bar" class="subject-progress-bar" hidden></div>
+        <div id="ll-browse-items-container"></div>
+
+        <div id="ll-browse-empty" class="empty-ledger" hidden>
+          <h3>Your Learning Library is ready</h3>
+          <p>Describe a situation or choose a category above to generate your first batch of expressions.</p>
+        </div>
+
+        <div id="ll-auth-gate-card" class="signed-out-gate-card" hidden>
+          <div class="gate-card-kicker" data-i18n="authRequiredKicker">Account Required</div>
+          <h3>Sign in to build and access your personal Learning Library</h3>
+          <p>Explore any domain and generation option above—when you generate expressions, we will ask you to sign in or create an account so all items and progress stay synced to you.</p>
+          <div class="gate-card-actions">
+            <button type="button" class="btn-vox" data-open-auth="login" data-i18n="signInToContinue">Sign in to continue</button>
+            <button type="button" class="btn-secondary" data-open-auth="register" data-i18n="createFreeAccount">Create account</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+    </div>
+  </div>
+
+  <!-- Account & Security Slide-Over Drawer -->
   <div class="drawer-backdrop" id="account-drawer-backdrop" hidden>
     <aside class="account-drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
       <div class="drawer-header">
@@ -754,37 +1530,11 @@
         </button>
       </div>
 
-      <!-- Guest Auth Forms (Google OAuth 2.0 + Email Sign In / Create Account) -->
+      <!-- Guest Auth Forms (Email Sign In / Create Account) -->
       <div id="drawer-guest-view">
         <div id="auth-gate-banner" class="auth-gate-banner" hidden>
           <strong data-i18n="authGateTitle">Sign in first to continue</strong>
           <p id="auth-gate-desc" data-i18n="authGateDesc">Your requested action is saved and will run automatically right after you sign in or create an account.</p>
-        </div>
-
-        <!-- Real Google Sign-In Button + GIS Slot -->
-        <div class="google-auth-block">
-          <button type="button" class="btn-google-oauth" id="google-signin-btn">
-            <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-            </svg>
-            <span data-i18n="continueWithGoogle">Continue with Google</span>
-          </button>
-          <div id="google-gis-button-slot" class="google-gis-slot" hidden></div>
-
-          <div id="google-setup-card" class="google-setup-card" hidden>
-            <strong>Configure Google OAuth Client Credentials</strong>
-            <p>Google OAuth 2.0 PKCE &amp; RS256 OIDC verification are active on the server. Add your Google Cloud Web Client credentials to <code>.env</code>:</p>
-            <pre class="ltr-num" id="google-setup-snippet">GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-client-secret</pre>
-            <p>Authorized Redirect URI: <code id="google-redirect-uri-code" class="ltr-num">http://localhost:3333/api/auth/google/callback</code></p>
-          </div>
-        </div>
-
-        <div class="auth-divider">
-          <span data-i18n="orContinueWithEmail">or continue with email</span>
         </div>
 
         <div class="auth-tabs" role="tablist">
@@ -797,7 +1547,7 @@ GOOGLE_CLIENT_SECRET=your-client-secret</pre>
         <form id="login-form" class="form-stack">
           <div class="field-group">
             <label class="field-label" for="login-email" data-i18n="emailLabel">Email</label>
-            <input class="field-input" type="email" id="login-email" required autocomplete="email" placeholder="you@example.com" />
+            <input class="field-input" type="email" inputmode="email" id="login-email" required autocomplete="email" placeholder="you@example.com" />
           </div>
           <div class="field-group">
             <label class="field-label" for="login-password" data-i18n="passwordLabel">Password</label>
@@ -813,7 +1563,7 @@ GOOGLE_CLIENT_SECRET=your-client-secret</pre>
           </div>
           <div class="field-group">
             <label class="field-label" for="reg-email" data-i18n="emailLabel">Email</label>
-            <input class="field-input" type="email" id="reg-email" required autocomplete="email" placeholder="you@example.com" />
+            <input class="field-input" type="email" inputmode="email" id="reg-email" required autocomplete="email" placeholder="you@example.com" />
           </div>
           <div class="field-group">
             <label class="field-label" for="reg-password" data-i18n="passwordMinLabel">Password (8+ characters)</label>
@@ -827,7 +1577,7 @@ GOOGLE_CLIENT_SECRET=your-client-secret</pre>
         </form>
 
         <p class="auth-note" style="margin-top: 18px;" data-i18n="guestSyncNote">
-          Sign in with Google or email to unlock video extraction, dynamic AI coaching, world translations, vocabulary flashcards, and full history &amp; cache control.
+          Sign in or create an account to unlock video extraction, dynamic AI coaching, world translations, vocabulary flashcards, and full history &amp; cache control.
         </p>
       </div>
 
@@ -835,13 +1585,12 @@ GOOGLE_CLIENT_SECRET=your-client-secret</pre>
       <div id="drawer-profile-view" hidden>
         <div class="profile-card">
           <div class="profile-card-row">
-            <img id="profile-avatar-img" class="profile-avatar-lg" alt="" hidden />
             <div class="profile-avatar-fallback" id="profile-avatar-fallback">U</div>
             <div style="min-width: 0; flex: 1;">
               <div class="profile-name" id="profile-name"></div>
               <div class="profile-email" id="profile-email"></div>
               <div class="profile-badges-row">
-                <span class="cache-pill" id="profile-provider-badge">Email</span>
+                <span class="cache-pill" id="profile-provider-badge">Email Account</span>
               </div>
             </div>
           </div>
@@ -901,8 +1650,36 @@ GOOGLE_CLIENT_SECRET=your-client-secret</pre>
     </aside>
   </div>
 
+  <!-- Learning Library Study Detail Drawer -->
+  <div class="drawer-backdrop" id="ll-study-drawer-backdrop" hidden>
+    <aside class="account-drawer ll-study-drawer" role="dialog" aria-modal="true" aria-labelledby="ll-study-title">
+      <div class="drawer-header ll-study-drawer-head">
+        <div class="ll-study-nav-group">
+          <button type="button" class="btn-secondary btn-xs" id="ll-study-prev-btn" aria-label="Previous expression">&larr; Prev</button>
+          <span class="ll-study-counter ltr-num" id="ll-study-counter">1 / 1</span>
+          <button type="button" class="btn-secondary btn-xs" id="ll-study-next-btn" aria-label="Next expression">Next &rarr;</button>
+        </div>
+        <button type="button" class="icon-btn" id="ll-study-close-btn" aria-label="Close study drawer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div id="ll-study-drawer-body" class="ll-study-drawer-body"></div>
+    </aside>
+  </div>
+
   <div id="workspace-toast" class="editorial-toast" role="status" aria-live="polite"></div>
 
-  <script src="app.js"></script>
+  <script defer src="/icon.js"></script>
+  <script defer src="/copy.js"></script>
+  <script defer src="/word-lookup.js"></script>
+  <script defer src="/router.js"></script>
+  <script defer src="/ai-provider-selector.js"></script>
+  <script defer src="/tech-lexicon-modes.js"></script>
+  <script defer src="/tech-lexicon.js"></script>
+  <script defer src="/learning-library.js"></script>
+  <script defer src="/app.js"></script>
 </body>
 </html>

@@ -94,6 +94,8 @@ data/transcripts/
 data/media/
 data/logs/
 data/*.pid
+data/.vault.key
+data/models-dev-cache.json
 data/PUBLIC_URL.txt
 data/*.sqlite
 data/*.sqlite-shm

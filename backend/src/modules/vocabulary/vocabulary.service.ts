@@ -28,10 +28,12 @@ export interface VocabularyItem {
   ipa: string;
   partOfSpeech: string;
   definition: string;
+  generalTranslation: string;
   translation: string;
   contextSentence: string;
   timestampSec: number;
   masteryLevel: number;
+  isCompleted: boolean;
   nextReviewAt: string;
   createdAt: string;
 }
@@ -41,6 +43,7 @@ export interface CreateVocabularyDto {
   ipa?: string;
   partOfSpeech?: string;
   definition: string;
+  generalTranslation?: string;
   translation?: string;
   contextSentence?: string;
   lessonId?: string;
@@ -70,10 +73,12 @@ export class VocabularyService {
       ipa: String(row.ipa || ''),
       partOfSpeech: String(row.part_of_speech || ''),
       definition: String(row.definition),
+      generalTranslation: String(row.general_translation || ''),
       translation: String(row.translation || ''),
       contextSentence: String(row.context_sentence || ''),
       timestampSec: Number(row.timestamp_sec) || 0,
       masteryLevel: Number(row.mastery_level) || 0,
+      isCompleted: Boolean(row.is_completed),
       nextReviewAt: String(row.next_review_at),
       createdAt: String(row.created_at),
     };
@@ -97,8 +102,9 @@ export class VocabularyService {
 
     if (query && query.trim()) {
       const q = `%${query.trim().toLowerCase()}%`;
-      sql += ' AND (LOWER(term) LIKE ? OR LOWER(definition) LIKE ? OR LOWER(context_sentence) LIKE ?)';
-      params.push(q, q, q);
+      sql +=
+        ' AND (LOWER(term) LIKE ? OR LOWER(definition) LIKE ? OR LOWER(general_translation) LIKE ? OR LOWER(translation) LIKE ? OR LOWER(context_sentence) LIKE ?)';
+      params.push(q, q, q, q, q);
     }
 
     sql += ' ORDER BY created_at DESC';
@@ -129,6 +135,7 @@ export class VocabularyService {
           SET ipa = COALESCE(NULLIF(?, ''), ipa),
               part_of_speech = COALESCE(NULLIF(?, ''), part_of_speech),
               definition = ?,
+              general_translation = COALESCE(NULLIF(?, ''), general_translation),
               translation = COALESCE(NULLIF(?, ''), translation),
               context_sentence = COALESCE(NULLIF(?, ''), context_sentence),
               lesson_id = COALESCE(?, lesson_id),
@@ -141,6 +148,7 @@ export class VocabularyService {
           (dto.ipa || '').trim(),
           (dto.partOfSpeech || '').trim(),
           definition,
+          (dto.generalTranslation || '').trim(),
           (dto.translation || '').trim(),
           (dto.contextSentence || '').trim(),
           dto.lessonId || null,
@@ -165,9 +173,9 @@ export class VocabularyService {
       .prepare(`
         INSERT INTO vocabulary_items (
           id, user_id, guest_token, lesson_id, video_id, lesson_title,
-          term, ipa, part_of_speech, definition, translation,
+          term, ipa, part_of_speech, definition, general_translation, translation,
           context_sentence, timestamp_sec, mastery_level, next_review_at, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)
       `)
       .run(
         id,
@@ -180,6 +188,7 @@ export class VocabularyService {
         (dto.ipa || '').trim(),
         (dto.partOfSpeech || '').trim(),
         definition,
+        (dto.generalTranslation || '').trim(),
         (dto.translation || '').trim(),
         (dto.contextSentence || '').trim(),
         Number(dto.timestampSec) || 0,
@@ -226,6 +235,28 @@ export class VocabularyService {
     this.sqlite.db
       .prepare('UPDATE vocabulary_items SET mastery_level = ?, next_review_at = ? WHERE id = ?')
       .run(nextLevel, nextReviewAt, id);
+
+    const updated = this.sqlite.db.prepare('SELECT * FROM vocabulary_items WHERE id = ?').get(id);
+    return this.rowToVocab(updated!);
+  }
+
+  setCompleted(
+    id: string,
+    isCompleted: boolean,
+    scope?: RequestIdentityScope,
+  ): VocabularyItem {
+    const where = this.scopeWhere(scope);
+    const existing = this.sqlite.db
+      .prepare(`SELECT * FROM vocabulary_items WHERE id = ? AND ${where.sql}`)
+      .get(id, ...where.params);
+
+    if (!existing) {
+      throw new NotFoundException('Vocabulary item not found.');
+    }
+
+    this.sqlite.db
+      .prepare(`UPDATE vocabulary_items SET is_completed = ? WHERE id = ? AND ${where.sql}`)
+      .run(isCompleted ? 1 : 0, id, ...where.params);
 
     const updated = this.sqlite.db.prepare('SELECT * FROM vocabulary_items WHERE id = ?').get(id);
     return this.rowToVocab(updated!);
@@ -289,6 +320,19 @@ export class VocabularyController {
       ? body.rating
       : 'good';
     return this.vocabularyService.review(id, rating, identity);
+  }
+
+  @Patch(':id/complete')
+  setCompleted(
+    @Param('id') id: string,
+    @Body() body: { completed?: boolean },
+    @Req() req: Request,
+  ) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    if (typeof body?.completed !== 'boolean') {
+      throw new BadRequestException('Field "completed" must be a boolean.');
+    }
+    return this.vocabularyService.setCompleted(id, body.completed, identity);
   }
 
   @Delete(':id')

@@ -20,6 +20,7 @@ import {
   TranslationResponse,
 } from './shadowing.translation.service';
 import { ShadowingAnalysisService } from './shadowing.analysis.service';
+import { ShadowingCoachGlossService } from './shadowing.coach-gloss.service';
 import { segmentParagraphs, segmentSentences } from '../../../core/linguistics/segmentation';
 import { classifyMediaUrl, EXTERNAL_MEDIA_ID_PATTERN } from '../../../core/media/media-url';
 
@@ -33,6 +34,7 @@ export class ShadowingService {
     private readonly transcriptService: TranscriptService,
     private readonly translationService: ShadowingTranslationService,
     private readonly analysisService: ShadowingAnalysisService,
+    private readonly coachGlossService: ShadowingCoachGlossService,
   ) {}
 
   checkExisting(url: string, scope?: RequestIdentityScope) {
@@ -159,15 +161,27 @@ export class ShadowingService {
     return this.analysisService.analyze(historyId, force);
   }
 
+  coachGlosses(historyId: string, force = false, scope?: RequestIdentityScope) {
+    this.assertOwnedLesson(historyId, scope);
+    return this.coachGlossService.gloss(historyId, force);
+  }
+
   defineWord(
     historyId: string,
     word: string,
     sentenceIndex?: number,
     language?: string,
-    scope?: RequestIdentityScope,
+    lookupScope?: 'word' | 'phrase' | 'sentence',
+    identityScope?: RequestIdentityScope,
   ) {
-    this.assertOwnedLesson(historyId, scope);
-    return this.analysisService.defineWordInContext(historyId, word, sentenceIndex, language);
+    this.assertOwnedLesson(historyId, identityScope);
+    return this.analysisService.defineWordInContext(
+      historyId,
+      word,
+      sentenceIndex,
+      language,
+      lookupScope,
+    );
   }
 
   private async buildAndPersist(

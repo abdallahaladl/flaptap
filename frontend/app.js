@@ -1,7 +1,7 @@
 /* ==========================================================================
    FLAPTAP WORKSPACE CONTROLLER (app.js)
    Paper-Editorial UI · Multi-language (EN/AR/ES/FR/DE/TR) · Light/Dark Mode
-   Strict Sign-In Gate with Pending Action Resume · Real Google OAuth 2.0 + OIDC
+   Strict Sign-In Gate with Pending Action Resume · Email & Password Auth
    Full History, Caching & Usage Control Center · Vocabulary SRS Flashcards
    ========================================================================== */
 
@@ -18,6 +18,11 @@
       navPronunciation: 'Pronunciation',
       navVocabulary: 'Vocabulary',
       navHistory: 'History & Usage',
+      navTechLinguist: 'Tech Lexicon',
+      navLearningLibrary: 'Learning Library',
+      techLinguistKicker: 'Software & AI Engineering Lexicon',
+      techLinguistHeadline: 'Master authentic <span class="vox-underline">American Tech English</span> from videos & talks.',
+      techLinguistSubcopy: 'Autonomous speech-to-text audit, interactive engineering vocabulary & idiom tables with click-any-word contextual translation, and native communication mental models—all inside one study studio.',
       streakUnit: 'day streak',
       signIn: 'Sign in',
       createAccount: 'Create account',
@@ -28,8 +33,6 @@
       authRequiredKicker: 'Account Required',
       authGateTitle: 'Sign in first to continue',
       authGateDesc: 'Your requested action is saved and will run automatically right after you sign in or create an account.',
-      continueWithGoogle: 'Continue with Google',
-      orContinueWithEmail: 'or continue with email',
       heroKicker: 'Spoken English Studio',
       heroHeadline: 'Turn any English video into a <span class="vox-underline">precision speaking lesson</span>.',
       heroSubcopy: 'Paste a YouTube link to train complete sentences, editorial paragraphs, active dictation, and connected-speech coaching at exact word timestamps.',
@@ -144,7 +147,7 @@
       activeSessionsHeading: 'Active Sessions',
       revokeOtherSessionsBtn: 'Sign out others',
       deleteAccountBtn: 'Delete account & all data',
-      guestSyncNote: 'Sign in with Google or email to unlock video extraction, dynamic AI coaching, world translations, vocabulary flashcards, and full history & cache control.',
+      guestSyncNote: 'Sign in or create an account to unlock video extraction, dynamic AI coaching, world translations, vocabulary flashcards, and full history & cache control.',
       openLesson: 'Study',
       reextractBtn: 'Re-extract',
       clearCacheItemBtn: 'Clear Cache',
@@ -157,6 +160,11 @@
       trackVideo: 'Video',
       trackDialogue: 'Dialogue',
       trackPronunciation: 'Pronunciation',
+      progressTotal: 'Total',
+      progressCompleted: 'Completed',
+      progressRemaining: 'Remaining',
+      markComplete: 'Mark complete',
+      completedLabel: 'Completed',
       confirmClear: 'Permanently delete all lessons from your library?',
       confirmClearVocab: 'Permanently clear all saved words from your Vocabulary Vault?',
       confirmDeleteAccount: 'Permanently delete your account, lesson history, caches, notes, and vocabulary? This cannot be undone.',
@@ -168,6 +176,11 @@
       navPronunciation: 'النطق',
       navVocabulary: 'المفردات',
       navHistory: 'السجل والاستخدام',
+      navTechLinguist: 'معجم التقنية',
+      navLearningLibrary: 'مكتبة التعلم',
+      techLinguistKicker: 'معجم هندسة البرمجيات والذكاء الاصطناعي',
+      techLinguistHeadline: 'أتقن <span class="vox-underline">الإنجليزية التقنية الأمريكية</span> من الفيديوهات والمحادثات.',
+      techLinguistSubcopy: 'تدقيق آلي للنصوص، جداول تفاعلية ثلاثية الأعمدة للمصطلحات والتعابير مع ترجمة فورية سياقية عند الضغط على أي كلمة، وأنماط التفكير الهندسي الأمريكي.',
       streakUnit: 'أيام متتالية',
       signIn: 'تسجيل الدخول',
       createAccount: 'إنشاء حساب',
@@ -178,8 +191,6 @@
       authRequiredKicker: 'يتطلب تسجيل الدخول',
       authGateTitle: 'سجّل الدخول أولاً للمتابعة',
       authGateDesc: 'تم حفظ الإجراء المطلوب وسيتم تنفيذه تلقائياً فور تسجيل الدخول أو إنشاء حساب.',
-      continueWithGoogle: 'المتابعة باستخدام Google',
-      orContinueWithEmail: 'أو بالبريد الإلكتروني',
       heroKicker: 'استوديو الإنجليزية المنطوقة',
       heroHeadline: 'حوّل أي فيديو إنجليزي إلى <span class="vox-underline">درس تحدث احترافي متكامل</span>.',
       heroSubcopy: 'الصق رابط يوتيوب للتدرب على الجمل الكاملة، الفقرات المترابطة، الإملاء السمعي، وتدريب الكلام المتصل بتوقيت دقيق لكل كلمة.',
@@ -242,6 +253,11 @@
       gateHistoryDesc: 'تحكم في ملفات النصوص وتحليلات المدرب والترجمات المحفوظة وسجل النشاط وتصدير بياناتك.',
       openLesson: 'ادرس',
       reextractBtn: 'إعادة استخراج',
+      progressTotal: 'الإجمالي',
+      progressCompleted: 'مكتمل',
+      progressRemaining: 'المتبقي',
+      markComplete: 'تحديد كمكتمل',
+      completedLabel: 'مكتمل',
       clearCacheItemBtn: 'مسح الكاش',
       resetProgressItemBtn: 'تصفير التقدم',
       deleteItemBtn: 'حذف',
@@ -263,12 +279,16 @@
       navPronunciation: 'Pronunciación',
       navVocabulary: 'Vocabulario',
       navHistory: 'Historial y Uso',
+      navTechLinguist: 'Léxico Técnico',
+      navLearningLibrary: 'Biblioteca',
+      techLinguistKicker: 'Léxico de Ingeniería de Software e IA',
+      techLinguistHeadline: 'Domina el <span class="vox-underline">inglés técnico estadounidense</span> auténtico.',
+      techLinguistSubcopy: 'Auditoría automática de transcripción, tablas interactivas con traducción contextual palabra por palabra y modelos mentales nativos.',
       streakUnit: 'días seguidos',
       signIn: 'Iniciar sesión',
       createAccount: 'Crear cuenta',
       signOut: 'Cerrar sesión',
       accountTitle: 'Cuenta',
-      continueWithGoogle: 'Continuar con Google',
       heroKicker: 'Estudio de Inglés Hablado',
       heroHeadline: 'Convierte cualquier video en inglés en una <span class="vox-underline">lección de habla precisa</span>.',
       heroSubcopy: 'Pega un enlace de YouTube para practicar oraciones completas, párrafos editoriales, dictado activo y habla conectada.',
@@ -285,12 +305,16 @@
       navPronunciation: 'Prononciation',
       navVocabulary: 'Vocabulaire',
       navHistory: 'Historique',
+      navTechLinguist: 'Lexique Tech',
+      navLearningLibrary: 'Bibliothèque',
+      techLinguistKicker: 'Lexique Génie Logiciel & IA',
+      techLinguistHeadline: 'Maîtrisez l’<span class="vox-underline">anglais technique américain</span> authentique.',
+      techLinguistSubcopy: 'Audit ASR automatique, tableaux interactifs avec traduction contextuelle mot à mot et modèles de pensée natifs.',
       streakUnit: 'jours de suite',
       signIn: 'Connexion',
       createAccount: 'Créer un compte',
       signOut: 'Déconnexion',
       accountTitle: 'Compte',
-      continueWithGoogle: 'Continuer avec Google',
       heroKicker: 'Studio d’Anglais Parlé',
       heroHeadline: 'Transformez toute vidéo anglaise en <span class="vox-underline">leçon orale de précision</span>.',
       heroSubcopy: 'Collez un lien YouTube pour travailler phrases complètes, paragraphes cohérents, dictée active et discours connecté.',
@@ -307,12 +331,16 @@
       navPronunciation: 'Aussprache',
       navVocabulary: 'Vokabeln',
       navHistory: 'Verlauf & Cache',
+      navTechLinguist: 'Tech-Lexikon',
+      navLearningLibrary: 'Lernbibliothek',
+      techLinguistKicker: 'Software- & KI-Ingenieur-Lexikon',
+      techLinguistHeadline: 'Meistern Sie authentisches <span class="vox-underline">amerikanisches Tech-Englisch</span>.',
+      techLinguistSubcopy: 'Automatische ASR-Prüfung, interaktive Tabellen mit kontextbezogener Wortübersetzung und muttersprachlichen Denkmustern.',
       streakUnit: 'Tage Serie',
       signIn: 'Anmelden',
       createAccount: 'Konto erstellen',
       signOut: 'Abmelden',
       accountTitle: 'Konto',
-      continueWithGoogle: 'Weiter mit Google',
       heroKicker: 'Gesprochenes Englisch',
       heroHeadline: 'Verwandle jedes englische Video in eine <span class="vox-underline">präzise Sprechlektion</span>.',
       heroSubcopy: 'Füge einen YouTube-Link ein, um vollständige Sätze, Absätze, aktives Diktat und Connected Speech zu trainieren.',
@@ -329,12 +357,16 @@
       navPronunciation: 'Telaffuz',
       navVocabulary: 'Kelimeler',
       navHistory: 'Geçmiş ve Önbellek',
+      navTechLinguist: 'Teknoloji Sözlüğü',
+      navLearningLibrary: 'Öğrenme Kitaplığı',
+      techLinguistKicker: 'Yazılım ve Yapay Zeka Sözlüğü',
+      techLinguistHeadline: 'Videolardan özgün <span class="vox-underline">Amerikan Teknik İngilizcesi</span> öğrenin.',
+      techLinguistSubcopy: 'Otomatik ASR denetimi, bağlamsal kelime çevirisi sunan etkileşimli tablolar ve yerel mühendislik düşünce kalıpları.',
       streakUnit: 'gün seri',
       signIn: 'Giriş yap',
       createAccount: 'Hesap oluştur',
       signOut: 'Çıkış yap',
       accountTitle: 'Hesap',
-      continueWithGoogle: 'Google ile devam et',
       heroKicker: 'Konuşma İngilizcesi Stüdyosu',
       heroHeadline: 'Herhangi bir İngilizce videoyu <span class="vox-underline">hassas bir konuşma dersine</span> dönüştürün.',
       heroSubcopy: 'Tam cümleler, paragraflar, aktif dikte ve bağlı konuşma pratiği için bir YouTube bağlantısı yapıştırın.',
@@ -353,12 +385,6 @@
     authToken: localStorage.getItem('flaptap_auth_token') || '',
     user: null,
     sessionLoaded: false,
-    googleAuth: {
-      enabled: false,
-      gisOnly: false,
-      clientId: null,
-      redirectUri: `${window.location.origin}/api/auth/google/callback`,
-    },
     pendingAction: null,
     stats: null,
     usageOverview: null,
@@ -398,6 +424,11 @@
       .replace(/'/g, '&#39;');
   }
 
+  /** Sprite icon markup (frontend/icons.svg) — icon-only controls always get a label. */
+  function icon(name, options) {
+    return window.FlaptapIcon ? window.FlaptapIcon(name, options) : '';
+  }
+
   function formatDuration(sec) {
     const total = Math.max(0, Math.round(Number(sec) || 0));
     const m = Math.floor(total / 60);
@@ -432,7 +463,19 @@
   async function apiFetch(url, options) {
     const opts = Object.assign({ credentials: 'same-origin' }, options || {});
     opts.headers = apiHeaders(opts.headers);
-    const res = await fetch(url, opts);
+    let res;
+    try {
+      res = await fetch(url, opts);
+    } catch {
+      const isMobileOnLocalhost =
+        location.hostname === 'localhost' &&
+        /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent || '');
+      throw new Error(
+        isMobileOnLocalhost
+          ? 'Cannot reach Flaptap on localhost. Open your computer’s same-Wi-Fi URL instead (for example http://192.168.x.x:3333).'
+          : 'Cannot connect to Flaptap right now. Check that the server is running on the same Wi-Fi network.',
+      );
+    }
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
       const err = new Error(body?.message || `Request failed (${res.status})`);
@@ -516,7 +559,7 @@
     if (act.type === 'video_lesson' && act.url) {
       const qs = new URLSearchParams({ url: act.url });
       if (act.force) qs.set('force', '1');
-      window.location.href = `studio.html?${qs.toString()}`;
+      window.location.href = `/studio?${qs.toString()}`;
       return;
     }
 
@@ -558,6 +601,14 @@
       return;
     }
 
+    if (act.type === 'learning_library_generate' && act.payload) {
+      switchSection('learning-library');
+      if (window.FlaptapLearningLibrary?.resumeGeneration) {
+        await window.FlaptapLearningLibrary.resumeGeneration(act.payload);
+      }
+      return;
+    }
+
     if (act.type === 'section' && act.section) {
       switchSection(act.section);
     }
@@ -590,7 +641,13 @@
 
     document.querySelectorAll('[data-i18n]').forEach((el) => {
       const key = el.getAttribute('data-i18n');
-      if (key === 'heroHeadline' || key === 'dialogueHeadline' || key === 'pronHeadline') {
+      if (
+        key === 'heroHeadline' ||
+        key === 'dialogueHeadline' ||
+        key === 'pronHeadline' ||
+        key === 'techLinguistHeadline' ||
+        key.endsWith('Headline')
+      ) {
         el.innerHTML = t(key);
       } else {
         el.textContent = t(key);
@@ -606,48 +663,98 @@
     updateAccountHeader();
     renderLibrary();
     renderVocabulary();
+    renderFlashcard();
     renderHistoryLedger();
     renderActivityTimeline();
+    window.dispatchEvent(new CustomEvent('flaptap:ui-lang-changed', { detail: { lang: state.uiLang } }));
+    window.FlaptapRouter?.refreshChrome?.();
   }
 
   /* ========================================================================
-     SECTION NAVIGATION
+     SECTION NAVIGATION & MODULAR ROUTE SYNCHRONIZATION
      ======================================================================== */
 
-  function switchSection(section) {
-    if (!['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history'].includes(section)) {
+  function activateSectionPanel(section) {
+    if (section === 'tech-lexicon') section = 'tech-linguist';
+    if (section === 'library') section = 'learning-library';
+    if (!['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'tech-linguist', 'learning-library'].includes(section)) {
       section = 'lessons';
     }
     state.section = section;
-
-    document.querySelectorAll('.nav-tab[data-section]').forEach((btn) => {
-      const isActive = btn.dataset.section === section;
-      btn.classList.toggle('active', isActive);
-      btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
-    });
-
-    ['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history'].forEach((name) => {
+    ['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'tech-linguist', 'learning-library'].forEach((name) => {
       const panel = document.getElementById(`section-${name}`);
       if (panel) panel.hidden = name !== section;
     });
+    return section;
+  }
 
-    if (section === 'vocabulary') {
+  async function applyRoute(routeState) {
+    const resolved = activateSectionPanel(routeState?.section || 'lessons');
+
+    if (resolved === 'lessons' || resolved === 'dialogue' || resolved === 'pronunciation') {
+      renderLibrary();
+    } else if (resolved === 'vocabulary') {
+      const qsFilter = routeState?.searchParams?.get('filter');
+      if (qsFilter && ['all', 'due', 'mastered'].includes(qsFilter)) {
+        state.vocabFilter = qsFilter;
+        document.querySelectorAll('.filter-pill[data-vocab-filter]').forEach((p) => {
+          const act = p.dataset.vocabFilter === qsFilter;
+          p.classList.toggle('active', act);
+          p.setAttribute('aria-selected', act ? 'true' : 'false');
+        });
+      }
+      const wantsFlashcards =
+        routeState?.subview === 'flashcards' ||
+        routeState?.searchParams?.get('view') === 'flashcards';
       if (state.user) {
-        loadVocabulary();
+        await loadVocabulary();
+        if (wantsFlashcards && state.vocabItems.length > 0 && !state.flashcardsOpen) {
+          setFlashcardsOpen(true, { skipUrlSync: true });
+        } else if (!wantsFlashcards && state.flashcardsOpen) {
+          setFlashcardsOpen(false, { skipUrlSync: true });
+        }
       } else {
         renderVocabulary();
       }
-    } else if (section === 'history') {
+    } else if (resolved === 'history') {
+      const qsTrack = routeState?.searchParams?.get('track');
+      const qsCache = routeState?.searchParams?.get('cache');
+      if (qsTrack && ['all', 'shadowing', 'street_talk', 'phonetics'].includes(qsTrack)) {
+        state.ledgerTrackFilter = qsTrack;
+        document.querySelectorAll('[data-ledger-track]').forEach((p) => {
+          const act = p.dataset.ledgerTrack === qsTrack;
+          p.classList.toggle('active', act);
+          p.setAttribute('aria-selected', act ? 'true' : 'false');
+        });
+      }
+      if (qsCache && ['all', 'coach', 'translations', 'transcript', 'notes'].includes(qsCache)) {
+        state.ledgerCacheFilter = qsCache;
+        const cSel = document.getElementById('ledger-cache-filter');
+        if (cSel) cSel.value = qsCache;
+      }
       if (state.user) {
-        loadUsageAndHistory();
+        await loadUsageAndHistory();
       } else {
         renderHistorySectionAuthState();
       }
+    } else if (resolved === 'tech-linguist') {
+      await window.FlaptapTechLexicon?.init?.(routeState);
+    } else if (resolved === 'learning-library') {
+      await window.FlaptapLearningLibrary?.init?.(routeState);
     }
   }
 
+  function switchSection(section, opts = {}) {
+    if (window.FlaptapRouter && !opts.skipRouteUpdate) {
+      window.FlaptapRouter.navigate(section, opts);
+      return;
+    }
+    const resolved = activateSectionPanel(section);
+    applyRoute({ section: resolved, searchParams: new URLSearchParams(window.location.search) });
+  }
+
   /* ========================================================================
-     ACCOUNT, REAL GOOGLE OAUTH 2.0 + OIDC, SESSIONS & SECURITY
+     ACCOUNT, SESSIONS & SECURITY (EMAIL & PASSWORD)
      ======================================================================== */
 
   function updateAccountHeader() {
@@ -660,16 +767,10 @@
     if (state.user) {
       btn?.classList.add('authenticated');
       if (label) label.textContent = state.user.name.split(' ')[0];
-      if (state.user.avatarUrl && avatarImg) {
-        avatarImg.src = state.user.avatarUrl;
-        avatarImg.hidden = false;
-        if (avatar) avatar.hidden = true;
-      } else {
-        if (avatarImg) avatarImg.hidden = true;
-        if (avatar) {
-          avatar.textContent = (state.user.name[0] || 'U').toUpperCase();
-          avatar.hidden = false;
-        }
+      if (avatarImg) avatarImg.hidden = true;
+      if (avatar) {
+        avatar.textContent = (state.user.name[0] || 'U').toUpperCase();
+        avatar.hidden = false;
       }
       if (guestIcon) guestIcon.style.display = 'none';
     } else {
@@ -716,140 +817,6 @@
     }
   }
 
-  async function loadGoogleOAuthConfig() {
-    try {
-      const cfg = await apiFetch('/api/auth/google/config', { method: 'GET' });
-      state.googleAuth = Object.assign(state.googleAuth, cfg || {});
-      const redirectCode = document.getElementById('google-redirect-uri-code');
-      if (redirectCode && state.googleAuth.redirectUri) {
-        redirectCode.textContent = state.googleAuth.redirectUri;
-      }
-      if (state.googleAuth.clientId) {
-        mountGoogleIdentityServices(state.googleAuth.clientId);
-      }
-    } catch {}
-  }
-
-  function mountGoogleIdentityServices(clientId) {
-    if (!clientId || document.getElementById('google-gis-sdk')) return;
-    const script = document.createElement('script');
-    script.id = 'google-gis-sdk';
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      try {
-        if (!window.google?.accounts?.id) return;
-        window.google.accounts.id.initialize({
-          client_id: clientId,
-          callback: (resp) => {
-            if (resp?.credential) {
-              handleGoogleGisCredential(resp.credential);
-            }
-          },
-          ux_mode: 'popup',
-        });
-        if (state.googleAuth.gisOnly) {
-          const slot = document.getElementById('google-gis-button-slot');
-          if (slot) {
-            slot.hidden = false;
-            window.google.accounts.id.renderButton(slot, {
-              theme: state.theme === 'dark' ? 'filled_black' : 'outline',
-              size: 'large',
-              width: 340,
-              text: 'continue_with',
-            });
-          }
-        }
-      } catch {}
-    };
-    document.head.appendChild(script);
-  }
-
-  async function handleGoogleGisCredential(credentialJwt) {
-    const errBox = document.getElementById('auth-error-box');
-    if (errBox) errBox.hidden = true;
-    try {
-      const res = await apiFetch('/api/auth/google/credential', {
-        method: 'POST',
-        body: JSON.stringify({
-          credential: credentialJwt,
-          uiLanguage: state.uiLang,
-          nativeLanguage: localStorage.getItem('flaptap_trans_lang') || 'ar',
-          guestToken: state.guestToken,
-        }),
-      });
-      await handleAuthSuccess(
-        res,
-        res.isNewUser
-          ? `Google account created for ${res.user.name}`
-          : `Signed in with Google as ${res.user.name}`,
-      );
-    } catch (err) {
-      if (errBox) {
-        errBox.textContent = err.message;
-        errBox.hidden = false;
-      } else {
-        showToast(err.message);
-      }
-    }
-  }
-
-  window.flaptapCompleteGoogleCredential = handleGoogleGisCredential;
-
-  function startGoogleOAuthFlow() {
-    const errBox = document.getElementById('auth-error-box');
-    const setupCard = document.getElementById('google-setup-card');
-    if (errBox) errBox.hidden = true;
-
-    if (state.googleAuth.enabled) {
-      if (setupCard) setupCard.hidden = true;
-      const isMobileOrStandalone =
-        /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent || '') ||
-        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
-        window.navigator.standalone === true ||
-        window.innerWidth <= 900;
-
-      const params = new URLSearchParams({
-        mode: isMobileOrStandalone ? 'redirect' : 'popup',
-        uiLang: state.uiLang,
-        nativeLang: localStorage.getItem('flaptap_trans_lang') || 'ar',
-        returnTo: window.location.pathname + window.location.search,
-      });
-      const startUrl = `/api/auth/google/start?${params.toString()}`;
-
-      if (isMobileOrStandalone) {
-        window.location.href = startUrl;
-        return;
-      }
-
-      const width = 520;
-      const height = 650;
-      const left = Math.max(0, Math.round(window.screenX + (window.outerWidth - width) / 2));
-      const top = Math.max(0, Math.round(window.screenY + (window.outerHeight - height) / 2));
-      const popup = window.open(
-        startUrl,
-        'flaptap_google_oauth',
-        `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`,
-      );
-      if (!popup) {
-        params.set('mode', 'redirect');
-        window.location.href = `/api/auth/google/start?${params.toString()}`;
-      }
-      return;
-    }
-
-    if (state.googleAuth.gisOnly && window.google?.accounts?.id) {
-      window.google.accounts.id.prompt();
-      return;
-    }
-
-    // Show clean Google Cloud Console setup instructions if credentials are not in .env yet
-    if (setupCard) {
-      setupCard.hidden = !setupCard.hidden;
-    }
-  }
-
   async function handleAuthSuccess(res, toastMsg) {
     state.user = res.user;
     state.authToken = res.token || state.authToken || '';
@@ -858,9 +825,6 @@
     }
     if (res.user?.nativeLanguage) {
       localStorage.setItem('flaptap_trans_lang', res.user.nativeLanguage);
-    }
-    if (res.googleAuth) {
-      state.googleAuth = Object.assign(state.googleAuth, res.googleAuth);
     }
 
     updateAccountHeader();
@@ -872,21 +836,25 @@
     if (state.section === 'vocabulary') await loadVocabulary();
     if (state.section === 'history') await loadUsageAndHistory();
     checkUrlCache((document.getElementById('youtube-url-input')?.value || '').trim());
+    window.dispatchEvent(new CustomEvent('flaptap:auth-changed', { detail: { user: state.user } }));
 
     await resumePendingAction();
   }
 
   async function loadSessionAndStats() {
+    const tokenAtStart = state.authToken || '';
     try {
       const data = await apiFetch('/api/auth/me', { method: 'GET' });
       state.user = data.authenticated ? data.user : null;
       state.sessionLoaded = true;
-      if (data.googleAuth) {
-        state.googleAuth = Object.assign(state.googleAuth, data.googleAuth);
-      }
       if (!state.user) {
-        state.authToken = '';
-        localStorage.removeItem('flaptap_auth_token');
+        const currentStored = localStorage.getItem('flaptap_auth_token') || '';
+        if (!currentStored || currentStored === tokenAtStart) {
+          state.authToken = '';
+          localStorage.removeItem('flaptap_auth_token');
+        } else {
+          state.authToken = currentStored;
+        }
         state.lessons = [];
         state.vocabItems = [];
         state.usageOverview = null;
@@ -895,30 +863,67 @@
       }
       updateAccountHeader();
       updateStatsDisplay(data.stats);
+      window.dispatchEvent(new CustomEvent('flaptap:auth-changed', { detail: { user: state.user } }));
     } catch {
       state.sessionLoaded = true;
       updateAccountHeader();
       updateStatsDisplay(null);
+      window.dispatchEvent(new CustomEvent('flaptap:auth-changed', { detail: { user: null } }));
+    }
+  }
+
+  function applyLanguagesList(langs) {
+    state.languages = Array.isArray(langs) ? langs : [];
+    const optionsHtml = state.languages
+      .map((l) => `<option value="${escapeHtml(l.code)}">${escapeHtml(l.name)} (${escapeHtml(l.native)})</option>`)
+      .join('');
+
+    const regSelect = document.getElementById('reg-native-lang');
+    const prefSelect = document.getElementById('pref-native-lang');
+    const lexiconLangSelect = document.getElementById('lexicon-lookup-lang');
+    if (regSelect && optionsHtml) {
+      regSelect.innerHTML = optionsHtml;
+      regSelect.value = localStorage.getItem('flaptap_trans_lang') || 'ar';
+    }
+    if (lexiconLangSelect && optionsHtml) {
+      lexiconLangSelect.innerHTML = optionsHtml;
+      lexiconLangSelect.value =
+        state.user?.nativeLanguage || localStorage.getItem('flaptap_trans_lang') || 'ar';
+    }
+    if (prefSelect && optionsHtml) {
+      prefSelect.innerHTML = optionsHtml;
+      prefSelect.value = state.user?.nativeLanguage || localStorage.getItem('flaptap_trans_lang') || 'ar';
+    }
+    if (optionsHtml) {
+      window.dispatchEvent(new CustomEvent('flaptap:languages-loaded'));
     }
   }
 
   async function loadLanguagesCatalog() {
+    const CACHE_KEY = 'flaptap_languages_v1';
+    let hasFreshCache = false;
+    try {
+      const cachedRaw = localStorage.getItem(CACHE_KEY);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        if (Array.isArray(cached?.languages) && cached.languages.length > 0) {
+          applyLanguagesList(cached.languages);
+          if (Date.now() - Number(cached.ts || 0) < 24 * 60 * 60 * 1000) {
+            hasFreshCache = true;
+          }
+        }
+      }
+    } catch {}
+
+    if (hasFreshCache) return;
+
     try {
       const data = await apiFetch('/api/languages', { method: 'GET' });
-      state.languages = Array.isArray(data.languages) ? data.languages : [];
-      const optionsHtml = state.languages
-        .map((l) => `<option value="${escapeHtml(l.code)}">${escapeHtml(l.name)} (${escapeHtml(l.native)})</option>`)
-        .join('');
-
-      const regSelect = document.getElementById('reg-native-lang');
-      const prefSelect = document.getElementById('pref-native-lang');
-      if (regSelect) {
-        regSelect.innerHTML = optionsHtml;
-        regSelect.value = localStorage.getItem('flaptap_trans_lang') || 'ar';
-      }
-      if (prefSelect) {
-        prefSelect.innerHTML = optionsHtml;
-        prefSelect.value = state.user?.nativeLanguage || localStorage.getItem('flaptap_trans_lang') || 'ar';
+      if (Array.isArray(data.languages) && data.languages.length > 0) {
+        applyLanguagesList(data.languages);
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), languages: data.languages }));
+        } catch {}
       }
     } catch {}
   }
@@ -951,17 +956,16 @@
       listEl.innerHTML = state.activeSessions
         .map((s) => {
           const ua = (s.userAgent || 'Browser session').slice(0, 48);
-          const methodBadge = s.authMethod === 'google' ? 'Google' : 'Email';
           return `
             <div class="session-item">
               <div class="session-item-meta">
                 <span class="session-item-title">${escapeHtml(ua)}</span>
-                <span class="session-item-sub">${escapeHtml(methodBadge)} · ${escapeHtml(formatShortDate(s.lastActiveAt))} ${s.isCurrent ? '· Current device' : ''}</span>
+                <span class="session-item-sub">${escapeHtml(formatShortDate(s.lastActiveAt))} ${s.isCurrent ? '· Current device' : ''}</span>
               </div>
               ${
                 s.isCurrent
-                  ? `<span class="cache-pill forest">Active</span>`
-                  : `<button type="button" class="btn-danger-ghost btn-xs" data-revoke-session="${escapeHtml(s.sessionId)}">Revoke</button>`
+                  ? `<span class="status-chip is-done">${icon('circle-check')}Active</span>`
+                  : `<button type="button" class="icon-action icon-action--xs is-danger" data-revoke-session="${escapeHtml(s.sessionId)}" aria-label="Revoke session" title="Revoke session">${icon('log-out')}</button>`
               }
             </div>
           `;
@@ -980,10 +984,8 @@
     const errBox = document.getElementById('auth-error-box');
     const gateBanner = document.getElementById('auth-gate-banner');
     const gateDesc = document.getElementById('auth-gate-desc');
-    const setupCard = document.getElementById('google-setup-card');
 
     if (errBox) errBox.hidden = true;
-    if (setupCard) setupCard.hidden = true;
 
     if (state.user) {
       if (guestView) guestView.hidden = true;
@@ -995,25 +997,15 @@
       const prefLang = document.getElementById('pref-native-lang');
       if (prefLang && state.user.nativeLanguage) prefLang.value = state.user.nativeLanguage;
 
-      const avatarImg = document.getElementById('profile-avatar-img');
       const avatarFallback = document.getElementById('profile-avatar-fallback');
-      if (state.user.avatarUrl && avatarImg) {
-        avatarImg.src = state.user.avatarUrl;
-        avatarImg.hidden = false;
-        if (avatarFallback) avatarFallback.hidden = true;
-      } else {
-        if (avatarImg) avatarImg.hidden = true;
-        if (avatarFallback) {
-          avatarFallback.textContent = (state.user.name[0] || 'U').toUpperCase();
-          avatarFallback.hidden = false;
-        }
+      if (avatarFallback) {
+        avatarFallback.textContent = (state.user.name[0] || 'U').toUpperCase();
+        avatarFallback.hidden = false;
       }
 
       const providerBadge = document.getElementById('profile-provider-badge');
       if (providerBadge) {
-        const p = state.user.authProvider || 'email';
-        providerBadge.textContent =
-          p === 'email+google' ? 'Email + Google' : p === 'google' ? 'Google Account' : 'Email Account';
+        providerBadge.textContent = 'Email Account';
       }
 
       const currPwGroup = document.getElementById('current-password-group');
@@ -1098,8 +1090,8 @@
      LESSON LIBRARY
      ======================================================================== */
 
-  async function loadLibrary() {
-    if (!state.user) {
+  async function loadLibrary(opts) {
+    if (!state.user && !opts?.force) {
       state.lessons = [];
       renderLibrary();
       return;
@@ -1127,25 +1119,234 @@
     const ci = item.cacheInfo;
     if (!ci) return '';
     const pills = [];
-    if (ci.transcriptCached) pills.push(`<span class="cache-pill">Transcript</span>`);
+    if (ci.transcriptCached) pills.push(`<span class="cache-pill">${icon('file-text')}Transcript</span>`);
     if (ci.aiCoachCached) {
       pills.push(
-        `<span class="cache-pill active">Coach${ci.aiInsightsCount ? ` · ${ci.aiInsightsCount}` : ''}</span>`,
+        `<span class="cache-pill active">${icon('sparkles')}Coach${ci.aiInsightsCount ? ` · ${ci.aiInsightsCount}` : ''}</span>`,
       );
     }
     if (Array.isArray(ci.translationLanguages) && ci.translationLanguages.length > 0) {
       pills.push(
-        `<span class="cache-pill active">${escapeHtml(ci.translationLanguages.map((c) => c.toUpperCase()).join('+'))}</span>`,
+        `<span class="cache-pill active">${icon('globe')}${escapeHtml(ci.translationLanguages.map((c) => c.toUpperCase()).join('+'))}</span>`,
       );
     }
-    if (ci.hasNotes) pills.push(`<span class="cache-pill forest">Notes</span>`);
+    if (ci.hasNotes) pills.push(`<span class="cache-pill notes">${icon('pencil')}Notes</span>`);
     if (item.payloadBytes) {
-      pills.push(`<span class="cache-pill ltr-num">${escapeHtml(formatBytes(item.payloadBytes))}</span>`);
+      pills.push(`<span class="cache-pill ltr-num">${icon('database')}${escapeHtml(formatBytes(item.payloadBytes))}</span>`);
     }
     return pills.join('');
   }
 
+  const CHECK_ICON_SVG =
+    '<svg class="chk-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line class="chk-dash" x1="6.5" y1="12" x2="17.5" y2="12"></line><polyline class="chk-tick" points="19.5 7 9.5 17 4.5 12"></polyline></svg>';
+
+  function renderCheckButtonHtml({ checked = false, attrs = '', label = '', pill = false, text = '' } = {}) {
+    const titleText = label || (checked ? t('completedLabel') : t('markComplete'));
+    const pillClass = pill ? ' item-check-btn--pill' : '';
+    const innerText = pill && text ? `<span>${escapeHtml(text)}</span>` : '';
+    return `<button type="button" class="item-check-btn${pillClass}${checked ? ' is-checked' : ''}" ${attrs} aria-pressed="${checked ? 'true' : 'false'}" aria-label="${escapeHtml(titleText)}" title="${escapeHtml(titleText)}">${CHECK_ICON_SVG}${innerText}</button>`;
+  }
+
+  function renderSubjectProgressBar(targetElOrId, { total = 0, completed = 0 } = {}) {
+    const el = typeof targetElOrId === 'string' ? document.getElementById(targetElOrId) : targetElOrId;
+    if (!el) return;
+
+    const safeTotal = Math.max(0, Number(total) || 0);
+    if (safeTotal === 0) {
+      el.hidden = true;
+      el.classList.remove('is-all-done');
+      el.innerHTML = '';
+      return;
+    }
+
+    const safeCompleted = Math.max(0, Math.min(safeTotal, Number(completed) || 0));
+    const remaining = Math.max(0, safeTotal - safeCompleted);
+    const pct = Math.round((safeCompleted / safeTotal) * 100);
+    const isAr = (state?.uiLang || document.documentElement.lang) === 'ar';
+    const totalLabel = isAr ? 'الإجمالي' : 'Total';
+    const doneLabel = isAr ? 'مكتمل' : 'Completed';
+    const remLabel = isAr ? 'المتبقي' : 'Remaining';
+
+    el.hidden = false;
+    el.classList.toggle('is-all-done', remaining === 0 && safeTotal > 0);
+    el.innerHTML = `
+      <div class="subject-progress-stats">
+        <span class="sp-stat">
+          <span class="sp-stat-label">${totalLabel}:</span>
+          <strong class="sp-stat-value ltr-num" data-sp-total>${safeTotal}</strong>
+        </span>
+        <span class="sp-sep" aria-hidden="true"></span>
+        <span class="sp-stat sp-stat--done">
+          <span class="sp-stat-label">${doneLabel}:</span>
+          <strong class="sp-stat-value ltr-num" data-sp-completed>${safeCompleted}</strong>
+        </span>
+        <span class="sp-sep" aria-hidden="true"></span>
+        <span class="sp-stat">
+          <span class="sp-stat-label">${remLabel}:</span>
+          <strong class="sp-stat-value ltr-num" data-sp-remaining>${remaining}</strong>
+        </span>
+      </div>
+      <div class="subject-progress-track-wrap">
+        <div class="subject-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${safeTotal}" aria-valuenow="${safeCompleted}">
+          <div class="subject-progress-fill" style="width: ${pct}%;"></div>
+        </div>
+        <span class="subject-progress-pct ltr-num">${pct}%</span>
+      </div>
+    `;
+  }
+
+  async function toggleLessonCompletion(id) {
+    const lesson = state.lessons.find((l) => l.id === id);
+    if (!lesson) return;
+    const prev = Boolean(lesson.isCompleted);
+    const next = !prev;
+    lesson.isCompleted = next;
+    renderLibrary();
+    renderHistoryLedger();
+
+    try {
+      await apiFetch(`/api/history/${encodeURIComponent(id)}/complete`, {
+        method: 'PATCH',
+        body: JSON.stringify({ completed: next }),
+      });
+    } catch (err) {
+      lesson.isCompleted = prev;
+      renderLibrary();
+      renderHistoryLedger();
+      showToast(err?.message || 'Could not update completion.');
+    }
+  }
+
+  async function toggleVocabCompletion(id) {
+    const item = state.vocabItems.find((v) => v.id === id);
+    if (!item) return;
+    const prev = Boolean(item.isCompleted);
+    const next = !prev;
+    item.isCompleted = next;
+    renderVocabulary();
+    renderFlashcard();
+
+    try {
+      await apiFetch(`/api/vocabulary/${encodeURIComponent(id)}/complete`, {
+        method: 'PATCH',
+        body: JSON.stringify({ completed: next }),
+      });
+    } catch (err) {
+      item.isCompleted = prev;
+      renderVocabulary();
+      renderFlashcard();
+      showToast(err?.message || 'Could not update completion.');
+    }
+  }
+
+  function buildLessonCardHtml(item) {
+    const hasVideoThumb = item.track === 'shadowing' && (item.thumbnailUrl || item.videoId);
+    const thumbSrc =
+      item.thumbnailUrl ||
+      (item.videoId ? `https://img.youtube.com/vi/${encodeURIComponent(item.videoId)}/hqdefault.jpg` : '');
+
+    const mediaHtml = hasVideoThumb
+      ? `<img src="${escapeHtml(thumbSrc)}" alt="${escapeHtml(item.title)}" loading="lazy" />`
+      : `<div class="card-editorial-cover">
+           <p class="cover-style-quote">${escapeHtml(item.accentDialect || 'General American English')}</p>
+         </div>`;
+
+    const sentencesCount = Number(item.sentencesCount || item.stats?.sentencesCount || 0);
+    const drillsCount = Number(item.completedDrills || 0);
+    const isDone = Boolean(item.isCompleted);
+    const cefrHtml = item.cefrLevel
+      ? `<span class="card-cefr ltr-num">${escapeHtml(item.cefrLevel)}</span>`
+      : '';
+    const checkBtnHtml = renderCheckButtonHtml({
+      checked: isDone,
+      attrs: `data-lesson-complete="${escapeHtml(item.id)}"`,
+    });
+    const cachePillsHtml = buildCachePillsHtml(item);
+
+    return `
+      <article class="history-card${isDone ? ' is-item-completed' : ''}" data-lesson-id="${escapeHtml(item.id)}" tabindex="0" role="link" aria-label="${escapeHtml(item.title)}">
+        <div class="card-media">
+          ${mediaHtml}
+          <span class="card-track-stamp">${escapeHtml(trackLabel(item.track))}</span>
+          <span class="card-duration-stamp">${formatDuration(item.durationSeconds)}</span>
+          <button type="button" class="card-delete-btn" data-delete-id="${escapeHtml(item.id)}" aria-label="Delete lesson" title="Delete lesson">
+            ${icon('x')}
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="card-creator-row">
+            <span class="card-creator">${escapeHtml(item.creator || 'Speaker')}</span>
+            <div style="display: inline-flex; align-items: center; gap: 6px;">
+              ${cefrHtml}
+              ${checkBtnHtml}
+            </div>
+          </div>
+          <h3 class="card-title">${escapeHtml(item.title)}</h3>
+          ${cachePillsHtml ? `<div class="card-cache-strip">${cachePillsHtml}</div>` : ''}
+          <div class="card-footer-meta">
+            <div class="card-metrics">
+              <span class="ltr-num">${Number(item.pacingWpm || 145)} WPM</span>
+              ${sentencesCount > 0 ? `<span>· <strong class="ltr-num">${sentencesCount}</strong> ${escapeHtml(t('sentencesUnit'))}</span>` : ''}
+              ${drillsCount > 0 ? `<span>· <strong class="ltr-num">${drillsCount}</strong> ${escapeHtml(t('drillsDoneUnit'))}</span>` : ''}
+            </div>
+            <span class="card-open-cue">
+              <span>${escapeHtml(t('openLesson'))}</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+                <polyline points="12 5 19 12 12 19"></polyline>
+              </svg>
+            </span>
+          </div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderTrackShelf(gridId, emptyId, countId, progressId, trackName) {
+    const grid = document.getElementById(gridId);
+    const empty = document.getElementById(emptyId);
+    const countEl = document.getElementById(countId);
+    if (!grid) return;
+
+    if (!state.user) {
+      grid.innerHTML = '';
+      if (empty) empty.hidden = true;
+      if (countEl) countEl.textContent = '0';
+      renderSubjectProgressBar(progressId, { total: 0, completed: 0 });
+      return;
+    }
+
+    const filtered = state.lessons.filter((item) => item.track === trackName);
+    if (countEl) countEl.textContent = String(filtered.length);
+    renderSubjectProgressBar(progressId, {
+      total: filtered.length,
+      completed: filtered.filter((i) => i.isCompleted).length,
+    });
+    if (filtered.length === 0) {
+      grid.innerHTML = '';
+      if (empty) empty.hidden = false;
+      return;
+    }
+    if (empty) empty.hidden = true;
+    grid.innerHTML = filtered.map(buildLessonCardHtml).join('');
+  }
+
   function renderLibrary() {
+    renderTrackShelf(
+      'dialogue-history-grid',
+      'dialogue-empty-state',
+      'dialogue-count-label',
+      'dialogue-progress-bar',
+      'street_talk',
+    );
+    renderTrackShelf(
+      'pronunciation-history-grid',
+      'pronunciation-empty-state',
+      'pronunciation-count-label',
+      'pronunciation-progress-bar',
+      'phonetics',
+    );
+
     const grid = document.getElementById('history-grid');
     const empty = document.getElementById('library-empty-state');
     const gateCard = document.getElementById('library-auth-gate-card');
@@ -1159,6 +1360,7 @@
       if (clearBtn) clearBtn.hidden = true;
       if (countLabel) countLabel.textContent = '0';
       if (gateCard) gateCard.hidden = false;
+      renderSubjectProgressBar('lessons-progress-bar', { total: 0, completed: 0 });
       return;
     }
 
@@ -1176,6 +1378,10 @@
 
     if (countLabel) countLabel.textContent = String(filtered.length);
     if (clearBtn) clearBtn.hidden = state.lessons.length === 0;
+    renderSubjectProgressBar('lessons-progress-bar', {
+      total: filtered.length,
+      completed: filtered.filter((i) => i.isCompleted).length,
+    });
 
     if (filtered.length === 0) {
       grid.innerHTML = '';
@@ -1185,65 +1391,7 @@
 
     if (empty) empty.hidden = true;
 
-    grid.innerHTML = filtered
-      .map((item) => {
-        const hasVideoThumb = item.track === 'shadowing' && (item.thumbnailUrl || item.videoId);
-        const thumbSrc =
-          item.thumbnailUrl ||
-          (item.videoId ? `https://img.youtube.com/vi/${encodeURIComponent(item.videoId)}/hqdefault.jpg` : '');
-
-        const mediaHtml = hasVideoThumb
-          ? `<img src="${escapeHtml(thumbSrc)}" alt="${escapeHtml(item.title)}" loading="lazy" />`
-          : `<div class="card-editorial-cover">
-               <p class="cover-style-quote">${escapeHtml(item.accentDialect || 'General American English')}</p>
-             </div>`;
-
-        const sentencesCount = Number(item.sentencesCount || item.stats?.sentencesCount || 0);
-        const drillsCount = Number(item.completedDrills || 0);
-        const cefrHtml = item.cefrLevel
-          ? `<span class="card-cefr ltr-num">${escapeHtml(item.cefrLevel)}</span>`
-          : '';
-        const cachePillsHtml = buildCachePillsHtml(item);
-
-        return `
-          <article class="history-card" data-lesson-id="${escapeHtml(item.id)}" tabindex="0" role="link" aria-label="${escapeHtml(item.title)}">
-            <div class="card-media">
-              ${mediaHtml}
-              <span class="card-track-stamp">${escapeHtml(trackLabel(item.track))}</span>
-              <span class="card-duration-stamp">${formatDuration(item.durationSeconds)}</span>
-              <button type="button" class="card-delete-btn" data-delete-id="${escapeHtml(item.id)}" aria-label="Delete lesson" title="Delete lesson">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            </div>
-            <div class="card-body">
-              <div class="card-creator-row">
-                <span class="card-creator">${escapeHtml(item.creator || 'Speaker')}</span>
-                ${cefrHtml}
-              </div>
-              <h3 class="card-title">${escapeHtml(item.title)}</h3>
-              ${cachePillsHtml ? `<div class="card-cache-strip">${cachePillsHtml}</div>` : ''}
-              <div class="card-footer-meta">
-                <div class="card-metrics">
-                  <span class="ltr-num">${Number(item.pacingWpm || 145)} WPM</span>
-                  ${sentencesCount > 0 ? `<span>· <strong class="ltr-num">${sentencesCount}</strong> ${escapeHtml(t('sentencesUnit'))}</span>` : ''}
-                  ${drillsCount > 0 ? `<span>· <strong class="ltr-num">${drillsCount}</strong> ${escapeHtml(t('drillsDoneUnit'))}</span>` : ''}
-                </div>
-                <span class="card-open-cue">
-                  <span>${escapeHtml(t('openLesson'))}</span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                    <polyline points="12 5 19 12 12 19"></polyline>
-                  </svg>
-                </span>
-              </div>
-            </div>
-          </article>
-        `;
-      })
-      .join('');
+    grid.innerHTML = filtered.map(buildLessonCardHtml).join('');
   }
 
   /* ========================================================================
@@ -1395,6 +1543,10 @@
     const visible = getFilteredSortedLedgerLessons();
     if (countLabel) countLabel.textContent = String(visible.length);
     syncBulkSelectionToolbar(visible);
+    renderSubjectProgressBar('history-ledger-progress-bar', {
+      total: visible.length,
+      completed: visible.filter((i) => i.isCompleted).length,
+    });
 
     if (visible.length === 0) {
       listEl.innerHTML = '';
@@ -1406,16 +1558,23 @@
     listEl.innerHTML = visible
       .map((item) => {
         const checked = state.selectedLedgerIds.has(item.id) ? 'checked' : '';
+        const isDone = Boolean(item.isCompleted);
         const totalBytes = (Number(item.payloadBytes) || 0) + (Number(item.cacheInfo?.transcriptBytes) || 0);
         const canReextract = item.track === 'shadowing' && (item.sourceUrl || item.videoId);
         const videoUrl = item.sourceUrl || (item.videoId ? `https://www.youtube.com/watch?v=${item.videoId}` : '');
 
         return `
-          <div class="history-ledger-row" data-ledger-row="${escapeHtml(item.id)}">
+          <div class="history-ledger-row${isDone ? ' is-item-completed' : ''}" data-ledger-row="${escapeHtml(item.id)}">
             <div class="ledger-row-left">
               <input type="checkbox" data-ledger-check="${escapeHtml(item.id)}" ${checked} aria-label="Select ${escapeHtml(item.title)}" />
               <div class="ledger-row-main">
-                <a href="studio.html?id=${encodeURIComponent(item.id)}" class="ledger-row-title">${escapeHtml(item.title)}</a>
+                <div class="ledger-title-check-row">
+                  <a href="/studio?id=${encodeURIComponent(item.id)}" class="ledger-row-title">${escapeHtml(item.title)}</a>
+                  ${renderCheckButtonHtml({
+                    checked: isDone,
+                    attrs: `data-ledger-complete="${escapeHtml(item.id)}"`,
+                  })}
+                </div>
                 <div class="ledger-row-meta">
                   <span>${escapeHtml(trackLabel(item.track))}</span>
                   <span>·</span>
@@ -1433,15 +1592,15 @@
               </div>
             </div>
             <div class="ledger-row-actions">
-              <a href="studio.html?id=${encodeURIComponent(item.id)}" class="btn-secondary btn-xs">${escapeHtml(t('openLesson'))}</a>
+              <a href="/studio?id=${encodeURIComponent(item.id)}" class="icon-action icon-action--sm" title="${escapeHtml(t('openLesson'))}" aria-label="${escapeHtml(t('openLesson'))}">${icon('play')}</a>
               ${
                 canReextract
-                  ? `<button type="button" class="btn-secondary btn-xs" data-reextract-url="${escapeHtml(videoUrl)}" title="Bypass transcript cache and re-extract fresh">${escapeHtml(t('reextractBtn'))}</button>`
+                  ? `<button type="button" class="icon-action icon-action--sm" data-reextract-url="${escapeHtml(videoUrl)}" title="Bypass transcript cache and re-extract fresh" aria-label="Bypass transcript cache and re-extract fresh">${icon('refresh')}</button>`
                   : ''
               }
-              <button type="button" class="btn-secondary btn-xs" data-clear-item-cache="${escapeHtml(item.id)}">${escapeHtml(t('clearCacheItemBtn'))}</button>
-              <button type="button" class="btn-secondary btn-xs" data-reset-item-progress="${escapeHtml(item.id)}">${escapeHtml(t('resetProgressItemBtn'))}</button>
-              <button type="button" class="btn-danger-ghost btn-xs" data-delete-item-ledger="${escapeHtml(item.id)}">${escapeHtml(t('deleteItemBtn'))}</button>
+              <button type="button" class="icon-action icon-action--sm" data-clear-item-cache="${escapeHtml(item.id)}" title="${escapeHtml(t('clearCacheItemBtn'))}" aria-label="${escapeHtml(t('clearCacheItemBtn'))}">${icon('database')}</button>
+              <button type="button" class="icon-action icon-action--sm" data-reset-item-progress="${escapeHtml(item.id)}" title="${escapeHtml(t('resetProgressItemBtn'))}" aria-label="${escapeHtml(t('resetProgressItemBtn'))}">${icon('rotate-ccw')}</button>
+              <button type="button" class="icon-action icon-action--sm is-danger" data-delete-item-ledger="${escapeHtml(item.id)}" title="${escapeHtml(t('deleteItemBtn'))}" aria-label="${escapeHtml(t('deleteItemBtn'))}">${icon('trash')}</button>
             </div>
           </div>
         `;
@@ -1485,7 +1644,7 @@
               <span class="ltr-num">+${mins} min</span>
               <span>·</span>
               <span>${escapeHtml(formatShortDate(log.createdAt))}</span>
-              <button type="button" class="btn-danger-ghost btn-xs" data-delete-activity="${escapeHtml(log.id)}" aria-label="Delete log entry">×</button>
+              <button type="button" class="icon-action icon-action--xs is-danger" data-delete-activity="${escapeHtml(log.id)}" aria-label="Delete log entry" title="Delete log entry">${icon('trash')}</button>
             </div>
           </div>
         `;
@@ -1530,12 +1689,19 @@
     fcBtn.disabled = Boolean(state.user && state.vocabItems.length === 0);
   }
 
-  function setFlashcardsOpen(open) {
+  function setFlashcardsOpen(open, opts = {}) {
     state.flashcardsOpen = Boolean(open && state.vocabItems.length > 0);
     state.flashcardIndex = 0;
     state.flashcardRevealed = false;
     syncFlashcardButtonDom();
     renderFlashcard();
+    if (!opts.skipUrlSync) {
+      window.FlaptapRouter?.updateSubroute?.('vocabulary', {
+        subview: state.flashcardsOpen ? 'flashcards' : '',
+        filter: state.vocabFilter,
+        replace: Boolean(opts.replace),
+      });
+    }
   }
 
   async function loadVocabulary() {
@@ -1573,10 +1739,16 @@
       if (empty) empty.hidden = true;
       if (stage) stage.hidden = true;
       if (gateCard) gateCard.hidden = false;
+      renderSubjectProgressBar('vocab-progress-bar', { total: 0, completed: 0 });
       return;
     }
 
     if (gateCard) gateCard.hidden = true;
+
+    renderSubjectProgressBar('vocab-progress-bar', {
+      total: state.vocabItems.length,
+      completed: state.vocabItems.filter((v) => v.isCompleted).length,
+    });
 
     if (state.vocabItems.length === 0) {
       grid.innerHTML = '';
@@ -1590,31 +1762,46 @@
     grid.innerHTML = state.vocabItems
       .map((v) => {
         const level = Math.max(0, Math.min(4, Number(v.masteryLevel) || 0));
+        const isDone = Boolean(v.isCompleted);
         const dots = [0, 1, 2, 3]
           .map((i) => `<span class="mastery-dot ${i < level ? 'filled' : ''}"></span>`)
           .join('');
 
         const lessonLink = v.lessonId
-          ? `<a href="studio.html?id=${encodeURIComponent(v.lessonId)}&t=${encodeURIComponent(v.timestampSec || 0)}" style="font-weight: 600; color: var(--ink);">${escapeHtml(t('openInContext'))} →</a>`
+          ? `<a href="/studio?id=${encodeURIComponent(v.lessonId)}&t=${encodeURIComponent(v.timestampSec || 0)}" style="font-weight: 600; color: var(--ink);">${escapeHtml(t('openInContext'))} →</a>`
           : `<span></span>`;
 
         return `
-          <article class="vocab-card" data-vocab-id="${escapeHtml(v.id)}">
+          <article class="vocab-card${isDone ? ' is-item-completed' : ''}" data-vocab-id="${escapeHtml(v.id)}">
             <div class="vocab-card-head">
               <h3 class="vocab-term">${escapeHtml(v.term)}</h3>
-              <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="vocab-card-top-actions">
+                ${window.FlaptapCopy ? window.FlaptapCopy.buttonHtml(v.term, { className: 'icon-action icon-action--xs' }) : ''}
                 ${v.partOfSpeech ? `<span class="vocab-pos">${escapeHtml(v.partOfSpeech)}</span>` : ''}
-                <button type="button" class="icon-btn" style="width: 26px; height: 26px;" data-delete-vocab="${escapeHtml(v.id)}" aria-label="Remove word">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                ${renderCheckButtonHtml({
+                  checked: isDone,
+                  attrs: `data-vocab-complete="${escapeHtml(v.id)}"`,
+                })}
+                <button type="button" class="icon-action icon-action--xs is-danger" data-delete-vocab="${escapeHtml(v.id)}" aria-label="Remove word" title="Remove word">
+                  ${icon('x')}
                 </button>
               </div>
             </div>
             ${v.ipa ? `<div class="vocab-ipa ltr-num">${escapeHtml(v.ipa)}</div>` : ''}
             <p class="vocab-def">${escapeHtml(v.definition)}</p>
-            ${v.translation ? `<p class="vocab-def" style="font-weight: 600; color: var(--ink);">${escapeHtml(v.translation)}</p>` : ''}
+            ${
+              v.generalTranslation
+                ? `<div class="vocab-sense-row is-general"><span class="sense-badge">General</span><p class="vocab-general-trans" dir="auto">${escapeHtml(v.generalTranslation)}</p></div>`
+                : ''
+            }
+            ${
+              v.translation
+                ? `<div class="vocab-sense-row is-context">${v.generalTranslation ? '<span class="sense-badge is-context">In context</span>' : ''}<p class="vocab-def vocab-context-trans" dir="auto" style="font-weight: 600; color: var(--ink);">${escapeHtml(v.translation)}</p></div>`
+                : ''
+            }
             ${v.contextSentence ? `<blockquote class="vocab-context">“${escapeHtml(v.contextSentence)}”</blockquote>` : ''}
             <div class="vocab-card-foot">
-              <div class="mastery-dots" title="Mastery level ${level}/4">${dots}</div>
+              <div class="mastery-dots" data-level="${level}" title="Mastery level ${level}/4">${dots}</div>
               ${lessonLink}
             </div>
           </article>
@@ -1637,10 +1824,36 @@
     const item = state.vocabItems[idx];
 
     document.getElementById('flashcard-progress-text').textContent = `${idx + 1} / ${state.vocabItems.length}`;
+    const fcToggleBtn = document.getElementById('fc-complete-toggle-btn');
+    const fcCompleteLabel = document.getElementById('fc-complete-label');
+    if (fcToggleBtn) {
+      const done = Boolean(item.isCompleted);
+      fcToggleBtn.classList.toggle('is-checked', done);
+      fcToggleBtn.setAttribute('aria-pressed', done ? 'true' : 'false');
+      fcToggleBtn.dataset.vocabId = item.id;
+      const doneLabel = done ? t('completedLabel') : t('markComplete');
+      fcToggleBtn.setAttribute('aria-label', doneLabel);
+      fcToggleBtn.title = doneLabel;
+      if (fcCompleteLabel) {
+        fcCompleteLabel.textContent = doneLabel;
+      }
+    }
     document.getElementById('fc-term').textContent = item.term;
     document.getElementById('fc-ipa').textContent = item.ipa || '';
     document.getElementById('fc-context').textContent = item.contextSentence ? `“${item.contextSentence}”` : '';
     document.getElementById('fc-def').textContent = item.definition;
+
+    const genWrap = document.getElementById('fc-general-trans-wrap');
+    const genEl = document.getElementById('fc-general-trans');
+    const hasGeneral = Boolean(item.generalTranslation && item.generalTranslation.trim());
+    if (genWrap && genEl) {
+      genEl.textContent = item.generalTranslation || '';
+      genWrap.hidden = !hasGeneral;
+    }
+    const ctxSenseLabel = document.getElementById('fc-context-sense-label');
+    if (ctxSenseLabel) {
+      ctxSenseLabel.hidden = !hasGeneral || !Boolean(item.translation && item.translation.trim());
+    }
     document.getElementById('fc-trans').textContent = item.translation || '';
 
     document.getElementById('fc-answer').hidden = !state.flashcardRevealed;
@@ -1660,7 +1873,7 @@
           method: 'POST',
           body: JSON.stringify({ scenario }),
         });
-        window.location.href = `studio.html?id=${encodeURIComponent(created.id)}`;
+        window.location.href = `/studio?id=${encodeURIComponent(created.id)}`;
       } catch (error) {
         if (error.status === 401) {
           state.user = null;
@@ -1681,7 +1894,7 @@
           method: 'POST',
           body: JSON.stringify({ topic }),
         });
-        window.location.href = `studio.html?id=${encodeURIComponent(created.id)}`;
+        window.location.href = `/studio?id=${encodeURIComponent(created.id)}`;
       } catch (error) {
         if (error.status === 401) {
           state.user = null;
@@ -1699,29 +1912,6 @@
      ======================================================================== */
 
   function bindEvents() {
-    // Popup postMessage listener for real Google OAuth 2.0 callback
-    window.addEventListener('message', async (event) => {
-      if (event.origin !== window.location.origin) return;
-      const data = event.data;
-      if (!data || typeof data !== 'object') return;
-      if (data.type === 'flaptap:google-auth-success') {
-        await handleAuthSuccess(
-          data,
-          data.isNewUser
-            ? `Google account created for ${data.user?.name || 'you'}`
-            : `Signed in with Google as ${data.user?.name || 'you'}`,
-        );
-      } else if (data.type === 'flaptap:google-auth-error') {
-        const errBox = document.getElementById('auth-error-box');
-        if (errBox) {
-          errBox.textContent = data.error || 'Google sign-in failed.';
-          errBox.hidden = false;
-        } else {
-          showToast(data.error || 'Google sign-in failed.');
-        }
-      }
-    });
-
     // Theme & UI Language
     document.getElementById('theme-toggle-btn')?.addEventListener('click', () => {
       applyTheme(state.theme === 'dark' ? 'light' : 'dark');
@@ -1731,13 +1921,9 @@
       applyUiLanguage(e.target.value);
     });
 
-    // Primary Navigation Tabs
-    document.querySelectorAll('.nav-tab[data-section]').forEach((btn) => {
-      btn.addEventListener('click', () => switchSection(btn.dataset.section));
-    });
-
-    document.getElementById('manage-history-jump-btn')?.addEventListener('click', () => {
-      switchSection('history');
+    // Global AI Provider Keys button in Sidebar Footer
+    document.getElementById('sidebar-ai-keys-btn')?.addEventListener('click', () => {
+      window.FlaptapAiSelector?.openKeysManager?.(apiFetch);
     });
 
     // Gate Card Sign-In / Create Account CTA Buttons
@@ -1758,7 +1944,7 @@
 
     document.getElementById('open-cached-lesson-btn')?.addEventListener('click', () => {
       if (state.urlCacheMatch?.id) {
-        window.location.href = `studio.html?id=${encodeURIComponent(state.urlCacheMatch.id)}`;
+        window.location.href = `/studio?id=${encodeURIComponent(state.urlCacheMatch.id)}`;
       }
     });
 
@@ -1776,7 +1962,7 @@
       }
       const qs = new URLSearchParams({ url });
       if (force) qs.set('force', '1');
-      window.location.href = `studio.html?${qs.toString()}`;
+      window.location.href = `/studio?${qs.toString()}`;
     });
 
     // Generate Custom Dialogue (Auth-Gated Before Execution!)
@@ -1827,39 +2013,56 @@
       renderLibrary();
     });
 
-    // Library Card Open / Delete
-    document.getElementById('history-grid')?.addEventListener('click', async (e) => {
-      const delBtn = e.target.closest('[data-delete-id]');
-      if (delBtn) {
-        e.stopPropagation();
-        const id = delBtn.getAttribute('data-delete-id');
-        try {
-          await apiFetch(`/api/history/${encodeURIComponent(id)}`, { method: 'DELETE' });
-          state.lessons = state.lessons.filter((l) => l.id !== id);
-          state.selectedLedgerIds.delete(id);
-          renderLibrary();
-          loadSessionAndStats();
-        } catch (err) {
-          showToast(err.message);
+    // Library Card Open / Delete (Shared across Lessons, Dialogue, and Pronunciation grids)
+    function bindLessonGridInteractions(gridId) {
+      const grid = document.getElementById(gridId);
+      if (!grid) return;
+
+      grid.addEventListener('click', async (e) => {
+        const checkBtn = e.target.closest('[data-lesson-complete]');
+        if (checkBtn) {
+          e.stopPropagation();
+          const id = checkBtn.getAttribute('data-lesson-complete');
+          await toggleLessonCompletion(id);
+          return;
         }
-        return;
-      }
 
-      const card = e.target.closest('.history-card[data-lesson-id]');
-      if (card) {
-        const id = card.getAttribute('data-lesson-id');
-        window.location.href = `studio.html?id=${encodeURIComponent(id)}`;
-      }
-    });
+        const delBtn = e.target.closest('[data-delete-id]');
+        if (delBtn) {
+          e.stopPropagation();
+          const id = delBtn.getAttribute('data-delete-id');
+          try {
+            await apiFetch(`/api/history/${encodeURIComponent(id)}`, { method: 'DELETE' });
+            state.lessons = state.lessons.filter((l) => l.id !== id);
+            state.selectedLedgerIds.delete(id);
+            renderLibrary();
+            loadSessionAndStats();
+          } catch (err) {
+            showToast(err.message);
+          }
+          return;
+        }
 
-    document.getElementById('history-grid')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
         const card = e.target.closest('.history-card[data-lesson-id]');
         if (card) {
-          window.location.href = `studio.html?id=${encodeURIComponent(card.getAttribute('data-lesson-id'))}`;
+          const id = card.getAttribute('data-lesson-id');
+          window.location.href = `/studio?id=${encodeURIComponent(id)}`;
         }
-      }
-    });
+      });
+
+      grid.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const card = e.target.closest('.history-card[data-lesson-id]');
+          if (card) {
+            window.location.href = `/studio?id=${encodeURIComponent(card.getAttribute('data-lesson-id'))}`;
+          }
+        }
+      });
+    }
+
+    ['history-grid', 'dialogue-history-grid', 'pronunciation-history-grid'].forEach(
+      bindLessonGridInteractions,
+    );
 
     document.getElementById('clear-library-btn')?.addEventListener('click', async () => {
       if (!requireAuthBeforeAction({ type: 'section', section: 'lessons' })) return;
@@ -1884,6 +2087,10 @@
           p.classList.toggle('active', isAct);
           p.setAttribute('aria-selected', isAct ? 'true' : 'false');
         });
+        window.FlaptapRouter?.updateSubroute?.('vocabulary', {
+          subview: state.flashcardsOpen ? 'flashcards' : '',
+          filter: state.vocabFilter,
+        });
         if (state.user) loadVocabulary();
       });
     });
@@ -1894,6 +2101,14 @@
     });
 
     document.getElementById('vocab-grid')?.addEventListener('click', async (e) => {
+      const checkBtn = e.target.closest('[data-vocab-complete]');
+      if (checkBtn) {
+        e.stopPropagation();
+        const id = checkBtn.getAttribute('data-vocab-complete');
+        await toggleVocabCompletion(id);
+        return;
+      }
+
       const delBtn = e.target.closest('[data-delete-vocab]');
       if (delBtn) {
         const id = delBtn.getAttribute('data-delete-vocab');
@@ -1905,6 +2120,13 @@
           showToast(err.message);
         }
       }
+    });
+
+    document.getElementById('fc-complete-toggle-btn')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const item = state.vocabItems[state.flashcardIndex];
+      if (!item) return;
+      await toggleVocabCompletion(item.id);
     });
 
     document.getElementById('toggle-flashcards-btn')?.addEventListener('click', () => {
@@ -2022,12 +2244,20 @@
           p.classList.toggle('active', isAct);
           p.setAttribute('aria-selected', isAct ? 'true' : 'false');
         });
+        window.FlaptapRouter?.updateSubroute?.('history', {
+          track: state.ledgerTrackFilter,
+          cache: state.ledgerCacheFilter,
+        });
         renderHistoryLedger();
       });
     });
 
     document.getElementById('ledger-cache-filter')?.addEventListener('change', (e) => {
       state.ledgerCacheFilter = e.target.value || 'all';
+      window.FlaptapRouter?.updateSubroute?.('history', {
+        track: state.ledgerTrackFilter,
+        cache: state.ledgerCacheFilter,
+      });
       renderHistoryLedger();
     });
 
@@ -2082,11 +2312,20 @@
     });
 
     document.getElementById('history-ledger-list')?.addEventListener('click', async (e) => {
+      const checkBtn = e.target.closest('[data-ledger-complete]');
+      if (checkBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const id = checkBtn.getAttribute('data-ledger-complete');
+        await toggleLessonCompletion(id);
+        return;
+      }
+
       const reextractBtn = e.target.closest('[data-reextract-url]');
       if (reextractBtn) {
         const videoUrl = reextractBtn.getAttribute('data-reextract-url');
         if (videoUrl) {
-          window.location.href = `studio.html?url=${encodeURIComponent(videoUrl)}&force=1`;
+          window.location.href = `/studio?url=${encodeURIComponent(videoUrl)}&force=1`;
         }
         return;
       }
@@ -2161,14 +2400,12 @@
       }
     });
 
-    // Account Drawer Controls & Google / Email Authentication
+    // Account Drawer Controls & Email Authentication
     document.getElementById('open-account-btn')?.addEventListener('click', () => openAccountDrawer({ fromGate: false }));
     document.getElementById('close-account-btn')?.addEventListener('click', closeAccountDrawer);
     document.getElementById('account-drawer-backdrop')?.addEventListener('click', (e) => {
       if (e.target.id === 'account-drawer-backdrop') closeAccountDrawer();
     });
-
-    document.getElementById('google-signin-btn')?.addEventListener('click', startGoogleOAuthFlow);
 
     document.querySelectorAll('.auth-tab[data-auth-tab]').forEach((tab) => {
       tab.addEventListener('click', () => setAuthDrawerTab(tab.dataset.authTab));
@@ -2315,6 +2552,7 @@
       renderLibrary();
       renderVocabulary();
       renderHistorySectionAuthState();
+      window.dispatchEvent(new CustomEvent('flaptap:auth-changed', { detail: { user: null } }));
       showToast('Signed out');
     });
 
@@ -2336,6 +2574,7 @@
         renderLibrary();
         renderVocabulary();
         renderHistorySectionAuthState();
+        window.dispatchEvent(new CustomEvent('flaptap:auth-changed', { detail: { user: null } }));
         showToast('Account and all personal data permanently deleted');
       } catch (err) {
         showToast(err.message);
@@ -2361,18 +2600,39 @@
     bindEvents();
 
     const params = new URLSearchParams(window.location.search);
-    const urlSection = params.get('section');
     const authRequired = params.get('auth') === 'required';
     const nextHref = params.get('next');
     const authError = params.get('auth_error');
 
-    await Promise.all([loadSessionAndStats(), loadLanguagesCatalog(), loadGoogleOAuthConfig()]);
-    await loadLibrary();
+    const initialRoute = window.FlaptapRouter
+      ? window.FlaptapRouter.initShell({ translator: t })
+      : { section: 'lessons', searchParams: params };
 
-    if (urlSection && ['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history'].includes(urlSection)) {
-      switchSection(urlSection);
+    // Immediately show the route's panel before async session fetch to avoid any Home flash on refresh
+    activateSectionPanel(initialRoute.section);
+
+    if (window.FlaptapRouter) {
+      window.FlaptapRouter.onRouteChange((route) => {
+        applyRoute(route);
+      });
     }
 
+    const bootTasks = [loadSessionAndStats()];
+    if (state.authToken) {
+      bootTasks.push(loadLibrary({ force: true }));
+    }
+    void loadLanguagesCatalog();
+
+    await Promise.all(bootTasks);
+    if (!state.authToken && state.user) {
+      await loadLibrary();
+    } else if (!state.user) {
+      renderLibrary();
+    }
+
+    await applyRoute(window.FlaptapRouter?.getCurrentRoute?.() || initialRoute);
+
+    const openAccountParam = params.get('account') === 'open';
     if (authError) {
       openAccountDrawer({ fromGate: false, tab: 'login' });
       const errBox = document.getElementById('auth-error-box');
@@ -2380,6 +2640,11 @@
         errBox.textContent = authError;
         errBox.hidden = false;
       }
+    } else if (openAccountParam) {
+      openAccountDrawer({ fromGate: false, tab: 'login' });
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('account');
+      window.history.replaceState({}, '', cleanUrl.pathname + cleanUrl.search);
     } else if (authRequired) {
       const safeNext =
         nextHref && nextHref.startsWith('/') && !nextHref.startsWith('//')
@@ -2402,4 +2667,33 @@
       await resumePendingAction();
     }
   });
+
+  function isVocabularySaved(term) {
+    if (!term || !window.FlaptapWordLookup) return false;
+    const norm = window.FlaptapWordLookup.normalizeTermKey(term);
+    return state.vocabItems.some(
+      (v) => window.FlaptapWordLookup.normalizeTermKey(v.term) === norm,
+    );
+  }
+
+  // Expose clean workspace bridge for independent modular features
+  window.FlaptapWorkspace = {
+    apiFetch,
+    getAuthHeaders: () => apiHeaders(),
+    showToast,
+    withButtonLoading,
+    getUser: () => state.user,
+    getUiLang: () => state.uiLang,
+    getLanguages: () => state.languages || [],
+    requireAuthBeforeAction,
+    navigateToSection: (section, opts) => switchSection(section, opts),
+    checkUrlCache,
+    refreshVocabulary: async () => {
+      await loadVocabulary();
+      await loadSessionAndStats();
+    },
+    renderSubjectProgressBar,
+    renderCheckButtonHtml,
+    isVocabularySaved,
+  };
 })();

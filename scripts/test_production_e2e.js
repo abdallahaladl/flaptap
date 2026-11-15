@@ -33,147 +33,13 @@ async function waitForTranslation(page) {
 }
 
 /* ============================================================================
-   REAL CRYPTOGRAPHIC GOOGLE OAUTH 2.0 PKCE + RS256 OIDC VERIFICATION HARNESS
-   Uses a real 2048-bit RSA keypair, JWKS endpoint, PKCE S256 verifier check,
-   and an isolated production NestJS instance to verify Google Sign-In E2E.
+   EMAIL & PASSWORD ONLY AUTHENTICATION VERIFICATION
+   Verifies session cookie + Bearer token auth, password hashing/change,
+   session management, and absence of third-party OAuth / companion pairing routes.
    ============================================================================ */
-async function verifyRealGoogleOAuthAndOidc() {
-  console.log('\n--- 1b. Real Cryptographic Google OAuth 2.0 PKCE (S256) + RS256 OIDC Verification ---');
-
-  const { publicKey, privateKey } = crypto.generateKeyPairSync('rsa', {
-    modulusLength: 2048,
-  });
-  const publicJwk = publicKey.export({ format: 'jwk' });
-  const kid = 'e2e-google-rs256-key-1';
-  const testClientId = 'e2e-google-client-id.apps.googleusercontent.com';
-  const testClientSecret = 'e2e-google-client-secret-xyz';
-
-  const issuedCodes = new Map();
-
-  function signOidcIdToken(claims, customPrivateKey = privateKey) {
-    const header = { alg: 'RS256', typ: 'JWT', kid };
-    const signingInput = `${base64UrlEncode(JSON.stringify(header))}.${base64UrlEncode(JSON.stringify(claims))}`;
-    const signature = crypto.createSign('RSA-SHA256').update(signingInput).end().sign(customPrivateKey);
-    return `${signingInput}.${base64UrlEncode(signature)}`;
-  }
-
-  // Start local OIDC Provider (JWKS + Authorization + Token exchange with PKCE S256 validation)
-  const oidcServer = http.createServer((req, res) => {
-    const reqUrl = new URL(req.url, 'http://127.0.0.1');
-
-    if (req.method === 'GET' && reqUrl.pathname === '/jwks') {
-      res.writeHead(200, {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=3600',
-      });
-      res.end(
-        JSON.stringify({
-          keys: [
-            {
-              ...publicJwk,
-              kid,
-              use: 'sig',
-              alg: 'RS256',
-            },
-          ],
-        }),
-      );
-      return;
-    }
-
-    if (req.method === 'GET' && reqUrl.pathname === '/auth') {
-      const clientId = reqUrl.searchParams.get('client_id');
-      const redirectUri = reqUrl.searchParams.get('redirect_uri');
-      const state = reqUrl.searchParams.get('state');
-      const codeChallenge = reqUrl.searchParams.get('code_challenge');
-      const codeChallengeMethod = reqUrl.searchParams.get('code_challenge_method');
-
-      if (clientId !== testClientId || codeChallengeMethod !== 'S256' || !codeChallenge || !redirectUri || !state) {
-        res.writeHead(400, { 'Content-Type': 'text/plain' });
-        res.end('Invalid OAuth authorization request');
-        return;
-      }
-
-      const authCode = `code_${crypto.randomBytes(16).toString('hex')}`;
-      issuedCodes.set(authCode, { redirectUri, codeChallenge });
-
-      const cb = new URL(redirectUri);
-      cb.searchParams.set('code', authCode);
-      cb.searchParams.set('state', state);
-      res.writeHead(302, { Location: cb.toString() });
-      res.end();
-      return;
-    }
-
-    if (req.method === 'POST' && reqUrl.pathname === '/token') {
-      let rawBody = '';
-      req.on('data', (chunk) => {
-        rawBody += chunk;
-      });
-      req.on('end', () => {
-        const params = new URLSearchParams(rawBody);
-        const code = params.get('code');
-        const clientId = params.get('client_id');
-        const clientSecret = params.get('client_secret');
-        const redirectUri = params.get('redirect_uri');
-        const codeVerifier = params.get('code_verifier') || '';
-        const grantType = params.get('grant_type');
-
-        const record = issuedCodes.get(code);
-        issuedCodes.delete(code);
-
-        const computedChallenge = base64UrlEncode(
-          crypto.createHash('sha256').update(codeVerifier).digest(),
-        );
-
-        if (
-          !record ||
-          grantType !== 'authorization_code' ||
-          clientId !== testClientId ||
-          clientSecret !== testClientSecret ||
-          redirectUri !== record.redirectUri ||
-          computedChallenge !== record.codeChallenge
-        ) {
-          res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'invalid_grant', error_description: 'PKCE or client check failed' }));
-          return;
-        }
-
-        const nowSec = Math.floor(Date.now() / 1000);
-        const idToken = signOidcIdToken({
-          iss: 'https://accounts.google.com',
-          aud: testClientId,
-          sub: 'google-sub-pkce-1001',
-          email: 'google.pkce.user@flaptap.test',
-          email_verified: true,
-          name: ' Jordan Google PKCE ',
-          picture: 'https://lh3.googleusercontent.com/a/default-user',
-          iat: nowSec - 5,
-          exp: nowSec + 3600,
-        });
-
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(
-          JSON.stringify({
-            access_token: 'ya29.real_pkce_access_token',
-            token_type: 'Bearer',
-            expires_in: 3600,
-            id_token: idToken,
-          }),
-        );
-      });
-      return;
-    }
-
-    res.writeHead(404);
-    res.end();
-  });
-
-  await new Promise((resolve) => oidcServer.listen(0, '127.0.0.1', resolve));
-  const oidcPort = oidcServer.address().port;
-  const oidcBase = `http://127.0.0.1:${oidcPort}`;
-
-  const tempDbPath = path.join(os.tmpdir(), `flaptap-google-e2e-${Date.now()}.sqlite`);
+async function verifyEmailOnlyAuthIsolation() {
+  console.log('\n--- 1b. Email & Password Only Authentication Verification ---');
+  const tempDbPath = path.join(os.tmpdir(), `flaptap-email-auth-e2e-${Date.now()}.sqlite`);
   const testAppPort = 3390 + Math.floor(Math.random() * 80);
   const testAppUrl = `http://127.0.0.1:${testAppPort}`;
 
@@ -183,147 +49,91 @@ async function verifyRealGoogleOAuthAndOidc() {
       PORT: String(testAppPort),
       HOST: '127.0.0.1',
       FLAPTAP_SQLITE_PATH: tempDbPath,
-      GOOGLE_CLIENT_ID: testClientId,
-      GOOGLE_CLIENT_SECRET: testClientSecret,
-      GOOGLE_OAUTH_AUTH_URL: `${oidcBase}/auth`,
-      GOOGLE_OAUTH_TOKEN_URL: `${oidcBase}/token`,
-      GOOGLE_OAUTH_JWKS_URI: `${oidcBase}/jwks`,
     },
     stdio: 'ignore',
   });
 
   try {
-    // Wait for isolated NestJS server to boot
     let booted = false;
     for (let i = 0; i < 40; i++) {
       try {
-        const r = await fetch(`${testAppUrl}/api/auth/google/config`);
+        const r = await fetch(`${testAppUrl}/api/auth/me`);
         if (r.ok) {
-          const cfg = await r.json();
-          assert(cfg.enabled === true && cfg.clientId === testClientId, `Unexpected google config: ${JSON.stringify(cfg)}`);
           booted = true;
           break;
         }
       } catch {}
       await new Promise((r) => setTimeout(r, 150));
     }
-    assert(booted, 'Isolated Google OAuth test server failed to start.');
+    assert(booted, 'Isolated Email-Only Auth test server failed to start.');
 
-    // 1. Test full OAuth 2.0 Authorization Code + PKCE (S256) + Double-Submit Cookie State Flow
-    const startRes = await fetch(`${testAppUrl}/api/auth/google/start?mode=popup&uiLang=en&nativeLang=ar`, {
-      redirect: 'manual',
+    const email = `email.only.${Date.now()}@flaptap.test`;
+    const password = 'Password123!';
+    const regRes = await fetch(`${testAppUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Jordan Email', email, password }),
     });
-    assert(startRes.status === 302, `Expected 302 from /api/auth/google/start, got ${startRes.status}`);
-    const authLocation = startRes.headers.get('location');
-    const setCookieHeader = startRes.headers.get('set-cookie') || '';
-    const stateCookieMatch = /flaptap_oauth_state=([^;]+)/.exec(setCookieHeader);
-    assert(authLocation && stateCookieMatch, 'Missing OAuth redirect location or state cookie.');
+    assert(regRes.ok, `Email registration failed: ${regRes.status}`);
+    const setCookieHeader = regRes.headers.get('set-cookie') || '';
+    const sessionCookieMatch = /flaptap_session=([^;]+)/.exec(setCookieHeader);
+    assert(sessionCookieMatch, 'Registration did not set HttpOnly flaptap_session cookie.');
 
-    // Follow redirect to OIDC provider `/auth`
-    const providerRes = await fetch(authLocation, { redirect: 'manual' });
-    assert(providerRes.status === 302, `Expected 302 from OIDC /auth, got ${providerRes.status}`);
-    const callbackLocation = providerRes.headers.get('location');
-    assert(callbackLocation && callbackLocation.includes('/api/auth/google/callback'), 'Invalid callback redirect.');
-
-    // Complete callback with double-submit state cookie
-    const cbRes = await fetch(callbackLocation, {
-      headers: { Cookie: `flaptap_oauth_state=${stateCookieMatch[1]}` },
-    });
-    assert(cbRes.status === 200, `Expected 200 from Google callback, got ${cbRes.status}`);
-    const cbHtml = await cbRes.text();
-    assert(cbHtml.includes('flaptap:google-auth-success'), 'Callback HTML missing success postMessage payload.');
-    assert(cbHtml.includes('google.pkce.user@flaptap.test'), 'Callback HTML missing verified Google user email.');
-    const sessionCookieMatch = /flaptap_session=([^;]+)/.exec(cbRes.headers.get('set-cookie') || '');
-    assert(sessionCookieMatch, 'Google callback did not set HttpOnly flaptap_session cookie.');
-
-    // Verify authenticated `/api/auth/me` using the Google session cookie
-    const googleMe = await fetch(`${testAppUrl}/api/auth/me`, {
+    const meCookie = await fetch(`${testAppUrl}/api/auth/me`, {
       headers: { Cookie: `flaptap_session=${sessionCookieMatch[1]}` },
     }).then((r) => r.json());
     assert(
-      googleMe.authenticated &&
-      googleMe.user.email === 'google.pkce.user@flaptap.test' &&
-      googleMe.user.authProvider === 'google' &&
-      googleMe.user.hasPassword === false,
-      `Google PKCE user profile mismatch: ${JSON.stringify(googleMe)}`,
+      meCookie.authenticated && meCookie.user.email === email && meCookie.user.hasPassword === true,
+      `Email session profile mismatch: ${JSON.stringify(meCookie)}`,
     );
 
-    // 2. Replay protection: replaying the exact same callback URL & state must fail (400 bridge error)
-    const replayRes = await fetch(callbackLocation, {
-      headers: { Cookie: `flaptap_oauth_state=${stateCookieMatch[1]}` },
-    });
-    assert(replayRes.status === 400, `Expected 400 on replayed OAuth state, got ${replayRes.status}`);
-
-    // 3. Account Linking via GIS RS256 Credential (`POST /api/auth/google/credential`):
-    // Register an email+password account first, then sign in with Google using the same verified email!
-    const existingEmail = 'linked.account@flaptap.test';
-    const emailReg = await fetch(`${testAppUrl}/api/auth/register`, {
+    const wrongLogin = await fetch(`${testAppUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: 'Linked User',
-        email: existingEmail,
-        password: 'Password123!',
-      }),
-    }).then((r) => r.json());
-    assert(emailReg.authenticated && emailReg.user.authProvider === 'email', 'Pre-link email registration failed.');
-
-    const nowSec = Math.floor(Date.now() / 1000);
-    const validGisToken = signOidcIdToken({
-      iss: 'accounts.google.com',
-      aud: testClientId,
-      sub: 'google-sub-gis-2002',
-      email: existingEmail,
-      email_verified: true,
-      name: 'Linked User',
-      picture: 'https://lh3.googleusercontent.com/a/linked-user',
-      iat: nowSec - 5,
-      exp: nowSec + 3600,
+      body: JSON.stringify({ email, password: 'WrongPassword!' }),
     });
+    assert(wrongLogin.status === 401, `Wrong password must return 401, got ${wrongLogin.status}`);
 
-    const linkRes = await fetch(`${testAppUrl}/api/auth/google/credential`, {
+    // Duplicate registration on an account with an existing password must still return 409 Conflict
+    const dupReg = await fetch(`${testAppUrl}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ credential: validGisToken }),
+      body: JSON.stringify({ name: 'Duplicate Try', email, password: 'AnotherPassword123!' }),
     });
-    assert(linkRes.ok, `Google GIS credential login failed: ${linkRes.status}`);
-    const linkData = await linkRes.json();
+    assert(dupReg.status === 409, `Expected 409 for duplicate email with password, got ${dupReg.status}`);
+
+    // Legacy passwordless (oauth_google_only) account upgrades smoothly on Create Account
+    const { DatabaseSync } = require('node:sqlite');
+    const db = new DatabaseSync(tempDbPath);
+    const legacyId = 'legacy-pwless-e2e';
+    const legacyEmail = `legacy.pwless.${Date.now()}@flaptap.test`;
+    const nowIso = new Date().toISOString();
+    db.prepare(
+      `INSERT INTO users (id, email, name, password_hash, auth_provider, created_at)
+       VALUES (?, ?, 'Legacy User', 'oauth_google_only', 'google', ?)`,
+    ).run(legacyId, legacyEmail, nowIso);
+    db.close();
+
+    const claimLegacy = await fetch(`${testAppUrl}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Legacy Upgraded', email: legacyEmail, password }),
+    });
+    assert(claimLegacy.ok, `Expected legacy passwordless account upgrade to succeed, got ${claimLegacy.status}`);
+    const claimData = await claimLegacy.json();
     assert(
-      linkData.authenticated &&
-      linkData.isNewUser === false &&
-      linkData.user.id === emailReg.user.id &&
-      linkData.user.authProvider === 'email+google' &&
-      linkData.user.hasPassword === true,
-      `Google account linking mismatch: ${JSON.stringify(linkData)}`,
+      claimData.authenticated && claimData.user.id === legacyId && claimData.user.hasPassword === true,
+      `Legacy upgrade user mismatch: ${JSON.stringify(claimData)}`,
     );
 
-    // 4. Forged Signature Rejection: sign with an attacker RSA key -> must return 401!
-    const attackerKeys = crypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
-    const forgedJwt = signOidcIdToken(
-      {
-        iss: 'https://accounts.google.com',
-        aud: testClientId,
-        sub: 'attacker-sub',
-        email: existingEmail,
-        email_verified: true,
-        iat: nowSec,
-        exp: nowSec + 3600,
-      },
-      attackerKeys.privateKey,
-    );
-    const forgedRes = await fetch(`${testAppUrl}/api/auth/google/credential`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ credential: forgedJwt }),
-    });
-    assert(forgedRes.status === 401, `Forged RSA signature must return 401, got ${forgedRes.status}`);
+    const removedGoogle = await fetch(`${testAppUrl}/api/auth/google/config`);
+    assert(removedGoogle.status === 404, `Expected 404 for removed Google config route, got ${removedGoogle.status}`);
+    const removedCompanion = await fetch(`${testAppUrl}/api/auth/companion/status`);
+    assert(removedCompanion.status === 404, `Expected 404 for removed companion route, got ${removedCompanion.status}`);
 
-    console.log(
-      'PASS: Google OAuth 2.0 PKCE (S256), RS256 JWKS verification, account creation, email+google linking, state replay defense & forged-JWT rejection verified!',
-    );
+    console.log('PASS: Email & Password-only registration, legacy passwordless upgrade, cookie session auth, bad-password 401, and removal of OAuth/pairing routes verified!');
   } finally {
     backendProc.kill('SIGTERM');
-    await new Promise((resolve) => oidcServer.close(resolve));
     for (const suffix of ['', '-wal', '-shm']) {
       try {
         if (fs.existsSync(tempDbPath + suffix)) fs.unlinkSync(tempDbPath + suffix);
@@ -442,8 +252,8 @@ async function runProductionE2ETest() {
       `Expected 404 video_unavailable, got ${removedRes.status} ${removedBody.code}`);
     console.log('PASS: Invalid URL -> 400, removed video -> 404 video_unavailable');
 
-    // Run real cryptographic Google OAuth 2.0 PKCE + RS256 OIDC verification
-    await verifyRealGoogleOAuthAndOidc();
+    // Verify Email & Password only authentication and clean removal of OAuth/pairing routes
+    await verifyEmailOnlyAuthIsolation();
 
     // -----------------------------------------------------------------------
     // 1c. Lesson Processing, Segmentation Invariants, Dynamic AI Generators & Isolation
@@ -653,13 +463,16 @@ async function runProductionE2ETest() {
     // -----------------------------------------------------------------------
     // 2a. Signed-Out Visitor Gate & Automatic Pending-Action Continuation
     // -----------------------------------------------------------------------
-    console.log('\n--- 2a. Signed-Out Browser UI Gate, Google Sign-In Drawer & Auto-Resume ---');
+    console.log('\n--- 2a. Signed-Out Browser UI Gate, Email Sign-In Drawer & Auto-Resume ---');
     await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForSelector('.navbar', { timeout: 10000 });
+    await page.waitForSelector('.app-sidebar', { timeout: 10000 });
     await page.waitForFunction(() => window.flaptapState?.sessionLoaded === true, { timeout: 10000 });
 
     const signedOutHome = await page.evaluate(() => ({
-      navTabs: [...document.querySelectorAll('.nav-tab[data-section]')].map((b) => b.dataset.section),
+      navTabs: [...document.querySelectorAll('.sidebar-nav-link[data-route-section]')].map(
+        (b) => b.dataset.routeSection,
+      ),
+      topbarNavLeak: document.querySelectorAll('.workspace-topbar .nav-tab').length,
       cardsLeaked: document.querySelectorAll('.history-card').length,
       gateVisible: !document.getElementById('library-auth-gate-card')?.hidden,
       startBtnEnabled: !document.getElementById('start-lesson-btn')?.disabled,
@@ -670,8 +483,18 @@ async function runProductionE2ETest() {
     }));
 
     assert(
-      JSON.stringify(signedOutHome.navTabs) === JSON.stringify(['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history']),
-      `Expected all 5 tabs visible to signed-out visitor, got ${JSON.stringify(signedOutHome.navTabs)}`,
+      signedOutHome.topbarNavLeak === 0 &&
+        JSON.stringify(signedOutHome.navTabs) ===
+          JSON.stringify([
+            'lessons',
+            'dialogue',
+            'pronunciation',
+            'learning-library',
+            'tech-linguist',
+            'vocabulary',
+            'history',
+          ]),
+      `Expected all 7 primary links inside Left Sidebar (0 topbar tabs), got ${JSON.stringify(signedOutHome.navTabs)}`,
     );
     assert(signedOutHome.cardsLeaked === 0 && signedOutHome.gateVisible, 'Signed-out visitor leaked library cards!');
     assert(signedOutHome.startBtnEnabled, 'Start Lesson button must remain clickable for signed-out visitor.');
@@ -699,16 +522,20 @@ async function runProductionE2ETest() {
       pathname: window.location.pathname,
       drawerOpen: !document.getElementById('account-drawer-backdrop')?.hidden,
       gateBannerVisible: !document.getElementById('auth-gate-banner')?.hidden,
-      googleBtnVisible: Boolean(document.getElementById('google-signin-btn')),
+      emailFormVisible: Boolean(document.getElementById('login-form')),
+      noGoogleBtn: !document.getElementById('google-signin-btn'),
+      noPairingUi: !document.getElementById('wifi-companion-card') && !document.getElementById('google-device-pairing-card'),
     }));
     assert(
       interceptedState.pathname === '/' &&
       interceptedState.drawerOpen &&
       interceptedState.gateBannerVisible &&
-      interceptedState.googleBtnVisible,
-      `Action was not intercepted by Sign-In drawer: ${JSON.stringify(interceptedState)}`,
+      interceptedState.emailFormVisible &&
+      interceptedState.noGoogleBtn &&
+      interceptedState.noPairingUi,
+      `Action was not intercepted by clean Email-Only Sign-In drawer: ${JSON.stringify(interceptedState)}`,
     );
-    await page.screenshot({ path: path.join(SCREENSHOT_DIR, '01-auth-gate-google-drawer.png') });
+    await page.screenshot({ path: path.join(SCREENSHOT_DIR, '01-auth-gate-email-drawer.png') });
 
     // Now sign in inside the open drawer -> pending Start Lesson action must automatically resume into Studio!
     await page.type('#login-email', userAEmail);
@@ -720,7 +547,7 @@ async function runProductionE2ETest() {
 
     await page.waitForSelector('.sentence-driller-card', { timeout: 30000 });
     assert(
-      page.url().includes('/studio.html') && page.url().includes(`id=${encodeURIComponent(fixture.id)}`),
+      page.url().includes('/studio') && page.url().includes(`id=${encodeURIComponent(fixture.id)}`),
       `Pending action did not auto-resume into Studio after sign-in: ${page.url()}`,
     );
     console.log('PASS: Signed-out actions intercepted before execution and automatically resumed into Studio upon Sign-In!');
@@ -730,9 +557,38 @@ async function runProductionE2ETest() {
     // -----------------------------------------------------------------------
     console.log('\n--- 2b. Authenticated Workspace, Instant Cache Banner & History/Usage Control Center ---');
     await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForFunction(() => document.querySelectorAll('.history-card').length === 4, {
-      timeout: 15000,
-    });
+    await page.waitForFunction(
+      () =>
+        document.querySelectorAll('#history-grid .history-card').length === 4 &&
+        document.querySelectorAll('#dialogue-history-grid .history-card').length === 1 &&
+        document.querySelectorAll('#pronunciation-history-grid .history-card').length === 1,
+      { timeout: 15000 },
+    );
+
+    // Verify checkable Lesson cards & real-time Total/Completed/Remaining progress bar
+    const initLessonBar = await page.evaluate(() => ({
+      total: document.querySelector('#lessons-progress-bar [data-sp-total]')?.textContent?.trim(),
+      completed: document.querySelector('#lessons-progress-bar [data-sp-completed]')?.textContent?.trim(),
+      remaining: document.querySelector('#lessons-progress-bar [data-sp-remaining]')?.textContent?.trim(),
+    }));
+    assert(
+      initLessonBar.total === '4' && initLessonBar.completed === '0' && initLessonBar.remaining === '4',
+      `Initial Lessons progress bar mismatch: ${JSON.stringify(initLessonBar)}`,
+    );
+    await page.click('#history-grid [data-lesson-complete]');
+    const afterLessonCheck = await page.evaluate(() => ({
+      total: document.querySelector('#lessons-progress-bar [data-sp-total]')?.textContent?.trim(),
+      completed: document.querySelector('#lessons-progress-bar [data-sp-completed]')?.textContent?.trim(),
+      remaining: document.querySelector('#lessons-progress-bar [data-sp-remaining]')?.textContent?.trim(),
+      checkedCard: document.querySelector('#history-grid .history-card')?.classList.contains('is-item-completed'),
+    }));
+    assert(
+      afterLessonCheck.total === '4' &&
+      afterLessonCheck.completed === '1' &&
+      afterLessonCheck.remaining === '3' &&
+      afterLessonCheck.checkedCard === true,
+      `Instant Lessons completion update failed: ${JSON.stringify(afterLessonCheck)}`,
+    );
 
     // Type cached URL -> assert `#url-cache-banner` detects cached video immediately
     await page.type('#youtube-url-input', 'https://www.youtube.com/watch?v=Ka0p5tUUmgg');
@@ -753,11 +609,32 @@ async function runProductionE2ETest() {
     await page.select('#ui-lang-select', 'en');
     await page.click('#theme-toggle-btn');
 
-    // Switch to `History & Usage` Control Center tab
-    await page.click('.nav-tab[data-section="history"]');
+    // Switch to `History & Usage` dedicated route `/history` & verify refresh preserves page
+    await page.click('.sidebar-nav-link[data-route-section="history"]');
     await page.waitForFunction(
-      () => document.querySelectorAll('#history-ledger-list .history-ledger-row').length === 4,
+      () =>
+        window.location.pathname === '/history' &&
+        document.querySelectorAll('#history-ledger-list .history-ledger-row').length === 4,
       { timeout: 15000 },
+    );
+    await page.reload({ waitUntil: 'domcontentloaded', timeout: 20000 });
+    await page.waitForFunction(
+      () =>
+        window.location.pathname === '/history' &&
+        !document.getElementById('section-history')?.hidden &&
+        document.querySelectorAll('#history-ledger-list .history-ledger-row').length === 4,
+      { timeout: 15000 },
+    );
+    const reloadedHistoryBar = await page.evaluate(() => ({
+      total: document.querySelector('#history-ledger-progress-bar [data-sp-total]')?.textContent?.trim(),
+      completed: document.querySelector('#history-ledger-progress-bar [data-sp-completed]')?.textContent?.trim(),
+      remaining: document.querySelector('#history-ledger-progress-bar [data-sp-remaining]')?.textContent?.trim(),
+    }));
+    assert(
+      reloadedHistoryBar.total === '4' &&
+      reloadedHistoryBar.completed === '1' &&
+      reloadedHistoryBar.remaining === '3',
+      `History progress bar did not persist lesson completion after reload: ${JSON.stringify(reloadedHistoryBar)}`,
     );
 
     // Test multi-select checkbox state & bulk button enable/disable state
@@ -832,19 +709,29 @@ async function runProductionE2ETest() {
       };
     });
 
-    // --- CRITICAL REGRESSION TEST: DECLUTTERED SENTENCE ITEMS & CENTRALIZED SIDE DECK ---
-    // Verify each sentence item has ONLY the single Play/Pause status button (loop & translate moved to side deck)
-    const iconButtonsCheck = await page.evaluate(() => ({
-      playBtnsCount: document.querySelectorAll('[data-play-sent]').length,
-      loopBtnsInCard: document.querySelectorAll('.sentence-driller-card [data-loop-sent]').length,
-      transBtnsInCard: document.querySelectorAll('.sentence-driller-card [data-trans-btn-sent]').length,
-      deckPrevBtn: Boolean(document.getElementById('deck-prev-sent-btn')),
-      deckNextBtn: Boolean(document.getElementById('deck-next-sent-btn')),
-      deckPlayBtn: Boolean(document.getElementById('deck-play-active-btn')),
-      deckAutoFollowBtn: Boolean(document.getElementById('deck-auto-follow-btn')),
-      sideTransBtn: Boolean(document.getElementById('side-trans-active-btn')),
-      playTextLen: (document.querySelector('[data-play-sent="1"]')?.textContent || '').trim().length,
-    }));
+    // --- CRITICAL REGRESSION TEST: SINGLE-ROW HORIZONTAL CONTROL BAR & CHECKABLE ITEMS ---
+    const iconButtonsCheck = await page.evaluate(() => {
+      const bar = document.getElementById('studio-control-bar');
+      const btns = Array.from(bar?.querySelectorAll('.scb-btn') || []).filter(
+        (b) => getComputedStyle(b).display !== 'none',
+      );
+      const tops = btns.map((b) => Math.round(b.getBoundingClientRect().top));
+      const bottoms = btns.map((b) => Math.round(b.getBoundingClientRect().bottom));
+      return {
+        playBtnsCount: document.querySelectorAll('[data-play-sent]').length,
+        loopBtnsInCard: document.querySelectorAll('.sentence-driller-card [data-loop-sent]').length,
+        transBtnsInCard: document.querySelectorAll('.sentence-driller-card [data-trans-btn-sent]').length,
+        deckPrevBtn: Boolean(document.getElementById('deck-prev-sent-btn')),
+        deckNextBtn: Boolean(document.getElementById('deck-next-sent-btn')),
+        deckPlayBtn: Boolean(document.getElementById('deck-play-active-btn')),
+        deckAutoFollowBtn: Boolean(document.getElementById('deck-auto-follow-btn')),
+        flowBtn: Boolean(document.getElementById('studio-flow-btn')),
+        barHeight: bottoms.length ? Math.max(...bottoms) - Math.min(...tops) : 999,
+        barOverflow: bar ? bar.scrollWidth - bar.clientWidth : 999,
+        sideTransBtn: Boolean(document.getElementById('side-trans-active-btn')),
+        playTextLen: (document.querySelector('[data-play-sent="1"]')?.textContent || '').trim().length,
+      };
+    });
     assert(
       iconButtonsCheck.playBtnsCount > 0 &&
       iconButtonsCheck.loopBtnsInCard === 0 &&
@@ -853,10 +740,41 @@ async function runProductionE2ETest() {
       iconButtonsCheck.deckNextBtn &&
       iconButtonsCheck.deckPlayBtn &&
       iconButtonsCheck.deckAutoFollowBtn &&
+      iconButtonsCheck.flowBtn &&
+      iconButtonsCheck.barHeight <= 44 &&
+      iconButtonsCheck.barOverflow <= 2 &&
       !iconButtonsCheck.sideTransBtn &&
       iconButtonsCheck.playTextLen === 0,
-      `Decluttered sentence cards & centralized side deck check failed: ${JSON.stringify(iconButtonsCheck)}`,
+      `Unified single-row control bar & card layout check failed: ${JSON.stringify(iconButtonsCheck)}`,
     );
+
+    // Verify Shadow Mode Completion Checkbox toggles synchronously without starting playback
+    await page.click('[data-studio-check-subject="sentences"][data-studio-check-index="1"]');
+    const shadowCompletionAfterCheck = await page.evaluate(() => ({
+      completed: document.querySelector('#studio-shadow-progress-bar [data-sp-completed]')?.textContent?.trim(),
+      total: document.querySelector('#studio-shadow-progress-bar [data-sp-total]')?.textContent?.trim(),
+      remaining: document.querySelector('#studio-shadow-progress-bar [data-sp-remaining]')?.textContent?.trim(),
+      isPlaying: window.studioState.isPlaying,
+      cardDone: document.getElementById('sent-card-1')?.classList.contains('is-item-completed'),
+    }));
+    assert(
+      shadowCompletionAfterCheck.completed === '1' &&
+      Number(shadowCompletionAfterCheck.remaining) === Number(shadowCompletionAfterCheck.total) - 1 &&
+      shadowCompletionAfterCheck.isPlaying === false &&
+      shadowCompletionAfterCheck.cardDone === true,
+      `Shadow sentence completion toggle failed: ${JSON.stringify(shadowCompletionAfterCheck)}`,
+    );
+
+    const setStudioFlow = async (targetFlow) => {
+      for (let i = 0; i < 4; i++) {
+        const cur = await page.evaluate(
+          () => document.getElementById('studio-flow-btn')?.getAttribute('data-flow-state'),
+        );
+        if (cur === targetFlow) return;
+        await page.click('#studio-flow-btn');
+      }
+      throw new Error(`Could not cycle #studio-flow-btn to "${targetFlow}"`);
+    };
 
     // Step A: Play/Pause button on sentence card has 2 logical states only (Play starts, Pause stops)
     // Click 1: Click Play -> starts playing!
@@ -893,9 +811,8 @@ async function runProductionE2ETest() {
       `Step A2 (Pause #1) failed: ${JSON.stringify(stepAPause)}`,
     );
 
-    // Step A3: Centralized Loop flow from Side Deck
-    // Click Loop on Side Deck flow control -> activates Loop mode and plays active sentence!
-    await page.click('.flow-btn[data-end-action="loop"]');
+    // Step A3: Centralized Loop flow via single-icon #studio-flow-btn
+    await setStudioFlow('loop');
     await page.click('[data-play-sent="1"]');
     const loopStepA = await page.evaluate(() => ({
       loopIdx: window.studioState.loopSentenceIndex,
@@ -933,8 +850,8 @@ async function runProductionE2ETest() {
       `Step B (Move #1 -> #2 must inherit Loop mode) failed: ${JSON.stringify(loopStepB)}`,
     );
 
-    // Step C: Toggle flow to Auto-Pause -> deactivates loop, then move to #3 -> #3 plays once!
-    await page.click('.flow-btn[data-end-action="pause"]');
+    // Step C: Cycle flow to Auto-Pause -> deactivates loop, then move to #3 -> #3 plays once!
+    await setStudioFlow('pause');
     await page.click('[data-play-sent="3"]');
     const loopStepC = await page.evaluate(() => ({
       loopIdx: window.studioState.loopSentenceIndex,
@@ -956,8 +873,8 @@ async function runProductionE2ETest() {
       `Step C (Toggle Auto-Pause -> #3 plays Once) failed: ${JSON.stringify(loopStepC)}`,
     );
 
-    // Step D: Toggle Loop ON in side deck for #3, then click Sentence #1 card -> #1 inherits Loop!
-    await page.click('.flow-btn[data-end-action="loop"]');
+    // Step D: Cycle flow to Loop, then click Sentence #1 card -> #1 inherits Loop!
+    await setStudioFlow('loop');
     await page.click('#sent-card-1');
     const loopStepD = await page.evaluate(() => ({
       loopIdx: window.studioState.loopSentenceIndex,
@@ -973,8 +890,8 @@ async function runProductionE2ETest() {
       `Step D (Clicking sentence line inherits Loop) failed: ${JSON.stringify(loopStepD)}`,
     );
 
-    // Step E: Click `Auto-Pause` flow button -> switches flow to Once, and clicking #1 while playing pauses it!
-    await page.click('.flow-btn[data-end-action="pause"]');
+    // Step E: Cycle back to Auto-Pause -> switches flow to Once, and clicking #1 while playing pauses it!
+    await setStudioFlow('pause');
     await page.click('[data-play-sent="1"]');
     const loopStepE = await page.evaluate(() => ({
       loopIdx: window.studioState.loopSentenceIndex,
@@ -1056,7 +973,7 @@ async function runProductionE2ETest() {
 
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '06-studio-shadow-light.png') });
 
-    // Flexible Video Docking: Split (side) -> Theater (theater) -> Split (side) (Zero Remount!)
+    // Flexible Video Docking: Transcript (side) -> Theater (theater) -> Transcript (side) (Zero Remount!)
     await page.click('[data-layout-choice="theater"]');
     await new Promise((r) => setTimeout(r, 180));
     const theaterLayout = await page.evaluate(() => {
@@ -1087,11 +1004,20 @@ async function runProductionE2ETest() {
       paragraphs: document.querySelectorAll('.editorial-paragraph-block').length,
       readVisible: getComputedStyle(document.getElementById('mode-panel-read')).display !== 'none',
       transHidden: getComputedStyle(document.getElementById('translation-control-deck')).display === 'none',
+      transBtnHidden: document.getElementById('trans-trigger-btn')?.hidden,
     }));
-    assert(readState.readVisible && readState.transHidden && readState.paragraphs > 0, 'Read mode failed.');
+    assert(
+      readState.readVisible && readState.transHidden && readState.transBtnHidden && readState.paragraphs > 0,
+      `Read mode failed: ${JSON.stringify(readState)}`,
+    );
+    await page.click('[data-studio-check-subject="paragraphs"][data-studio-check-index="1"]');
+    assert(
+      (await page.evaluate(() => document.querySelector('#studio-read-progress-bar [data-sp-completed]')?.textContent?.trim())) === '1',
+      'Read paragraph completion did not update #studio-read-progress-bar.',
+    );
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '07-studio-read-paragraphs.png') });
 
-    // Listen Mode (Cloze Dictation + Prev/Next Disabled Boundary Check)
+    // Listen Mode (Cloze Dictation + Prev/Next Disabled Boundary Check + Completion Toggle)
     await page.click('.mode-tab-btn[data-mode="listen"]');
     const dictInit = await page.evaluate(() => ({
       inputs: document.querySelectorAll('#dictation-sentence-area .cloze-input').length,
@@ -1104,9 +1030,14 @@ async function runProductionE2ETest() {
     assert((await page.evaluate(() => document.getElementById('dict-prev-btn')?.disabled)) === false,
       'Dictation Prev button did not enable on sentence #2.');
     await page.click('#dict-reveal-btn');
+    await page.click('#dict-check-complete-btn');
+    assert(
+      (await page.evaluate(() => document.querySelector('#studio-listen-progress-bar [data-sp-completed]')?.textContent?.trim())) === '1',
+      'Listen dictation manual completion toggle did not update #studio-listen-progress-bar.',
+    );
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '08-studio-listen-dictation.png') });
 
-    // Coach Mode (Real Dynamic OpenCode Go AI Analysis + `+ Save` -> `✓ Saved` Button State)
+    // Coach Mode (Real Dynamic OpenCode Go AI Analysis + `+ Save` -> `✓ Saved` + Completion Check)
     console.log('\n--- 4. Dynamic OpenCode Go AI Coach, Word Lookup & Save Button States ---');
     await page.click('.mode-tab-btn[data-mode="coach"]');
     await page.waitForFunction(() => !document.getElementById('coach-content-box')?.hidden, {
@@ -1125,6 +1056,11 @@ async function runProductionE2ETest() {
     }));
     assert(coachStats.connected > 0 && coachStats.expressions > 0 && coachStats.vocab > 0 && coachStats.verbatimIntact,
       `Dynamic AI Coach check failed: ${JSON.stringify(coachStats)}`);
+    await page.click('[data-studio-check-subject="coachConnected"][data-studio-check-index="0"]');
+    assert(
+      (await page.evaluate(() => document.querySelector('#studio-coach-connected-progress-bar [data-sp-completed]')?.textContent?.trim())) === '1',
+      'Coach connected speech check toggle did not update progress bar.',
+    );
 
     // Click `+ Save` on first Coach vocabulary card -> assert `.is-saved` state transitions immediately
     await page.click('[data-save-vocab="0"]');
@@ -1160,23 +1096,34 @@ async function runProductionE2ETest() {
     );
 
     // -----------------------------------------------------------------------
-    // 5. Exact Millisecond Playback Boundaries & 0.05x Speed Steppers
+    // 5. Exact Millisecond Playback Boundaries & 0.05x Speed Steppers (via Control Bar Popover)
     // -----------------------------------------------------------------------
     console.log('\n--- 5. Exact Millisecond Playback Boundaries & Speed Control ---');
+    await page.click('#speed-trigger-btn');
+    await page.waitForFunction(() => document.getElementById('speed-popover')?.hidden === false, {
+      timeout: 5000,
+    });
     await page.evaluate(() => window.setStudioSpeed(0.85));
     const exact005Speed = await page.evaluate(() => ({
       badge: document.getElementById('current-speed-badge')?.textContent,
+      pill: document.getElementById('scb-speed-value')?.textContent,
       slider: document.getElementById('speed-slider')?.value,
     }));
     assert(
-      exact005Speed.badge === '0.85x' && exact005Speed.slider === '0.85',
+      exact005Speed.badge === '0.85x' && exact005Speed.pill === '0.85x' && exact005Speed.slider === '0.85',
       `0.05x speed precision failed: ${JSON.stringify(exact005Speed)}`,
     );
 
     // Test Steppers: [−] and [+] flanking speed badge
     await page.click('#speed-up-btn');
-    const steppedUp = await page.evaluate(() => document.getElementById('current-speed-badge')?.textContent);
-    assert(steppedUp === '0.90x', `Step up (+0.05x) failed: expected 0.90x, got ${steppedUp}`);
+    const steppedUp = await page.evaluate(() => ({
+      badge: document.getElementById('current-speed-badge')?.textContent,
+      pill: document.getElementById('scb-speed-value')?.textContent,
+    }));
+    assert(
+      steppedUp.badge === '0.90x' && steppedUp.pill === '0.90x',
+      `Step up (+0.05x) failed: expected 0.90x, got ${JSON.stringify(steppedUp)}`,
+    );
 
     await page.click('#speed-down-btn');
     const steppedDown = await page.evaluate(() => document.getElementById('current-speed-badge')?.textContent);
@@ -1185,10 +1132,15 @@ async function runProductionE2ETest() {
     await page.evaluate(() => window.setStudioSpeed(1.5));
     const presetSpeed = await page.evaluate(() => ({
       state: window.studioState.speed,
+      pill: document.getElementById('scb-speed-value')?.textContent,
       activeTick: document.querySelector('#speed-ticks-row .speed-tick.active')?.textContent,
     }));
-    assert(presetSpeed.state === 1.5 && presetSpeed.activeTick === '1.50x', '1.50x preset failed.');
+    assert(
+      presetSpeed.state === 1.5 && presetSpeed.pill === '1.50x' && presetSpeed.activeTick === '1.50x',
+      '1.50x preset failed.',
+    );
     await page.evaluate(() => window.setStudioSpeed(1.0));
+    await page.click('#speed-trigger-btn'); // Close speed popover
 
     const boundaries = await page.evaluate(() => {
       window.studioState.endAction = 'pause';
@@ -1268,6 +1220,12 @@ async function runProductionE2ETest() {
       `Language catalog / removed controls check failed: ${JSON.stringify(langInfo)}`,
     );
 
+    // Open Translation popover from unified control bar before interacting
+    await page.click('#trans-trigger-btn');
+    await page.waitForFunction(() => document.getElementById('translation-control-deck')?.hidden === false, {
+      timeout: 5000,
+    });
+
     // 6a. Verify permanent cross-account video cache on `fixture` (`Ka0p5tUUmgg`)
     await page.select('#trans-lang-select', 'ar');
     const needsFixtureTranslate = await page.evaluate(
@@ -1307,14 +1265,21 @@ async function runProductionE2ETest() {
       timeout: 30000,
     });
 
+    // Open Translation popover before interacting on fresh lesson
+    await page.click('#trans-trigger-btn');
+    await page.waitForFunction(() => document.getElementById('translation-control-deck')?.hidden === false, {
+      timeout: 5000,
+    });
+
     // Selecting "none" hides all translation buttons and boxes without calling API
     await page.select('#trans-lang-select', 'none');
     const noneState = await page.evaluate(() => ({
       allBtnHidden: document.getElementById('trans-all-btn')?.hidden,
+      badge: document.getElementById('scb-trans-lang-badge')?.textContent?.trim(),
       visibleBoxes: [...document.querySelectorAll('.sentence-translation-box')].filter((b) => !b.hidden).length,
     }));
     assert(
-      noneState.allBtnHidden === true && noneState.visibleBoxes === 0,
+      noneState.allBtnHidden === true && noneState.badge === 'OFF' && noneState.visibleBoxes === 0,
       `None language state failed: ${JSON.stringify(noneState)}`,
     );
 
@@ -1325,6 +1290,7 @@ async function runProductionE2ETest() {
       allBtnHidden: document.getElementById('trans-all-btn')?.hidden,
       allBtnDisabled: document.getElementById('trans-all-btn')?.disabled,
       allBtnState: document.getElementById('trans-all-btn')?.dataset.transAllState,
+      badge: document.getElementById('scb-trans-lang-badge')?.textContent?.trim(),
       transBtnSent1: Boolean(document.querySelector('[data-trans-btn-sent="1"]')),
       visibleBoxes: [...document.querySelectorAll('.sentence-translation-box')].filter((b) => !b.hidden).length,
     }));
@@ -1332,10 +1298,14 @@ async function runProductionE2ETest() {
       beforeTriggerState.allBtnHidden === false &&
       beforeTriggerState.allBtnDisabled === false &&
       beforeTriggerState.allBtnState === 'ready' &&
+      beforeTriggerState.badge === 'AR' &&
       beforeTriggerState.transBtnSent1 === true &&
       beforeTriggerState.visibleBoxes === 0,
       `Before-trigger state failed (spinner must not auto-translate): ${JSON.stringify(beforeTriggerState)}`,
     );
+
+    // Close popover before per-sentence trigger click, then open for #trans-all-btn
+    await page.click('#trans-trigger-btn');
 
     // 6c. Trigger 1: Click translation button on sentence #1
     await page.click('[data-trans-btn-sent="1"]');
@@ -1366,7 +1336,8 @@ async function runProductionE2ETest() {
       `Single-sentence translation state failed: ${JSON.stringify(afterSingleState)}`,
     );
 
-    // 6d. Trigger 2: Click side deck Translate All (Translate Remaining) button
+    // 6d. Trigger 2: Open Translation popover and click Translate All (Translate Remaining) button
+    await page.click('#trans-trigger-btn');
     await page.click('#trans-all-btn');
     await page.waitForFunction(
       (total) => {
@@ -1456,7 +1427,7 @@ async function runProductionE2ETest() {
       beforeDrill,
     );
 
-    await page.click('#download-obsidian-btn');
+    await page.click('#download-markdown-btn');
     await new Promise((r) => setTimeout(r, 250));
     const toastMsg = await page.evaluate(() => document.getElementById('studio-toast')?.textContent || '');
     assert(/downloaded|\.md/i.test(toastMsg), `Export toast did not confirm: "${toastMsg}"`);
@@ -1468,9 +1439,63 @@ async function runProductionE2ETest() {
 
     await page.setViewport({ width: 390, height: 844 });
     await new Promise((r) => setTimeout(r, 250));
-    const mobileOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    assert(mobileOverflow <= 4, `Horizontal overflow on 390px mobile: +${mobileOverflow}px`);
+    const mobile390 = await page.evaluate(() => {
+      const bar = document.getElementById('studio-control-bar');
+      const btns = Array.from(bar?.querySelectorAll('.scb-btn') || []).filter(
+        (b) => getComputedStyle(b).display !== 'none',
+      );
+      const tops = btns.map((b) => Math.round(b.getBoundingClientRect().top));
+      const bottoms = btns.map((b) => Math.round(b.getBoundingClientRect().bottom));
+      return {
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+        barHeight: bottoms.length ? Math.max(...bottoms) - Math.min(...tops) : 999,
+        barOverflow: bar ? bar.scrollWidth - bar.clientWidth : 999,
+      };
+    });
+    assert(mobile390.overflow <= 4, `Horizontal overflow on 390px mobile: +${mobile390.overflow}px`);
+    assert(
+      mobile390.barHeight <= 44 && mobile390.barOverflow <= 2,
+      `Control bar wrapped/overflowed on 390px mobile: ${JSON.stringify(mobile390)}`,
+    );
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '11-studio-mobile.png') });
+
+    await page.setViewport({ width: 360, height: 780 });
+    await new Promise((r) => setTimeout(r, 200));
+    const mobile360 = await page.evaluate(() => {
+      const bar = document.getElementById('studio-control-bar');
+      const btns = Array.from(bar?.querySelectorAll('.scb-btn') || []).filter(
+        (b) => getComputedStyle(b).display !== 'none',
+      );
+      const tops = btns.map((b) => Math.round(b.getBoundingClientRect().top));
+      const bottoms = btns.map((b) => Math.round(b.getBoundingClientRect().bottom));
+      return {
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+        barHeight: bottoms.length ? Math.max(...bottoms) - Math.min(...tops) : 999,
+        barOverflow: bar ? bar.scrollWidth - bar.clientWidth : 999,
+        persistedShadowDone: document.querySelector('#studio-shadow-progress-bar [data-sp-completed]')?.textContent?.trim(),
+      };
+    });
+    assert(
+      mobile360.overflow <= 4 &&
+      mobile360.barHeight <= 44 &&
+      mobile360.barOverflow <= 2 &&
+      mobile360.persistedShadowDone === '1',
+      `360px single-row control bar or persisted completion failed: ${JSON.stringify(mobile360)}`,
+    );
+
+    // Check Vocabulary Vault progress bar reflects Coach-saved word & completion toggle
+    await page.goto(`${BASE_URL}/vocabulary`, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await page.waitForSelector('#vocab-grid [data-vocab-complete]', { timeout: 15000 });
+    await page.click('#vocab-grid [data-vocab-complete]');
+    const vocabBarAfter = await page.evaluate(() => ({
+      total: document.querySelector('#vocab-progress-bar [data-sp-total]')?.textContent?.trim(),
+      completed: document.querySelector('#vocab-progress-bar [data-sp-completed]')?.textContent?.trim(),
+      remaining: document.querySelector('#vocab-progress-bar [data-sp-remaining]')?.textContent?.trim(),
+    }));
+    assert(
+      Number(vocabBarAfter.total) >= 1 && vocabBarAfter.completed === '1',
+      `Vocabulary Vault completion toggle/progress bar failed: ${JSON.stringify(vocabBarAfter)}`,
+    );
 
     // Verify PWA Manifest, Service Worker & Chromium Installability
     const cdpSession = await page.target().createCDPSession();
@@ -1481,9 +1506,7 @@ async function runProductionE2ETest() {
       !installErrors.installabilityErrors || installErrors.installabilityErrors.length === 0,
       `PWA installability errors detected: ${JSON.stringify(installErrors.installabilityErrors)}`,
     );
-    const pwaOriginRes = await fetch(`${BASE_URL}/api/pwa/origin`).then((r) => r.json());
-    assert(pwaOriginRes && typeof pwaOriginRes.port === 'number', 'Missing /api/pwa/origin response');
-    console.log('PASS: Android/Tablet PWA Manifest, Service Worker & Chromium Installability (0 errors)');
+    console.log('PASS: PWA Manifest, Service Worker & Chromium Installability (0 errors)');
 
     const appConsoleErrors = consoleErrors.filter(
       (txt) => !/youtube|ytimg|googlevideo|ERR_BLOCKED|Failed to load resource|401 \(Unauthorized\)|404 \(Not Found\)/i.test(txt),

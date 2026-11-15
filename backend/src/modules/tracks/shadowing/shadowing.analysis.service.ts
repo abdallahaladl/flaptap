@@ -6,7 +6,8 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { AiClient } from '../../../core/ai/ai.client';
-import { DEFAULT_LANGUAGE, getLanguage } from '../../../core/ai/languages';
+import { WordDefinitionResponse, WordLookupService } from '../../../core/ai/word-lookup.service';
+import { DEFAULT_LANGUAGE } from '../../../core/ai/languages';
 import {
   AiCoachAnalysis,
   ConnectedSpeechEntry,
@@ -22,20 +23,7 @@ import {
   HighlightAnnotation,
 } from '../../../core/linguistics/highlights';
 
-export interface WordDefinitionResponse {
-  term: string;
-  ipa: string;
-  partOfSpeech: string;
-  definition: string;
-  translation: string;
-  targetLanguage: string;
-  targetLanguageName: string;
-  rtl: boolean;
-  spokenTip: string;
-  contextSentence: string;
-  sentenceIndex: number;
-  timestampSec: number;
-}
+export { WordDefinitionResponse };
 
 const ANALYSIS_VERSION = 1;
 
@@ -47,6 +35,7 @@ export class ShadowingAnalysisService {
   constructor(
     private readonly ai: AiClient,
     private readonly historyRepo: HistoryRepository,
+    private readonly wordLookup: WordLookupService,
   ) {}
 
   async analyze(historyId: string, force = false): Promise<{
@@ -100,12 +89,12 @@ export class ShadowingAnalysisService {
   }
 
   private selectRepresentativeSentences(sentences: SentenceItem[]): SentenceItem[] {
-    if (sentences.length <= 75) return sentences;
+    if (sentences.length <= 50) return sentences;
     // Sample evenly across opening, body, and conclusion while preserving original indices
     const selected: SentenceItem[] = [];
-    const step = sentences.length / 72;
+    const step = sentences.length / 48;
     const used = new Set<number>();
-    for (let i = 0; i < 72; i++) {
+    for (let i = 0; i < 48; i++) {
       const idx = Math.min(sentences.length - 1, Math.floor(i * step));
       if (!used.has(idx)) {
         used.add(idx);
@@ -134,67 +123,23 @@ export class ShadowingAnalysisService {
 
     const systemPrompt = [
       'You are an elite American English phonetician, prosody coach, and applied linguist.',
-      'Your task is to analyze a real verbatim spoken English transcript (which may be a tech talk, science lecture, podcast, interview, news report, vlog, or dialogue) and extract dynamic, deeply educational spoken-English insights.',
-      '',
-      'CRITICAL ENGINEERING RULES:',
-      '1. UNIVERSAL GENRE ADAPTABILITY: Every spoken English transcript contains rich connected speech, natural phrasal/idiomatic expressions, and high-value vocabulary — NEVER return empty arrays.',
-      '   - For connectedSpeech: identify real multi-word sequences from the transcript demonstrating American connected speech: alveolar Flap-T between vowels ("got a", "lot of", "better", "put it"), consonant-to-vowel linking/catenation ("done it again", "came across"), function-word schwa reductions ("to", "for", "of", "and", "can"), consonant cluster elision ("just got", "next day", "first time"), palatalization ("did you", "would you"), or glottal stops.',
-      '   - For expressions: identify real phrasal verbs, idioms, collocations, discourse transitions, or rhetorical phrases actually spoken in the transcript (even in technical or academic speech, speakers use phrases like "come across", "put to the side", "no longer the case", "done it again", "keep in mind", "cut down on").',
-      '   - For vocabulary: identify high-leverage content words, domain terms, verbs, or modifiers from the transcript.',
-      '2. STRICT VERBATIM GROUNDING: Every `exactPhrase`, `phrase`, and `term` MUST appear verbatim (character-for-character substring) inside the referenced `[sentenceIndex]` line.',
-      '3. ACCURATE PHONETICS: Provide genuine General American IPA (with linking ties ‿, flaps t̬, and schwas ə) and concrete physical tongue/jaw/airflow mechanics.',
-      '4. Return ONLY a single valid JSON object with no markdown fences and no extra commentary.',
+      'Analyze a verbatim spoken English transcript across ANY genre and extract educational spoken-English insights (never return empty arrays).',
+      'RULES:',
+      '1. STRICT VERBATIM GROUNDING: Every exactPhrase, phrase, and term MUST appear character-for-character inside its referenced [sentenceIndex].',
+      '2. connectedSpeech (5-7 items): 2-5 word verbatim substrings showing Flap-T, linking, schwa reductions, elision, or palatalization with General American IPA (ties ‿, flap t̬, schwa ə) and <=12-word physical mechanics.',
+      '3. expressions (4-7 items): verbatim phrasal verbs, idioms, slang, or discourse markers with concise meaning, General American IPA, and <=12-word usageNote. Set register to "Slang" or "Colloquial" only when the phrase is genuinely informal.',
+      '4. vocabulary (5-7 items): high-leverage verbatim content words/domain terms with IPA, POS, and <=10-word definition.',
+      '5. Output ONLY compact single-line JSON (no markdown fences, no pretty-print whitespace):',
+      '{"overview":{"summary":"1-2 concise sentences","speakerStyle":"3-6 word cadence","cefrLevel":"B1|B2|C1|C2","focusTips":["tip 1","tip 2"]},"connectedSpeech":[{"exactPhrase":"verbatim 2-5 words","spokenIpa":"/IPA/","phenomenon":"mechanism","mechanics":"<=12 words","sentenceIndex":1}],"expressions":[{"phrase":"verbatim phrase","meaning":"<=12 words","register":"Conversational|Professional|Academic|Colloquial|Slang","ipa":"/IPA/","usageNote":"<=12 words","sentenceIndex":1}],"vocabulary":[{"term":"verbatim word","ipa":"/IPA/","partOfSpeech":"noun|verb|adjective|adverb","definition":"<=10 words","sentenceIndex":1}]}',
     ].join('\n');
 
     const userPrompt = [
-      `Lesson Title: ${item.title || 'Spoken English Lesson'}`,
-      `Speaker / Channel: ${item.creator || 'Speaker'}`,
-      `Estimated Pacing: ${item.pacingWpm || 150} WPM`,
+      `Title: ${item.title || 'Spoken English Lesson'} | Speaker: ${item.creator || 'Speaker'} | Pacing: ${item.pacingWpm || 150} WPM`,
       '',
       'Numbered Verbatim Sentences:',
       numberedLines,
       '',
-      'Return strictly this JSON schema:',
-      '{',
-      '  "overview": {',
-      '    "summary": "2 concise sentences describing what the speaker covers and why this clip is valuable for spoken English mastery.",',
-      '    "speakerStyle": "Short 3-6 word cadence label, e.g. Fast Technical Explainer, Measured Academic Storytelling",',
-      '    "cefrLevel": "B1" | "B2" | "C1" | "C2",',
-      '    "focusTips": [',
-      '      "Actionable prosody/shadowing coaching tip specific to this speaker",',
-      '      "Second specific rhythm, linking, or stress coaching tip"',
-      '    ]',
-      '  },',
-      '  "connectedSpeech": [',
-      '    {',
-      '      "exactPhrase": "exact 2-5 word substring from sentence",',
-      '      "spokenIpa": "/phonetic IPA showing real American linking or reduction/",',
-      '      "phenomenon": "e.g. Alveolar Flap-T & Linking | Schwa Function Reduction | Consonant Elision | Palatalization",',
-      '      "mechanics": "Concise physical mouth/tongue instruction for shadowing this smoothly",',
-      '      "sentenceIndex": 1',
-      '    }',
-      '  ],',
-      '  "expressions": [',
-      '    {',
-      '      "phrase": "exact multi-word expression, phrasal verb, or collocation from sentence",',
-      '      "meaning": "Clear plain-English explanation in context",',
-      '      "register": "Conversational | Idiomatic | Professional | Academic | Colloquial",',
-      '      "usageNote": "How and why native speakers deploy this phrase naturally",',
-      '      "sentenceIndex": 1',
-      '    }',
-      '  ],',
-      '  "vocabulary": [',
-      '    {',
-      '      "term": "exact word or compound term from sentence",',
-      '      "ipa": "/General American IPA/",',
-      '      "partOfSpeech": "noun | verb | adjective | adverb | phrasal verb",',
-      '      "definition": "Crisp contextual meaning in this talk",',
-      '      "sentenceIndex": 1',
-      '    }',
-      '  ]',
-      '}',
-      '',
-      'Target counts: 5 to 8 items in connectedSpeech, 4 to 8 items in expressions, and 5 to 8 items in vocabulary (scale naturally if the clip is very short, minimum 3 per array).',
+      'Extract 5-7 connectedSpeech, 4-7 expressions, and 5-7 vocabulary (min 3 per array for short clips). Compact JSON only.',
     ].join('\n');
 
     const startedAt = Date.now();
@@ -202,8 +147,8 @@ export class ShadowingAnalysisService {
     try {
       raw = await this.ai.chatJson<any>(systemPrompt, userPrompt, {
         temperature: 0.2,
-        maxTokens: 6000,
-        timeoutMs: 55000,
+        maxTokens: 3200,
+        timeoutMs: 32000,
         json: true,
       });
     } catch (error: any) {
@@ -376,6 +321,7 @@ export class ShadowingAnalysisService {
         phrase: grounded.exact,
         meaning: String(entry?.meaning || '').trim(),
         register: String(entry?.register || 'Conversational').trim(),
+        ipa: String(entry?.ipa || '').trim(),
         usageNote: String(entry?.usageNote || '').trim(),
         sentenceIndex: grounded.index,
       });
@@ -438,6 +384,7 @@ export class ShadowingAnalysisService {
     word: string,
     sentenceIndex?: number,
     targetLanguageCode?: string,
+    lookupScope?: 'word' | 'phrase' | 'sentence',
   ): Promise<WordDefinitionResponse> {
     const cleanWord = (word || '')
       .replace(/^[^\p{L}\p{N}'-]+|[^\p{L}\p{N}'-]+$/gu, '')
@@ -451,65 +398,20 @@ export class ShadowingAnalysisService {
       throw new NotFoundException(`Lesson "${historyId}" not found.`);
     }
 
-    if (!this.ai.isConfigured()) {
-      throw new ServiceUnavailableException(
-        'Word lookup requires OPENCODE_GO_API_KEY to be configured.',
-      );
-    }
-
     const sentences = item.sentences || [];
     const targetSentence =
       sentences.find((s) => s.index === Number(sentenceIndex)) ||
       sentences.find((s) => s.text.toLowerCase().includes(cleanWord.toLowerCase())) ||
       sentences[0];
 
-    const contextText = targetSentence?.text || cleanWord;
-    const lang = getLanguage(targetLanguageCode || DEFAULT_LANGUAGE);
-
-    const systemPrompt = [
-      'You are a concise, authoritative English lexicographer and American pronunciation coach.',
-      'Explain the requested English word or phrase strictly according to its exact sense in the given spoken sentence.',
-      `Provide a natural, standard ${lang.name} (${lang.native}) translation for that exact contextual meaning.`,
-      'Return ONLY a valid JSON object.',
-    ].join('\n');
-
-    const userPrompt = [
-      `Video: ${item.title}`,
-      `Spoken sentence: "${contextText}"`,
-      `Selected word: "${cleanWord}"`,
-      `Target translation language: ${lang.name} (${lang.native})`,
-      '',
-      'Return strictly this JSON shape:',
-      '{',
-      '  "term": "canonical word or multi-word phrasal unit if part of a phrasal verb in this sentence",',
-      '  "ipa": "/General American IPA/",',
-      '  "partOfSpeech": "noun | verb | adjective | adverb | phrasal verb | idiom",',
-      '  "definition": "1 crisp plain-English sentence defining it in this exact context",',
-      `  "translation": "natural ${lang.name} equivalent in context",`,
-      '  "spokenTip": "1 brief tip on how Americans pronounce, stress, or link this word in speech"',
-      '}',
-    ].join('\n');
-
-    const payload = await this.ai.chatJson<any>(systemPrompt, userPrompt, {
-      temperature: 0.15,
-      maxTokens: 600,
-      timeoutMs: 25000,
-      json: true,
-    });
-
-    return {
-      term: String(payload?.term || cleanWord).trim(),
-      ipa: String(payload?.ipa || '').trim(),
-      partOfSpeech: String(payload?.partOfSpeech || '').trim(),
-      definition: String(payload?.definition || '').trim(),
-      translation: String(payload?.translation || '').trim(),
-      targetLanguage: lang.code,
-      targetLanguageName: lang.name,
-      rtl: Boolean(lang.rtl),
-      spokenTip: String(payload?.spokenTip || '').trim(),
-      contextSentence: contextText,
+    return this.wordLookup.defineWordInContext({
+      word: cleanWord,
+      contextSentence: targetSentence?.text || cleanWord,
+      title: item.title,
+      targetLanguageCode: targetLanguageCode || DEFAULT_LANGUAGE,
       sentenceIndex: targetSentence?.index || 1,
       timestampSec: targetSentence?.startSec || 0,
-    };
+      scope: lookupScope,
+    });
   }
 }

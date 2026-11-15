@@ -3,16 +3,12 @@ import { AppModule } from './app.module';
 import { Logger } from '@nestjs/common';
 import * as express from 'express';
 import * as path from 'path';
-import * as fs from 'fs';
 import * as os from 'os';
-import { spawn, ChildProcess } from 'child_process';
+import * as zlib from 'zlib';
 import { loadEnvironment } from './core/config/env';
+import { resolveFrontendEntryFile } from './core/config/frontend-routes';
 
 loadEnvironment();
-
-let currentHttpsOrigin = '';
-let spawnedTunnelProc: ChildProcess | null = null;
-let tunnelMonitorTimer: NodeJS.Timeout | null = null;
 
 function getLanIp(): string {
   const nets = os.networkInterfaces();
@@ -26,160 +22,139 @@ function getLanIp(): string {
   return '127.0.0.1';
 }
 
-function findCloudflaredBinary(): string | null {
-  const candidates = [
-    path.join(os.homedir(), '.local/bin/cloudflared'),
-    '/opt/homebrew/bin/cloudflared',
-    '/usr/local/bin/cloudflared',
-    '/usr/bin/cloudflared',
-  ];
-  for (const p of candidates) {
-    try {
-      if (fs.existsSync(p) && fs.statSync(p).isFile()) {
-        return p;
+function createCompressionMiddleware(): express.RequestHandler {
+  return (req, res, next) => {
+    if (req.method === 'HEAD' || req.headers.range || req.path.includes('stream')) {
+      return next();
+    }
+    const accept = String(req.headers['accept-encoding'] || '').toLowerCase();
+    const useBr = accept.includes('br') && typeof zlib.createBrotliCompress === 'function';
+    const useGzip = !useBr && accept.includes('gzip');
+    if (!useBr && !useGzip) {
+      return next();
+    }
+
+    const origWrite = res.write.bind(res);
+    const origEnd = res.end.bind(res);
+    let decided = false;
+    let comp: zlib.BrotliCompress | zlib.Gzip | null = null;
+    let endCallback: (() => void) | undefined;
+
+    const initCompressor = (): boolean => {
+      if (decided) return Boolean(comp);
+      decided = true;
+
+      if (res.statusCode < 200 || res.statusCode >= 300 || res.statusCode === 204) {
+        return false;
       }
-    } catch {
-      // ignore
-    }
-  }
-  return null;
-}
-
-async function isHttpsOriginReachable(origin: string): Promise<boolean> {
-  if (!origin || !origin.startsWith('https://')) return false;
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-    const res = await fetch(`${origin}/api/health`, {
-      signal: controller.signal,
-      headers: { Accept: 'application/json' },
-    });
-    clearTimeout(timer);
-    return res.ok;
-  } catch {
-    return false;
-  }
-}
-
-function readCandidateHttpsOrigin(rootDir: string): string {
-  const urlFile = path.join(rootDir, 'data', 'PUBLIC_URL.txt');
-  const logFile = path.join(rootDir, 'data', 'logs', 'tunnel.log');
-  try {
-    if (fs.existsSync(urlFile)) {
-      const u = fs.readFileSync(urlFile, 'utf8').trim();
-      if (u.startsWith('https://')) return u.replace(/\/+$/, '');
-    }
-  } catch {
-    // ignore
-  }
-  try {
-    if (fs.existsSync(logFile)) {
-      const content = fs.readFileSync(logFile, 'utf8');
-      const matches = content.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/g);
-      if (matches && matches.length > 0) {
-        return matches[matches.length - 1];
+      if (res.getHeader('Content-Encoding')) {
+        return false;
       }
-    }
-  } catch {
-    // ignore
-  }
-  return '';
-}
+      const ct = String(res.getHeader('Content-Type') || '');
+      if (
+        !/^(text\/(html|css|plain|xml|csv)|application\/(javascript|json|manifest\+json)|image\/svg\+xml)/i.test(ct) ||
+        /text\/event-stream/i.test(ct)
+      ) {
+        return false;
+      }
+      const contentLen = Number(res.getHeader('Content-Length') || 0);
+      if (contentLen > 0 && contentLen < 860) {
+        return false;
+      }
 
-async function ensureHttpsTunnel(port: number, rootDir: string, logger: Logger): Promise<void> {
-  if (
-    process.env.DISABLE_AUTO_TUNNEL === 'true' ||
-    process.env.RENDER ||
-    process.env.RAILWAY_ENVIRONMENT ||
-    process.env.FLY_APP_NAME
-  ) {
-    return;
-  }
+      res.removeHeader('Content-Length');
+      res.setHeader('Content-Encoding', useBr ? 'br' : 'gzip');
+      const vary = String(res.getHeader('Vary') || '');
+      if (!/accept-encoding/i.test(vary)) {
+        res.setHeader('Vary', vary ? `${vary}, Accept-Encoding` : 'Accept-Encoding');
+      }
 
-  const existingCandidate = readCandidateHttpsOrigin(rootDir);
-  if (existingCandidate && (await isHttpsOriginReachable(existingCandidate))) {
-    if (currentHttpsOrigin !== existingCandidate) {
-      currentHttpsOrigin = existingCandidate;
-      logger.log(`🔒 HTTPS PWA Origin active: ${currentHttpsOrigin}`);
-    }
-    return;
-  }
+      comp = useBr
+        ? zlib.createBrotliCompress({ params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4 } })
+        : zlib.createGzip({ level: 6 });
 
-  if (spawnedTunnelProc && !spawnedTunnelProc.killed) {
-    return;
-  }
-
-  const bin = findCloudflaredBinary();
-  if (!bin) {
-    return;
-  }
-
-  const dataDir = path.join(rootDir, 'data');
-  const logsDir = path.join(dataDir, 'logs');
-  const urlFile = path.join(dataDir, 'PUBLIC_URL.txt');
-  const logFile = path.join(logsDir, 'tunnel.log');
-  fs.mkdirSync(logsDir, { recursive: true });
-
-  logger.log('🌐 Starting embedded Cloudflare HTTPS tunnel for Android/Tablet PWA installation...');
-  const proc = spawn(bin, ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${port}`], {
-    detached: true,
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-  proc.unref();
-  spawnedTunnelProc = proc;
-
-  const handleOutput = (chunk: Buffer) => {
-    const text = chunk.toString('utf8');
-    try {
-      fs.appendFileSync(logFile, text);
-    } catch {
-      // ignore
-    }
-    const match = text.match(/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/);
-    if (match && match[0]) {
-      const detected = match[0].replace(/\/+$/, '');
-      if (currentHttpsOrigin !== detected) {
-        currentHttpsOrigin = detected;
-        try {
-          fs.writeFileSync(urlFile, `${detected}\n`, 'utf8');
-        } catch {
-          // ignore
+      comp.on('data', (c: Buffer) => {
+        origWrite(c);
+      });
+      comp.on('drain', () => {
+        res.emit('drain');
+      });
+      comp.on('end', () => {
+        if (endCallback) {
+          origEnd(endCallback);
+        } else {
+          origEnd();
         }
-        logger.log(`🔒 HTTPS PWA Origin ready: ${currentHttpsOrigin} (LAN auto-upgrade enabled)`);
+      });
+      comp.on('error', () => {
+        try {
+          origEnd();
+        } catch {}
+      });
+      res.once('close', () => {
+        if (comp && !res.writableEnded) {
+          try {
+            comp.destroy();
+          } catch {}
+        }
+      });
+      return true;
+    };
+
+    res.write = ((chunk: any, encoding?: any, cb?: any): boolean => {
+      if (!decided) {
+        initCompressor();
       }
-    }
-    if (text.includes('Unauthorized: Tunnel not found')) {
-      currentHttpsOrigin = '';
-      proc.kill('SIGTERM');
-    }
+      if (comp) {
+        return comp.write(chunk, encoding, cb);
+      }
+      return origWrite(chunk, encoding, cb);
+    }) as any;
+
+    res.end = ((chunk?: any, encoding?: any, cb?: any): any => {
+      let actualChunk = chunk;
+      let actualEnc = encoding;
+      let actualCb = cb;
+      if (typeof actualChunk === 'function') {
+        actualCb = actualChunk;
+        actualChunk = undefined;
+        actualEnc = undefined;
+      } else if (typeof actualEnc === 'function') {
+        actualCb = actualEnc;
+        actualEnc = undefined;
+      }
+
+      if (!decided) {
+        const byteLen = actualChunk
+          ? Buffer.isBuffer(actualChunk)
+            ? actualChunk.length
+            : Buffer.byteLength(String(actualChunk), actualEnc || 'utf8')
+          : 0;
+        if (!actualChunk || byteLen < 860) {
+          decided = true;
+          return origEnd(chunk, encoding, cb);
+        }
+        initCompressor();
+      }
+
+      if (comp) {
+        endCallback = typeof actualCb === 'function' ? actualCb : undefined;
+        if (actualChunk !== undefined) {
+          comp.end(actualChunk, actualEnc);
+        } else {
+          comp.end();
+        }
+        return res;
+      }
+      return origEnd(chunk, encoding, cb);
+    }) as any;
+
+    next();
   };
-
-  proc.stdout?.on('data', handleOutput);
-  proc.stderr?.on('data', handleOutput);
-  proc.on('exit', () => {
-    if (spawnedTunnelProc === proc) {
-      spawnedTunnelProc = null;
-    }
-  });
-}
-
-function syncAdbReverse(port: number): void {
-  const candidates = ['/usr/local/bin/adb', '/opt/homebrew/bin/adb', path.join(os.homedir(), 'Library/Android/sdk/platform-tools/adb')];
-  for (const adbBin of candidates) {
-    try {
-      if (fs.existsSync(adbBin)) {
-        const p = spawn(adbBin, ['reverse', `tcp:${port}`, `tcp:${port}`], { stdio: 'ignore' });
-        p.unref();
-        return;
-      }
-    } catch {
-      // ignore
-    }
-  }
 }
 
 async function bootstrap() {
-  const logger = new Logger('Flaptap-Production');
+  const logger = new Logger('Flaptap');
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],
   });
@@ -189,75 +164,32 @@ async function bootstrap() {
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.set('trust proxy', true);
 
-  const corsOrigin = process.env.CORS_ORIGIN || '*';
+  const corsOriginEnv = (process.env.CORS_ORIGIN || '').trim();
+  const corsOrigin: boolean | string | string[] =
+    !corsOriginEnv || corsOriginEnv === '*'
+      ? true
+      : corsOriginEnv.split(',').map((s) => s.trim()).filter(Boolean);
+
   app.enableCors({
     origin: corsOrigin,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-guest-token'],
   });
 
+  app.use(createCompressionMiddleware());
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  const rootDir = path.resolve(__dirname, '../..');
   const port = parseInt(process.env.PORT || '3333', 10);
 
-  // Expose live HTTPS origin for PWA upgrade & diagnostics
-  expressApp.get('/api/pwa/origin', (_req: express.Request, res: express.Response) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.json({
-      httpsOrigin: currentHttpsOrigin || null,
-      lanIp: getLanIp(),
-      port,
-      secureInstallReady: Boolean(currentHttpsOrigin),
-    });
-  });
-
-  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  app.use((_req: express.Request, res: express.Response, next: express.NextFunction) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    if (process.env.NODE_ENV === 'production') {
-      res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    }
-
-    // Automatic LAN HTTP -> Trusted HTTPS redirect so Android/Tablet Chrome
-    // always runs in a Secure Context and enables native WebAPK installation.
-    if (currentHttpsOrigin && (req.method === 'GET' || req.method === 'HEAD')) {
-      const forwardedProto = ((req.headers['x-forwarded-proto'] as string) || '')
-        .split(',')[0]
-        .trim()
-        .toLowerCase();
-      const cfVisitor = ((req.headers['cf-visitor'] as string) || '').toLowerCase();
-      const hostHeader = (req.headers.host || '').toLowerCase();
-      const hostname = hostHeader.split(':')[0];
-      const isHttps =
-        req.secure ||
-        forwardedProto === 'https' ||
-        cfVisitor.includes('"https"') ||
-        hostname.endsWith('.trycloudflare.com');
-      const isLoopback =
-        hostname === 'localhost' ||
-        hostname === '127.0.0.1' ||
-        hostname === '[::1]' ||
-        hostname === '::1';
-      const isHtmlNav =
-        req.path === '/' ||
-        req.path === '/index.html' ||
-        req.path === '/studio.html' ||
-        (req.headers.accept || '').includes('text/html');
-
-      if (!isHttps && !isLoopback && isHtmlNav && !req.query.lan) {
-        res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-        return res.redirect(302, `${currentHttpsOrigin}${req.originalUrl}`);
-      }
-    }
-
     next();
   });
 
-  // Frontend assets. HTML/JS/CSS revalidate on every load so a deployment is
-  // picked up immediately without stale bundles.
   const frontendPath = path.resolve(__dirname, '../../frontend');
   app.use(
     express.static(frontendPath, {
@@ -266,44 +198,45 @@ async function bootstrap() {
       setHeaders: (res, filePath) => {
         if (filePath.endsWith('manifest.json') || filePath.endsWith('.webmanifest')) {
           res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
-          res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+          res.setHeader('Cache-Control', 'public, max-age=3600, must-revalidate');
         } else if (filePath.endsWith('sw.js')) {
           res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
           res.setHeader('Service-Worker-Allowed', '/');
-          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-        } else if (filePath.endsWith('.png')) {
-          res.setHeader('Content-Type', 'image/png');
-          res.setHeader('Cache-Control', 'public, max-age=3600');
-        } else if (filePath.endsWith('.html') || filePath.endsWith('.js') || filePath.endsWith('.css')) {
-          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+          res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+        } else if (filePath.endsWith('.png') || filePath.endsWith('.svg')) {
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+        } else if (filePath.endsWith('.js') || filePath.endsWith('.css')) {
+          res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+        } else if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache, must-revalidate');
         }
       },
     }),
   );
 
-  const host = process.env.HOST || '0.0.0.0';
+  app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if ((req.method !== 'GET' && req.method !== 'HEAD') || req.path.startsWith('/api/')) {
+      return next();
+    }
+    const entryFile = resolveFrontendEntryFile(req.path);
+    if (!entryFile) {
+      return next();
+    }
+    res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    return res.sendFile(path.join(frontendPath, entryFile));
+  });
 
+  const host = process.env.HOST || '0.0.0.0';
   await app.listen(port, host);
-  logger.log(`🚀 Flaptap AI online on http://${host}:${port} (LAN: http://${getLanIp()}:${port})`);
+  logger.log(`🚀 Flaptap online: http://localhost:${port} (Same Wi-Fi LAN: http://${getLanIp()}:${port})`);
   logger.log(
     process.env.OPENCODE_GO_API_KEY
       ? `🧠 AI: OpenCode Go · ${process.env.OPENCODE_GO_MODEL || 'deepseek-v4.1-flash'}`
       : '⚠️  AI: OPENCODE_GO_API_KEY is not set. Translation and dialogue generation are disabled until it is added.',
   );
 
-  syncAdbReverse(port);
-  void ensureHttpsTunnel(port, rootDir, logger);
-  tunnelMonitorTimer = setInterval(() => {
-    syncAdbReverse(port);
-    void ensureHttpsTunnel(port, rootDir, logger);
-  }, 25000);
-
   const shutdown = async (signal: string) => {
     logger.log(`${signal} received: closing Flaptap cleanly...`);
-    if (tunnelMonitorTimer) {
-      clearInterval(tunnelMonitorTimer);
-      tunnelMonitorTimer = null;
-    }
     try {
       await app.close();
       logger.log('Flaptap shutdown complete.');

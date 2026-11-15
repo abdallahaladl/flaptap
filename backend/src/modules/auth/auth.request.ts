@@ -4,7 +4,6 @@ import { AuthService, SessionClientMeta, UserProfile } from './auth.service';
 import { RequestIdentityScope } from '../../core/database/history.repository';
 
 export const SESSION_COOKIE_NAME = 'flaptap_session';
-export const OAUTH_STATE_COOKIE_NAME = 'flaptap_oauth_state';
 export const GUEST_COOKIE_NAME = 'flaptap_guest';
 
 export interface ResolvedRequestIdentity extends RequestIdentityScope {
@@ -68,15 +67,6 @@ export function extractClientMeta(req: Request): SessionClientMeta {
   return { userAgent: ua, ipAddress: ip };
 }
 
-export function extractRequestOrigin(req: Request): string {
-  const protoHeader = String(req.headers?.['x-forwarded-proto'] || '').split(',')[0].trim();
-  const proto = protoHeader || (req.secure ? 'https' : 'http');
-  const host = String(req.headers?.['x-forwarded-host'] || req.headers?.host || 'localhost:3333')
-    .split(',')[0]
-    .trim();
-  return `${proto}://${host}`;
-}
-
 export function isSecureRequest(req?: Request): boolean {
   if (!req) return false;
   if (req.secure) return true;
@@ -133,21 +123,5 @@ export function clearSessionCookie(res: Response, req?: Request): void {
   res.append(
     'Set-Cookie',
     `${SESSION_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secureAttr}`,
-  );
-}
-
-export function setOAuthStateCookie(res: Response, state: string, req?: Request): void {
-  const secureAttr = isSecureRequest(req) ? '; Secure' : '';
-  res.append(
-    'Set-Cookie',
-    `${OAUTH_STATE_COOKIE_NAME}=${encodeURIComponent(state)}; Path=/; Max-Age=600; HttpOnly; SameSite=Lax${secureAttr}`,
-  );
-}
-
-export function clearOAuthStateCookie(res: Response, req?: Request): void {
-  const secureAttr = isSecureRequest(req) ? '; Secure' : '';
-  res.append(
-    'Set-Cookie',
-    `${OAUTH_STATE_COOKIE_NAME}=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax${secureAttr}`,
   );
 }
