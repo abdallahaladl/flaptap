@@ -1,11 +1,10 @@
 /* ==========================================================================
    FLAPTAP LEARNING LIBRARY (learning-library.css)
-   Centralized Paper & Vox Editorial Design · Synced with Lessons Design Language
+   Unified Apple Design System Layout · Consumes design-tokens.css
    ========================================================================== */
 
-/* Command Desk Enhancements (Shares .editorial-desk base from styles.css) */
 .ll-command-desk {
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .ll-desk-top {
@@ -22,110 +21,119 @@
 }
 
 .ll-domain-pills .filter-pill {
-  font-size: 0.77rem;
-  padding: 5px 10px;
+  font-size: 0.79rem;
+  padding: 6px 12px;
 }
 
 .ll-command-form {
   max-width: 100%;
 }
 
-/* Streamlined Generation Options Row */
+/* Balanced Apple Generation Options Bar (Zero awkward row wrapping) */
 .ll-options-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-  margin-top: 16px;
+  display: grid;
+  grid-template-columns: auto minmax(150px, 1fr) minmax(140px, 1fr) minmax(150px, 1fr);
+  align-items: end;
+  gap: 12px;
+  margin-top: 18px;
 }
 
 .ll-option-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ll-option-group--items {
+  flex-direction: column;
+}
+
+.ll-items-controls {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .ll-options-row .ll-compact-select {
-  max-width: 158px;
+  width: 100%;
+  max-width: none;
+  height: 36px;
 }
 
 .ll-option-label {
   font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--ink-muted);
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: -0.005em;
+  color: var(--ap-text-secondary);
   white-space: nowrap;
 }
 
 .ll-count-pills {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  padding: 2px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--rule);
-  background: var(--bg-inset);
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--ap-radius-pill);
+  border: 1px solid var(--ap-border);
+  background: var(--ap-fill);
 }
 
 .ll-count-pill {
   min-width: 34px;
   height: 28px;
-  padding: 0 8px;
-  border-radius: var(--radius-xs);
-  font-family: var(--font-mono);
+  padding: 0 9px;
+  border-radius: var(--ap-radius-pill);
+  font-family: var(--ap-font-text);
   font-size: 0.79rem;
   font-weight: 600;
-  color: var(--ink-secondary);
-  transition: background-color 0.14s ease, color 0.14s ease;
+  color: var(--ap-text-secondary);
+  transition: background-color 0.16s var(--ap-ease), color 0.16s var(--ap-ease), box-shadow 0.16s var(--ap-ease);
 }
 
 .ll-count-pill:hover:not(.active) {
-  color: var(--ink);
+  color: var(--ap-text-primary);
 }
 
 .ll-count-pill.active {
-  background: var(--vox-yellow);
-  color: var(--vox-yellow-ink);
+  background: var(--ap-surface);
+  color: var(--ap-blue);
   font-weight: 700;
+  box-shadow: var(--ap-shadow-pill);
 }
 
 .ll-custom-count-input {
-  width: 48px;
-  height: 32px;
-  padding: 0 6px;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  background: var(--bg-paper);
-  color: var(--ink);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
+  width: 54px;
+  height: 36px;
+  padding: 0 8px;
+  border: 1px solid var(--ap-border-strong);
+  border-radius: var(--ap-radius-sm);
+  background: var(--ap-surface);
+  color: var(--ap-text-primary);
+  font-family: var(--ap-font-mono);
+  font-size: 0.82rem;
   font-weight: 600;
   text-align: center;
 }
 
 .ll-custom-count-input:focus {
   outline: none;
-  border-color: var(--ink);
+  border-color: var(--ap-blue);
+  box-shadow: 0 0 0 3px var(--ap-blue-ring);
 }
 
-.ll-compact-select {
-  height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--rule);
-  border-radius: var(--radius-sm);
-  background: var(--bg-paper);
-  color: var(--ink);
-  font-size: 0.8rem;
-  font-weight: 500;
-  max-width: 210px;
-  cursor: pointer;
+@media (max-width: 960px) {
+  .ll-options-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-.ll-compact-select:focus {
-  outline: none;
-  border-color: var(--ink);
+@media (max-width: 600px) {
+  .ll-options-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Streaming Progress Card */
@@ -133,11 +141,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 16px 20px;
-  background: var(--bg-sheet);
-  border: 1.5px solid var(--ink);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-card);
+  padding: 18px 22px;
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius-lg);
+  box-shadow: var(--ap-shadow-card), var(--ap-specular);
 }
 
 .ll-progress-top {
@@ -1282,7 +1290,7 @@
 #ll-study-drawer-backdrop {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  background: rgba(20, 20, 19, 0.52);
+  background: var(--ap-backdrop);
 }
 
 [data-theme="dark"] #ll-study-drawer-backdrop {

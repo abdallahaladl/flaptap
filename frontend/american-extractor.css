@@ -1,241 +1,63 @@
 /* ==========================================================================
-   Flaptap — Phrase Lens (Extractor) · Apple Design Language
-   Strictly scoped to #section-american-extractor & body.is-extractor-view
-   Supports both Light Mode & Dark Mode, RTL, Mobile, and Reduced Motion.
+   Flaptap — Phrase Lens (Extractor) · Feature Layout Styles
+   Consumes global Apple Design Tokens from design-tokens.css & apple-components.css.
    ========================================================================== */
 
-/* --------------------------------------------------------------------------
-   1. SCOPED SHELL & CANVAS ADAPTATION
-   -------------------------------------------------------------------------- */
-
-body.is-extractor-view .workspace-main,
-body:has(#section-american-extractor:not([hidden])) .workspace-main {
-  max-width: 1120px;
-}
-
-[data-theme="light"]:has(#section-american-extractor:not([hidden])),
-[data-theme="light"] body.is-extractor-view,
-[data-theme="light"] body:has(#section-american-extractor:not([hidden])) {
-  background-color: #F5F5F7;
-}
-
-[data-theme="dark"]:has(#section-american-extractor:not([hidden])),
-[data-theme="dark"] body.is-extractor-view,
-[data-theme="dark"] body:has(#section-american-extractor:not([hidden])) {
-  background-color: #000000;
-}
-
-/* Remove warm tactile paper grain inside Apple-styled Phrase Lens */
-body.is-extractor-view::before,
-body:has(#section-american-extractor:not([hidden]))::before {
-  opacity: 0;
-}
-
-body.is-extractor-view .app-sidebar,
-body:has(#section-american-extractor:not([hidden])) .app-sidebar {
-  background: rgba(251, 251, 253, 0.86);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-inline-end: 1px solid rgba(0, 0, 0, 0.08);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
-}
-
-[data-theme="dark"] body.is-extractor-view .app-sidebar,
-[data-theme="dark"] body:has(#section-american-extractor:not([hidden])) .app-sidebar {
-  background: rgba(22, 22, 24, 0.86);
-  border-inline-end-color: rgba(255, 255, 255, 0.10);
-}
-
-body.is-extractor-view .workspace-topbar,
-body:has(#section-american-extractor:not([hidden])) .workspace-topbar {
-  background: rgba(245, 245, 247, 0.92);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
-}
-
-[data-theme="dark"] body.is-extractor-view .workspace-topbar,
-[data-theme="dark"] body:has(#section-american-extractor:not([hidden])) .workspace-topbar {
-  background: rgba(12, 12, 14, 0.92);
-  border-bottom-color: rgba(255, 255, 255, 0.10);
-}
-
-body.is-extractor-view .sidebar-nav-link.active,
-body:has(#section-american-extractor:not([hidden])) .sidebar-nav-link.active {
-  background: rgba(0, 113, 227, 0.12);
-  color: #0071E3;
-}
-
-[data-theme="dark"] body.is-extractor-view .sidebar-nav-link.active,
-[data-theme="dark"] body:has(#section-american-extractor:not([hidden])) .sidebar-nav-link.active {
-  background: rgba(10, 132, 255, 0.20);
-  color: #0A84FF;
-}
-
-[data-theme="dark"] body.is-extractor-view .account-btn.authenticated,
-[data-theme="dark"] body:has(#section-american-extractor:not([hidden])) .account-btn.authenticated {
-  background: rgba(255, 255, 255, 0.12);
-  color: #F5F5F7;
-  border-color: rgba(255, 255, 255, 0.18);
-}
-
-[data-theme="dark"] body.is-extractor-view .account-btn.authenticated:hover,
-[data-theme="dark"] body:has(#section-american-extractor:not([hidden])) .account-btn.authenticated:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
-
-/* Unified Apple pill styling for topbar EN selector while inside Phrase Lens */
-body.is-extractor-view .ui-lang-select,
-body:has(#section-american-extractor:not([hidden])) .ui-lang-select {
-  appearance: none !important;
-  -webkit-appearance: none !important;
-  -moz-appearance: none !important;
-  height: 34px;
-  min-height: 34px;
-  line-height: 32px;
-  padding: 0 24px 0 11px;
-  border-radius: 980px;
-  border: 1px solid rgba(0, 0, 0, 0.10);
-  background-color: rgba(255, 255, 255, 0.88);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  color: #1D1D1F;
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
-  font-size: 0.79rem;
-  font-weight: 600;
-  vertical-align: middle;
-}
-
-body.is-extractor-view .ui-lang-select::picker-icon,
-body:has(#section-american-extractor:not([hidden])) .ui-lang-select::picker-icon {
-  display: none;
-}
-
-[dir="rtl"] body.is-extractor-view .ui-lang-select,
-[dir="rtl"] body:has(#section-american-extractor:not([hidden])) .ui-lang-select {
-  padding: 0 11px 0 24px;
-  background-position: left 8px center;
-}
-
-[data-theme="dark"] body.is-extractor-view .ui-lang-select,
-[data-theme="dark"] body:has(#section-american-extractor:not([hidden])) .ui-lang-select {
-  background-color: rgba(255, 255, 255, 0.10);
-  border-color: rgba(255, 255, 255, 0.16);
-  color: #F5F5F7;
-}
-
-/* --------------------------------------------------------------------------
-   2. SEMANTIC APPLE DESIGN TOKENS (LIGHT + DARK)
-   -------------------------------------------------------------------------- */
-
 #section-american-extractor {
-  --aex-font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
-  --aex-font-text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", system-ui, sans-serif;
-  --aex-font-mono: "SF Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --aex-font-display: var(--ap-font-display);
+  --aex-font-text: var(--ap-font-text);
+  --aex-font-mono: var(--ap-font-mono);
 
-  --aex-canvas: #F5F5F7;
-  --aex-surface: #FFFFFF;
-  --aex-surface-2: #FBFBFD;
-  --aex-surface-inset: #F2F2F7;
-  --aex-glass: #FFFFFF;
+  --aex-canvas: var(--ap-canvas);
+  --aex-surface: var(--ap-surface);
+  --aex-surface-2: var(--ap-surface-secondary);
+  --aex-surface-inset: var(--ap-fill-subtle);
+  --aex-glass: var(--ap-surface-elevated);
 
-  --aex-text-primary: #1D1D1F;
-  --aex-text-secondary: #6E6E73;
-  --aex-text-tertiary: #86868B;
+  --aex-text-primary: var(--ap-text-primary);
+  --aex-text-secondary: var(--ap-text-secondary);
+  --aex-text-tertiary: var(--ap-text-tertiary);
 
-  --aex-border: rgba(0, 0, 0, 0.08);
-  --aex-border-strong: rgba(0, 0, 0, 0.14);
-  --aex-specular: inset 0 1px 0 rgba(255, 255, 255, 0.90);
+  --aex-border: var(--ap-border);
+  --aex-border-strong: var(--ap-border-strong);
+  --aex-specular: var(--ap-specular);
 
-  --aex-fill: rgba(118, 118, 128, 0.12);
-  --aex-fill-hover: rgba(118, 118, 128, 0.18);
-  --aex-fill-subtle: rgba(118, 118, 128, 0.07);
+  --aex-fill: var(--ap-fill);
+  --aex-fill-hover: var(--ap-fill-hover);
+  --aex-fill-subtle: var(--ap-fill-subtle);
 
-  --aex-blue: #0071E3;
-  --aex-blue-hover: #0077ED;
-  --aex-blue-wash: rgba(0, 113, 227, 0.11);
-  --aex-green: #248A3D;
-  --aex-green-solid: #34C759;
-  --aex-green-wash: rgba(52, 199, 89, 0.12);
-  --aex-orange: #C93400;
-  --aex-orange-wash: rgba(255, 149, 0, 0.14);
-  --aex-indigo: #5E5CE6;
-  --aex-indigo-wash: rgba(94, 92, 230, 0.12);
+  --aex-blue: var(--ap-blue);
+  --aex-blue-hover: var(--ap-blue-hover);
+  --aex-blue-wash: var(--ap-blue-wash);
+  --aex-green: var(--ap-green);
+  --aex-green-solid: var(--ap-green-solid);
+  --aex-green-wash: var(--ap-green-wash);
+  --aex-orange: var(--ap-orange);
+  --aex-orange-wash: var(--ap-orange-wash);
+  --aex-indigo: var(--ap-indigo);
+  --aex-indigo-wash: var(--ap-indigo-wash);
   --aex-teal: #008299;
   --aex-teal-wash: rgba(0, 162, 179, 0.12);
-  --aex-red: #D70015;
-  --aex-red-wash: rgba(255, 59, 48, 0.11);
+  --aex-red: var(--ap-red);
+  --aex-red-wash: var(--ap-red-wash);
 
-  --aex-shadow-hero:
-    0 2px 10px rgba(0, 0, 0, 0.04),
-    0 22px 48px -20px rgba(0, 0, 0, 0.12);
-  --aex-shadow-card:
-    0 1px 4px rgba(0, 0, 0, 0.03),
-    0 12px 30px -14px rgba(0, 0, 0, 0.09);
-  --aex-shadow-hover:
-    0 8px 22px rgba(0, 0, 0, 0.07),
-    0 24px 48px -18px rgba(0, 0, 0, 0.14);
-  --aex-shadow-popover:
-    0 16px 40px rgba(0, 0, 0, 0.14),
-    0 2px 8px rgba(0, 0, 0, 0.06);
+  --aex-shadow-hero: var(--ap-shadow-hero);
+  --aex-shadow-card: var(--ap-shadow-card);
+  --aex-shadow-hover: var(--ap-shadow-card-hover);
+  --aex-shadow-popover: var(--ap-shadow-popover);
 
-  --aex-spring: cubic-bezier(0.22, 1, 0.36, 1);
-  --aex-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
-  --aex-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --aex-spring: var(--ap-spring);
+  --aex-ease: var(--ap-ease);
+  --aex-bounce: var(--ap-bounce);
 
-  font-family: var(--aex-font-text);
-  color: var(--aex-text-primary);
+  font-family: var(--ap-font-text);
+  color: var(--ap-text-primary);
   -webkit-font-smoothing: antialiased;
 }
 
 [data-theme="dark"] #section-american-extractor {
-  --aex-canvas: #000000;
-  --aex-surface: #1C1C1E;
-  --aex-surface-2: #242426;
-  --aex-surface-inset: #141416;
-  --aex-glass: #2C2C2E;
-
-  --aex-text-primary: #F5F5F7;
-  --aex-text-secondary: #A1A1A6;
-  --aex-text-tertiary: #6E6E73;
-
-  --aex-border: rgba(255, 255, 255, 0.10);
-  --aex-border-strong: rgba(255, 255, 255, 0.18);
-  --aex-specular: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-
-  --aex-fill: rgba(118, 118, 128, 0.24);
-  --aex-fill-hover: rgba(118, 118, 128, 0.34);
-  --aex-fill-subtle: rgba(118, 118, 128, 0.14);
-
-  --aex-blue: #0A84FF;
-  --aex-blue-hover: #409CFF;
-  --aex-blue-wash: rgba(10, 132, 255, 0.20);
-  --aex-green: #30D158;
-  --aex-green-solid: #30D158;
-  --aex-green-wash: rgba(48, 209, 88, 0.17);
-  --aex-orange: #FF9F0A;
-  --aex-orange-wash: rgba(255, 159, 10, 0.18);
-  --aex-indigo: #7D7AFF;
-  --aex-indigo-wash: rgba(125, 122, 255, 0.20);
   --aex-teal: #40CBE0;
   --aex-teal-wash: rgba(64, 203, 224, 0.17);
-  --aex-red: #FF453A;
-  --aex-red-wash: rgba(255, 69, 58, 0.18);
-
-  --aex-shadow-hero:
-    0 4px 16px rgba(0, 0, 0, 0.45),
-    0 24px 60px -20px rgba(0, 0, 0, 0.78);
-  --aex-shadow-card:
-    0 2px 8px rgba(0, 0, 0, 0.35),
-    0 14px 32px -14px rgba(0, 0, 0, 0.65);
-  --aex-shadow-hover:
-    0 10px 26px rgba(0, 0, 0, 0.55),
-    0 28px 54px -16px rgba(0, 0, 0, 0.85);
-  --aex-shadow-popover:
-    0 20px 50px rgba(0, 0, 0, 0.75),
-    0 0 0 1px rgba(255, 255, 255, 0.12);
 }
 
 #section-american-extractor *,
@@ -1111,8 +933,20 @@ body:has(#section-american-extractor:not([hidden])) .ui-lang-select::picker-icon
 }
 
 #section-american-extractor .aex-options-secondary {
-  grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   padding-top: 4px;
+}
+
+@media (max-width: 960px) {
+  #section-american-extractor .aex-options-secondary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  #section-american-extractor .aex-options-secondary {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Smooth Collapsible Spring Drawer */

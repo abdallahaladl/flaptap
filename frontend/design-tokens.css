@@ -1,0 +1,324 @@
+/* ==========================================================================
+   FLAPTAP — UNIFIED APPLE DESIGN SYSTEM TOKENS (design-tokens.css)
+   Single Source of Truth for Colors, Typography, Surfaces, Glass, Radii,
+   Shadows, Motion Curves & Semantic Legacy Mappings across index & studio.
+   Zero external font requests (native SF Pro / Apple system stack).
+   ========================================================================== */
+
+:root {
+  /* Typography */
+  --ap-font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, 'Geeza Pro', sans-serif;
+  --ap-font-text: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, 'Geeza Pro', sans-serif;
+  --ap-font-mono: 'SF Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Legacy font variable aliases -> SF Pro unified system */
+  --font-serif: var(--ap-font-display);
+  --font-sans: var(--ap-font-text);
+  --font-mono: var(--ap-font-mono);
+
+  /* Radii */
+  --ap-radius-xs: 8px;
+  --ap-radius-sm: 10px;
+  --ap-radius-md: 14px;
+  --ap-radius-lg: 20px;
+  --ap-radius-xl: 24px;
+  --ap-radius-hero: 28px;
+  --ap-radius-pill: 980px;
+
+  --radius-xs: var(--ap-radius-xs);
+  --radius-sm: var(--ap-radius-sm);
+  --radius-md: var(--ap-radius-md);
+  --radius-lg: var(--ap-radius-lg);
+
+  /* Motion */
+  --ap-ease: cubic-bezier(0.25, 1, 0.5, 1);
+  --ap-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ap-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-editorial: var(--ap-spring);
+
+  /* Spacing & Layout */
+  --ap-content-max: 1120px;
+  --grain-opacity: 0;
+}
+
+/* ==========================================================================
+   LIGHT THEME TOKENS (Approved Lessons Apple Palette)
+   ========================================================================== */
+
+:root,
+[data-theme="light"] {
+  /* Apple Semantic Surfaces */
+  --ap-canvas: #F5F5F7;
+  --ap-surface: #FFFFFF;
+  --ap-surface-secondary: #FBFBFD;
+  --ap-surface-subtle: #FBFBFD;
+  --ap-surface-elevated: #FFFFFF;
+  --ap-fill: rgba(118, 118, 128, 0.12);
+  --ap-fill-hover: rgba(118, 118, 128, 0.18);
+  --ap-fill-subtle: rgba(118, 118, 128, 0.08);
+  --ap-glass: rgba(245, 245, 247, 0.84);
+  --ap-glass-sidebar: rgba(251, 251, 253, 0.88);
+  --ap-glass-topbar: rgba(245, 245, 247, 0.90);
+  --ap-glass-popover: rgba(255, 255, 255, 0.96);
+  --ap-glass-dark: rgba(28, 28, 30, 0.72);
+  --ap-border: rgba(0, 0, 0, 0.07);
+  --ap-border-strong: rgba(0, 0, 0, 0.13);
+  --ap-specular: inset 0 1px 0 rgba(255, 255, 255, 0.90);
+  --ap-backdrop: rgba(15, 15, 20, 0.40);
+
+  /* Apple Typography Ink */
+  --ap-text-primary: #1D1D1F;
+  --ap-text-secondary: #6E6E73;
+  --ap-text-tertiary: #86868B;
+
+  /* Apple Semantic Accents */
+  --ap-blue: #0071E3;
+  --ap-blue-hover: #0077ED;
+  --ap-blue-wash: rgba(0, 113, 227, 0.10);
+  --ap-blue-wash-strong: rgba(0, 113, 227, 0.16);
+  --ap-blue-ring: rgba(0, 113, 227, 0.22);
+  --ap-accent-grad: linear-gradient(120deg, #0071E3 0%, #00A2FF 100%);
+
+  --ap-green: #248A3D;
+  --ap-green-solid: #34C759;
+  --ap-green-wash: rgba(52, 199, 89, 0.14);
+
+  --ap-orange: #C93400;
+  --ap-orange-solid: #FF9500;
+  --ap-orange-wash: rgba(255, 149, 0, 0.14);
+
+  --ap-pink: #D31B45;
+  --ap-pink-wash: rgba(255, 45, 85, 0.12);
+
+  --ap-indigo: #3634A3;
+  --ap-indigo-wash: rgba(88, 86, 214, 0.12);
+
+  --ap-red: #D70015;
+  --ap-red-solid: #FF3B30;
+  --ap-red-wash: rgba(255, 59, 48, 0.12);
+
+  /* Apple Elevation Shadows */
+  --ap-shadow-hero:
+    0 2px 10px rgba(0, 0, 0, 0.03),
+    0 20px 50px -20px rgba(0, 0, 0, 0.09);
+  --ap-shadow-card:
+    0 1px 3px rgba(0, 0, 0, 0.04),
+    0 10px 28px -12px rgba(0, 0, 0, 0.08);
+  --ap-shadow-card-hover:
+    0 6px 16px rgba(0, 0, 0, 0.06),
+    0 24px 48px -16px rgba(0, 0, 0, 0.14);
+  --ap-shadow-popover:
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    0 20px 48px -12px rgba(0, 0, 0, 0.20);
+  --ap-shadow-pill:
+    0 2px 6px rgba(0, 0, 0, 0.08),
+    0 0 1px rgba(0, 0, 0, 0.06);
+
+  /* Legacy Variable Aliases -> Apple System (zero old cream/yellow leakage) */
+  --bg-paper: var(--ap-canvas);
+  --bg-sheet: var(--ap-surface);
+  --bg-inset: var(--ap-fill-subtle);
+  --bg-hover: var(--ap-fill);
+  --bg-elevated: var(--ap-surface-elevated);
+
+  --ink: var(--ap-text-primary);
+  --ink-secondary: var(--ap-text-secondary);
+  --ink-muted: var(--ap-text-secondary);
+  --ink-faint: var(--ap-text-tertiary);
+  --ink-on-dark: #FFFFFF;
+
+  --rule: var(--ap-border);
+  --rule-strong: var(--ap-border-strong);
+  --rule-ink: var(--ap-text-primary);
+
+  --vox-yellow: var(--ap-blue);
+  --vox-yellow-ink: #FFFFFF;
+  --vox-yellow-wash: var(--ap-blue-wash);
+  --vox-yellow-border: rgba(0, 113, 227, 0.30);
+
+  --accent-vermilion: var(--ap-orange);
+  --accent-vermilion-wash: var(--ap-orange-wash);
+  --accent-Cobalt: var(--ap-blue);
+
+  --status-success: var(--ap-green);
+  --status-success-wash: var(--ap-green-wash);
+  --status-success-border: rgba(52, 199, 89, 0.28);
+  --status-warning: var(--ap-orange);
+  --status-warning-wash: var(--ap-orange-wash);
+  --status-warning-border: rgba(255, 149, 0, 0.28);
+  --status-danger: var(--ap-red);
+  --status-danger-wash: var(--ap-red-wash);
+  --status-danger-border: rgba(255, 59, 48, 0.28);
+  --status-info: var(--ap-blue);
+  --status-info-wash: var(--ap-blue-wash);
+  --status-info-border: rgba(0, 113, 227, 0.26);
+  --status-neutral: var(--ap-text-secondary);
+  --status-neutral-wash: var(--ap-fill-subtle);
+  --status-neutral-border: var(--ap-border-strong);
+
+  --icon-strong: var(--ap-text-primary);
+  --icon-default: var(--ap-text-secondary);
+  --icon-muted: var(--ap-text-tertiary);
+
+  /* Verbatim Highlight Washes (Apple Pastel Tints) */
+  --hl-connected-bg: rgba(0, 113, 227, 0.13);
+  --hl-connected-line: var(--ap-blue);
+  --hl-expression-bg: rgba(255, 149, 0, 0.15);
+  --hl-expression-line: var(--ap-orange);
+  --hl-vocab-bg: rgba(88, 86, 214, 0.13);
+  --hl-vocab-line: var(--ap-indigo);
+  --hl-stress-bg: rgba(255, 45, 85, 0.13);
+  --hl-stress-line: var(--ap-pink);
+
+  --shadow-card: var(--ap-shadow-card);
+  --shadow-float: var(--ap-shadow-popover);
+  --shadow-press: 0 2px 10px rgba(0, 113, 227, 0.26);
+
+  color-scheme: light;
+}
+
+/* ==========================================================================
+   DARK THEME TOKENS (True OLED Black #000000 + Elevated #1C1C1E)
+   ========================================================================== */
+
+[data-theme="dark"] {
+  --ap-canvas: #000000;
+  --ap-surface: #1C1C1E;
+  --ap-surface-secondary: #242426;
+  --ap-surface-subtle: #242426;
+  --ap-surface-elevated: #2C2C2E;
+  --ap-fill: rgba(118, 118, 128, 0.24);
+  --ap-fill-hover: rgba(118, 118, 128, 0.34);
+  --ap-fill-subtle: rgba(118, 118, 128, 0.16);
+  --ap-glass: rgba(18, 18, 20, 0.80);
+  --ap-glass-sidebar: rgba(22, 22, 24, 0.88);
+  --ap-glass-topbar: rgba(12, 12, 14, 0.90);
+  --ap-glass-popover: rgba(30, 30, 32, 0.96);
+  --ap-glass-dark: rgba(18, 18, 20, 0.76);
+  --ap-border: rgba(255, 255, 255, 0.09);
+  --ap-border-strong: rgba(255, 255, 255, 0.16);
+  --ap-specular: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  --ap-backdrop: rgba(0, 0, 0, 0.62);
+
+  --ap-text-primary: #F5F5F7;
+  --ap-text-secondary: #A1A1A6;
+  --ap-text-tertiary: #8E8E93;
+
+  --ap-blue: #0A84FF;
+  --ap-blue-hover: #409CFF;
+  --ap-blue-wash: rgba(10, 132, 255, 0.18);
+  --ap-blue-wash-strong: rgba(10, 132, 255, 0.26);
+  --ap-blue-ring: rgba(10, 132, 255, 0.32);
+  --ap-accent-grad: linear-gradient(120deg, #409CFF 0%, #64D2FF 100%);
+
+  --ap-green: #30D158;
+  --ap-green-solid: #30D158;
+  --ap-green-wash: rgba(48, 209, 88, 0.16);
+
+  --ap-orange: #FF9F0A;
+  --ap-orange-solid: #FF9F0A;
+  --ap-orange-wash: rgba(255, 159, 10, 0.16);
+
+  --ap-pink: #FF375F;
+  --ap-pink-wash: rgba(255, 55, 95, 0.16);
+
+  --ap-indigo: #7D7AFF;
+  --ap-indigo-wash: rgba(94, 92, 230, 0.20);
+
+  --ap-red: #FF453A;
+  --ap-red-solid: #FF453A;
+  --ap-red-wash: rgba(255, 69, 58, 0.17);
+
+  --ap-shadow-hero:
+    0 4px 16px rgba(0, 0, 0, 0.45),
+    0 24px 60px -20px rgba(0, 0, 0, 0.75);
+  --ap-shadow-card:
+    0 2px 10px rgba(0, 0, 0, 0.40),
+    0 16px 36px -16px rgba(0, 0, 0, 0.72);
+  --ap-shadow-card-hover:
+    0 10px 24px rgba(0, 0, 0, 0.55),
+    0 28px 54px -16px rgba(0, 0, 0, 0.85);
+  --ap-shadow-popover:
+    0 6px 18px rgba(0, 0, 0, 0.45),
+    0 24px 56px -14px rgba(0, 0, 0, 0.82);
+  --ap-shadow-pill: 0 2px 8px rgba(0, 0, 0, 0.42);
+
+  /* Legacy Variable Aliases -> Dark Apple System */
+  --bg-paper: var(--ap-canvas);
+  --bg-sheet: var(--ap-surface);
+  --bg-inset: var(--ap-fill-subtle);
+  --bg-hover: var(--ap-fill);
+  --bg-elevated: var(--ap-surface-elevated);
+
+  --ink: var(--ap-text-primary);
+  --ink-secondary: var(--ap-text-secondary);
+  --ink-muted: var(--ap-text-secondary);
+  --ink-faint: var(--ap-text-tertiary);
+  --ink-on-dark: #1D1D1F;
+
+  --rule: var(--ap-border);
+  --rule-strong: var(--ap-border-strong);
+  --rule-ink: var(--ap-text-primary);
+
+  --vox-yellow: var(--ap-blue);
+  --vox-yellow-ink: #FFFFFF;
+  --vox-yellow-wash: var(--ap-blue-wash);
+  --vox-yellow-border: rgba(10, 132, 255, 0.36);
+
+  --accent-vermilion: var(--ap-orange);
+  --accent-vermilion-wash: var(--ap-orange-wash);
+  --accent-Cobalt: var(--ap-blue);
+
+  --status-success: var(--ap-green);
+  --status-success-wash: var(--ap-green-wash);
+  --status-success-border: rgba(48, 209, 88, 0.30);
+  --status-warning: var(--ap-orange);
+  --status-warning-wash: var(--ap-orange-wash);
+  --status-warning-border: rgba(255, 159, 10, 0.30);
+  --status-danger: var(--ap-red);
+  --status-danger-wash: var(--ap-red-wash);
+  --status-danger-border: rgba(255, 69, 58, 0.32);
+  --status-info: var(--ap-blue);
+  --status-info-wash: var(--ap-blue-wash);
+  --status-info-border: rgba(10, 132, 255, 0.32);
+  --status-neutral: var(--ap-text-secondary);
+  --status-neutral-wash: var(--ap-fill-subtle);
+  --status-neutral-border: var(--ap-border-strong);
+
+  --icon-strong: var(--ap-text-primary);
+  --icon-default: var(--ap-text-secondary);
+  --icon-muted: var(--ap-text-tertiary);
+
+  --hl-connected-bg: rgba(10, 132, 255, 0.20);
+  --hl-connected-line: var(--ap-blue);
+  --hl-expression-bg: rgba(255, 159, 10, 0.18);
+  --hl-expression-line: var(--ap-orange);
+  --hl-vocab-bg: rgba(125, 122, 255, 0.20);
+  --hl-vocab-line: var(--ap-indigo);
+  --hl-stress-bg: rgba(255, 55, 95, 0.20);
+  --hl-stress-line: var(--ap-pink);
+
+  --shadow-card: var(--ap-shadow-card);
+  --shadow-float: var(--ap-shadow-popover);
+  --shadow-press: 0 2px 10px rgba(10, 132, 255, 0.34);
+
+  color-scheme: dark;
+}
+
+/* Guarantee HTML [hidden] always hides elements (including SVG icons inside buttons) */
+[hidden],
+svg[hidden] {
+  display: none !important;
+}
+
+/* Shared entrance animation */
+@keyframes appleFadeRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
