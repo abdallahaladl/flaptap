@@ -42,6 +42,7 @@
   </script>
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/studio.css" />
+  <link rel="stylesheet" href="/studio-apple.css" />
 </head>
 <body class="studio-body">
   <!-- Compositor-Only Loading & Error Overlay -->
@@ -61,78 +62,82 @@
   <header class="studio-topbar">
     <div class="studio-topbar-inner">
       <div class="studio-lead">
-        <a href="/" class="back-library-link" id="back-to-library-link">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"></line>
-            <polyline points="12 19 5 12 12 5"></polyline>
+        <a href="/" class="back-library-link" id="back-to-library-link" title="Back to Lessons Library">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"></polyline>
           </svg>
           <span data-i18n="libraryBack">Library</span>
         </a>
+
+        <span class="topbar-lead-sep" aria-hidden="true"></span>
 
         <div class="studio-title-block">
           <h1 id="studio-title" class="studio-title">Loading lesson...</h1>
           <div class="studio-meta-line">
             <span id="studio-creator">—</span>
-            <span>·</span>
+            <span aria-hidden="true">·</span>
             <span id="studio-wpm" class="ltr-num">150 WPM</span>
-            <span>·</span>
+            <span aria-hidden="true">·</span>
             <span id="studio-sentence-total" class="ltr-num">0 sentences</span>
             <span id="studio-cefr-badge" class="cefr-pill ltr-num" hidden>B2</span>
           </div>
         </div>
       </div>
 
-      <!-- Ergonomic Video Docking Switcher (Transcript 35/65 | Theater 65/35) — Zero Remount -->
-      <div class="studio-center-dock">
-        <div class="layout-switcher" role="group" aria-label="Video docking layout">
-          <button type="button" class="layout-btn active" data-layout-choice="side" aria-pressed="true" title="Transcript Focus (35% Video · 65% Sentences)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-              <line x1="9" y1="4" x2="9" y2="20"></line>
+      <div class="studio-toolbar">
+        <button
+          type="button"
+          class="studio-progress-pill"
+          id="studio-progress-pill"
+          aria-haspopup="dialog"
+          aria-expanded="false"
+          aria-controls="studio-progress-popover"
+          title="Lesson completion progress — updates automatically when all items are checked"
+          aria-label="Lesson completion progress"
+        >
+          <span class="studio-progress-ring-wrap" aria-hidden="true">
+            <svg class="studio-progress-ring" viewBox="0 0 24 24">
+              <circle class="sp-ring-track" cx="12" cy="12" r="9"></circle>
+              <circle class="sp-ring-arc" id="studio-progress-ring-arc" cx="12" cy="12" r="9"></circle>
             </svg>
-            <span data-i18n="layoutSide">Transcript</span>
-            <span class="layout-pill-ratio">35/65</span>
+            <svg class="studio-progress-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </span>
+          <span class="studio-progress-label" id="studio-progress-label">0%</span>
+          <span class="studio-progress-fraction ltr-num" id="studio-progress-fraction">0/0</span>
+        </button>
+
+        <div class="topbar-utility-capsule" role="group" aria-label="Workspace tools">
+          <button type="button" class="icon-action topbar-cap-btn" id="download-markdown-btn" title="Export Markdown study sheet" aria-label="Export Markdown study sheet">
+            <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#download"></use></svg>
           </button>
-          <button type="button" class="layout-btn" data-layout-choice="theater" aria-pressed="false" title="Theater Cinema (65% Video · 35% Sentences)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="16" rx="2"></rect>
-              <line x1="15" y1="4" x2="15" y2="20"></line>
+
+          <span class="topbar-cap-sep" aria-hidden="true"></span>
+
+          <div class="topbar-lang-wrap">
+            <select id="studio-ui-lang-select" class="ui-lang-select" aria-label="Interface language">
+              <option value="en">EN</option>
+              <option value="ar">AR</option>
+              <option value="es">ES</option>
+              <option value="fr">FR</option>
+              <option value="de">DE</option>
+              <option value="tr">TR</option>
+            </select>
+          </div>
+
+          <span class="topbar-cap-sep" aria-hidden="true"></span>
+
+          <button type="button" class="icon-btn topbar-cap-btn" id="studio-theme-toggle" title="Toggle Light / Dark theme" aria-label="Toggle color theme">
+            <svg id="studio-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" hidden>
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
             </svg>
-            <span data-i18n="layoutTheater">Theater</span>
-            <span class="layout-pill-ratio">65/35</span>
+            <svg id="studio-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+            </svg>
           </button>
         </div>
-      </div>
-
-      <div class="studio-toolbar">
-
-        <button type="button" class="icon-action" id="download-markdown-btn" title="Export Markdown study sheet" aria-label="Export Markdown study sheet">
-          <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#download"></use></svg>
-        </button>
-
-        <button type="button" class="studio-complete-btn" id="complete-drill-btn" title="Record completed practice session" aria-label="Record completed practice session">
-          <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#circle-check"></use></svg>
-          <span id="drill-counter-badge" class="studio-complete-count ltr-num">0</span>
-        </button>
-
-        <select id="studio-ui-lang-select" class="ui-lang-select" aria-label="Interface language">
-          <option value="en">EN</option>
-          <option value="ar">AR</option>
-          <option value="es">ES</option>
-          <option value="fr">FR</option>
-          <option value="de">DE</option>
-          <option value="tr">TR</option>
-        </select>
-
-        <button type="button" class="icon-btn" id="studio-theme-toggle" aria-label="Toggle color theme">
-          <svg id="studio-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" hidden>
-            <circle cx="12" cy="12" r="4"></circle>
-            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
-          </svg>
-          <svg id="studio-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
-            <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
-          </svg>
-        </button>
 
         <!-- User Profile Avatar / Sign In Header Action -->
         <button type="button" class="account-btn" id="studio-account-btn" title="Your Account" aria-label="Your Account">
@@ -148,8 +153,8 @@
     </div>
   </header>
 
-  <!-- Flexible Studio Grid (Never Remounted Across Mode or Layout Switches) -->
-  <main id="studio-main-content" class="studio-workspace" data-layout="side">
+  <!-- Theater Studio Grid -->
+  <main id="studio-main-content" class="studio-workspace" data-layout="theater">
     <!-- Media & Voice Deck -->
     <aside class="studio-deck" aria-label="Media and voice controls">
       <div class="player-frame-card">
@@ -167,106 +172,6 @@
 
             <!-- Single-Click Action Flash (Play / Pause Indicator) -->
             <div class="video-action-flash" id="video-action-flash" aria-hidden="true" hidden></div>
-
-            <!-- Floating Pro Zoom HUD Overlay -->
-            <div class="video-zoom-hud" id="video-zoom-hud" role="toolbar" aria-label="Video zoom and focus controls">
-              <!-- Mini Radar / Viewfinder (appears when zoomed) -->
-              <div class="video-zoom-radar" id="video-zoom-radar" title="Mini-map: Click or drag to pan viewport" hidden>
-                <div class="video-zoom-radar-window" id="video-zoom-radar-window"></div>
-              </div>
-
-              <!-- Main HUD Bar -->
-              <div class="video-zoom-hud-bar">
-                <button type="button" class="video-zoom-btn" id="video-zoom-out-btn" title="Zoom out (-)" aria-label="Zoom out">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                  </svg>
-                </button>
-
-                <div class="video-zoom-level-wrapper">
-                  <button type="button" class="video-zoom-level-pill ltr-num" id="video-zoom-level-pill" aria-expanded="false" aria-haspopup="true" title="Zoom level (Click to customize)">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <circle cx="11" cy="11" r="8"></circle>
-                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                    </svg>
-                    <span id="video-zoom-val-text">100%</span>
-                  </button>
-
-                  <!-- Dropdown Menu / Slider Card -->
-                  <div class="video-zoom-popover" id="video-zoom-popover" hidden>
-                    <div class="zoom-popover-header">
-                      <span class="zoom-popover-title">Video Focus & Zoom</span>
-                      <span class="zoom-popover-val ltr-num" id="zoom-popover-val">100%</span>
-                    </div>
-
-                    <div class="zoom-slider-row">
-                      <input type="range" id="video-zoom-slider" class="video-zoom-range" min="100" max="500" step="5" value="100" aria-label="Zoom percentage" />
-                    </div>
-
-                    <div class="zoom-presets-row">
-                      <button type="button" class="zoom-preset-chip" data-zoom="100">1x</button>
-                      <button type="button" class="zoom-preset-chip" data-zoom="150">1.5x</button>
-                      <button type="button" class="zoom-preset-chip" data-zoom="200">2x</button>
-                      <button type="button" class="zoom-preset-chip" data-zoom="300">3x</button>
-                      <button type="button" class="zoom-preset-chip" data-zoom="400">4x</button>
-                    </div>
-
-                    <div class="zoom-focal-row">
-                      <button type="button" class="zoom-focal-btn" id="zoom-focal-mouth-btn" title="Focus directly on speaker's mouth for pronunciation & shadowing">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <path d="M4 12c2.5-3 6-3 8-1 2-2 5.5-2 8 1-2.5 4-6 5-8 5s-5.5-1-8-5z"></path>
-                        </svg>
-                        <span>Focus Mouth (2.2x)</span>
-                      </button>
-                      <button type="button" class="zoom-focal-btn" id="zoom-focal-face-btn" title="Focus on face & expressions">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                          <circle cx="12" cy="8" r="4"></circle>
-                          <path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"></path>
-                        </svg>
-                        <span>Focus Face (1.8x)</span>
-                      </button>
-                    </div>
-
-                    <div class="zoom-hints-row">
-                      <span class="zoom-hint-line">💡 <strong>Pinch</strong> on trackpad or <strong>Wheel</strong> to zoom</span>
-                      <span class="zoom-hint-line">✋ <strong>Drag</strong> to pan • <strong>Double-click</strong> mouth to zoom</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button type="button" class="video-zoom-btn" id="video-zoom-in-btn" title="Zoom in (+)" aria-label="Zoom in">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"></line>
-                    <line x1="5" y1="12" x2="19" y2="12"></line>
-                  </svg>
-                </button>
-
-                <!-- Quick One-Click Mouth Focus Button -->
-                <button type="button" class="video-zoom-btn video-zoom-mouth-quick-btn" id="video-zoom-mouth-quick-btn" title="Quick Focus Mouth (2.2x)">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 12c2.5-3 6-3 8-1 2-2 5.5-2 8 1-2.5 4-6 5-8 5s-5.5-1-8-5z"></path>
-                  </svg>
-                  <span class="quick-btn-text">Mouth</span>
-                </button>
-
-                <!-- Reset Button (shown when zoom > 100%) -->
-                <button type="button" class="video-zoom-btn video-zoom-reset-btn" id="video-zoom-reset-btn" title="Reset Zoom to 100% (0)" hidden>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                    <path d="M3 3v5h5"></path>
-                  </svg>
-                  <span class="quick-btn-text">Reset</span>
-                </button>
-
-                <!-- Pass-Through to Native YouTube Controls Toggle -->
-                <button type="button" class="video-zoom-btn video-zoom-passthrough-btn" id="video-zoom-passthrough-btn" title="Toggle between Zoom/Pan mode and Native YouTube controls" aria-pressed="false">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                  </svg>
-                </button>
-              </div>
-            </div>
           </div>
           <div id="tts-audio-stage" class="tts-audio-stage" hidden>
             <span class="tts-stage-tag" id="tts-stage-tag">Spoken Audio Deck</span>
@@ -276,113 +181,142 @@
         </div>
       </div>
 
-      <!-- Unified Single Horizontal Control Row (Consistent Across All Devices & Layouts) -->
-      <div class="studio-control-bar-host">
-      <div id="studio-control-bar" class="studio-control-bar" role="toolbar" aria-label="Playback and study controls" dir="ltr">
-        <button type="button" class="scb-btn" id="deck-prev-sent-btn" title="Previous Sentence (Shift+Left)" aria-label="Previous Sentence">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polygon points="19 20 9 12 19 4 19 20"></polygon>
-            <line x1="5" y1="19" x2="5" y2="5"></line>
-          </svg>
-        </button>
+      <!-- Unified Apple Control Dock (Grouped by Category: Playback & Flow · Video Zoom & Focus · Speed · Tools) -->
+      <div class="studio-control-bar-host" dir="ltr">
+        <div id="studio-control-bar" class="studio-control-bar" role="toolbar" aria-label="Playback and study controls" dir="ltr">
+          <!-- Group 1: Playback Transport & Sentence Flow -->
+          <div class="scb-pod scb-pod--primary">
+            <div class="scb-cluster scb-cluster--playback" role="group" aria-label="Playback and sentence flow">
+              <button type="button" class="scb-btn" id="deck-prev-sent-btn" title="Previous Sentence (Shift+Left)" aria-label="Previous Sentence">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polygon points="19 20 9 12 19 4 19 20"></polygon>
+                  <line x1="5" y1="19" x2="5" y2="5"></line>
+                </svg>
+              </button>
 
-        <button type="button" class="scb-btn" id="deck-seek-back-btn" title="Rewind 1.5s (Left Arrow)" aria-label="Rewind 1.5 seconds">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
-            <path d="M3 3v5h5"></path>
-            <path d="M12 8.5v7"></path>
-            <path d="M9.5 11l2.5-2.5"></path>
-          </svg>
-        </button>
+              <button type="button" class="scb-btn scb-btn--primary" id="deck-play-active-btn" title="Play / Pause Active Sentence (Space)" aria-label="Play / Pause" aria-pressed="false">
+                <svg id="deck-play-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M7.5 4.8v14.4a.9.9 0 0 0 1.38.76l11.2-7.2a.9.9 0 0 0 0-1.52l-11.2-7.2a.9.9 0 0 0-1.38.76Z"></path>
+                </svg>
+                <svg id="deck-pause-icon" viewBox="0 0 24 24" fill="currentColor" hidden aria-hidden="true">
+                  <rect x="6" y="4.5" width="4" height="15" rx="1.4"></rect>
+                  <rect x="14" y="4.5" width="4" height="15" rx="1.4"></rect>
+                </svg>
+              </button>
 
-        <button type="button" class="scb-btn scb-btn--primary" id="deck-play-active-btn" title="Play / Pause Active Sentence (Space)" aria-label="Play / Pause" aria-pressed="false">
-          <svg id="deck-play-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polygon points="5 3 19 12 5 21 5 3"></polygon>
-          </svg>
-          <svg id="deck-pause-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" hidden aria-hidden="true">
-            <rect x="6" y="4" width="4" height="16"></rect>
-            <rect x="14" y="4" width="4" height="16"></rect>
-          </svg>
-        </button>
+              <button type="button" class="scb-btn" id="deck-replay-sent-btn" title="Replay current sentence from start (R)" aria-label="Replay current sentence">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="1 4 1 10 7 10"></polyline>
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                </svg>
+              </button>
 
-        <button type="button" class="scb-btn" id="deck-replay-sent-btn" title="Replay current sentence from start (R)" aria-label="Replay current sentence">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="1 4 1 10 7 10"></polyline>
-            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
-          </svg>
-        </button>
+              <button type="button" class="scb-btn" id="deck-next-sent-btn" title="Next Sentence (Shift+Right)" aria-label="Next Sentence">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                  <line x1="19" y1="5" x2="19" y2="19"></line>
+                </svg>
+              </button>
 
-        <button type="button" class="scb-btn" id="deck-seek-fwd-btn" title="Forward 1.5s (Right Arrow)" aria-label="Forward 1.5 seconds">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M21 12a9 9 0 1 1-3-6.7L21 8"></path>
-            <path d="M21 3v5h-5"></path>
-            <path d="M12 8.5v7"></path>
-            <path d="M14.5 11L12 8.5"></path>
-          </svg>
-        </button>
+              <span class="scb-sep" aria-hidden="true"></span>
 
-        <button type="button" class="scb-btn" id="deck-next-sent-btn" title="Next Sentence (Shift+Right)" aria-label="Next Sentence">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polygon points="5 4 15 12 5 20 5 4"></polygon>
-            <line x1="19" y1="5" x2="19" y2="19"></line>
-          </svg>
-        </button>
+              <button type="button" class="scb-btn scb-btn--flow" id="studio-flow-btn" data-end-action="loop" data-flow-state="loop" aria-label="Sentence Flow: Loop Once" title="Sentence Flow: Loop Once (click to cycle)" aria-pressed="true"></button>
+            </div>
+          </div>
 
-        <span class="scb-sep" aria-hidden="true"></span>
+          <!-- Group 2: Video Framing (Zoom Stepper + Mouth Focus + Reset) -->
+          <div class="scb-pod scb-pod--zoom" id="video-zoom-hud" role="group" aria-label="Video zoom and focus controls">
+            <div class="scb-cluster scb-cluster--zoom">
+              <button type="button" class="scb-btn scb-btn--zoom-step" id="video-zoom-out-btn" title="Zoom out (-)" aria-label="Zoom out" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
 
-        <button type="button" class="scb-btn" id="studio-flow-btn" data-end-action="pause" aria-label="Sentence Flow: Auto-Pause" title="Sentence Flow: Auto-Pause (click to cycle)" aria-pressed="false"></button>
+              <button type="button" class="scb-btn scb-btn--zoom-pill ltr-num" id="video-zoom-level-pill" aria-haspopup="dialog" aria-expanded="false" aria-controls="video-zoom-popover" title="Zoom level (Click for presets &amp; slider)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <span id="video-zoom-val-text">100%</span>
+              </button>
 
-        <button type="button" class="scb-btn scb-btn--speed ltr-num" id="speed-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="speed-popover" title="Playback Speed">
-          <span id="scb-speed-value">1.00x</span>
-        </button>
+              <button type="button" class="scb-btn scb-btn--zoom-step" id="video-zoom-in-btn" title="Zoom in (+)" aria-label="Zoom in">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
 
-        <button type="button" class="scb-btn active" id="deck-auto-follow-btn" aria-pressed="true" title="Auto-Follow active sentence (F)" aria-label="Auto-Follow active sentence">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="9"></circle>
-            <circle cx="12" cy="12" r="2.5" fill="currentColor"></circle>
-            <line x1="12" y1="2" x2="12" y2="5"></line>
-            <line x1="12" y1="19" x2="12" y2="22"></line>
-          </svg>
-        </button>
+              <span class="scb-sep" aria-hidden="true"></span>
 
-        <span class="scb-sep" aria-hidden="true"></span>
+              <button type="button" class="scb-btn scb-btn--mouth" id="video-zoom-mouth-quick-btn" title="Quick Focus Mouth (2.2x) [Z]" aria-label="Focus on speaker mouth">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 12c2.5-3 6-3 8-1 2-2 5.5-2 8 1-2.5 4-6 5-8 5s-5.5-1-8-5z"></path>
+                </svg>
+                <span class="quick-btn-text" data-i18n="mouthFocusBtn">Mouth</span>
+              </button>
 
-        <button type="button" class="scb-btn" id="record-toggle-btn" aria-pressed="false" title="Record your voice" aria-label="Record your voice">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-            <line x1="12" x2="12" y1="19" y2="22"></line>
-          </svg>
-        </button>
+              <button type="button" class="scb-btn scb-btn--zoom-reset" id="video-zoom-reset-btn" title="Reset Zoom to 100% (0)" aria-label="Reset zoom to 100%" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                  <path d="M3 3v5h5"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
 
-        <button type="button" class="scb-btn scb-btn--voice" id="voice-menu-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="voice-popover" title="Voice playback &amp; A/B comparison" aria-label="Voice playback and comparison">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
-            <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
-          </svg>
-          <span class="scb-dot-indicator" id="scb-voice-dot" hidden></span>
-        </button>
+          <!-- Group 3: Playback Speed (Positioned near Sentences pane) -->
+          <div class="scb-pod scb-pod--speed" id="scb-speed-group" role="group" aria-label="Playback speed controls">
+            <div class="scb-cluster scb-cluster--speed">
+              <button type="button" class="scb-btn scb-btn--speed-step scb-btn--speed-down" id="scb-speed-down-btn" aria-label="Decrease speed by 0.05x" title="Decrease speed (-0.05x) [">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
+              <button type="button" class="scb-btn scb-btn--speed ltr-num" id="speed-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="speed-popover" aria-label="Playback Speed: 1.00x" title="Playback Speed — click for slider &amp; presets">
+                <span id="scb-speed-value">1.00x</span>
+              </button>
+              <button type="button" class="scb-btn scb-btn--speed-step scb-btn--speed-up" id="scb-speed-up-btn" aria-label="Increase speed by 0.05x" title="Increase speed (+0.05x) ]">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </button>
 
-        <button type="button" class="scb-btn scb-btn--trans" id="trans-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="translation-control-deck" title="Translation settings (T)" aria-label="Translation settings">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="m5 8 6 6"></path>
-            <path d="m4 14 6-6 2-3"></path>
-            <path d="M2 5h12"></path>
-            <path d="M7 2h1"></path>
-            <path d="m22 22-5-10-5 10"></path>
-            <path d="M14 18h6"></path>
-          </svg>
-          <span class="scb-lang-tag ltr-num" id="scb-trans-lang-badge">AR</span>
-        </button>
+              <span class="scb-sep" aria-hidden="true"></span>
 
-        <button type="button" class="scb-btn scb-btn--shortcuts" id="shortcuts-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="shortcuts-popover" title="Keyboard shortcuts" aria-label="Keyboard shortcuts">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"></circle>
-            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
-        </button>
-      </div>
+              <div class="scb-inline-sub" id="quick-speed-bar" role="group" aria-label="Quick playback speed shortcuts">
+                <button type="button" class="qsb-btn qsb-btn--half ltr-num" id="qsb-speed-05-btn" data-quick-speed="0.5" aria-pressed="false" aria-label="Set playback speed to 0.5x" title="Half speed (0.5x)">
+                  <span>0.5x</span>
+                </button>
+                <button type="button" class="qsb-btn qsb-btn--three-quarter ltr-num" id="qsb-speed-075-btn" data-quick-speed="0.75" aria-pressed="false" aria-label="Set playback speed to 0.75x" title="Slow practice speed (0.75x)">
+                  <span>0.75x</span>
+                </button>
+                <button type="button" class="qsb-btn qsb-btn--reset" id="qsb-speed-reset-btn" aria-label="Reset speed to 1.00x" title="Reset speed to 1.00x" disabled>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Group 4: Study Tools Menu -->
+          <div class="scb-pod scb-pod--menu">
+            <div class="scb-cluster scb-cluster--menu" role="group" aria-label="Study tools menu">
+              <button type="button" class="scb-btn scb-btn--menu" id="scb-more-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="studio-more-popover" title="Study tools, seek, voice &amp; translation menu" aria-label="Tools menu">
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <circle cx="5.5" cy="12" r="1.8"></circle>
+                  <circle cx="12" cy="12" r="1.8"></circle>
+                  <circle cx="18.5" cy="12" r="1.8"></circle>
+                </svg>
+                <span class="scb-dot-indicator scb-more-rec-dot" id="scb-more-rec-dot" hidden></span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Calm Desktop Active-Sentence Preview Card (Keeps active line visible under video when scrolling Coach/Read/Notes) -->
@@ -401,115 +335,6 @@
         <span class="rec-live-label" data-i18n="recRecording">Recording...</span>
         <span id="rec-live-timer" class="rec-timer-badge ltr-num">00:00</span>
         <div class="rec-vu-meter" style="flex: 1;"><div id="rec-live-vu-fill" class="rec-vu-fill" style="width: 0%;"></div></div>
-      </div>
-
-      <!-- Floating Popover 1: Speed Control -->
-      <div id="speed-popover" class="scb-popover deck-panel speed-panel" role="dialog" aria-label="Playback Speed" hidden>
-        <div class="deck-panel-head">
-          <span class="deck-panel-label" data-i18n="playbackSpeedLabel">Playback Speed</span>
-          <div class="speed-stepper-cluster">
-            <button type="button" class="speed-step-btn" id="speed-down-btn" aria-label="Decrease speed by 0.05x" title="Decrease speed (-0.05x)">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            </button>
-            <span id="current-speed-badge" class="speed-badge ltr-num">1.00x</span>
-            <button type="button" class="speed-step-btn" id="speed-up-btn" aria-label="Increase speed by 0.05x" title="Increase speed (+0.05x)">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            </button>
-          </div>
-        </div>
-        <div class="speed-controls-row">
-          <input
-            type="range"
-            id="speed-slider"
-            class="speed-slider"
-            min="0.25"
-            max="2"
-            step="0.05"
-            value="1"
-            aria-label="Playback speed"
-          />
-          <div id="speed-ticks-row" class="speed-ticks-row">
-            <button type="button" class="speed-tick" data-speed="0.5">0.50x</button>
-            <button type="button" class="speed-tick" data-speed="0.75">0.75x</button>
-            <button type="button" class="speed-tick active" data-speed="1">1.00x</button>
-            <button type="button" class="speed-tick" data-speed="1.25">1.25x</button>
-            <button type="button" class="speed-tick" data-speed="1.5">1.50x</button>
-            <button type="button" class="speed-tick" data-speed="1.75">1.75x</button>
-            <button type="button" class="speed-tick" data-speed="2">2.00x</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Floating Popover 2: Voice Comparison -->
-      <div id="voice-popover" class="scb-popover deck-panel voice-panel" role="dialog" aria-label="Voice Comparison" hidden>
-        <div class="deck-panel-head">
-          <span class="deck-panel-label" data-i18n="voiceRecorderLabel">Voice Comparison</span>
-          <div class="rec-head-meta">
-            <span id="rec-timer-badge" class="rec-timer-badge ltr-num" hidden>00:00</span>
-            <span id="rec-status-label" class="rec-status-pill ltr-num" data-i18n="recReady">Ready</span>
-          </div>
-        </div>
-        <div class="recorder-actions-row">
-          <button type="button" class="btn-secondary compare-btn" id="replay-recording-btn" disabled title="Replay your recorded take">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-            <span>Your Voice</span>
-          </button>
-          <button type="button" class="btn-vox compare-btn" id="ab-compare-btn" disabled title="Play Speaker then Your Voice sequentially">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
-            <span>A/B Compare</span>
-          </button>
-          <button type="button" id="replay-original-btn" style="display: none;" aria-hidden="true"></button>
-        </div>
-        <div id="rec-vu-meter" class="rec-vu-meter" hidden>
-          <div id="rec-vu-fill" class="rec-vu-fill" style="width: 0%;"></div>
-        </div>
-        <audio id="recorded-audio-player" class="rec-audio-player" controls hidden></audio>
-      </div>
-
-      <!-- Floating Popover 3: 170+ World Language Translation Console -->
-      <div id="translation-control-deck" class="scb-popover deck-panel translation-deck-panel" role="dialog" aria-label="Translation Console" hidden>
-        <div class="trans-toolbar-row">
-          <div class="trans-toolbar-select-group">
-            <label class="deck-panel-label" for="trans-lang-select" data-i18n="translationLangLabel">Language</label>
-            <div class="trans-select-wrapper">
-              <select id="trans-lang-select" class="trans-lang-select" aria-label="Translation target language"></select>
-              <span class="trans-select-chevron" aria-hidden="true">
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-              </span>
-            </div>
-          </div>
-          <div class="trans-toolbar-actions-group">
-            <button type="button" class="btn-secondary side-trans-btn trans-all-btn" id="trans-all-btn" data-translate-all title="Translate all sentences in lesson">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>
-              <span id="side-trans-all-btn-label" data-i18n="translateAllBtn">Translate All</span>
-            </button>
-            <label class="toggle-pill-label" for="side-trans-visibility-toggle" title="Toggle visibility of translated subtitles">
-              <input type="checkbox" id="side-trans-visibility-toggle" class="trans-switch-input" checked />
-              <span class="trans-switch-track" aria-hidden="true"><span class="trans-switch-thumb"></span></span>
-              <span class="trans-switch-label" data-i18n="showTranslationsLabel">Show</span>
-            </label>
-            <span id="side-trans-status-text" class="trans-status ltr-num" aria-live="polite">—</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Floating Popover 4: Keyboard Shortcuts -->
-      <div id="shortcuts-popover" class="scb-popover deck-panel shortcuts-popover" role="dialog" aria-label="Keyboard shortcuts" hidden>
-        <div class="deck-panel-head">
-          <span class="deck-panel-label">Keyboard Shortcuts</span>
-        </div>
-        <div class="shortcuts-strip">
-          <span><kbd class="kbd-chip">Space</kbd> <span data-i18n="keyPlay">Play/Pause</span></span>
-          <span><kbd class="kbd-chip">R</kbd> <span data-i18n="keyReplay">Replay</span></span>
-          <span><kbd class="kbd-chip">←</kbd><kbd class="kbd-chip">→</kbd> <span data-i18n="keySeek">Seek ±1.5s</span></span>
-          <span><kbd class="kbd-chip">↑</kbd><kbd class="kbd-chip">↓</kbd> <span data-i18n="keyPrevNext">Prev/Next</span></span>
-          <span><kbd class="kbd-chip">L</kbd> <span data-i18n="keyLoop">Loop</span></span>
-          <span><kbd class="kbd-chip">Z</kbd> <span>Mouth</span></span>
-          <span><kbd class="kbd-chip">+/-</kbd> <span>Zoom</span></span>
-          <span><kbd class="kbd-chip">T</kbd> <span>Translate</span></span>
-          <span><kbd class="kbd-chip">F</kbd> <span>Follow</span></span>
-          <span><kbd class="kbd-chip">V</kbd> <span data-i18n="keyLayout">Layout</span></span>
-        </div>
       </div>
     </aside>
 
@@ -812,6 +637,338 @@
       </div>
     </section>
   </main>
+
+  <!-- Control Bar Floating Popovers (Mounted at body root so deck overflow/iframes never occlude them) -->
+  <!-- Floating Popover: Video Focus & Zoom -->
+  <div id="video-zoom-popover" class="scb-popover deck-panel video-zoom-popover" role="dialog" aria-label="Video Focus &amp; Zoom" hidden>
+    <div class="zoom-popover-header">
+      <span class="zoom-popover-title">Video Focus &amp; Zoom</span>
+      <div class="zoom-popover-head-right">
+        <div class="video-zoom-radar" id="video-zoom-radar" title="Mini-map: Click or drag to pan viewport" hidden>
+          <div class="video-zoom-radar-window" id="video-zoom-radar-window"></div>
+        </div>
+        <span class="zoom-popover-val ltr-num" id="zoom-popover-val">100%</span>
+      </div>
+    </div>
+
+    <div class="zoom-slider-row">
+      <input type="range" id="video-zoom-slider" class="video-zoom-range" min="100" max="500" step="5" value="100" aria-label="Zoom percentage" />
+    </div>
+
+    <div class="zoom-presets-row">
+      <button type="button" class="zoom-preset-chip active" data-zoom="100">1x</button>
+      <button type="button" class="zoom-preset-chip" data-zoom="150">1.5x</button>
+      <button type="button" class="zoom-preset-chip" data-zoom="200">2x</button>
+      <button type="button" class="zoom-preset-chip" data-zoom="300">3x</button>
+      <button type="button" class="zoom-preset-chip" data-zoom="400">4x</button>
+    </div>
+
+    <div class="zoom-focal-row">
+      <button type="button" class="zoom-focal-btn" id="zoom-focal-mouth-btn" title="Focus directly on speaker's mouth for pronunciation &amp; shadowing">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12c2.5-3 6-3 8-1 2-2 5.5-2 8 1-2.5 4-6 5-8 5s-5.5-1-8-5z"></path>
+        </svg>
+        <span>Focus Mouth (2.2x)</span>
+      </button>
+      <button type="button" class="zoom-focal-btn" id="zoom-focal-face-btn" title="Focus on face &amp; expressions">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="8" r="4"></circle>
+          <path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"></path>
+        </svg>
+        <span>Focus Face (1.8x)</span>
+      </button>
+    </div>
+
+    <div class="zoom-hints-row">
+      <span class="zoom-hint-line"><strong>Pinch</strong> or <strong>Wheel</strong> to zoom &middot; <strong>Drag</strong> to pan</span>
+      <span class="zoom-hint-line"><strong>Double-click</strong> speaker mouth to focus</span>
+    </div>
+  </div>
+
+  <!-- Floating Popover 0: Study Tools Menu (Icons + Labels) -->
+  <div id="studio-more-popover" class="scb-popover deck-panel more-menu-panel" role="dialog" aria-label="Study tools menu" hidden>
+    <div class="deck-panel-head more-menu-head">
+      <span class="deck-panel-label" data-i18n="studyToolsLabel">Study Tools</span>
+    </div>
+    <div class="more-menu-list">
+      <!-- Seek Step Row -->
+      <div class="more-menu-row more-menu-row--seek" role="group" aria-label="Seek duration controls">
+        <div class="more-menu-item-info">
+          <span class="more-menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 18 3 12 11 6 11 18"></polygon>
+              <polygon points="21 18 13 12 21 6 21 18"></polygon>
+            </svg>
+          </span>
+          <div class="more-menu-copy">
+            <span class="more-menu-title" data-i18n="seekStepLabel">Seek Step</span>
+            <span class="more-menu-sub">← / →</span>
+          </div>
+        </div>
+        <div class="more-seek-controls" dir="ltr">
+          <button type="button" class="more-seek-btn" id="deck-seek-back-btn" title="Rewind 2s (Left Arrow)" aria-label="Rewind 2 seconds">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="11 18 3 12 11 6 11 18"></polygon>
+              <polygon points="21 18 13 12 21 6 21 18"></polygon>
+            </svg>
+          </button>
+          <div class="scb-seek-spinner" id="scb-seek-spinner" title="Seek step duration (1s to 5s, step 0.5s)">
+            <div class="scb-seek-value-wrap">
+              <span id="seek-step-label" class="scb-seek-label ltr-num" aria-hidden="true">2s</span>
+              <select id="seek-step-select" class="scb-seek-select ltr-num" aria-label="Rewind and forward duration in seconds">
+                <option value="1">1s</option>
+                <option value="1.5">1.5s</option>
+                <option value="2" selected>2s</option>
+                <option value="2.5">2.5s</option>
+                <option value="3">3s</option>
+                <option value="3.5">3.5s</option>
+                <option value="4">4s</option>
+                <option value="4.5">4.5s</option>
+                <option value="5">5s</option>
+              </select>
+            </div>
+            <div class="scb-spinner-arrows">
+              <button type="button" class="scb-spinner-btn" id="seek-step-up-btn" aria-label="Increase seek duration by 0.5s" title="Increase duration (+0.5s)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="18 15 12 9 6 15"></polyline>
+                </svg>
+              </button>
+              <button type="button" class="scb-spinner-btn" id="seek-step-down-btn" aria-label="Decrease seek duration by 0.5s" title="Decrease duration (-0.5s)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+            </div>
+          </div>
+          <button type="button" class="more-seek-btn" id="deck-seek-fwd-btn" title="Forward 2s (Right Arrow)" aria-label="Forward 2 seconds">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polygon points="13 18 21 12 13 6 13 18"></polygon>
+              <polygon points="3 18 11 12 3 6 3 18"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Auto-Follow Row -->
+      <button type="button" class="more-menu-item active" id="deck-auto-follow-btn" aria-pressed="true" title="Auto-Follow active sentence (F)">
+        <span class="more-menu-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9"></circle>
+            <circle cx="12" cy="12" r="2.5" fill="currentColor"></circle>
+            <line x1="12" y1="2" x2="12" y2="5"></line>
+            <line x1="12" y1="19" x2="12" y2="22"></line>
+          </svg>
+        </span>
+        <span class="more-menu-copy">
+          <span class="more-menu-title" data-i18n="autoFollowLabel">Auto-Follow</span>
+          <span class="more-menu-sub">F</span>
+        </span>
+        <span class="more-menu-pill" id="deck-auto-follow-text"><strong>ON</strong></span>
+      </button>
+
+      <!-- Record Voice Row -->
+      <button type="button" class="more-menu-item" id="record-toggle-btn" aria-pressed="false" title="Record your voice">
+        <span class="more-menu-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" x2="12" y1="19" y2="22"></line>
+          </svg>
+        </span>
+        <span class="more-menu-copy">
+          <span class="more-menu-title" id="record-btn-text" data-i18n="recordVoice">Record Voice</span>
+          <span class="more-menu-sub" data-i18n="voiceRecorderSub">Shadow &amp; compare</span>
+        </span>
+        <span class="more-menu-chevron" aria-hidden="true">●</span>
+      </button>
+
+      <!-- Voice Playback & A/B Compare Row -->
+      <button type="button" class="more-menu-item" id="voice-menu-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="voice-popover" title="Voice playback &amp; A/B comparison">
+        <span class="more-menu-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+            <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+          </svg>
+        </span>
+        <span class="more-menu-copy">
+          <span class="more-menu-title" data-i18n="voiceRecorderLabel">Voice Comparison</span>
+        </span>
+        <span class="more-menu-right">
+          <span class="scb-dot-indicator more-menu-take-dot" id="scb-voice-dot" hidden></span>
+          <svg class="more-menu-chevron-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </span>
+      </button>
+
+      <!-- Translation Settings Row -->
+      <button type="button" class="more-menu-item" id="trans-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="translation-control-deck" title="Translation settings (T)">
+        <span class="more-menu-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m5 8 6 6"></path>
+            <path d="m4 14 6-6 2-3"></path>
+            <path d="M2 5h12"></path>
+            <path d="M7 2h1"></path>
+            <path d="m22 22-5-10-5 10"></path>
+            <path d="M14 18h6"></path>
+          </svg>
+        </span>
+        <span class="more-menu-copy">
+          <span class="more-menu-title" data-i18n="translationMenuLabel">Translation</span>
+          <span class="more-menu-sub">T</span>
+        </span>
+        <span class="more-menu-right">
+          <span class="more-menu-pill ltr-num" id="scb-trans-lang-badge">AR</span>
+          <svg class="more-menu-chevron-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </span>
+      </button>
+
+      <!-- Keyboard Shortcuts Row -->
+      <button type="button" class="more-menu-item" id="shortcuts-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="shortcuts-popover" title="Keyboard shortcuts">
+        <span class="more-menu-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+        </span>
+        <span class="more-menu-copy">
+          <span class="more-menu-title" data-i18n="shortcutsMenuLabel">Keyboard Shortcuts</span>
+        </span>
+        <span class="more-menu-right">
+          <svg class="more-menu-chevron-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Floating Popover 1: Speed Control -->
+  <div id="speed-popover" class="scb-popover deck-panel speed-panel" role="dialog" aria-label="Playback Speed" hidden>
+    <div class="deck-panel-head speed-panel-head">
+      <div class="speed-head-titles">
+        <span class="deck-panel-label speed-panel-title" data-i18n="playbackSpeedLabel">Playback Speed</span>
+        <span class="speed-panel-hint">Tap readout to reset 1.00×</span>
+      </div>
+      <div class="speed-stepper-cluster" role="group" aria-label="Fine speed adjustment">
+        <button type="button" class="speed-step-btn" id="speed-down-btn" aria-label="Decrease speed by 0.05x" title="Decrease speed (-0.05x)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <button type="button" id="current-speed-badge" class="speed-badge ltr-num" title="Reset speed to 1.00x" aria-label="Current speed 1.00x, click to reset">1.00x</button>
+        <button type="button" class="speed-step-btn" id="speed-up-btn" aria-label="Increase speed by 0.05x" title="Increase speed (+0.05x)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+      </div>
+    </div>
+    <div class="speed-controls-row">
+      <div class="speed-slider-track-wrap">
+        <input
+          type="range"
+          id="speed-slider"
+          class="speed-slider"
+          min="0.25"
+          max="2"
+          step="0.05"
+          value="1"
+          aria-label="Playback speed"
+        />
+      </div>
+      <div id="speed-ticks-row" class="speed-ticks-row" role="group" aria-label="Speed presets">
+        <button type="button" class="speed-tick" data-speed="0.25">0.25x</button>
+        <button type="button" class="speed-tick" data-speed="0.5">0.50x</button>
+        <button type="button" class="speed-tick" data-speed="0.75">0.75x</button>
+        <button type="button" class="speed-tick active" data-speed="1">1.00x</button>
+        <button type="button" class="speed-tick" data-speed="1.25">1.25x</button>
+        <button type="button" class="speed-tick" data-speed="1.5">1.50x</button>
+        <button type="button" class="speed-tick" data-speed="1.75">1.75x</button>
+        <button type="button" class="speed-tick" data-speed="2">2.00x</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Popover 2: Voice Comparison -->
+  <div id="voice-popover" class="scb-popover deck-panel voice-panel" role="dialog" aria-label="Voice Comparison" hidden>
+    <div class="deck-panel-head">
+      <span class="deck-panel-label" data-i18n="voiceRecorderLabel">Voice Comparison</span>
+      <div class="rec-head-meta">
+        <span id="rec-timer-badge" class="rec-timer-badge ltr-num" hidden>00:00</span>
+        <span id="rec-status-label" class="rec-status-pill ltr-num" data-i18n="recReady">Ready</span>
+      </div>
+    </div>
+    <div class="recorder-actions-row">
+      <button type="button" class="btn-secondary compare-btn" id="replay-recording-btn" disabled title="Replay your recorded take">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        <span>Your Voice</span>
+      </button>
+      <button type="button" class="btn-vox compare-btn" id="ab-compare-btn" disabled title="Play Speaker then Your Voice sequentially">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
+        <span>A/B Compare</span>
+      </button>
+      <button type="button" id="replay-original-btn" style="display: none;" aria-hidden="true"></button>
+    </div>
+    <div id="rec-vu-meter" class="rec-vu-meter" hidden>
+      <div id="rec-vu-fill" class="rec-vu-fill" style="width: 0%;"></div>
+    </div>
+    <audio id="recorded-audio-player" class="rec-audio-player" controls hidden></audio>
+  </div>
+
+  <!-- Floating Popover 3: 170+ World Language Translation Console -->
+  <div id="translation-control-deck" class="scb-popover deck-panel translation-deck-panel" role="dialog" aria-label="Translation Console" hidden>
+    <div class="trans-toolbar-row">
+      <div class="trans-toolbar-select-group">
+        <label class="deck-panel-label" for="trans-lang-select" data-i18n="translationLangLabel">Language</label>
+        <div class="trans-select-wrapper">
+          <select id="trans-lang-select" class="trans-lang-select" aria-label="Translation target language"></select>
+          <span class="trans-select-chevron" aria-hidden="true">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </span>
+        </div>
+      </div>
+      <div class="trans-toolbar-actions-group">
+        <button type="button" class="btn-secondary side-trans-btn trans-all-btn" id="trans-all-btn" data-translate-all title="Translate all sentences in lesson">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>
+          <span id="side-trans-all-btn-label" data-i18n="translateAllBtn">Translate All</span>
+        </button>
+        <label class="toggle-pill-label" for="side-trans-visibility-toggle" title="Toggle visibility of translated subtitles">
+          <input type="checkbox" id="side-trans-visibility-toggle" class="trans-switch-input" checked />
+          <span class="trans-switch-track" aria-hidden="true"><span class="trans-switch-thumb"></span></span>
+          <span class="trans-switch-label" data-i18n="showTranslationsLabel">Show</span>
+        </label>
+        <span id="side-trans-status-text" class="trans-status ltr-num" aria-live="polite">—</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating Popover 4: Keyboard Shortcuts -->
+  <div id="shortcuts-popover" class="scb-popover deck-panel shortcuts-popover" role="dialog" aria-label="Keyboard shortcuts" hidden>
+    <div class="deck-panel-head">
+      <span class="deck-panel-label">Keyboard Shortcuts</span>
+    </div>
+    <div class="shortcuts-strip">
+      <span><kbd class="kbd-chip">Space</kbd> <span data-i18n="keyPlay">Play/Pause</span></span>
+      <span><kbd class="kbd-chip">R</kbd> <span data-i18n="keyReplay">Replay</span></span>
+      <span><kbd class="kbd-chip">←</kbd><kbd class="kbd-chip">→</kbd> <span id="shortcuts-seek-label" data-i18n="keySeek">Seek ±2s</span></span>
+      <span><kbd class="kbd-chip">↑</kbd><kbd class="kbd-chip">↓</kbd> <span data-i18n="keyPrevNext">Prev/Next</span></span>
+      <span><kbd class="kbd-chip">L</kbd> <span data-i18n="keyLoop">Loop</span></span>
+      <span><kbd class="kbd-chip">[</kbd><kbd class="kbd-chip">]</kbd> <span>Speed ±0.05x</span></span>
+      <span><kbd class="kbd-chip">Z</kbd> <span>Mouth</span></span>
+      <span><kbd class="kbd-chip">+/-</kbd> <span>Zoom</span></span>
+      <span><kbd class="kbd-chip">T</kbd> <span>Translate</span></span>
+      <span><kbd class="kbd-chip">F</kbd> <span>Follow</span></span>
+    </div>
+  </div>
+
+  <!-- Floating Popover 5: Real Item-Driven Lesson Completion Breakdown -->
+  <div id="studio-progress-popover" class="scb-popover deck-panel studio-progress-popover" role="dialog" aria-label="Lesson Progress Breakdown" hidden>
+    <div class="sp-pop-head">
+      <div class="sp-pop-titles">
+        <span class="sp-pop-title" id="sp-pop-title">Lesson Progress</span>
+        <span class="sp-pop-sub" id="sp-pop-sub">Check off all items across modes to complete</span>
+      </div>
+      <span class="sp-pop-badge ltr-num" id="sp-pop-badge">0/0 · 0%</span>
+    </div>
+    <div class="sp-mode-list" id="sp-mode-list"></div>
+    <div class="sp-pop-foot" id="sp-pop-foot" hidden>
+      <button type="button" class="sp-reset-btn" id="sp-reset-progress-btn">Reset Progress</button>
+    </div>
+  </div>
 
   <!-- Contextual AI Word Lookup Popover -->
   <div id="word-lookup-popover" class="word-popover" hidden role="dialog" aria-label="Word definition">

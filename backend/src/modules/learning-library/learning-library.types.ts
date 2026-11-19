@@ -6,6 +6,16 @@ export interface LearningUsagePattern {
   example: string;
 }
 
+/** One interchangeable filler inside a reusable expression frame. */
+export interface LearningPatternSlot {
+  /** Bare slot name without brackets, e.g. "X". */
+  slot: string;
+  /** What the slot stands for in plain English, e.g. "the thing you break". */
+  role: string;
+  /** A natural filler showing real usage, e.g. "the deploy". */
+  example: string;
+}
+
 export interface LearningExampleItem {
   speakerContext: string;
   sentence: string;
@@ -38,6 +48,7 @@ export interface LearningDomainMetadata {
     variationsHeading: string;
     combinationsHeading: string;
     patternsHeading: string;
+    patternHeading: string;
     examplesHeading: string;
     mechanicsHeading: string;
     nuanceHeading: string;
@@ -86,6 +97,8 @@ export interface GeneratedLearningCandidate {
   variations: string[];
   combinations: string[];
   usagePatterns: LearningUsagePattern[];
+  /** Slot legend for a reusable `expression` frame (empty for fixed terms). */
+  patternSlots: LearningPatternSlot[];
   examples: LearningExampleItem[];
   relatedExpressions: string[];
 }

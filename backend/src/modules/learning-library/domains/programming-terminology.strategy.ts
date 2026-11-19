@@ -66,6 +66,7 @@ export class ProgrammingTerminologyDomainStrategy extends BaseLearningDomainStra
       variationsHeading: 'Aliases & Variants',
       combinationsHeading: 'Codebase Collocations',
       patternsHeading: 'Code Review Usage Patterns',
+      patternHeading: 'Reusable Code Review Frame',
       examplesHeading: 'Pair Programming & PR Examples',
       mechanicsHeading: 'Spoken Pronunciation & Rhythm',
       nuanceHeading: 'Conceptual Pitfalls & Misconceptions',

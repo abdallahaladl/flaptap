@@ -5,7 +5,8 @@
  * 1. Public domain catalog & strict 401 auth_required gating on all user endpoints
  * 2. Strict per-user account isolation (User A vs User B)
  * 3. Live AI generation through Flaptap's existing AgentRoutingModule (count selection,
- *    category coverage, rich variations/combinations/usagePatterns/examples/IPA/mechanics)
+ *    category coverage, reusable [X]/[Y] pattern frames with slot legends, expression-level
+ *    Egyptian Arabic translation, rich variations/combinations/usagePatterns/examples/IPA/mechanics)
  * 4. Multi-generation duplicate prevention across consecutive batches & SQLite persistence
  * 5. Domain scalability & reusability (Natural American English + Programming Terminology)
  * 6. Full library CRUD, filtering, search, mastery tracking, word lookup, and JSON export
@@ -211,6 +212,19 @@ async function runE2E() {
 
     const hasBasic = (gen1.items || []).some((i) => BASIC_FORBIDDEN.has(i.expression.toLowerCase()));
     assert(!hasBasic, 'Batch 1 contains ZERO elementary ESL textbook filler');
+
+    const slotizedItem = (gen1.items || []).find(
+      (i) =>
+        Array.isArray(i.patternSlots) &&
+        i.patternSlots.length > 0 &&
+        /\[[^\]]+\]/.test(i.expression || ''),
+    );
+    assert(
+      Boolean(slotizedItem) &&
+        slotizedItem.patternSlots.every((slot) => slot.slot && slot.role) &&
+        /\[[^\]]+\]/.test(slotizedItem.localizedMeaning || ''),
+      `Reusable pattern contract holds ("${slotizedItem?.expression}" -> "${slotizedItem?.localizedMeaning}" with ${slotizedItem?.patternSlots?.length} explained slots)`,
+    );
 
     // Batch 2: Generate 5 MORE expressions -> verify 25 unique persisted items
     const gen2Res = await fetch(`${BASE_URL}/api/learning-library/generate`, {

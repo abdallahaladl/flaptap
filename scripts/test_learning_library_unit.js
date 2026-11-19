@@ -178,6 +178,113 @@ async function run() {
     'Natural American English strategy exposes all 8 core expression categories',
   );
 
+  // Reusable-pattern contract: slotized expressions get a complete slot legend,
+  // invented slots are dropped, and the prompt demands Egyptian Arabic phrasing.
+  const patternCtx = {
+    domainId: 'natural_american_english',
+    requestedCount: 1,
+    askCount: 1,
+    categoryFilter: 'all',
+    focusTopic: '',
+    preferredRegister: '',
+    targetLanguageCode: 'ar',
+    targetLanguageName: 'Arabic',
+    targetLanguageNative: 'العربية',
+    excludedExpressions: [],
+  };
+  const patternPrompts = nae.buildGenerationPrompts(patternCtx);
+  check(
+    patternPrompts.systemPrompt.includes('REUSABLE PATTERN LAW') &&
+      patternPrompts.userPrompt.includes('Egyptian Arabic') &&
+      patternPrompts.userPrompt.includes('Translate ONLY the expression itself'),
+    'Prompt enforces reusable slot frames and expression-level Egyptian Arabic translation',
+  );
+
+  const patternCandidate = nae.normalizeCandidate(
+    {
+      expression: 'run [X] against [Y]',
+      coreMeaning: 'Test a change in a second environment',
+      localizedMeaning: 'جرّب [X] على [Y]',
+      patternSlots: [
+        { slot: 'X', role: 'the change you made', example: 'the migration' },
+        { slot: 'Z', role: 'invented slot', example: 'nonsense' },
+      ],
+      examples: [{ speakerContext: 'Team standup, Monday', sentence: 'Run the migration against staging.' }],
+    },
+    patternCtx,
+  );
+  check(
+    patternCandidate &&
+      patternCandidate.patternSlots.length === 2 &&
+      patternCandidate.patternSlots[0].slot === 'X' &&
+      patternCandidate.patternSlots[0].role === 'the change you made' &&
+      patternCandidate.patternSlots[1].slot === 'Y' &&
+      patternCandidate.patternSlots[1].role === '',
+    'Pattern slots are ordered, completed from the expression, and bogus slots dropped',
+  );
+  const fixedCandidate = nae.normalizeCandidate(
+    {
+      expression: 'deadlock',
+      coreMeaning: 'Two tasks wait on each other forever',
+      patternSlots: [{ slot: 'X', role: 'ignored', example: 'ignored' }],
+      examples: [{ speakerContext: 'Code review, Friday', sentence: 'That lock ordering can deadlock.' }],
+    },
+    patternCtx,
+  );
+  check(
+    fixedCandidate && fixedCandidate.patternSlots.length === 0,
+    'Fixed terms keep an empty slot legend instead of forced brackets',
+  );
+  const literalBracketCandidate = nae.normalizeCandidate(
+    {
+      expression: 'off the top of my [head]',
+      coreMeaning: 'Answer from memory without checking',
+      localizedMeaning: 'من دماغي [كده]',
+      patternSlots: [{ slot: 'head', role: 'literal word', example: 'head' }],
+      spokenForm: 'Off the top of my head, Thursday',
+      examples: [{ speakerContext: 'Standup, Monday', sentence: 'Off the top of my head, two days.' }],
+    },
+    patternCtx,
+  );
+  check(
+    literalBracketCandidate &&
+      literalBracketCandidate.expression === 'off the top of my head' &&
+      literalBracketCandidate.patternSlots.length === 0 &&
+      literalBracketCandidate.localizedMeaning === 'من دماغي كده',
+    'Literal words in brackets are unwrapped instead of posing as reusable slots',
+  );
+  const gerundSlotCandidate = nae.normalizeCandidate(
+    {
+      expression: 'Not me [doing X]',
+      coreMeaning: 'Self-deprecating denial of your own behavior',
+      localizedMeaning: 'مش أنا اللي [X]',
+      patternSlots: [{ slot: 'X', role: 'the embarrassing thing', example: 'eating fries' }],
+      examples: [{ speakerContext: 'Office kitchen, Monday', sentence: 'Not me eating fries again.' }],
+    },
+    patternCtx,
+  );
+  check(
+    gerundSlotCandidate &&
+      gerundSlotCandidate.patternSlots.length === 1 &&
+      gerundSlotCandidate.patternSlots[0].slot === 'doing X' &&
+      gerundSlotCandidate.patternSlots[0].role === 'the embarrassing thing',
+    'Gerund slots ("[doing X]") match their bare slot legend entry',
+  );
+  const templatedSpoken = nae.normalizeCandidate(
+    {
+      expression: 'I’m not gonna lie, [X]',
+      coreMeaning: 'Give a candid reaction',
+      localizedMeaning: 'بصراحة، [X]',
+      spokenForm: 'I’m not gonna lie, X',
+      examples: [{ speakerContext: 'Slack thread, Tuesday', sentence: 'I’m not gonna lie, this feels risky.' }],
+    },
+    patternCtx,
+  );
+  check(
+    templatedSpoken && templatedSpoken.spokenForm === '',
+    'A template echoed into "spokenForm" is rejected instead of shown as spoken English',
+  );
+
   // Register a dynamic custom domain at runtime to prove Open/Closed scalability
   registry.register({
     id: 'medical_english',
@@ -604,6 +711,100 @@ async function run() {
   } finally {
     mockServer.close();
   }
+
+  // ---------------------------------------------------------------------------
+  // 5. Count Fulfillment: under-delivery + refill waves + output token budget
+  // ---------------------------------------------------------------------------
+  const budgetPrompts = [];
+  const flakyAiProviders = {
+    hasAnyConfiguredKey: () => true,
+    getDefaultSummary: () => ({
+      configured: true,
+      provider: 'Stub',
+      model: 'stub-fast',
+      keyId: 'env:STUB_KEY',
+    }),
+    resolveExecutionSelection: async () => ({
+      key: {
+        id: 'env:STUB_KEY',
+        providerId: 'opencode-go',
+        providerName: 'Stub',
+      },
+      modelId: 'stub-fast',
+      variantId: 'medium',
+    }),
+    executeChat: async (_userId, req) => {
+      const askMatch = /Return exactly (\d+) complete objects/.exec(req.userPrompt || '');
+      const ask = Number(askMatch?.[1]) || 1;
+      budgetPrompts.push({ usr: req.userPrompt, maxTokens: Number(req.maxTokens) || 0 });
+      // First two shards under-deliver (2 items instead of 5/2), simulating a
+      // reasoning model that truncated its JSON at the old 4096 token ceiling.
+      const yielded = budgetPrompts.length <= 2 ? Math.min(ask, 2) : ask;
+      const offset = budgetPrompts.length * 10;
+      return {
+        content: JSON.stringify({
+          items: Array.from({ length: yielded }, (_, i) => ({
+            expression: `stub phrase ${offset + i}`,
+            categoryId: 'modern_slang',
+            register: 'Everyday Spoken',
+            coreMeaning: `Stub meaning ${offset + i}`,
+            localizedMeaning: 'تعبير تجريبي',
+            ipa: '/stʌb/',
+            phoneticBreakdown: 'One stressed syllable',
+            variations: [`stub variant ${offset + i}`],
+            combinations: [`stub combo ${offset + i}`],
+            usagePatterns: [
+              {
+                pattern: `stub phrase ${offset + i} [X]`,
+                meaning: 'Stub pattern',
+                example: `Try stub phrase ${offset + i} now.`,
+              },
+            ],
+            examples: [
+              {
+                speakerContext: 'Friends chat',
+                sentence: `Honestly, stub phrase ${offset + i} works.`,
+                explanation: 'Natural',
+              },
+            ],
+          })),
+        }),
+        modelUsed: 'stub-fast',
+        executionTimeMs: 10,
+      };
+    },
+  };
+
+  const countingService = new LearningLibraryService(
+    registry,
+    repository,
+    flakyAiProviders,
+    stubWordLookup,
+  );
+  const genCount = await countingService.generateItems(userB.id, {
+    domainId: 'natural_american_english',
+    count: 7,
+  });
+  check(
+    genCount.items.length === 7 &&
+      genCount.fulfilledCount === 7 &&
+      budgetPrompts.length >= 3,
+    `Requested 7, first shards under-delivered, refill waves saved exactly ${genCount.items.length}/7 (calls=${budgetPrompts.length})`,
+  );
+  check(
+    budgetPrompts.every((p) => {
+      const ask = Number(/Return exactly (\d+) complete objects/.exec(p.usr)?.[1]) || 1;
+      return p.maxTokens >= ask * 600 && p.maxTokens >= 4096;
+    }),
+    `Every pass sends a reasoning-aware output budget (min=${Math.min(
+      ...budgetPrompts.map((p) => p.maxTokens),
+    )} tokens)`,
+  );
+  check(
+    budgetPrompts[0].usr.includes('array length') &&
+      budgetPrompts[0].usr.includes('Return exactly'),
+    'Prompt carries the hard count contract (exact array length)',
+  );
 
   sqlite.onModuleDestroy();
   for (const suffix of ['', '-wal', '-shm']) {

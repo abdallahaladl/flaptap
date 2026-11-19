@@ -1540,14 +1540,20 @@
         return;
       }
 
-      const wordSpan = e.target.closest('.clickable-word');
-      if (wordSpan) {
-        e.stopPropagation();
-        const word = wordSpan.dataset.word || wordSpan.textContent;
-        const ctxSentence = wordSpan.dataset.contextSentence || word;
-        openLexiconWordLookup(word, ctxSentence, wordSpan);
-      }
     });
+
+    const resultsCard = document.getElementById('linguist-results-card');
+    if (resultsCard && global.FlaptapWordLookup?.bindSelectionLookup) {
+      global.FlaptapWordLookup.bindSelectionLookup(resultsCard, {
+        maxLength: 320,
+        onSelect: (text, meta) => {
+          const node = meta?.range?.startContainer;
+          const element = node?.nodeType === 1 ? node : node?.parentElement;
+          const word = element?.closest('.clickable-word');
+          openLexiconWordLookup(text, word?.dataset.contextSentence || text, null);
+        },
+      });
+    }
 
     document.getElementById('res-save-all-vocab-btn')?.addEventListener('click', () => handleSaveAllToFlashcards());
 

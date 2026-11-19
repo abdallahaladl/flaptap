@@ -776,7 +776,19 @@ async function runProductionE2ETest() {
       throw new Error(`Could not cycle #studio-flow-btn to "${targetFlow}"`);
     };
 
+    // Default flow state on load must be 'loop' (Loop Once)
+    const defaultFlowState = await page.evaluate(() => ({
+      attr: document.getElementById('studio-flow-btn')?.getAttribute('data-flow-state'),
+      endAction: window.studioState.endAction,
+    }));
+    assert(
+      defaultFlowState.attr === 'loop' && defaultFlowState.endAction === 'loop',
+      `Default #studio-flow-btn state must be "loop": ${JSON.stringify(defaultFlowState)}`,
+    );
+
     // Step A: Play/Pause button on sentence card has 2 logical states only (Play starts, Pause stops)
+    // Switch to 'pause' flow first to verify non-loop single play/pause behavior
+    await setStudioFlow('pause');
     // Click 1: Click Play -> starts playing!
     await page.click('[data-play-sent="1"]');
     const stepAPlay = await page.evaluate(() => ({
@@ -1096,9 +1108,25 @@ async function runProductionE2ETest() {
     );
 
     // -----------------------------------------------------------------------
-    // 5. Exact Millisecond Playback Boundaries & 0.05x Speed Steppers (via Control Bar Popover)
+    // 5. Exact Millisecond Playback Boundaries & 0.05x Speed Steppers (Inline + Popover)
     // -----------------------------------------------------------------------
     console.log('\n--- 5. Exact Millisecond Playback Boundaries & Speed Control ---');
+    // Inline [−] and [+] steppers directly in #studio-control-bar without opening popover
+    await page.click('#scb-speed-down-btn');
+    const inlineDown = await page.evaluate(() => ({
+      pill: document.getElementById('scb-speed-value')?.textContent,
+      popoverHidden: document.getElementById('speed-popover')?.hidden,
+    }));
+    assert(
+      inlineDown.pill === '0.95x' && inlineDown.popoverHidden === true,
+      `Inline speed down failed: ${JSON.stringify(inlineDown)}`,
+    );
+    await page.click('#scb-speed-up-btn');
+    assert(
+      (await page.evaluate(() => document.getElementById('scb-speed-value')?.textContent)) === '1.00x',
+      'Inline speed up failed to restore 1.00x.',
+    );
+
     await page.click('#speed-trigger-btn');
     await page.waitForFunction(() => document.getElementById('speed-popover')?.hidden === false, {
       timeout: 5000,

@@ -20,6 +20,7 @@
       navHistory: 'History & Usage',
       navTechLinguist: 'Tech Lexicon',
       navLearningLibrary: 'Learning Library',
+      navExtractor: 'Phrase Lens',
       techLinguistKicker: 'Software & AI Engineering Lexicon',
       techLinguistHeadline: 'Master authentic <span class="vox-underline">American Tech English</span> from videos & talks.',
       techLinguistSubcopy: 'Autonomous speech-to-text audit, interactive engineering vocabulary & idiom tables with click-any-word contextual translation, and native communication mental models—all inside one study studio.',
@@ -34,19 +35,20 @@
       authGateTitle: 'Sign in first to continue',
       authGateDesc: 'Your requested action is saved and will run automatically right after you sign in or create an account.',
       heroKicker: 'Spoken English Studio',
-      heroHeadline: 'Turn any English video into a <span class="vox-underline">precision speaking lesson</span>.',
-      heroSubcopy: 'Paste a YouTube link to train complete sentences, editorial paragraphs, active dictation, and connected-speech coaching at exact word timestamps.',
-      urlPlaceholder: 'Paste a YouTube video link...',
+      heroHeadline: 'Turn any video into <span class="apple-hero-accent">your speaking studio.</span>',
+      heroSubcopy: 'Paste a link to shadow real speakers sentence by sentence — with word-level timing, connected-speech coaching, and instant translation.',
+      urlPlaceholder: 'Paste a YouTube, TikTok, Vimeo, or video link...',
+      worksWithLabel: 'Works with',
       startLessonBtn: 'Start Lesson',
-      cachedBadge: 'Cached',
-      openCachedBtn: 'Open Cached (0ms)',
-      bypassCacheLabel: 'Bypass cache & re-extract',
+      cachedBadge: 'Ready in Library',
+      openCachedBtn: 'Open Instantly',
+      bypassCacheLabel: 'Re-extract fresh',
       manageHistoryCacheBtn: 'History & Cache',
-      capFullSentences: 'Complete sentence boundaries',
-      capModes: 'Shadow, Read, Listen & Coach modes',
-      capLanguages: '170+ translation languages',
+      capFullSentences: 'Complete sentences',
+      capModes: 'Four studio modes',
+      capLanguages: '170+ languages',
       statLessons: 'Lessons in Library',
-      statDrills: 'Sessions Completed',
+      statDrills: 'Lessons Completed',
       statVocab: 'Saved Vocabulary',
       statMinutes: 'Practice Minutes',
       libraryHeading: 'Lesson Library',
@@ -56,8 +58,8 @@
       filterPronunciation: 'Pronunciation',
       searchLessonsPlaceholder: 'Search lessons...',
       clearLibraryBtn: 'Clear Library',
-      emptyLibraryTitle: 'Your library is ready',
-      emptyLibraryDesc: 'Paste any YouTube video link above, or generate a custom dialogue or pronunciation workout to begin.',
+      emptyLibraryTitle: 'No lessons yet',
+      emptyLibraryDesc: 'Paste a video link above to build your first interactive speaking lesson.',
       gateLibraryTitle: 'Sign in to build and access your personal lesson library',
       gateLibraryDesc: 'Explore any tool above—when you start a video lesson, dialogue, or pronunciation workout, we will ask you to sign in or create an account so all progress, caches, and notes stay synced to you.',
       dialogueKicker: 'Real-World Spoken Dialogue',
@@ -178,6 +180,7 @@
       navHistory: 'السجل والاستخدام',
       navTechLinguist: 'معجم التقنية',
       navLearningLibrary: 'مكتبة التعلم',
+      navExtractor: 'عدسة العبارات',
       techLinguistKicker: 'معجم هندسة البرمجيات والذكاء الاصطناعي',
       techLinguistHeadline: 'أتقن <span class="vox-underline">الإنجليزية التقنية الأمريكية</span> من الفيديوهات والمحادثات.',
       techLinguistSubcopy: 'تدقيق آلي للنصوص، جداول تفاعلية ثلاثية الأعمدة للمصطلحات والتعابير مع ترجمة فورية سياقية عند الضغط على أي كلمة، وأنماط التفكير الهندسي الأمريكي.',
@@ -204,7 +207,7 @@
       capModes: 'أوضاع الترديد والقراءة والاستماع والمدرب',
       capLanguages: 'ترجمة لأكثر من 170 لغة',
       statLessons: 'الدروس في المكتبة',
-      statDrills: 'الجلسات المكتملة',
+      statDrills: 'الدروس المكتملة',
       statVocab: 'المفردات المحفوظة',
       statMinutes: 'دقائق التدريب',
       libraryHeading: 'مكتبة الدروس',
@@ -281,6 +284,7 @@
       navHistory: 'Historial y Uso',
       navTechLinguist: 'Léxico Técnico',
       navLearningLibrary: 'Biblioteca',
+      navExtractor: 'Phrase Lens',
       techLinguistKicker: 'Léxico de Ingeniería de Software e IA',
       techLinguistHeadline: 'Domina el <span class="vox-underline">inglés técnico estadounidense</span> auténtico.',
       techLinguistSubcopy: 'Auditoría automática de transcripción, tablas interactivas con traducción contextual palabra por palabra y modelos mentales nativos.',
@@ -307,6 +311,7 @@
       navHistory: 'Historique',
       navTechLinguist: 'Lexique Tech',
       navLearningLibrary: 'Bibliothèque',
+      navExtractor: 'Phrase Lens',
       techLinguistKicker: 'Lexique Génie Logiciel & IA',
       techLinguistHeadline: 'Maîtrisez l’<span class="vox-underline">anglais technique américain</span> authentique.',
       techLinguistSubcopy: 'Audit ASR automatique, tableaux interactifs avec traduction contextuelle mot à mot et modèles de pensée natifs.',
@@ -333,6 +338,7 @@
       navHistory: 'Verlauf & Cache',
       navTechLinguist: 'Tech-Lexikon',
       navLearningLibrary: 'Lernbibliothek',
+      navExtractor: 'Phrase Lens',
       techLinguistKicker: 'Software- & KI-Ingenieur-Lexikon',
       techLinguistHeadline: 'Meistern Sie authentisches <span class="vox-underline">amerikanisches Tech-Englisch</span>.',
       techLinguistSubcopy: 'Automatische ASR-Prüfung, interaktive Tabellen mit kontextbezogener Wortübersetzung und muttersprachlichen Denkmustern.',
@@ -359,6 +365,7 @@
       navHistory: 'Geçmiş ve Önbellek',
       navTechLinguist: 'Teknoloji Sözlüğü',
       navLearningLibrary: 'Öğrenme Kitaplığı',
+      navExtractor: 'Phrase Lens',
       techLinguistKicker: 'Yazılım ve Yapay Zeka Sözlüğü',
       techLinguistHeadline: 'Videolardan özgün <span class="vox-underline">Amerikan Teknik İngilizcesi</span> öğrenin.',
       techLinguistSubcopy: 'Otomatik ASR denetimi, bağlamsal kelime çevirisi sunan etkileşimli tablolar ve yerel mühendislik düşünce kalıpları.',
@@ -609,6 +616,14 @@
       return;
     }
 
+    if (act.type === 'aex_extract' && act.payload) {
+      switchSection('american-extractor');
+      if (window.FlaptapAmericanExtractor?.resumePending) {
+        await window.FlaptapAmericanExtractor.resumePending(act.payload);
+      }
+      return;
+    }
+
     if (act.type === 'section' && act.section) {
       switchSection(act.section);
     }
@@ -677,11 +692,13 @@
   function activateSectionPanel(section) {
     if (section === 'tech-lexicon') section = 'tech-linguist';
     if (section === 'library') section = 'learning-library';
-    if (!['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'tech-linguist', 'learning-library'].includes(section)) {
+    if (!['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'tech-linguist', 'american-extractor', 'learning-library'].includes(section)) {
       section = 'lessons';
     }
     state.section = section;
-    ['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'tech-linguist', 'learning-library'].forEach((name) => {
+    document.body.classList.toggle('is-lessons-view', section === 'lessons');
+    document.body.classList.toggle('is-extractor-view', section === 'american-extractor');
+    ['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'tech-linguist', 'american-extractor', 'learning-library'].forEach((name) => {
       const panel = document.getElementById(`section-${name}`);
       if (panel) panel.hidden = name !== section;
     });
@@ -739,6 +756,8 @@
       }
     } else if (resolved === 'tech-linguist') {
       await window.FlaptapTechLexicon?.init?.(routeState);
+    } else if (resolved === 'american-extractor') {
+      await window.FlaptapAmericanExtractor?.init?.(routeState);
     } else if (resolved === 'learning-library') {
       await window.FlaptapLearningLibrary?.init?.(routeState);
     }
@@ -841,8 +860,9 @@
     await resumePendingAction();
   }
 
-  async function loadSessionAndStats() {
+  async function loadSessionAndStats(options = {}) {
     const tokenAtStart = state.authToken || '';
+    const previousUserId = state.user?.id || null;
     try {
       const data = await apiFetch('/api/auth/me', { method: 'GET' });
       state.user = data.authenticated ? data.user : null;
@@ -863,12 +883,17 @@
       }
       updateAccountHeader();
       updateStatsDisplay(data.stats);
-      window.dispatchEvent(new CustomEvent('flaptap:auth-changed', { detail: { user: state.user } }));
+      const nextUserId = state.user?.id || null;
+      if (!options.silent || nextUserId !== previousUserId) {
+        window.dispatchEvent(new CustomEvent('flaptap:auth-changed', { detail: { user: state.user } }));
+      }
     } catch {
       state.sessionLoaded = true;
       updateAccountHeader();
       updateStatsDisplay(null);
-      window.dispatchEvent(new CustomEvent('flaptap:auth-changed', { detail: { user: null } }));
+      if (!options.silent || previousUserId !== null) {
+        window.dispatchEvent(new CustomEvent('flaptap:auth-changed', { detail: { user: null } }));
+      }
     }
   }
 
@@ -1147,7 +1172,22 @@
     return `<button type="button" class="item-check-btn${pillClass}${checked ? ' is-checked' : ''}" ${attrs} aria-pressed="${checked ? 'true' : 'false'}" aria-label="${escapeHtml(titleText)}" title="${escapeHtml(titleText)}">${CHECK_ICON_SVG}${innerText}</button>`;
   }
 
-  function renderSubjectProgressBar(targetElOrId, { total = 0, completed = 0 } = {}) {
+  /** Patch an existing check button in place so no re-render is needed. */
+  function setCheckButtonState(btn, checked) {
+    if (!btn) return;
+    btn.classList.toggle('is-checked', checked);
+    btn.setAttribute('aria-pressed', checked ? 'true' : 'false');
+    const label = checked ? t('completedLabel') : t('markComplete');
+    btn.setAttribute('aria-label', label);
+    btn.title = label;
+    const pillLabel = btn.querySelector('span');
+    if (pillLabel) pillLabel.textContent = label;
+  }
+
+  function renderSubjectProgressBar(
+    targetElOrId,
+    { total = 0, completed = 0, state: stateChip = null } = {},
+  ) {
     const el = typeof targetElOrId === 'string' ? document.getElementById(targetElOrId) : targetElOrId;
     if (!el) return;
 
@@ -1166,11 +1206,17 @@
     const totalLabel = isAr ? 'الإجمالي' : 'Total';
     const doneLabel = isAr ? 'مكتمل' : 'Completed';
     const remLabel = isAr ? 'المتبقي' : 'Remaining';
+    const chipTone = ['new', 'progress', 'done'].includes(stateChip?.tone) ? stateChip.tone : '';
+    const chipHtml =
+      stateChip?.label && chipTone
+        ? `<span class="sp-state sp-state--${chipTone}">${escapeHtml(stateChip.label)}</span><span class="sp-sep" aria-hidden="true"></span>`
+        : '';
 
     el.hidden = false;
-    el.classList.toggle('is-all-done', remaining === 0 && safeTotal > 0);
+    el.classList.toggle('is-all-done', remaining === 0 || chipTone === 'done');
     el.innerHTML = `
       <div class="subject-progress-stats">
+        ${chipHtml}
         <span class="sp-stat">
           <span class="sp-stat-label">${totalLabel}:</span>
           <strong class="sp-stat-value ltr-num" data-sp-total>${safeTotal}</strong>
@@ -1199,18 +1245,28 @@
     const lesson = state.lessons.find((l) => l.id === id);
     if (!lesson) return;
     const prev = Boolean(lesson.isCompleted);
+    const prevProgress = lesson.itemProgress ? { ...lesson.itemProgress } : undefined;
     const next = !prev;
     lesson.isCompleted = next;
     renderLibrary();
     renderHistoryLedger();
 
     try {
-      await apiFetch(`/api/history/${encodeURIComponent(id)}/complete`, {
+      const res = await apiFetch(`/api/history/${encodeURIComponent(id)}/complete`, {
         method: 'PATCH',
         body: JSON.stringify({ completed: next }),
       });
+      if (res?.item) {
+        lesson.isCompleted = Boolean(res.item.isCompleted);
+        lesson.itemProgress = res.item.itemProgress || lesson.itemProgress;
+        lesson.completedDrills = Number(res.item.completedDrills || 0);
+        renderLibrary();
+        renderHistoryLedger();
+        apiFetch('/api/history/stats').then(updateStatsDisplay).catch(() => {});
+      }
     } catch (err) {
       lesson.isCompleted = prev;
+      if (prevProgress) lesson.itemProgress = prevProgress;
       renderLibrary();
       renderHistoryLedger();
       showToast(err?.message || 'Could not update completion.');
@@ -1239,7 +1295,7 @@
     }
   }
 
-  function buildLessonCardHtml(item) {
+  function buildLessonCardHtml(item, opts = {}) {
     const hasVideoThumb = item.track === 'shadowing' && (item.thumbnailUrl || item.videoId);
     const thumbSrc =
       item.thumbnailUrl ||
@@ -1251,9 +1307,15 @@
            <p class="cover-style-quote">${escapeHtml(item.accentDialect || 'General American English')}</p>
          </div>`;
 
+    const playOverlayHtml = opts.applePlayOverlay
+      ? `<span class="apple-card-play-badge" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v14l11-7-11-7z"/></svg></span>`
+      : '';
+
     const sentencesCount = Number(item.sentencesCount || item.stats?.sentencesCount || 0);
-    const drillsCount = Number(item.completedDrills || 0);
     const isDone = Boolean(item.isCompleted);
+    const doneItems = Number(item.itemProgress?.doneItems ?? 0);
+    const totalItems = Number(item.itemProgress?.totalItems ?? 0);
+    const progressPct = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
     const cefrHtml = item.cefrLevel
       ? `<span class="card-cefr ltr-num">${escapeHtml(item.cefrLevel)}</span>`
       : '';
@@ -1263,10 +1325,17 @@
     });
     const cachePillsHtml = buildCachePillsHtml(item);
 
+    const progressMetaHtml = isDone
+      ? `<span>· <strong class="ltr-num">100%</strong> ${escapeHtml(t('completedLabel'))}</span>`
+      : doneItems > 0 && totalItems > 0
+      ? `<span>· <strong class="ltr-num">${doneItems}/${totalItems}</strong> (${progressPct}%)</span>`
+      : '';
+
     return `
       <article class="history-card${isDone ? ' is-item-completed' : ''}" data-lesson-id="${escapeHtml(item.id)}" tabindex="0" role="link" aria-label="${escapeHtml(item.title)}">
         <div class="card-media">
           ${mediaHtml}
+          ${playOverlayHtml}
           <span class="card-track-stamp">${escapeHtml(trackLabel(item.track))}</span>
           <span class="card-duration-stamp">${formatDuration(item.durationSeconds)}</span>
           <button type="button" class="card-delete-btn" data-delete-id="${escapeHtml(item.id)}" aria-label="Delete lesson" title="Delete lesson">
@@ -1287,7 +1356,7 @@
             <div class="card-metrics">
               <span class="ltr-num">${Number(item.pacingWpm || 145)} WPM</span>
               ${sentencesCount > 0 ? `<span>· <strong class="ltr-num">${sentencesCount}</strong> ${escapeHtml(t('sentencesUnit'))}</span>` : ''}
-              ${drillsCount > 0 ? `<span>· <strong class="ltr-num">${drillsCount}</strong> ${escapeHtml(t('drillsDoneUnit'))}</span>` : ''}
+              ${progressMetaHtml}
             </div>
             <span class="card-open-cue">
               <span>${escapeHtml(t('openLesson'))}</span>
@@ -1391,7 +1460,7 @@
 
     if (empty) empty.hidden = true;
 
-    grid.innerHTML = filtered.map(buildLessonCardHtml).join('');
+    grid.innerHTML = filtered.map((item) => buildLessonCardHtml(item, { applePlayOverlay: true })).join('');
   }
 
   /* ========================================================================
@@ -1937,9 +2006,44 @@
       }
     });
 
-    // URL Input Instant Cache Check + Start Video Lesson (Auth-Gated Before Execution!)
-    document.getElementById('youtube-url-input')?.addEventListener('input', (e) => {
+    // URL Input Instant Cache Check + Paste/Clear Pills + Start Video Lesson (Auth-Gated Before Execution!)
+    const lessonsUrlInput = document.getElementById('youtube-url-input');
+    const lessonsPasteBtn = document.getElementById('lessons-paste-btn');
+    const lessonsClearBtn = document.getElementById('lessons-clear-url-btn');
+    const syncLessonsUrlButtons = () => {
+      const hasVal = Boolean((lessonsUrlInput?.value || '').trim());
+      if (lessonsPasteBtn) lessonsPasteBtn.hidden = hasVal;
+      if (lessonsClearBtn) lessonsClearBtn.hidden = !hasVal;
+    };
+    syncLessonsUrlButtons();
+
+    lessonsUrlInput?.addEventListener('input', (e) => {
+      syncLessonsUrlButtons();
       checkUrlCache((e.target.value || '').trim());
+    });
+
+    lessonsPasteBtn?.addEventListener('click', async () => {
+      if (!lessonsUrlInput) return;
+      try {
+        if (navigator.clipboard?.readText) {
+          const text = (await navigator.clipboard.readText()).trim();
+          if (text) {
+            lessonsUrlInput.value = text;
+            lessonsUrlInput.dispatchEvent(new Event('input', { bubbles: true }));
+            lessonsUrlInput.focus();
+            return;
+          }
+        }
+      } catch {}
+      lessonsUrlInput.focus();
+      showToast('Paste a video link into the field');
+    });
+
+    lessonsClearBtn?.addEventListener('click', () => {
+      if (!lessonsUrlInput) return;
+      lessonsUrlInput.value = '';
+      lessonsUrlInput.dispatchEvent(new Event('input', { bubbles: true }));
+      lessonsUrlInput.focus();
     });
 
     document.getElementById('open-cached-lesson-btn')?.addEventListener('click', () => {
@@ -2690,10 +2794,11 @@
     checkUrlCache,
     refreshVocabulary: async () => {
       await loadVocabulary();
-      await loadSessionAndStats();
+      await loadSessionAndStats({ silent: true });
     },
     renderSubjectProgressBar,
     renderCheckButtonHtml,
+    setCheckButtonState,
     isVocabularySaved,
   };
 })();

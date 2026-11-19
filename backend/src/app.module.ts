@@ -22,9 +22,10 @@ import { HealthController } from './modules/health/health.controller';
 import { AiProvidersModule } from './modules/ai-providers/ai-providers.module';
 import { TechLinguistModule } from './modules/tech-linguist/tech-linguist.module';
 import { LearningLibraryModule } from './modules/learning-library/learning-library.module';
+import { AmericanExtractorModule } from './modules/american-extractor/american-extractor.module';
 
 @Module({
-  imports: [AiProvidersModule, TechLinguistModule, LearningLibraryModule],
+  imports: [AiProvidersModule, TechLinguistModule, LearningLibraryModule, AmericanExtractorModule],
   controllers: [
     HealthController,
     AuthController,

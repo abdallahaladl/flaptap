@@ -84,7 +84,9 @@
     })();
   </script>
   <link rel="stylesheet" href="/styles.css" />
+  <link rel="stylesheet" href="/lessons-apple.css" />
   <link rel="stylesheet" href="/learning-library.css" />
+  <link rel="stylesheet" href="/american-extractor.css" />
 </head>
 <body>
   <div class="app-shell">
@@ -157,6 +159,17 @@
               <polyline points="2 12 12 17 22 12"></polyline>
             </svg>
             <span class="sidebar-link-text" data-i18n="navTechLinguist">Tech Lexicon</span>
+          </a>
+          <a href="/extractor" class="sidebar-nav-link" data-route-section="american-extractor" title="Phrase Lens">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 8V6a2 2 0 0 1 2-2h2"></path>
+              <path d="M4 16v2a2 2 0 0 0 2 2h2"></path>
+              <path d="M16 4h2a2 2 0 0 1 2 2v2"></path>
+              <path d="M16 20h2a2 2 0 0 0 2-2v-2"></path>
+              <circle cx="11.5" cy="11.5" r="3.2"></circle>
+              <path d="m14 14 2.5 2.5"></path>
+            </svg>
+            <span class="sidebar-link-text" data-i18n="navExtractor">Phrase Lens</span>
           </a>
           <a href="/vocabulary" class="sidebar-nav-link" data-route-section="vocabulary" title="Vocabulary Vault">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -268,21 +281,21 @@
       <main class="workspace-main">
     <!-- SECTION 1: VIDEO LESSONS & LIBRARY -->
     <section id="section-lessons">
-      <div class="editorial-desk">
+      <div class="editorial-desk apple-lessons-hero">
         <div class="desk-kicker">
-          <span class="desk-kicker-mark"></span>
+          <span class="apple-kicker-dot" aria-hidden="true"></span>
           <span data-i18n="heroKicker">Spoken English Studio</span>
         </div>
         <h1 class="desk-headline" data-i18n="heroHeadline">
-          Turn any English video into a <span class="vox-underline">precision speaking lesson</span>.
+          Turn any video into <span class="apple-hero-accent">your speaking studio.</span>
         </h1>
         <p class="desk-subcopy" data-i18n="heroSubcopy">
-          Paste any video link (YouTube, TikTok, Instagram, X/Twitter, Vimeo, TED, Loom, direct video) to train complete sentences, editorial paragraphs, active dictation, and connected-speech coaching at exact word timestamps.
+          Paste a link to shadow real speakers sentence by sentence — with word-level timing, connected-speech coaching, and instant translation.
         </p>
 
         <form class="command-form" id="video-lesson-form" novalidate>
           <div class="command-input-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
               <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
             </svg>
@@ -290,23 +303,30 @@
               type="url"
               id="youtube-url-input"
               class="command-input"
-              placeholder="Paste any video link (YouTube, TikTok, Instagram, X, Vimeo, TED, Loom)..."
+              placeholder="Paste a YouTube, TikTok, Vimeo, or video link..."
               data-i18n-placeholder="urlPlaceholder"
               autocomplete="off"
               spellcheck="false"
               required
             />
+            <button type="button" class="apple-input-action" id="lessons-paste-btn" aria-label="Paste video URL">Paste</button>
+            <button type="button" class="apple-input-clear" id="lessons-clear-url-btn" aria-label="Clear URL" hidden>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
-          <button type="submit" class="btn-vox" id="start-lesson-btn">
+          <button type="submit" class="btn-vox apple-cta-pill" id="start-lesson-btn">
             <span data-i18n="startLessonBtn">Start Lesson</span>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-              <polyline points="12 5 19 12 12 19"></polyline>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
           </button>
         </form>
 
         <div class="platform-chips-row" aria-label="Supported video platforms">
+          <span class="platform-row-label" data-i18n="worksWithLabel">Works with</span>
           <span class="platform-chip">YouTube</span>
           <span class="platform-chip">TikTok</span>
           <span class="platform-chip">Instagram Reels</span>
@@ -320,51 +340,77 @@
         <!-- Instant Cache Detection & Cache Bypass Bar (For Signed-In Users) -->
         <div id="url-cache-banner" class="url-cache-banner" hidden>
           <div class="url-cache-info">
-            <span class="cache-hit-badge" data-i18n="cachedBadge">Cached</span>
+            <span class="cache-hit-badge" data-i18n="cachedBadge">Ready in Library</span>
             <span id="url-cache-title" class="url-cache-title"></span>
             <span id="url-cache-pills" class="url-cache-pills"></span>
           </div>
           <div class="url-cache-actions">
-            <button type="button" class="btn-secondary btn-xs" id="open-cached-lesson-btn" data-i18n="openCachedBtn">Open Cached (0ms)</button>
+            <button type="button" class="btn-secondary btn-xs" id="open-cached-lesson-btn" data-i18n="openCachedBtn">Open Instantly</button>
             <label class="force-refresh-toggle">
               <input type="checkbox" id="force-reextract-checkbox" />
-              <span data-i18n="bypassCacheLabel">Bypass cache &amp; re-extract</span>
+              <span data-i18n="bypassCacheLabel">Re-extract fresh</span>
             </label>
           </div>
         </div>
 
         <div class="desk-capabilities">
           <span class="capability-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            <span data-i18n="capFullSentences">Complete sentence boundaries</span>
+            <span class="capability-check-badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </span>
+            <span data-i18n="capFullSentences">Complete sentences</span>
           </span>
           <span class="capability-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            <span data-i18n="capModes">Shadow, Read, Listen &amp; Coach modes</span>
+            <span class="capability-check-badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </span>
+            <span data-i18n="capModes">Four studio modes</span>
           </span>
           <span class="capability-item">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            <span data-i18n="capLanguages">170+ translation languages</span>
+            <span class="capability-check-badge" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </span>
+            <span data-i18n="capLanguages">170+ languages</span>
           </span>
         </div>
       </div>
 
-      <!-- Practice Telemetry Ledger -->
+      <!-- Practice Telemetry Bento Cards -->
       <div class="telemetry-strip" aria-label="Practice overview">
         <div class="telemetry-cell">
-          <span class="telemetry-label" data-i18n="statLessons">Lessons in Library</span>
+          <div class="apple-stat-head">
+            <span class="telemetry-label" data-i18n="statLessons">Lessons in Library</span>
+            <span class="apple-stat-icon is-blue" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            </span>
+          </div>
           <span class="telemetry-value ltr-num" id="stat-lessons-count">0</span>
         </div>
         <div class="telemetry-cell">
-          <span class="telemetry-label" data-i18n="statDrills">Sessions Completed</span>
+          <div class="apple-stat-head">
+            <span class="telemetry-label" data-i18n="statDrills">Lessons Completed</span>
+            <span class="apple-stat-icon is-green" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="m8.5 12 2.5 2.5 4.5-5"></path></svg>
+            </span>
+          </div>
           <span class="telemetry-value ltr-num" id="stat-drills-count">0</span>
         </div>
         <div class="telemetry-cell">
-          <span class="telemetry-label" data-i18n="statVocab">Saved Vocabulary</span>
+          <div class="apple-stat-head">
+            <span class="telemetry-label" data-i18n="statVocab">Saved Vocabulary</span>
+            <span class="apple-stat-icon is-indigo" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
+            </span>
+          </div>
           <span class="telemetry-value ltr-num" id="stat-vocab-count">0</span>
         </div>
         <div class="telemetry-cell">
-          <span class="telemetry-label" data-i18n="statMinutes">Practice Minutes</span>
+          <div class="apple-stat-head">
+            <span class="telemetry-label" data-i18n="statMinutes">Practice Minutes</span>
+            <span class="apple-stat-icon is-orange" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+            </span>
+          </div>
           <span class="telemetry-value ltr-num" id="stat-minutes-count">0</span>
         </div>
       </div>
@@ -418,15 +464,20 @@
       <div id="lessons-progress-bar" class="subject-progress-bar" hidden></div>
       <div id="history-grid" class="history-grid"></div>
       <div id="library-empty-state" class="empty-ledger" hidden>
-        <h3 data-i18n="emptyLibraryTitle">Your library is ready</h3>
-        <p data-i18n="emptyLibraryDesc">Paste any YouTube video link above, or generate a custom dialogue or pronunciation workout to begin.</p>
+        <div class="apple-empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+        </div>
+        <h3 data-i18n="emptyLibraryTitle">No lessons yet</h3>
+        <p data-i18n="emptyLibraryDesc">Paste a video link above to build your first interactive speaking lesson.</p>
       </div>
       <div id="library-auth-gate-card" class="signed-out-gate-card" hidden>
         <div class="gate-card-kicker" data-i18n="authRequiredKicker">Account Required</div>
         <h3 data-i18n="gateLibraryTitle">Sign in to build and access your personal lesson library</h3>
         <p data-i18n="gateLibraryDesc">Explore any tool above—when you start a video lesson, dialogue, or pronunciation workout, we will ask you to sign in or create an account so all progress, caches, and notes stay synced to you.</p>
         <div class="gate-card-actions">
-          <button type="button" class="btn-vox" data-open-auth="login" data-i18n="signInToContinue">Sign in to continue</button>
+          <button type="button" class="btn-vox apple-cta-pill" data-open-auth="login" data-i18n="signInToContinue">Sign in to continue</button>
           <button type="button" class="btn-secondary" data-open-auth="register" data-i18n="createFreeAccount">Create account</button>
         </div>
       </div>
@@ -1286,7 +1337,405 @@
       </div>
     </section>
 
-    <!-- SECTION 7: LEARNING LIBRARY (CENTRALIZED EDITORIAL WORKSPACE) -->
+    <!-- SECTION 7: PHRASE LENS -->
+    <section id="section-american-extractor" hidden>
+      <div class="editorial-desk aex-desk">
+        <header class="aex-header">
+          <div class="aex-header-copy">
+            <div class="aex-kicker">
+              <span class="aex-kicker-dot" aria-hidden="true"></span>
+              <span>Smart Capture</span>
+            </div>
+            <h1 class="aex-headline">Phrase Lens</h1>
+            <p class="aex-subcopy">
+              Turn any video, link, image, or text into a crisp American English guide.
+            </p>
+          </div>
+
+          <nav class="lexicon-view-nav aex-view-nav" role="tablist" aria-label="Phrase Lens views">
+            <button type="button" class="lexicon-view-tab active" id="aex-tab-extract" data-aex-view="extract" role="tab" aria-selected="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2"></path><path d="M4 16v2a2 2 0 0 0 2 2h2"></path><path d="M16 4h2a2 2 0 0 1 2 2v2"></path><path d="M16 20h2a2 2 0 0 0 2-2v-2"></path><circle cx="12" cy="12" r="3"></circle></svg>
+              <span>Capture</span>
+            </button>
+            <button type="button" class="lexicon-view-tab" id="aex-tab-library" data-aex-view="library" role="tab" aria-selected="false">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              <span>Library</span>
+              <span class="lexicon-badge-pill" id="aex-library-count">0</span>
+            </button>
+          </nav>
+        </header>
+
+        <!-- VIEW 1: SOURCE EXTRACTION -->
+        <div id="aex-view-extract" class="aex-view-panel">
+          <div class="aex-source-card">
+            <div class="aex-source-topbar">
+              <div class="aex-source-tabs" role="tablist" aria-label="Source type">
+                <button type="button" class="linguist-tab-btn active" data-aex-source="link" role="tab" aria-selected="true">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                  <span>Link</span>
+                </button>
+                <button type="button" class="linguist-tab-btn" data-aex-source="text" role="tab" aria-selected="false">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                  <span>Text</span>
+                </button>
+                <button type="button" class="linguist-tab-btn" data-aex-source="upload" role="tab" aria-selected="false">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  <span>File</span>
+                </button>
+              </div>
+              <span class="aex-source-cap-hint">Video · Articles · Audio · Images</span>
+            </div>
+
+            <div class="aex-source-body">
+              <!-- LINK PANEL -->
+              <div class="aex-source-panel" data-aex-panel="link">
+                <label class="aex-field-label" for="aex-url-input">URL</label>
+                <div class="command-input-wrap aex-url-wrap">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="7"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input
+                    type="url"
+                    id="aex-url-input"
+                    class="command-input"
+                    placeholder="Paste a link or URL..."
+                    autocomplete="off"
+                    spellcheck="false"
+                  />
+                  <button type="button" class="command-quick-btn" id="aex-paste-btn" title="Paste from clipboard">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                    <span>Paste</span>
+                  </button>
+                </div>
+                <p class="aex-field-hint">
+                  Supports captions, web articles, and spoken audio links.
+                </p>
+              </div>
+
+              <!-- TEXT PANEL -->
+              <div class="aex-source-panel" data-aex-panel="text" hidden>
+                <div class="aex-label-row">
+                  <label class="aex-field-label" for="aex-text-input">Text or transcript</label>
+                  <span class="aex-mini-note ltr-num"><span id="aex-text-word-count">0</span> words</span>
+                </div>
+                <textarea
+                  id="aex-text-input"
+                  class="linguist-textarea aex-textarea"
+                  rows="6"
+                  placeholder="Paste a transcript, dialogue, excerpt, or notes..."
+                  aria-label="Text or Markdown source"
+                ></textarea>
+                <div class="aex-inline-row">
+                  <input
+                    type="text"
+                    id="aex-text-title"
+                    class="aex-text-input"
+                    placeholder="Optional title"
+                    aria-label="Optional source title"
+                    autocomplete="off"
+                  />
+                </div>
+                <div class="aex-lesson-row">
+                  <div class="aex-lesson-copy">
+                    <span class="aex-lesson-label">Saved lesson</span>
+                    <span class="aex-field-hint">Import transcript from your library.</span>
+                  </div>
+                  <select id="aex-lesson-select" class="aex-select aex-lesson-select" aria-label="Saved lesson transcript">
+                    <option value="">Choose a lesson…</option>
+                  </select>
+                  <button type="button" class="btn-secondary btn-sm" id="aex-refresh-lessons-btn" title="Refresh lessons">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    <span>Refresh</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- UPLOAD PANEL -->
+              <div class="aex-source-panel" data-aex-panel="upload" hidden>
+                <input
+                  type="file"
+                  id="aex-file-input"
+                  class="visually-hidden"
+                  accept=".txt,.md,.markdown,.srt,.vtt,.json,.png,.jpg,.jpeg,.webp,.gif,.mp3,.m4a,.wav,.aac,.flac,.ogg,.opus,.mp4,.mov,.webm,.mkv"
+                />
+                <label class="aex-dropzone" id="aex-file-drop" for="aex-file-input" tabindex="0">
+                  <span class="aex-drop-icon" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                  </span>
+                  <span class="aex-drop-title">Drop a file or browse</span>
+                  <span class="aex-drop-hint">Text, subtitles, screenshots, audio, or video · max 50 MB</span>
+                </label>
+                <div class="aex-file-chip" id="aex-file-chip" hidden>
+                  <span class="aex-file-chip-icon" aria-hidden="true">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
+                  </span>
+                  <span class="aex-file-name" id="aex-file-name"></span>
+                  <button type="button" class="icon-btn aex-file-clear" id="aex-file-clear" aria-label="Remove selected file">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="aex-options-section">
+              <div class="aex-options-head">
+                <span class="aex-options-title">Options</span>
+                <div class="aex-options-head-actions">
+                  <button type="button" class="aex-reset-options-btn" id="aex-reset-options-btn" hidden>
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    class="aex-customize-toggle"
+                    id="aex-options-toggle"
+                    aria-expanded="false"
+                    aria-controls="aex-advanced-options"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                    <span>Customize</span>
+                    <span class="aex-custom-count ltr-num" id="aex-custom-count" hidden>0</span>
+                    <svg class="aex-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="aex-options-grid aex-options-primary">
+                <div class="aex-option">
+                  <label class="aex-field-label" for="aex-type-select">Type</label>
+                  <select id="aex-type-select" class="aex-select"></select>
+                </div>
+                <div class="aex-option">
+                  <label class="aex-field-label" for="aex-level-select">Level</label>
+                  <select id="aex-level-select" class="aex-select"></select>
+                </div>
+                <div class="aex-option">
+                  <label class="aex-field-label" for="aex-language-select">Translate</label>
+                  <select id="aex-language-select" class="aex-select">
+                    <option value="ar">Arabic (العربية)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="aex-advanced-options" id="aex-advanced-options">
+                <div class="aex-advanced-options-inner">
+                  <div class="aex-options-grid aex-options-secondary">
+                    <div class="aex-option">
+                      <label class="aex-field-label" for="aex-style-select">Style</label>
+                      <select id="aex-style-select" class="aex-select"></select>
+                    </div>
+                    <div class="aex-option">
+                      <label class="aex-field-label" for="aex-focus-select">Focus</label>
+                      <select id="aex-focus-select" class="aex-select"></select>
+                    </div>
+                    <div class="aex-option">
+                      <label class="aex-field-label" for="aex-depth-select">Depth</label>
+                      <select id="aex-depth-select" class="aex-select"></select>
+                    </div>
+                    <div class="aex-option">
+                      <label class="aex-field-label" for="aex-goal-select">Goal</label>
+                      <select id="aex-goal-select" class="aex-select"></select>
+                    </div>
+                    <div class="aex-option">
+                      <label class="aex-field-label" for="aex-order-select">Order</label>
+                      <select id="aex-order-select" class="aex-select"></select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div id="aex-inline-error" class="lexicon-inline-error aex-inline-error" hidden>
+              <div class="inline-err-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              </div>
+              <div class="inline-err-content">
+                <div class="inline-err-title" id="aex-err-title">Capture failed</div>
+                <div class="inline-err-msg" id="aex-err-msg">Something went wrong.</div>
+              </div>
+              <div class="inline-err-actions">
+                <button type="button" class="btn-micro" id="aex-err-retry">Retry</button>
+                <button type="button" class="btn-micro-ghost" id="aex-err-dismiss">Dismiss</button>
+              </div>
+            </div>
+
+            <div id="aex-ai-selector-mount"></div>
+          </div>
+
+          <div class="aex-progress-card" id="aex-progress" hidden aria-live="polite">
+            <div class="aex-progress-head">
+              <div class="aex-progress-title-row">
+                <div class="editor-spinner" aria-hidden="true"></div>
+                <span class="aex-progress-title" id="aex-progress-status">Preparing source...</span>
+              </div>
+              <span class="aex-progress-elapsed ltr-num" id="aex-progress-elapsed">0.0s</span>
+            </div>
+            <div class="aex-progress-steps">
+              <div class="aex-pstep" id="aex-step-1"><span class="aex-pstep-num">1</span><span>Read source</span></div>
+              <div class="aex-pstep" id="aex-step-2"><span class="aex-pstep-num">2</span><span>Clean text</span></div>
+              <div class="aex-pstep" id="aex-step-3"><span class="aex-pstep-num">3</span><span>Analyze</span></div>
+              <div class="aex-pstep" id="aex-step-4"><span class="aex-pstep-num">4</span><span>Save guide</span></div>
+            </div>
+          </div>
+
+          <div class="aex-recent-shelf">
+            <div class="recent-shelf-head">
+              <div class="aex-section-label">Recent Guides</div>
+              <button type="button" class="btn-link" id="aex-jump-library">
+                <span>View All (<span id="aex-recent-total">0</span>)</span>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </button>
+            </div>
+            <div class="aex-recent-row" id="aex-recent-row"></div>
+            <div class="aex-empty-recent" id="aex-empty-recent" hidden>
+              <p>Your captured guides will appear here for instant review.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 2: STUDY GUIDE -->
+        <div id="aex-view-note" class="aex-view-panel" hidden>
+          <div class="aex-note-card" id="aex-note-card">
+            <div class="aex-note-head">
+              <div class="aex-note-head-top">
+                <div class="aex-note-breadcrumbs">
+                  <button type="button" class="btn-back-crumb" id="aex-back-to-extract">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                    <span>Capture</span>
+                  </button>
+                  <span class="crumb-sep">/</span>
+                  <span class="crumb-current" id="aex-note-creator">Source</span>
+                </div>
+
+                <div class="aex-note-actions">
+                  <div class="aex-note-inspectors">
+                    <button type="button" class="aex-icon-btn" id="aex-source-toggle" aria-expanded="false" aria-controls="aex-source-panel" title="Source text" aria-label="Source text">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+                    </button>
+                    <span class="aex-info-anchor">
+                      <button type="button" class="aex-icon-btn" id="aex-info-toggle" aria-expanded="false" aria-controls="aex-source-meta" title="Details" aria-label="Source details">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 8h.01"></path></svg>
+                      </button>
+                      <div class="aex-source-meta-card" id="aex-source-meta" role="dialog" aria-label="Source details" hidden></div>
+                    </span>
+                  </div>
+                  <div class="lexicon-lang-pill" title="Lookup translation language">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>
+                    <select id="aex-note-lang-select" aria-label="Translation language"></select>
+                  </div>
+                  <button type="button" class="btn-secondary btn-sm" id="aex-copy-btn">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    <span>Copy</span>
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm" id="aex-open-source-btn" hidden>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                    <span>Source</span>
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm" id="aex-studio-btn" hidden title="Open in Flaptap Studio">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                    <span>Studio</span>
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm" id="aex-new-btn" title="New capture">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>New</span>
+                  </button>
+                  <button type="button" class="btn-vox btn-sm" id="aex-save-all-btn" title="Save all items to Vocabulary">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                    <span>Save All</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="aex-note-head-main">
+                <h2 class="aex-note-title" id="aex-note-title">Study guide</h2>
+                <div class="aex-note-meta" id="aex-note-meta">
+                  <span class="meta-tag" id="aex-note-source-label">Source</span>
+                  <span class="meta-tag" id="aex-note-model">Model</span>
+                  <span class="meta-tag" id="aex-note-time">Time</span>
+                  <span class="meta-tag aex-count-tag" id="aex-note-count">0 items</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="aex-note-progress-row">
+              <div id="aex-note-progress" class="subject-progress-bar" hidden></div>
+              <button type="button" class="aex-scope-toggle" id="aex-note-scope" data-aex-scope="1" aria-pressed="false" title="Show unstudied items only">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M6.61 6.61A18.15 18.15 0 0 0 2 12s3 8 10 8a9.12 9.12 0 0 0 5.39-1.61"></path><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path><path d="m2 2 20 20"></path></svg>
+                <span>Hide studied</span>
+                <span class="aex-scope-count ltr-num" id="aex-study-count">0</span>
+              </button>
+              <button type="button" class="btn-secondary btn-sm aex-complete-note-btn" id="aex-complete-note-btn" aria-pressed="false">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                <span>Mark Complete</span>
+              </button>
+            </div>
+
+            <div class="aex-summary-banner" id="aex-note-summary-wrap" hidden>
+              <div class="aex-summary-head">
+                <span class="aex-summary-kicker">Takeaway</span>
+                <span class="aex-summary-style" id="aex-note-style"></span>
+              </div>
+              <p class="aex-summary-body" id="aex-note-summary"></p>
+            </div>
+
+            <section class="aex-source-panel" id="aex-source-panel" aria-label="Selectable source text" hidden>
+              <div class="aex-source-panel-head">
+                <div>
+                  <div class="aex-section-label">Source text</div>
+                  <p class="aex-source-reader-hint">Select any word for instant definition.</p>
+                </div>
+                <button type="button" class="aex-icon-btn" id="aex-source-close" aria-label="Close source text" title="Close">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                </button>
+              </div>
+              <div class="aex-source-content" id="aex-source-content"></div>
+            </section>
+
+            <div class="aex-note-body-grid">
+              <div class="aex-items-column">
+                <div class="aex-items-toolbar">
+                  <div class="filter-pills" id="aex-category-filters" role="group" aria-label="Filter items"></div>
+                  <div class="aex-item-search">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="search" id="aex-note-search" placeholder="Filter..." aria-label="Filter items" autocomplete="off" />
+                  </div>
+                </div>
+                <div class="aex-items-list" id="aex-items-list"></div>
+                <div class="aex-empty-filter" id="aex-empty-filter" hidden>
+                  <h4 id="aex-empty-title">No matches</h4>
+                  <p id="aex-empty-copy">Try another category, clear the search, or turn off “Hide studied”.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 3: LIBRARY -->
+        <div id="aex-view-library" class="aex-view-panel" hidden>
+          <div class="aex-library-card">
+            <div class="aex-library-head">
+              <div>
+                <div class="aex-section-label">Library</div>
+                <h2 class="aex-library-title">Saved Guides</h2>
+                <p class="aex-library-sub" id="aex-library-total">0 saved</p>
+              </div>
+              <div class="aex-item-search aex-library-search">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="search" id="aex-library-search" placeholder="Search guides..." aria-label="Search saved guides" autocomplete="off" />
+              </div>
+            </div>
+            <div class="aex-library-grid" id="aex-library-grid"></div>
+            <div class="aex-library-empty" id="aex-library-empty" hidden>
+              <h3>No saved guides yet</h3>
+              <p>Capture phrases from any video, link, screenshot, or text and reopen them anytime.</p>
+              <button type="button" class="btn-vox btn-sm" id="aex-library-new-btn">New Capture</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 8: LEARNING LIBRARY (CENTRALIZED EDITORIAL WORKSPACE) -->
     <section id="section-learning-library" hidden>
       <div class="editorial-desk ll-command-desk">
         <div class="ll-desk-top">
@@ -1389,6 +1838,7 @@
         <div class="ll-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="ll-progress-bar-role">
           <div class="ll-progress-fill" id="ll-progress-fill" style="width: 6%;"></div>
         </div>
+        <div class="ll-progress-live" id="ll-progress-live" aria-live="polite" hidden></div>
       </div>
 
       <!-- Practice Telemetry Ledger (Matches Lessons .telemetry-strip) -->
@@ -1679,6 +2129,7 @@
   <script defer src="/ai-provider-selector.js"></script>
   <script defer src="/tech-lexicon-modes.js"></script>
   <script defer src="/tech-lexicon.js"></script>
+  <script defer src="/american-extractor.js"></script>
   <script defer src="/learning-library.js"></script>
   <script defer src="/app.js"></script>
 </body>

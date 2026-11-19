@@ -1,5 +1,5 @@
 /* ==========================================================================
-   FLAPTAP SHARED CONTEXTUAL WORD LOOKUP & CLICKABLE TOKENIZER (word-lookup.js)
+   FLAPTAP SHARED CONTEXTUAL WORD LOOKUP & SELECTABLE WORD TOKENIZER (word-lookup.js)
    Shared across Lessons Studio (studio.html) & Tech Lexicon (index.html)
    ========================================================================== */
 
@@ -75,7 +75,7 @@
 
   /**
    * Preserves inline HTML tags such as <mark> while wrapping all English words
-   * (>= 2 characters) in <span class="clickable-word" ...>.
+   * (>= 2 characters) in selectable lookup tokens.
    */
   function tokenizeClickableWords(verbatimHtml, extraDataset) {
     const container = document.createElement('div');
@@ -147,15 +147,188 @@
   }
 
   /**
-   * Turns any selectable prose container into an instant contextual lookup
-   * surface. One shared implementation for every feature that needs it.
+   * Selection action bar: selecting text never calls a model directly. It
+   * reveals a compact action bar next to the selection and each feature's
+   * lookup runs only after the learner picks an action.
+   */
+  let selectionMenuState = null;
+  let selectionMenuDismissBound = false;
+
+  function ensureSelectionMenuDom() {
+    let menu = document.getElementById('selection-action-menu');
+    if (menu) return menu;
+
+    menu = document.createElement('div');
+    menu.id = 'selection-action-menu';
+    menu.className = 'selection-menu';
+    menu.hidden = true;
+    menu.setAttribute('role', 'toolbar');
+    menu.setAttribute('aria-label', 'Actions for the selected text');
+    menu.innerHTML = `
+      <span class="selection-menu-text" id="selection-menu-text"></span>
+      <span class="selection-menu-actions" id="selection-menu-actions"></span>
+    `;
+    menu.addEventListener('pointerdown', (event) => {
+      // Keep the text selection alive while the action bar is used.
+      event.preventDefault();
+    });
+    menu.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-selection-action]');
+      if (!button || !selectionMenuState) return;
+      const id = button.getAttribute('data-selection-action');
+      const state = selectionMenuState;
+      hideSelectionMenu();
+      const action = state.actions.find((entry, index) => String(entry.id || index) === id);
+      if (!action || typeof action.run !== 'function') return;
+      try {
+        action.run({ text: state.text, range: state.range });
+      } catch {}
+    });
+    document.body.appendChild(menu);
+    return menu;
+  }
+
+  function bindSelectionMenuDismiss() {
+    if (selectionMenuDismissBound) return;
+    selectionMenuDismissBound = true;
+    document.addEventListener(
+      'pointerdown',
+      (event) => {
+        const menu = document.getElementById('selection-action-menu');
+        if (!menu || menu.hidden) return;
+        if (menu.contains(event.target)) return;
+        hideSelectionMenu();
+      },
+      true,
+    );
+    document.addEventListener(
+      'keydown',
+      (event) => {
+        if (event.key !== 'Escape') return;
+        const menu = document.getElementById('selection-action-menu');
+        if (!menu || menu.hidden) return;
+        hideSelectionMenu();
+        event.preventDefault();
+        event.stopPropagation();
+      },
+      true,
+    );
+    window.addEventListener('scroll', repositionSelectionMenu, { capture: true, passive: true });
+    window.addEventListener('resize', repositionSelectionMenu);
+  }
+
+  function repositionSelectionMenu() {
+    const menu = document.getElementById('selection-action-menu');
+    if (!menu || menu.hidden || !selectionMenuState) return;
+    positionSelectionMenu(menu, selectionMenuState.range);
+  }
+
+  function positionSelectionMenu(menu, range) {
+    let rect = null;
+    try {
+      rect = range.getBoundingClientRect();
+    } catch {
+      rect = null;
+    }
+    if (!rect || (!rect.width && !rect.height)) {
+      hideSelectionMenu();
+      return;
+    }
+
+    menu.hidden = false;
+    const menuRect = menu.getBoundingClientRect();
+    const margin = 10;
+    const gap = 9;
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+
+    let left = rect.left + rect.width / 2 - menuRect.width / 2;
+    left = Math.max(margin, Math.min(left, viewportW - menuRect.width - margin));
+
+    let top = rect.top - menuRect.height - gap;
+    let placement = 'above';
+    if (top < margin) {
+      top = rect.bottom + gap;
+      placement = 'below';
+    }
+    top = Math.max(margin, Math.min(top, viewportH - menuRect.height - margin));
+
+    menu.style.left = `${Math.round(left)}px`;
+    menu.style.top = `${Math.round(top)}px`;
+    menu.dataset.placement = placement;
+  }
+
+  function showSelectionMenu(text, range, actions, options) {
+    const list = Array.isArray(actions) ? actions.filter((action) => action && action.label) : [];
+    if (!text || !range || list.length === 0) return;
+
+    const menu = ensureSelectionMenuDom();
+    bindSelectionMenuDismiss();
+
+    const textEl = menu.querySelector('#selection-menu-text');
+    textEl.textContent = text.length > 34 ? `${text.slice(0, 33)}…` : text;
+    textEl.title = text;
+
+    menu.querySelector('#selection-menu-actions').innerHTML = list
+      .map(
+        (action, index) => `
+        <button type="button" class="selection-menu-btn" data-selection-action="${escapeText(
+          action.id || index,
+        )}" title="${escapeText(action.title || action.label)}">
+          ${action.icon ? icon(action.icon, { size: 14 }) : ''}
+          <span>${escapeText(action.label)}</span>
+        </button>`,
+      )
+      .join('');
+
+    selectionMenuState = { text, range, actions: list };
+    positionSelectionMenu(menu, range);
+
+    if (options?.focus) {
+      menu.querySelector('.selection-menu-btn')?.focus({ preventScroll: true });
+    }
+  }
+
+  function hideSelectionMenu() {
+    const menu = document.getElementById('selection-action-menu');
+    if (menu && !menu.hidden) menu.hidden = true;
+    selectionMenuState = null;
+  }
+
+  /**
+   * Resolves the action bar contents. Features keep their existing lookup in
+   * `onSelect`; it is invoked only when the learner picks the action.
+   */
+  function resolveSelectionActions(options, text, range) {
+    if (typeof options.actions === 'function') {
+      const produced = options.actions({ text, range });
+      if (Array.isArray(produced) && produced.length > 0) return produced;
+    }
+    if (Array.isArray(options.actions) && options.actions.length > 0) {
+      return options.actions;
+    }
+    if (typeof options.onSelect !== 'function') return [];
+    return [
+      {
+        id: 'translate',
+        label: options.actionLabel || 'Translate',
+        icon: 'languages',
+        run: ({ text: selectedText, range: selectedRange }) =>
+          options.onSelect(selectedText, { range: selectedRange }),
+      },
+    ];
+  }
+
+  /**
+   * Turns any selectable prose container into a contextual lookup surface.
+   * Selecting reveals the action bar; no request is made until an action runs.
    *
    * @param {HTMLElement} container
-   * @param {{ onSelect: (text: string, meta: { range: Range }) => void, ignoreSelector?: string, maxLength?: number }} options
+   * @param {{ onSelect: (text: string, meta: { range: Range }) => void, actions?: Function|Array, actionLabel?: string, ignoreSelector?: string, maxLength?: number }} options
    * @returns {() => void} teardown
    */
   function bindSelectionLookup(container, options) {
-    if (!container || typeof options?.onSelect !== 'function') return () => {};
+    if (!container || (typeof options?.onSelect !== 'function' && !options?.actions)) return () => {};
 
     const maxLength = Math.max(2, Number(options.maxLength) || 300);
     const ignoreSelector =
@@ -183,13 +356,37 @@
 
       const range = selection.getRangeAt(0);
       if (!selectionBelongsToContainer(range)) return;
-
-      options.onSelect(text, { range });
+      if (
+        lastHandledSelection &&
+        lastHandledSelection.text === text &&
+        lastHandledSelection.startContainer === range.startContainer &&
+        lastHandledSelection.startOffset === range.startOffset &&
+        lastHandledSelection.endContainer === range.endContainer &&
+        lastHandledSelection.endOffset === range.endOffset
+      ) {
+        return;
+      }
+      lastHandledSelection = {
+        text,
+        startContainer: range.startContainer,
+        startOffset: range.startOffset,
+        endContainer: range.endContainer,
+        endOffset: range.endOffset,
+      };
+      showSelectionMenu(text, range, resolveSelectionActions(options, text, range), {
+        focus: keyboardGesture,
+      });
     }
 
     let timer = null;
+    let pointerIsDown = false;
+    let keyboardGesture = false;
     let selectionBeforePointerDown = '';
+    let lastHandledSelection = null;
     const onPointerDown = () => {
+      pointerIsDown = true;
+      keyboardGesture = false;
+      lastHandledSelection = null;
       selectionBeforePointerDown = normalizeSelectionText(
         window.getSelection()?.toString() || '',
       );
@@ -199,19 +396,39 @@
       timer = window.setTimeout(handleSelection, 10);
     };
     const onKeyUp = (event) => {
-      if (event.shiftKey || /^Arrow/.test(event.key)) schedule();
+      if (event.shiftKey || /^Arrow/.test(event.key)) {
+        keyboardGesture = true;
+        schedule();
+      }
+    };
+    const onPointerUp = () => {
+      pointerIsDown = false;
+      keyboardGesture = false;
+      schedule();
+    };
+    const onTouchEnd = () => {
+      pointerIsDown = false;
+      keyboardGesture = false;
+      schedule();
+    };
+    const onSelectionChange = () => {
+      if (!pointerIsDown) schedule();
     };
 
-    container.addEventListener('pointerdown', onPointerDown, true);
-    container.addEventListener('pointerup', schedule);
-    container.addEventListener('touchend', schedule, { passive: true });
+    document.addEventListener('pointerdown', onPointerDown, true);
+    document.addEventListener('touchstart', onPointerDown, { capture: true, passive: true });
+    document.addEventListener('pointerup', onPointerUp);
+    document.addEventListener('touchend', onTouchEnd, { passive: true });
+    document.addEventListener('selectionchange', onSelectionChange);
     container.addEventListener('keyup', onKeyUp);
 
     return () => {
       window.clearTimeout(timer);
-      container.removeEventListener('pointerdown', onPointerDown, true);
-      container.removeEventListener('pointerup', schedule);
-      container.removeEventListener('touchend', schedule);
+      document.removeEventListener('pointerdown', onPointerDown, true);
+      document.removeEventListener('touchstart', onPointerDown, true);
+      document.removeEventListener('pointerup', onPointerUp);
+      document.removeEventListener('touchend', onTouchEnd);
+      document.removeEventListener('selectionchange', onSelectionChange);
       container.removeEventListener('keyup', onKeyUp);
     };
   }
@@ -332,7 +549,7 @@
         // A selection-triggered lookup opens on pointerup; ignore the synthetic
         // click that immediately follows so the popover is not dismissed.
         if (Date.now() - lastOpenedAt < 320) return;
-        if (pop.contains(e.target) || e.target.closest('.clickable-word')) return;
+        if (pop.contains(e.target)) return;
         close();
       });
 

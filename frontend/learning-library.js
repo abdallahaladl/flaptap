@@ -140,6 +140,135 @@
     return escapeHtml(sentence);
   }
 
+  /** Slot names in order of appearance, e.g. "run [X] against [Y]" -> ["X", "Y"]. */
+  function extractSlotNames(text) {
+    const names = [];
+    const source = String(text || '');
+    const re = /\[([^[\]]{1,40})\]/g;
+    let match;
+    while ((match = re.exec(source))) {
+      const name = match[1].replace(/\s+/g, ' ').trim();
+      if (!name) continue;
+      if (names.some((n) => n.toLowerCase() === name.toLowerCase())) continue;
+      names.push(name);
+      if (names.length >= 4) break;
+    }
+    return names;
+  }
+
+  /** Render an expression/translation, wrapping reusable [slots] as tokens. */
+  function renderSlotizedText(text) {
+    return escapeHtml(text).replace(/\[([^[\]]{1,40})\]/g, (_match, name) => {
+      return `<span class="ll-slot" dir="ltr">[${name}]</span>`;
+    });
+  }
+
+  /** "[doing X]" and "X" are the same slot; "[X]" and "[Y]" are not. */
+  function slotNamesMatch(a, b) {
+    const normalize = (value) =>
+      String(value || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+    const left = normalize(a);
+    const right = normalize(b);
+    if (!left || !right) return false;
+    if (left === right) return true;
+    const leftTokens = left.split(' ');
+    const rightTokens = right.split(' ');
+    if (leftTokens.length === 1 || rightTokens.length === 1) {
+      return leftTokens[leftTokens.length - 1] === rightTokens[rightTokens.length - 1];
+    }
+    return left.includes(right) || right.includes(left);
+  }
+
+  function patternHeadingLabel() {
+    return getActiveDomain()?.uiLabels?.patternHeading || 'Reusable Pattern';
+  }
+
+  /** Speak the filled natural line when the title is a slot template. */
+  function getSpeakableText(item) {
+    if (!item) return '';
+    const expression = String(item.expression || '');
+    if (extractSlotNames(expression).length > 0 && item.spokenForm) {
+      return String(item.spokenForm);
+    }
+    return expression;
+  }
+
+  /**
+   * One reusable frame per item: expression slots with their roles, or (for
+   * items generated before slots existed) the first stored usage pattern.
+   */
+  function getPatternGuide(item) {
+    if (!item) return null;
+    const expressionSlots = extractSlotNames(item.expression);
+    if (expressionSlots.length > 0) {
+      const stored = (Array.isArray(item.patternSlots) ? item.patternSlots : [])
+        .filter((slot) => slot && String(slot.slot || '').trim())
+        .map((slot) => ({
+          slot: String(slot.slot).replace(/[[\]]/g, '').trim(),
+          role: String(slot.role || '').trim(),
+          example: String(slot.example || '').trim(),
+        }));
+      return {
+        kind: 'slots',
+        slots: expressionSlots.map((name) => {
+          const match = stored.find((s) => slotNamesMatch(s.slot, name));
+          return {
+            slot: name,
+            role: match?.role || '',
+            example: match?.example || '',
+          };
+        }),
+      };
+    }
+
+    const usage = (Array.isArray(item.usagePatterns) ? item.usagePatterns : []).find(
+      (pattern) =>
+        pattern &&
+        String(pattern.pattern || '').trim() &&
+        String(pattern.pattern).replace(/\s+/g, ' ').trim().toLowerCase() !==
+          String(item.expression || '').replace(/\s+/g, ' ').trim().toLowerCase(),
+    );
+    if (!usage) return null;
+    return {
+      kind: 'usage',
+      pattern: String(usage.pattern).trim(),
+      note: String(usage.meaning || '').trim(),
+    };
+  }
+
+  function renderPatternGuideHtml(item, { stacked = false, onlySlots = false } = {}) {
+    const guide = getPatternGuide(item);
+    if (!guide) return '';
+    if (guide.kind === 'usage' && onlySlots) return '';
+    const classes = `ll-pattern-guide${stacked ? ' is-stacked' : ''}${guide.kind === 'usage' ? ' is-usage' : ''}`;
+    const label = `<span class="ll-pattern-guide-label">${escapeHtml(patternHeadingLabel())}</span>`;
+
+    if (guide.kind === 'usage') {
+      return `<div class="${classes}" dir="ltr">
+        ${label}
+        <span class="ll-pattern-guide-formula">${renderSlotizedText(guide.pattern)}</span>
+        ${guide.note ? `<span class="ll-pattern-guide-note">${escapeHtml(guide.note)}</span>` : ''}
+      </div>`;
+    }
+
+    const chips = guide.slots
+      .map(
+        (slot) => `<span class="ll-slot-chip">
+          <span class="ll-slot-chip-token" dir="ltr">[${escapeHtml(slot.slot)}]</span>
+          ${slot.role ? `<span class="ll-slot-chip-role">${escapeHtml(slot.role)}</span>` : ''}
+          ${slot.example ? `<span class="ll-slot-chip-example" dir="ltr">e.g. ${escapeHtml(slot.example)}</span>` : ''}
+        </span>`,
+      )
+      .join('');
+    return `<div class="${classes}" dir="ltr">
+      ${label}
+      <div class="ll-pattern-chips">${chips}</div>
+    </div>`;
+  }
+
   /* ========================================================================
      INITIALIZATION & DOMAIN LOADING
      ======================================================================== */
@@ -605,16 +734,27 @@
       banner.hidden = true;
       return;
     }
+    const requested = Number(result?.requestedCount) || count;
+    const shortfall = Math.max(0, requested - count);
     const sec = ((result?.batch?.executionTimeMs || 1000) / 1000).toFixed(1);
     const skipped = result?.skippedDuplicatesCount || 0;
     if (titleEl) {
-      titleEl.textContent = `Added ${count} new expression${count === 1 ? '' : 's'} to your library`;
+      titleEl.textContent =
+        shortfall > 0
+          ? `Added ${count} of ${requested} requested expression${requested === 1 ? '' : 's'}`
+          : `Added ${count} new expression${count === 1 ? '' : 's'} to your library`;
     }
     if (metaEl) {
-      metaEl.textContent =
-        skipped > 0
-          ? `Completed in ${sec}s · ${skipped} duplicate${skipped === 1 ? '' : 's'} filtered out`
-          : `Completed in ${sec}s · Highlighted at the top of your library below`;
+      const parts = [`Completed in ${sec}s`];
+      if (skipped > 0) {
+        parts.push(`${skipped} duplicate${skipped === 1 ? '' : 's'} filtered out`);
+      }
+      if (shortfall > 0) {
+        parts.push(`${shortfall} still missing — generate again to fill the gap`);
+      } else if (skipped === 0) {
+        parts.push('Highlighted at the top of your library below');
+      }
+      metaEl.textContent = parts.join(' · ');
     }
     banner.hidden = false;
   }
@@ -637,8 +777,45 @@
 
     const progressCard = document.getElementById('ll-progress-card');
     const elapsedEl = document.getElementById('ll-progress-elapsed');
+    const liveEl = document.getElementById('ll-progress-live');
     const genBtn = document.getElementById('ll-generate-btn');
     const banner = document.getElementById('ll-latest-batch-banner');
+    let liveCount = 0;
+
+    const resetLiveStrip = () => {
+      liveCount = 0;
+      if (liveEl) {
+        liveEl.innerHTML = '';
+        liveEl.hidden = true;
+      }
+    };
+
+    const appendLiveChip = (item) => {
+      if (!liveEl || !item) return;
+      liveCount += 1;
+      const shown = liveEl.querySelectorAll('.ll-progress-live-chip').length;
+      if (shown >= 10) {
+        let more = liveEl.querySelector('.ll-progress-live-more');
+        if (!more) {
+          more = document.createElement('span');
+          more.className = 'll-progress-live-chip ll-progress-live-more';
+          liveEl.appendChild(more);
+        }
+        more.textContent = `+${liveCount - 10} more`;
+        return;
+      }
+      const chip = document.createElement('span');
+      chip.className = 'll-progress-live-chip';
+      const index = document.createElement('span');
+      index.className = 'll-live-index ltr-num';
+      index.textContent = String(liveCount);
+      chip.appendChild(index);
+      chip.appendChild(document.createTextNode(item.expression || ''));
+      liveEl.appendChild(chip);
+      liveEl.hidden = false;
+    };
+
+    resetLiveStrip();
 
     const startTime = Date.now();
     clearInterval(llState.elapsedTimer);
@@ -670,11 +847,12 @@
     try {
       await consumeSseGeneration(payload, ac.signal, (eventName, ev) => {
         if (eventName === 'started') {
+          resetLiveStrip();
           setProgressUi(
             12,
             `0 / ${ev.requestedCount || countVal} saved`,
             `Generating with ${ev.provider || providerName} (${ev.model || modelName})...`,
-            `Duplicate protection active against your saved library.`,
+            `Direct API call · duplicate protection against your saved library.`,
           );
           return;
         }
@@ -684,17 +862,21 @@
           for (const item of fresh) {
             llState.justGeneratedIds.add(item.id);
             llState.streamingItems.push(item);
+            appendLiveChip(item);
           }
 
           const pct = Math.max(
             15,
             Math.min(96, Math.round((ev.totalSavedCount / (ev.requestedCount || countVal)) * 100)),
           );
+          const targetCount = ev.requestedCount || countVal;
           setProgressUi(
             pct,
-            `${ev.totalSavedCount} / ${ev.requestedCount || countVal} saved`,
-            `Saved ${ev.totalSavedCount} of ${ev.requestedCount || countVal} expressions...`,
-            `Batch ${ev.chunksCompleted}/${ev.chunksTotal} complete`,
+            `${ev.totalSavedCount} / ${targetCount} saved`,
+            `Saved ${ev.totalSavedCount} of ${targetCount} expressions...`,
+            ev.totalSavedCount >= targetCount
+              ? 'All passes complete — finalizing your library.'
+              : 'Direct API · each item is saved the moment it arrives.',
           );
           return;
         }
@@ -714,7 +896,11 @@
       }
 
       if (completedResult) {
-        setProgressUi(100, `${completedResult.fulfilledCount} / ${countVal} saved`);
+        const fulfilled = Number(completedResult.fulfilledCount) || 0;
+        const requested = Number(completedResult.requestedCount) || countVal;
+        const completionPct =
+          requested > 0 ? Math.round((Math.min(fulfilled, requested) / requested) * 100) : 100;
+        setProgressUi(completionPct, `${fulfilled} / ${requested} saved`);
         for (const item of completedResult.items || []) {
           llState.justGeneratedIds.add(item.id);
         }
@@ -729,10 +915,31 @@
         if (searchEl) searchEl.value = '';
         syncFilterPillsUi();
 
-        showLatestBatchBanner(completedResult);
-        await loadLibraryItems();
+        // The stream already returned every saved item plus fresh stats: merge
+        // locally instead of paying another roundtrip before showing results.
+        const freshItems = Array.isArray(completedResult.items) ? completedResult.items : [];
+        if (freshItems.length > 0) {
+          const freshIds = new Set(freshItems.map((it) => it.id));
+          llState.items = [...freshItems, ...llState.items.filter((it) => !freshIds.has(it.id))];
+          if (completedResult.stats) llState.stats = completedResult.stats;
+          if (completedResult.categoryCounts) llState.categoryCounts = completedResult.categoryCounts;
+          if (completedResult.registerCounts) llState.registerCounts = completedResult.registerCounts;
+          renderBrowseAuthState();
+          renderBrowseStats();
+          renderBrowseFilters();
+          renderBrowseItems();
+        } else {
+          await loadLibraryItems();
+        }
 
-        showToast(`Added ${completedResult.fulfilledCount} new expressions to your library`);
+        showLatestBatchBanner(completedResult);
+
+        const missing = Math.max(0, requested - fulfilled);
+        showToast(
+          missing > 0
+            ? `Added ${fulfilled} of ${requested} expressions — ${missing} still missing, generate again to fill the gap`
+            : `Added ${fulfilled} new expression${fulfilled === 1 ? '' : 's'} to your library`,
+        );
       }
     } catch (err) {
       if (err?.name === 'AbortError' || ac.signal.aborted) {
@@ -758,6 +965,7 @@
       llState.elapsedTimer = null;
       llState.abortController = null;
       llState.isGenerating = false;
+      resetLiveStrip();
       if (progressCard) progressCard.hidden = true;
       if (genBtn) genBtn.disabled = false;
       llState.aiSelector?.setDisabled(false);
@@ -945,6 +1153,45 @@
     syncFilterPillsUi();
   }
 
+  /**
+   * Client-side mirror of the server ordering. The server sorts each fetch, but
+   * a finished generation merges its new items in streaming (oldest-first)
+   * order, so the merged list must be re-sorted or the newest batch appears
+   * upside down and the rest of the library falls out of order after it.
+   */
+  function compareLibraryItems(a, b) {
+    const sort = llState.browseSort || 'newest';
+
+    if (sort === 'alphabetical') {
+      return String(a.expression || '').localeCompare(String(b.expression || ''), 'en', {
+        sensitivity: 'base',
+      });
+    }
+
+    if (sort === 'mastery') {
+      const completedDiff = Number(Boolean(a.isCompleted)) - Number(Boolean(b.isCompleted));
+      if (completedDiff !== 0) return completedDiff;
+      const rank = (item) =>
+        item.masteryStatus === 'mastered' ? 2 : item.masteryStatus === 'learning' ? 1 : 0;
+      const rankDiff = rank(a) - rank(b);
+      if (rankDiff !== 0) return rankDiff;
+    }
+
+    if (sort === 'most_reviewed') {
+      const reviewDiff = (Number(b.reviewCount) || 0) - (Number(a.reviewCount) || 0);
+      if (reviewDiff !== 0) return reviewDiff;
+    }
+
+    // "newest" and the final tiebreak for every other mode.
+    const seqA = Number(a.sequenceNumber) || 0;
+    const seqB = Number(b.sequenceNumber) || 0;
+    if (seqA !== seqB) return seqB - seqA;
+    const createdA = String(a.createdAt || '');
+    const createdB = String(b.createdAt || '');
+    if (createdA !== createdB) return createdB.localeCompare(createdA);
+    return String(b.id || '').localeCompare(String(a.id || ''));
+  }
+
   function renderBrowseItems() {
     const container = document.getElementById('ll-browse-items-container');
     const emptyEl = document.getElementById('ll-browse-empty');
@@ -952,6 +1199,7 @@
     if (!container) return;
 
     const items = llState.items || [];
+    items.sort(compareLibraryItems);
     if (countEl) countEl.textContent = String(items.length);
 
     if (!getCurrentUser()) {
@@ -1022,7 +1270,7 @@
           <div class="ll-card-top-actions">
             ${renderCheckButton(isDone, item.id)}
             ${window.FlaptapCopy ? window.FlaptapCopy.buttonHtml(item.expression, { className: 'll-icon-action' }) : ''}
-            <button type="button" class="ll-icon-action" data-ll-speak="${escapeHtml(item.expression)}" title="Pronounce expression" aria-label="Pronounce ${escapeHtml(item.expression)}">
+            <button type="button" class="ll-icon-action" data-ll-speak="${escapeHtml(getSpeakableText(item))}" title="Pronounce expression" aria-label="Pronounce ${escapeHtml(item.expression)}">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
             </button>
             <button type="button" class="ll-icon-action ${item.isFavorite ? 'is-favorite' : ''}" data-ll-toggle-fav="${escapeHtml(item.id)}" title="Toggle favorite" aria-label="Toggle favorite">
@@ -1036,7 +1284,7 @@
 
         <div class="ll-expr-head">
           <button type="button" class="ll-expr-title-btn" data-ll-open-study="${escapeHtml(item.id)}">
-            <h3 class="ll-expr-title" dir="ltr">${escapeHtml(item.expression)}</h3>
+            <h3 class="ll-expr-title" dir="ltr">${renderSlotizedText(item.expression)}</h3>
           </button>
           ${
             item.ipa || showSpoken
@@ -1048,12 +1296,14 @@
           }
         </div>
 
+        ${renderPatternGuideHtml(item)}
+
         <div class="ll-meaning-block ${isMasked ? 'is-masked' : ''}">
           <div class="ll-meaning-body">
             <p class="ll-core-meaning">${escapeHtml(item.coreMeaning)}</p>
             ${
               item.localizedMeaning
-                ? `<p class="ll-localized-meaning" dir="auto">${escapeHtml(item.localizedMeaning)}</p>`
+                ? `<p class="ll-localized-meaning" dir="auto">${renderSlotizedText(item.localizedMeaning)}</p>`
                 : ''
             }
           </div>
@@ -1122,11 +1372,11 @@
                         <div class="ll-row-primary-body">
                           <div class="ll-expr-line">
                             <button type="button" class="ll-expr-title-btn" data-ll-open-study="${escapeHtml(item.id)}" title="Open study details" aria-label="Study ${escapeHtml(item.expression)}">
-                              <span class="ll-expr-title" dir="ltr">${escapeHtml(item.expression)}</span>
+                              <span class="ll-expr-title" dir="ltr">${renderSlotizedText(item.expression)}</span>
                             </button>
                             <div class="ll-expr-inline-tools">
                               ${copyBtn}
-                              <button type="button" class="ll-row-icon" data-ll-speak="${escapeHtml(item.expression)}" title="Listen" aria-label="Listen to ${escapeHtml(item.expression)}">
+                              <button type="button" class="ll-row-icon" data-ll-speak="${escapeHtml(getSpeakableText(item))}" title="Listen" aria-label="Listen to ${escapeHtml(item.expression)}">
                                 ${icon('volume-2')}
                               </button>
                             </div>
@@ -1139,10 +1389,11 @@
                                 </div>`
                               : ''
                           }
+                          ${renderPatternGuideHtml(item)}
                           ${
                             item.localizedMeaning
                               ? `<div class="ll-arabic-block ${isMasked ? 'is-masked' : ''}">
-                                  <p class="ll-arabic-text" dir="${isRtl ? 'rtl' : 'ltr'}" lang="${escapeHtml(goalLang)}">${escapeHtml(item.localizedMeaning)}</p>
+                                  <p class="ll-arabic-text" dir="${isRtl ? 'rtl' : 'ltr'}" lang="${escapeHtml(goalLang)}">${renderSlotizedText(item.localizedMeaning)}</p>
                                   ${isMasked ? `<button type="button" class="ll-recall-reveal-btn" data-ll-reveal="${escapeHtml(item.id)}">Reveal Meaning</button>` : ''}
                                 </div>`
                               : ''
@@ -1248,6 +1499,18 @@
       ws()?.isVocabularySaved && ws().isVocabularySaved(item.expression),
     );
     const examples = Array.isArray(item.examples) ? item.examples : [];
+    // The expression frame itself is already shown above; only list extra frames.
+    const patternKey = (value) =>
+      String(value || '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    const extraPatterns = (Array.isArray(item.usagePatterns) ? item.usagePatterns : []).filter(
+      (pattern) =>
+        pattern &&
+        String(pattern.pattern || '').trim() &&
+        patternKey(pattern.pattern) !== patternKey(item.expression),
+    );
 
     const drawerEl = document.querySelector('.ll-study-drawer');
     if (drawerEl) drawerEl.classList.toggle('is-item-completed', isDone);
@@ -1260,7 +1523,7 @@
       </div>
 
       <div class="ll-expr-head">
-        <h2 class="ll-study-title" id="ll-study-title">${escapeHtml(item.expression)}</h2>
+        <h2 class="ll-study-title" id="ll-study-title">${renderSlotizedText(item.expression)}</h2>
         ${
           item.ipa || showSpoken
             ? `<div class="ll-expr-meta-line">
@@ -1271,10 +1534,12 @@
         }
       </div>
 
+      ${renderPatternGuideHtml(item, { stacked: true, onlySlots: true })}
+
       <div class="ll-study-actions-bar">
         ${renderCheckButton(isDone, item.id, isDone ? 'Completed' : 'Mark Done')}
         ${window.FlaptapCopy ? window.FlaptapCopy.buttonHtml(item.expression, { className: 'btn-secondary btn-xs' }) : ''}
-        <button type="button" class="btn-secondary btn-xs" data-ll-speak="${escapeHtml(item.expression)}" title="Pronounce" aria-label="Pronounce">${icon('volume-2')}</button>
+        <button type="button" class="btn-secondary btn-xs" data-ll-speak="${escapeHtml(getSpeakableText(item))}" title="Pronounce" aria-label="Pronounce">${icon('volume-2')}</button>
         <button type="button" class="btn-secondary btn-xs ${item.isFavorite ? 'is-favorite' : ''}" data-ll-toggle-fav="${escapeHtml(item.id)}" title="${item.isFavorite ? 'Favorited' : 'Favorite'}" aria-label="${item.isFavorite ? 'Favorited' : 'Favorite'}">${icon('star')}</button>
         <button type="button" class="lex-mini-btn ${isSavedToVocab ? 'is-saved' : ''}" data-ll-save-vocab="${escapeHtml(item.id)}" title="${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}" aria-label="${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}">
           ${icon(isSavedToVocab ? 'bookmark-check' : 'bookmark-plus')}
@@ -1285,7 +1550,7 @@
       <div class="ll-meaning-block ${isMasked ? 'is-masked' : ''}">
         <div class="ll-meaning-body">
           <p class="ll-core-meaning">${escapeHtml(item.coreMeaning)}</p>
-          ${item.localizedMeaning ? `<p class="ll-localized-meaning" dir="auto">${escapeHtml(item.localizedMeaning)}</p>` : ''}
+          ${item.localizedMeaning ? `<p class="ll-localized-meaning" dir="auto">${renderSlotizedText(item.localizedMeaning)}</p>` : ''}
         </div>
         ${isMasked ? `<button type="button" class="ll-recall-reveal-btn" data-ll-reveal="${escapeHtml(item.id)}">Reveal Meaning</button>` : ''}
       </div>
@@ -1299,7 +1564,7 @@
               </div>
               <div class="ll-contrast-col">
                 <span class="ll-contrast-label">Natural Native</span>
-                <span class="ll-contrast-native">${escapeHtml(item.expression)}</span>
+                <span class="ll-contrast-native">${renderSlotizedText(item.expression)}</span>
               </div>
             </div>`
           : ''
@@ -1335,14 +1600,14 @@
       }
 
       ${
-        item.usagePatterns?.length
+        extraPatterns.length
           ? `<div class="ll-chip-section">
               <span class="ll-sub-label">${escapeHtml(labels.patternsHeading || 'Usage Patterns')}</span>
-              ${item.usagePatterns
+              ${extraPatterns
                 .map(
                   (p) => `
                   <div class="ll-pattern-item">
-                    <span class="ll-pattern-formula">${escapeHtml(p.pattern)}</span>
+                    <span class="ll-pattern-formula">${renderSlotizedText(p.pattern)}</span>
                     ${p.meaning ? `<span class="ll-pattern-meaning">${escapeHtml(p.meaning)}</span>` : ''}
                     ${p.example ? `<span class="ll-pattern-example">“${tokenizeExampleSentence(p.example, item.id)}”</span>` : ''}
                   </div>`,
@@ -1401,6 +1666,151 @@
   function replaceItemInMemory(updated) {
     if (!updated) return;
     llState.items = llState.items.map((it) => (it.id === updated.id ? updated : it));
+  }
+
+  function matchesBrowseMasteryFilter(item) {
+    if (!item) return false;
+    switch (llState.browseMastery) {
+      case 'completed':
+        return Boolean(item.isCompleted);
+      case 'pending':
+        return !item.isCompleted;
+      case 'favorites':
+        return Boolean(item.isFavorite);
+      default:
+        return true;
+    }
+  }
+
+  /**
+   * Check/uncheck must never rebuild the library. A full `innerHTML` refresh
+   * destroyed every card/row right after the click, so colors snapped instead
+   * of transitioning and the grid visibly flashed. Patch the touched nodes.
+   */
+  function patchCompletionDom(itemId, checked) {
+    if (!itemId) return;
+    const id = CSS.escape(String(itemId));
+    const syncBtn = ws()?.setCheckButtonState;
+
+    document.querySelectorAll(`[data-ll-toggle-complete="${id}"]`).forEach((btn) => {
+      if (syncBtn) {
+        syncBtn(btn, checked);
+        return;
+      }
+      btn.classList.toggle('is-checked', checked);
+      btn.setAttribute('aria-pressed', checked ? 'true' : 'false');
+    });
+
+    document
+      .querySelectorAll(`[data-ll-row-id="${id}"], [data-ll-card-id="${id}"]`)
+      .forEach((node) => node.classList.toggle('is-item-completed', checked));
+
+    const drawer = document.querySelector('.ll-study-drawer');
+    if (drawer && llState.activeStudyItemId === itemId) {
+      drawer.classList.toggle('is-item-completed', checked);
+    }
+  }
+
+  /** Keep the in-place completion counters in sync without rebuilding markup. */
+  function patchCompletionCounters(delta) {
+    if (!delta) return;
+    const stats = llState.stats || (llState.stats = {});
+    const total = Number(stats.totalItems) || 0;
+    const completed = Math.max(
+      0,
+      Math.min(total || Number.MAX_SAFE_INTEGER, (Number(stats.completedCount) || 0) + delta),
+    );
+    stats.completedCount = completed;
+
+    const completedEl = document.getElementById('ll-stat-completed');
+    if (completedEl) completedEl.textContent = String(completed);
+    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const pctEl = document.getElementById('ll-stat-progress');
+    if (pctEl) pctEl.textContent = `${pct}%`;
+
+    syncSidebarLlBadge(total, getCurrentUser());
+
+    const bar = document.getElementById('ll-browse-progress-bar');
+    if (!bar) return;
+    const items = llState.items || [];
+    const listTotal = items.length;
+    if (listTotal === 0) return;
+    const listCompleted = items.filter((it) => it.isCompleted).length;
+    const listPct = Math.round((listCompleted / listTotal) * 100);
+    const remaining = Math.max(0, listTotal - listCompleted);
+    const setText = (selector, value) => {
+      const node = bar.querySelector(selector);
+      if (node) node.textContent = String(value);
+    };
+
+    bar.hidden = false;
+    bar.classList.toggle('is-all-done', remaining === 0);
+    setText('[data-sp-total]', listTotal);
+    setText('[data-sp-completed]', listCompleted);
+    setText('[data-sp-remaining]', remaining);
+    const track = bar.querySelector('.subject-progress-track');
+    if (track) track.setAttribute('aria-valuenow', String(listCompleted));
+    const fill = bar.querySelector('.subject-progress-fill');
+    if (fill) fill.style.width = `${listPct}%`;
+    const pctNode = bar.querySelector('.subject-progress-pct');
+    if (pctNode) pctNode.textContent = `${listPct}%`;
+  }
+
+  /** Optimistic apply/rollback of one item's completion, DOM-only. */
+  function applyCompletionState(itemId, checked) {
+    const item = findItemAnywhere(itemId);
+    if (item) {
+      replaceItemInMemory({
+        ...item,
+        isCompleted: checked,
+        masteryStatus: checked ? 'mastered' : 'new',
+      });
+    }
+    patchCompletionDom(itemId, checked);
+    patchCompletionCounters(checked ? 1 : -1);
+  }
+
+  /** A mastery filter can hide the row once its state flips; then re-render. */
+  function dropRowWhenFilteredOut(itemId) {
+    const item = findItemAnywhere(itemId);
+    if (!item || matchesBrowseMasteryFilter(item)) return;
+    llState.items = llState.items.filter((it) => it.id !== itemId);
+    if (llState.activeStudyItemId === itemId) closeStudyDrawer();
+    renderBrowseStats();
+    renderBrowseItems();
+  }
+
+  /**
+   * Completion writes are serialized per item so a fast double-click cannot
+   * land out of order, and only the newest click may patch/roll back the UI.
+   */
+  let completionTokenSeq = 0;
+  const completionPatchChains = new Map();
+  const completionLatestTokens = new Map();
+
+  function requestCompletionPatch(itemId, next) {
+    const key = String(itemId);
+    const token = ++completionTokenSeq;
+    completionLatestTokens.set(key, token);
+    const previous = completionPatchChains.get(key) || Promise.resolve();
+    const run = previous
+      .catch(() => {})
+      .then(() =>
+        apiFetch(`/api/learning-library/items/${encodeURIComponent(itemId)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ isCompleted: next }),
+        }),
+      );
+    const settled = run.catch(() => {});
+    completionPatchChains.set(key, settled);
+    settled.then(() => {
+      if (completionPatchChains.get(key) === settled) completionPatchChains.delete(key);
+    });
+    return { token, run };
+  }
+
+  function isLatestCompletionWrite(itemId, token) {
+    return completionLatestTokens.get(String(itemId)) === token;
   }
 
   async function handleItemPatch(id, patch) {
@@ -1562,6 +1972,16 @@
       if (it.spokenForm) lines.push(`- **Spoken Form:** ${it.spokenForm}`);
       lines.push(`- **Meaning:** ${it.coreMeaning}`);
       if (it.localizedMeaning) lines.push(`- **Translation:** ${it.localizedMeaning}`);
+      if (it.patternSlots?.length) {
+        const slotLegend = it.patternSlots
+          .filter((slot) => slot?.slot)
+          .map(
+            (slot) =>
+              `[${slot.slot}] ${slot.role || 'slot'}${slot.example ? ` (e.g. ${slot.example})` : ''}`,
+          )
+          .join(' · ');
+        if (slotLegend) lines.push(`- **Pattern Slots:** ${slotLegend}`);
+      }
       if (it.textbookEquivalent) lines.push(`- **Textbook Contrast:** ${it.textbookEquivalent}`);
       if (it.variations?.length) lines.push(`- **Variations:** ${it.variations.join(', ')}`);
       if (it.combinations?.length) lines.push(`- **Combinations:** ${it.combinations.join(', ')}`);
@@ -1602,27 +2022,21 @@
       if (!item) return;
       const prev = Boolean(item.isCompleted);
       const next = !prev;
-      replaceItemInMemory({
-        ...item,
-        isCompleted: next,
-        masteryStatus: next ? 'mastered' : 'new',
-      });
-      if (getCurrentUser()) renderBrowseItems();
-      if (llState.activeStudyItemId === id) renderStudyDrawer();
 
+      applyCompletionState(id, next);
+
+      const { token, run } = requestCompletionPatch(id, next);
       try {
-        const res = await apiFetch(`/api/learning-library/items/${encodeURIComponent(id)}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ isCompleted: next }),
-        });
+        const res = await run;
+        if (!isLatestCompletionWrite(id, token)) return true;
         if (res?.item) {
           replaceItemInMemory(res.item);
+          patchCompletionDom(res.item.id, Boolean(res.item.isCompleted));
         }
-        await loadLibraryItems();
+        dropRowWhenFilteredOut(id);
       } catch (err) {
-        replaceItemInMemory({ ...item, isCompleted: prev });
-        if (getCurrentUser()) renderBrowseItems();
-        if (llState.activeStudyItemId === id) renderStudyDrawer();
+        if (!isLatestCompletionWrite(id, token)) return true;
+        applyCompletionState(id, prev);
         showToast(err?.message || 'Could not update completion.');
       }
       return true;
@@ -1700,16 +2114,6 @@
       } catch (err) {
         showToast(err?.message || 'Delete failed.');
       }
-      return true;
-    }
-
-    const wordSpan = e.target.closest('.clickable-word');
-    if (wordSpan) {
-      e.stopPropagation();
-      const word = wordSpan.dataset.word || wordSpan.textContent;
-      const ctxSentence = wordSpan.dataset.contextSentence || word;
-      const itemId = wordSpan.dataset.llItemId || '';
-      await handleOpenWordLookup(word, ctxSentence, itemId, wordSpan);
       return true;
     }
 
@@ -1938,6 +2342,22 @@
     studyDrawerBody?.addEventListener('click', (e) => {
       handleDelegatedActionClick(e);
     });
+    if (studyDrawerBody && global.FlaptapWordLookup?.bindSelectionLookup) {
+      global.FlaptapWordLookup.bindSelectionLookup(studyDrawerBody, {
+        maxLength: 320,
+        onSelect: (text, meta) => {
+          const node = meta?.range?.startContainer;
+          const element = node?.nodeType === 1 ? node : node?.parentElement;
+          const word = element?.closest('.clickable-word');
+          handleOpenWordLookup(
+            text,
+            word?.dataset.contextSentence || text,
+            word?.dataset.llItemId || llState.activeStudyItemId || '',
+            null,
+          );
+        },
+      });
+    }
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {

@@ -7,6 +7,7 @@ import {
   LiveModelsResponse,
   ProviderChatRequest,
   ProviderChatResponse,
+  ProviderImageAttachment,
   ProviderKeyProfile,
   ProviderProtocol,
 } from './ai-providers.types';
@@ -398,12 +399,17 @@ export class AiProvidersService {
       variant?: string;
       systemPrompt: string;
       userPrompt: string;
+      images?: ProviderImageAttachment[];
       temperature?: number;
       maxTokens?: number;
       json?: boolean;
       timeoutMs?: number;
       signal?: AbortSignal;
       allowIntraKeyFailover?: boolean;
+      /** Never wait a second full ceiling after a timeout (streamed work is kept). */
+      retryOnTimeout?: boolean;
+      /** Ask the adapter to return streamed text that arrived before a stall. */
+      allowPartialOnTimeout?: boolean;
       onContentDelta?: (delta: string, accumulated: string) => void;
     },
   ): Promise<ProviderChatResponse> {
@@ -428,12 +434,14 @@ export class AiProvidersService {
       variant: resolved.variantId,
       systemPrompt: params.systemPrompt,
       userPrompt: params.userPrompt,
+      images: params.images,
       temperature: params.temperature,
       supportsTemperature: catalogMeta?.supportsTemperature,
       maxTokens: params.maxTokens,
       json: params.json,
       timeoutMs: params.timeoutMs,
       signal: params.signal,
+      allowPartialOnTimeout: params.allowPartialOnTimeout,
       onContentDelta: params.onContentDelta,
     };
 
@@ -445,6 +453,10 @@ export class AiProvidersService {
       primaryError = firstErr;
 
       const msg = firstErr?.message || '';
+      const isTimeoutError = /timed out|stalled/i.test(msg);
+      if (isTimeoutError && params.retryOnTimeout === false) {
+        throw firstErr;
+      }
       const isTransient = /429|overloaded|502|503|504|rate|timed out|stalled|empty response/i.test(
         msg,
       );

@@ -37,7 +37,36 @@ const MAX_GENERATION_COUNT = 25;
 const DEFAULT_GENERATION_COUNT = 8;
 const MAX_ITEMS_PER_CHUNK = 5;
 const MAX_PARALLEL_WORKERS = 5;
-const MAX_EXCLUSION_PROMPT_ITEMS = 120;
+const MAX_EXCLUSION_PROMPT_ITEMS = 40;
+/** Hard stop for the whole generation so a slow upstream can never run for minutes. */
+const GENERATION_DEADLINE_MS = 120000;
+const HEAVY_GENERATION_DEADLINE_MS = 165000;
+
+/**
+ * Output budget per item. The full item schema (slots, IPA, 2 examples, 2
+ * variations, 2 combinations, patterns, related expressions, localized
+ * meaning) costs roughly 450-600 tokens in minified JSON. Budgeting 420 tokens
+ * per item used to truncate a 5-item chunk mid-array, which is exactly how a
+ * 10-item request ended up saving only 4.
+ */
+const OUTPUT_TOKENS_PER_ITEM = 620;
+/** Reasoning models bill thinking tokens inside max_tokens before any JSON. */
+const REASONING_HEADROOM_TOKENS = 4800;
+const HEAVY_OUTPUT_TOKENS_FLOOR = 16384;
+const MIN_OUTPUT_TOKENS = 4096;
+const MAX_OUTPUT_TOKENS = 24576;
+/** Extra refill rounds after the sharded first wave, each asking the real deficit. */
+const MAX_REFILL_WAVES = 3;
+const MAX_REFILL_PLANS_PER_WAVE = 2;
+
+const REFILL_ANGLES = [
+  'Cover high-frequency expressions still missing: everyday reactions and quick agreements.',
+  'Cover a different social register than earlier passes: dry humor, understatement, and soft hedges.',
+  'Cover storytelling pivots and frame phrases heard on podcasts and in group chats.',
+  'Cover modern peer-chat shorthand and creator commentary not used in earlier passes.',
+  'Cover casual workplace and tech banter phrasing not used in earlier passes.',
+];
+
 
 const SINGLE_CATEGORY_ANGLES = [
   'Focus on spontaneous reactions, enthusiastic agreement, and quick responses.',
@@ -383,18 +412,46 @@ export class LearningLibraryService {
     const isHeavyTier = ['high', 'xhigh', 'max', 'on'].includes(
       String(selection.variantId || '').toLowerCase(),
     );
+    const deadlineAt =
+      startedAtMs + (isHeavyTier ? HEAVY_GENERATION_DEADLINE_MS : GENERATION_DEADLINE_MS);
 
-    // When the library already has items, add +1 headroom inside Wave 1 so duplicate filtering
-    // doesn't force a slow sequential Wave 2 top-up roundtrip.
+    // Rescue tier: used only to refill missing items after a heavy pass already
+    // burned the latency budget, so a stall never becomes a second long wait.
+    const rescueVariantId = (() => {
+      if (!isHeavyTier) return undefined;
+      const variants = (selection.modelOption?.variants || []).map((v) => String(v.id).toLowerCase());
+      const pick = ['none', 'minimal', 'low', 'standard'].find((id) => variants.includes(id));
+      if (pick) return pick;
+      return selection.modelId.includes('luna') ? 'none' : 'low';
+    })();
+
+    // Extra headroom in Wave 1 costs a few output tokens but avoids a slow
+    // sequential top-up roundtrip when the library already holds duplicates.
     if (dedupIndex.size >= 5 && plans.length > 0) {
-      plans[0].askCount += 1;
+      plans[0].askCount += dedupIndex.size >= 20 ? 2 : 1;
       if (plans.length > 1 && requestedCount >= 8) {
         plans[1].askCount += 1;
       }
     }
 
-    const runSinglePlan = async (plan: ChunkWorkPlan, totalChunksPlanned: number) => {
+    const runSinglePlan = async (
+      plan: ChunkWorkPlan,
+      totalChunksPlanned: number,
+      options?: { variantId?: string; timeoutMs?: number },
+    ) => {
       if (callbacks?.signal?.aborted) return;
+
+      const effectiveVariantId = options?.variantId || selection.variantId;
+      const effectiveHeavy = ['high', 'xhigh', 'max', 'on'].includes(
+        String(effectiveVariantId || '').toLowerCase(),
+      );
+      const requestTimeoutMs = Math.max(
+        15000,
+        Math.min(
+          options?.timeoutMs ?? (effectiveHeavy ? 105000 : 48000),
+          deadlineAt - Date.now(),
+        ),
+      );
 
       const exclusions = this.buildPrioritizedExclusions(
         existingRows,
@@ -419,45 +476,56 @@ export class LearningLibraryService {
 
       let streamCursor = 0;
       const streamedNormKeys = new Set<string>();
-      const proportionalMaxTokens = isHeavyTier
-        ? 16384
-        : Math.min(4096, plan.askCount * 420 + 600);
+      const contentTokenBudget = plan.askCount * OUTPUT_TOKENS_PER_ITEM;
+      const proportionalMaxTokens = Math.max(
+        MIN_OUTPUT_TOKENS,
+        Math.min(
+          MAX_OUTPUT_TOKENS,
+          effectiveHeavy
+            ? Math.max(HEAVY_OUTPUT_TOKENS_FLOOR, contentTokenBudget + REASONING_HEADROOM_TOKENS)
+            : contentTokenBudget + REASONING_HEADROOM_TOKENS,
+        ),
+      );
+      const passPersistedStart = persistedItems.length;
 
       const res = await this.aiProviders.executeChat(userId, {
         keyId: selection.key.id,
         model: selection.modelId,
-        variant: selection.variantId,
+        variant: effectiveVariantId,
         systemPrompt,
         userPrompt,
         temperature,
         maxTokens: proportionalMaxTokens,
         json: true,
+        // A slow upstream must fail at the first ceiling: never chain a second
+        // identical wait. Streamed items are already persisted by then.
+        timeoutMs: requestTimeoutMs,
+        retryOnTimeout: false,
+        allowPartialOnTimeout: true,
         signal: callbacks?.signal,
         allowIntraKeyFailover: dto.allowFallback !== false,
-        onContentDelta: callbacks?.onChunk
-          ? (_delta, accumulated) => {
-              if (callbacks?.signal?.aborted || persistedItems.length >= requestedCount) return;
-              const { items: completedNow, nextIndex } = extractCompletedItemsSince(
-                accumulated,
-                streamCursor,
-              );
-              streamCursor = nextIndex;
-              if (completedNow.length > 0) {
-                for (const it of completedNow) {
-                  const key = String(it?.expression || '').trim().toLowerCase();
-                  if (key) streamedNormKeys.add(key);
-                }
-                ingestCandidateObjects(
-                  plan.chunkIndex,
-                  totalChunksPlanned,
-                  completedNow,
-                  selection.modelId,
-                  genCtx,
-                  false,
-                );
-              }
+        onContentDelta: (_delta, accumulated) => {
+          if (callbacks?.signal?.aborted || persistedItems.length >= requestedCount) return;
+          const { items: completedNow, nextIndex } = extractCompletedItemsSince(
+            accumulated,
+            streamCursor,
+          );
+          streamCursor = nextIndex;
+          if (completedNow.length > 0) {
+            for (const it of completedNow) {
+              const key = String(it?.expression || '').trim().toLowerCase();
+              if (key) streamedNormKeys.add(key);
             }
-          : undefined,
+            ingestCandidateObjects(
+              plan.chunkIndex,
+              totalChunksPlanned,
+              completedNow,
+              selection.modelId,
+              genCtx,
+              false,
+            );
+          }
+        },
       });
 
       if (res.fallbackFrom && !fallbackFromNote) {
@@ -466,18 +534,32 @@ export class LearningLibraryService {
 
       if (callbacks?.signal?.aborted) return;
 
-      const parsed = parseLearningGenerationResponse(res.content);
-      const allRawItems = Array.isArray(parsed?.items) ? parsed.items : [];
+      let parsedItems: any[] = [];
+      try {
+        const parsed = parseLearningGenerationResponse(res.content);
+        parsedItems = Array.isArray(parsed?.items) ? parsed.items : [];
+      } catch (parseErr: any) {
+        // A truncated or malformed response still delivered whatever streamed
+        // before the cutoff. Keep those items instead of failing the whole pass.
+        if (persistedItems.length > passPersistedStart) {
+          this.logger.warn(
+            `Chunk #${plan.chunkIndex} response was incomplete; kept ${persistedItems.length - passPersistedStart} streamed item(s).`,
+          );
+        } else {
+          throw parseErr;
+        }
+      }
+
       // Filter out items already processed live during incremental streaming so they aren't counted as duplicates
       const remainingRawItems =
         streamedNormKeys.size > 0
-          ? allRawItems.filter((it) => {
+          ? parsedItems.filter((it) => {
               const key = String(it?.expression || it?.phrase || it?.term || '')
                 .trim()
                 .toLowerCase();
               return !key || !streamedNormKeys.has(key);
             })
-          : allRawItems;
+          : parsedItems;
 
       ingestCandidateObjects(
         plan.chunkIndex,
@@ -486,6 +568,11 @@ export class LearningLibraryService {
         res.modelUsed,
         genCtx,
         true,
+      );
+
+      this.logger.log(
+        `Chunk #${plan.chunkIndex}: asked ${plan.askCount}, received ${parsedItems.length}, ` +
+          `saved ${persistedItems.length}/${requestedCount}${res.truncated ? ' (output hit max_tokens)' : ''}`,
       );
     };
 
@@ -496,6 +583,7 @@ export class LearningLibraryService {
     await Promise.all(
       Array.from({ length: workerCount }, async () => {
         while (cursor < plans.length && !callbacks?.signal?.aborted) {
+          if (Date.now() > deadlineAt - 20000) break;
           const plan = plans[cursor++];
           try {
             await runSinglePlan(plan, plans.length);
@@ -508,43 +596,83 @@ export class LearningLibraryService {
       }),
     );
 
-    // Wave 2: Only run top-up passes if Wave 1 actually produced items (avoid doomed retries when upstream is down)
-    if (persistedItems.length > 0 || workerErrors.length === 0) {
-      for (
-        let topUp = 0;
-        topUp < 2 &&
-        persistedItems.length < requestedCount &&
-        !callbacks?.signal?.aborted;
-        topUp++
-      ) {
-        const remaining = requestedCount - persistedItems.length;
-        const headroom = dedupIndex.size >= 15 ? 1 : 0;
-        const askCount = Math.min(MAX_ITEMS_PER_CHUNK + 1, Math.min(MAX_ITEMS_PER_CHUNK, remaining) + headroom);
-        const topUpIdx = plans.length + topUp;
+    // Wave 2+: bounded refill waves. Each wave asks for the exact deficit (plus
+    // one spare against duplicates) and runs up to two plans concurrently.
+    // A single capped top-up is why a 10-item request could settle at 4 items.
+    let refillWave = 0;
+    let emptyWaves = 0;
+    while (
+      persistedItems.length < requestedCount &&
+      !callbacks?.signal?.aborted &&
+      refillWave < MAX_REFILL_WAVES &&
+      emptyWaves < 2
+    ) {
+      const remaining = requestedCount - persistedItems.length;
+      const useRescue = Boolean(rescueVariantId && rescueVariantId !== selection.variantId);
+      const requiredWindowMs = useRescue ? 26000 : isHeavyTier ? 60000 : 18000;
+      if (deadlineAt - Date.now() < requiredWindowMs) break;
 
-        try {
-          await runSinglePlan(
-            {
-              chunkIndex: topUpIdx,
-              askCount,
-              angleHint:
-                categoryFilter === 'all'
-                  ? 'Choose fresh, distinctive expressions not yet covered in earlier passes.'
-                  : SINGLE_CATEGORY_ANGLES[topUp % SINGLE_CATEGORY_ANGLES.length],
-            },
-            plans.length + topUp + 1,
-          );
-        } catch (err: any) {
-          if (callbacks?.signal?.aborted) break;
-          workerErrors.push(err);
-          this.logger.warn(`Top-up pass ${topUp + 1} failed: ${err?.message}`);
-        }
-      }
+      // Ask one spare item on every refill: a single duplicate must not cost a
+      // whole extra roundtrip. Extra items are dropped by the requestedCount cap.
+      const headroom = dedupIndex.size >= 40 ? 2 : 1;
+      const plansToRun = Math.min(
+        MAX_REFILL_PLANS_PER_WAVE,
+        Math.ceil(remaining / MAX_ITEMS_PER_CHUNK),
+      );
+      const wavePlans: ChunkWorkPlan[] = Array.from({ length: plansToRun }, (_, i) => {
+        const slotRemaining = remaining - i * MAX_ITEMS_PER_CHUNK;
+        return {
+          chunkIndex: plans.length + refillWave * MAX_REFILL_PLANS_PER_WAVE + i,
+          askCount: Math.max(
+            1,
+            Math.min(MAX_ITEMS_PER_CHUNK, slotRemaining + headroom),
+          ),
+          angleHint:
+            categoryFilter === 'all'
+              ? REFILL_ANGLES[(refillWave * MAX_REFILL_PLANS_PER_WAVE + i) % REFILL_ANGLES.length]
+              : SINGLE_CATEGORY_ANGLES[
+                  (plans.length + refillWave + i) % SINGLE_CATEGORY_ANGLES.length
+                ],
+        };
+      });
+
+      const beforeWave = persistedItems.length;
+      await Promise.all(
+        wavePlans.map(async (plan) => {
+          try {
+            await runSinglePlan(
+              plan,
+              plans.length + wavePlans.length,
+              {
+                variantId: useRescue ? rescueVariantId : undefined,
+                timeoutMs: useRescue ? 45000 : undefined,
+              },
+            );
+          } catch (err: any) {
+            if (!callbacks?.signal?.aborted) {
+              workerErrors.push(err);
+              this.logger.warn(
+                `Refill wave ${refillWave + 1} chunk #${plan.chunkIndex} failed: ${err?.message}`,
+              );
+            }
+          }
+        }),
+      );
+
+      emptyWaves = persistedItems.length > beforeWave ? 0 : emptyWaves + 1;
+      refillWave++;
     }
 
     const totalExecutionMs = Date.now() - startedAtMs;
     const finalModelSummary =
       modelsUsedSet.size > 0 ? Array.from(modelsUsedSet).join(', ') : primaryModel;
+
+    if (persistedItems.length < requestedCount) {
+      this.logger.warn(
+        `Short of requested count: ${persistedItems.length}/${requestedCount} after ${refillWave} refill wave(s) ` +
+          `(skipped ${skippedDuplicatesCount} duplicate(s), ${totalExecutionMs}ms).`,
+      );
+    }
 
     if (persistedItems.length === 0) {
       this.repository.deleteBatchIfEmpty(userId, batchId);

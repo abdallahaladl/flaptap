@@ -210,6 +210,51 @@
   margin-top: 2px;
 }
 
+/* Live receipts: expressions appear the moment each one is saved. */
+.ll-progress-live {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ll-progress-live[hidden] {
+  display: none;
+}
+
+.ll-progress-live-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid var(--vox-yellow-border);
+  border-radius: 6px;
+  background: var(--vox-yellow-wash);
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  animation: ll-live-chip-in 0.18s ease both;
+}
+
+.ll-progress-live-chip .ll-live-index {
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes ll-live-chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* Newly Generated Batch Highlight Banner */
 .ll-batch-banner {
   display: flex;
@@ -358,7 +403,11 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: transform 0.18s var(--ease-editorial), border-color 0.18s ease, box-shadow 0.18s ease;
+  transition:
+    transform 0.18s var(--ease-editorial),
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .ll-card:hover {
@@ -446,6 +495,7 @@
   color: var(--ink-secondary);
   font-size: 0.71rem;
   font-weight: 600;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
 .ll-badge.is-category {
@@ -559,6 +609,7 @@
   background: var(--bg-paper);
   border: 1px solid var(--rule);
   border-radius: var(--radius-sm);
+  transition: border-color 0.18s ease;
 }
 
 .ll-meaning-block.is-masked .ll-meaning-body {
@@ -797,6 +848,7 @@
   transform: rotate(-2.4deg);
   clip-path: polygon(0 14%, 9% 0, 100% 6%, 97% 58%, 100% 100%, 6% 94%, 0 66%);
   pointer-events: none;
+  transition: background-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .ll-row-primary {
@@ -823,6 +875,7 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
 .ll-row-primary .item-check-btn {
@@ -937,6 +990,7 @@
   border-inline-start: 3px solid var(--ll-accent);
   border-radius: 3px 8px 8px 3px;
   background: color-mix(in srgb, var(--ll-accent-wash) 52%, transparent);
+  transition: background-color 0.18s ease, border-color 0.18s ease;
 }
 
 .ll-arabic-text {
@@ -960,6 +1014,115 @@
   opacity: 0.45;
   user-select: none;
   transition: filter 0.18s ease, opacity 0.18s ease;
+}
+
+/* Reusable slot tokens inside an expression or its translation */
+.ll-slot {
+  display: inline-block;
+  padding: 0 4px;
+  margin-inline: 1px;
+  border-radius: 4px;
+  border: 1px dashed color-mix(in srgb, var(--ll-accent) 52%, var(--rule));
+  background: color-mix(in srgb, var(--ll-accent-wash) 62%, transparent);
+  color: var(--ll-accent-ink);
+  font-family: var(--font-mono);
+  font-size: 0.84em;
+  font-weight: 700;
+  line-height: 1.45;
+  white-space: nowrap;
+  unicode-bidi: isolate;
+}
+
+/* Pattern legend: what [X] and [Y] stand for, plus a real filler */
+.ll-pattern-guide {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px 8px;
+  margin-top: 8px;
+  padding: 6px 9px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-xs);
+  background: color-mix(in srgb, var(--bg-inset) 62%, transparent);
+  color: var(--ink-secondary);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  max-width: 100%;
+}
+
+.ll-pattern-guide.is-stacked {
+  display: block;
+  margin-top: 12px;
+  padding: 9px 11px;
+}
+
+.ll-pattern-guide-label {
+  flex: none;
+  font-family: var(--font-sans);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+}
+
+.ll-pattern-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 6px;
+  min-width: 0;
+}
+
+.ll-slot-chip {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--ll-accent-line);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ll-accent-wash) 48%, transparent);
+}
+
+.ll-slot-chip-token {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ll-accent-ink);
+}
+
+.ll-slot-chip-role {
+  font-size: 0.75rem;
+  color: var(--ink-secondary);
+}
+
+.ll-slot-chip-example {
+  font-family: var(--font-mono);
+  font-size: 0.69rem;
+  font-style: italic;
+  color: var(--ink-muted);
+}
+
+.ll-pattern-guide-formula {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.ll-pattern-guide-note {
+  color: var(--ink-secondary);
+}
+
+.ll-pattern-guide-note::before {
+  content: '·';
+  margin-inline-end: 6px;
+  color: var(--ink-muted);
+}
+
+.ll-pattern-guide.is-stacked .ll-pattern-guide-formula {
+  display: block;
+  margin-top: 4px;
 }
 
 /* Usage column: two real-life examples with where/when stickers */
@@ -1013,6 +1176,7 @@
   text-transform: uppercase;
   line-height: 1.4;
   overflow-wrap: anywhere;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
 }
 
 .ll-use-quote {
@@ -1108,6 +1272,21 @@
 .ll-study-drawer {
   width: min(560px, 100vw);
   max-width: 100vw;
+  /* The drawer scrolls its own long body. Keep it on its own compositing layer
+     and never let a live backdrop blur above it repaint the page per frame. */
+  transform: translateZ(0);
+  contain: layout paint;
+  overscroll-behavior: contain;
+}
+
+#ll-study-drawer-backdrop {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background: rgba(20, 20, 19, 0.52);
+}
+
+[data-theme="dark"] #ll-study-drawer-backdrop {
+  background: rgba(0, 0, 0, 0.62);
 }
 
 /* Completed detail view repaints its accents in completion green. */

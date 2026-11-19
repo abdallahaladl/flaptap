@@ -24,6 +24,7 @@ Master real-world spoken English from YouTube videos, custom dialogues, and arti
   4. **Coach** — 100% dynamic AI prosody brief, connected speech & Flap-T mouth mechanics, expressions/phrasal verbs, and contextual vocabulary grounded verbatim to video timestamps.
   5. **Notes** — SQLite-persisted study notebook with 1-click Markdown (`.md`) study sheet export.
 - **Click-Any-Word Contextual Lookup & Vocabulary Vault:** Click any word in a transcript for an instant contextual definition, IPA, spoken pronunciation tip, and target-language translation, then save to your personal **Vocabulary Vault** with spaced-repetition flashcards.
+- **American English Extractor (`/extractor`):** Turn a YouTube or social video, audio URL/file, article, Markdown/text file, screenshot (multimodal OCR), pasted transcript, or an existing saved lesson into a persistent American English study map. The model extracts grounded idioms, slang, phrasal verbs, advanced vocabulary, collocations, connected speech, discourse markers, and patterns with General American IPA, spoken mechanics, usage nuance, US-tech notes, contextual translations, selectable-source lookup, and one-click Vocabulary saving. Dedicated `/extractor`, `/extractor/library`, and `/extractor/note/:id` routes preserve history and refresh state.
 - **Flexible Video Docking:** Switch seamlessly between **Side**, **Top**, and **Focus** video layouts without ever remounting the player or interrupting audio.
 - **Paper & Vox Editorial Design System:** Tactile cotton-paper Light Mode and matte-carbon Dark Mode, crisp SVG iconography, and multi-language interface (`EN`, `AR` RTL, `ES`, `FR`, `DE`, `TR`).
 - **Accounts, Google OAuth 2.0 & Strict Sign-In Gate:** All workspace tabs and tools are visible to visitors, while execution is gated behind authentication (`401 auth_required`) with automatic pending-action continuation right after sign-in. Supports real **Google OAuth 2.0 Authorization Code + PKCE (`S256`) & RS256 OIDC ID-token verification**, email/password accounts (`scrypt`), active device session management, password updates, and account deletion on Node's native `node:sqlite` (WAL mode).
@@ -48,17 +49,21 @@ flaptap/
 │       │   ├── tracks/shadowing/     # Video processing, dynamic AI Coach, word lookup, translation
 │       │   ├── tracks/street-talk/   # Custom spoken dialogue generator
 │       │   ├── tracks/phonetics/     # Custom articulatory pronunciation workout generator
+│       │   ├── american-extractor/   # Multi-source extraction, OCR, media speech-to-text, study maps
 │       │   ├── history/              # Scoped lesson summaries, notes persistence, stats
 │       │   └── languages/            # World-language catalog & AI health
 │       └── main.ts
 ├── frontend/                         # Zero-framework Paper-Editorial Web App
 │   ├── index.html & app.js           # Workspace, generators, library, Vocabulary flashcards, Auth
 │   ├── studio.html & studio.js       # 5-mode learning studio, flexible video docking, word lookup
+│   ├── american-extractor.js/.css    # Dedicated multi-source American English Extractor feature
 │   └── styles.css & studio.css       # Light/Dark paper tokens, RTL/LTR layout
 ├── skills/
-│   └── american-accent-shadowing-skill/scripts/extract_transcript.py
+│   ├── american-accent-shadowing-skill/scripts/extract_transcript.py
+│   └── american-accent-shadowing-skill/scripts/transcribe_media.py
 └── scripts/
     ├── test_production_e2e.js        # Comprehensive API + SQLite + AI + Puppeteer E2E suite
+    ├── test_american_extractor_e2e.js# Full extractor API, OCR, audio, and browser E2E suite
     └── test_timing_extractor.py      # Offline JSON3 word-offset regression suite
 ```
 
@@ -68,7 +73,7 @@ flaptap/
 
 ### 1. Prerequisites
 - **Node.js** `>= 22.5` (uses native `node:sqlite`)
-- **Python** `>= 3.9` with `youtube_transcript_api` and `yt-dlp`
+- **Python** `>= 3.9` with `youtube_transcript_api`, `yt-dlp`, and `faster-whisper`
 
 ### 2. Environment
 Copy `.env.example` to `.env` and configure your OpenCode Go key:

@@ -398,9 +398,9 @@
 
           <div class="ft-ai-head-controls">
             <div class="exec-presets-strip" role="group" aria-label="Speed presets">
-              <button type="button" class="preset-pill active" data-ft-preset="fast" title="Lowest thinking latency (~2–8s)">Fast</button>
-              <button type="button" class="preset-pill" data-ft-preset="balanced" title="Balanced reasoning effort (~5–15s)">Balanced</button>
-              <button type="button" class="preset-pill" data-ft-preset="deep" title="Deepest reasoning (~30–90s · much slower)">Deep</button>
+              <button type="button" class="preset-pill active" data-ft-preset="fast" title="Lowest thinking latency (~2–10s)">Fast</button>
+              <button type="button" class="preset-pill" data-ft-preset="balanced" title="Balanced reasoning effort (~10–30s)">Balanced</button>
+              <button type="button" class="preset-pill" data-ft-preset="deep" title="Deepest reasoning (~60–120s · much slower)">Deep</button>
             </div>
 
             <button type="button" class="btn-secondary btn-xs ft-ai-keys-btn" id="${escapeHtml(ids.keysBtn)}" title="Add or manage API keys">
@@ -564,8 +564,14 @@
 
       const stillValid = variants.some((v) => v.id === state.selectedVariant);
       if (!stillValid) {
+        const preferredVariant = Array.isArray(config.preferredVariants)
+          ? config.preferredVariants.find((id) => variants.some((v) => v.id === id))
+          : '';
         state.selectedVariant =
-          modelObj.defaultVariant || variants.find((v) => v.default)?.id || variants[0].id;
+          preferredVariant ||
+          modelObj.defaultVariant ||
+          variants.find((v) => v.default)?.id ||
+          variants[0].id;
       }
 
       varSel.disabled = false;
@@ -626,7 +632,11 @@
         .join('');
 
       if (!state.models.some((m) => m.id === state.selectedModel)) {
-        state.selectedModel = state.models.find((m) => m.default)?.id || state.models[0].id;
+        const preferredModel = Array.isArray(config.preferredModels)
+          ? config.preferredModels.find((id) => state.models.some((m) => m.id === id))
+          : '';
+        state.selectedModel =
+          preferredModel || state.models.find((m) => m.default)?.id || state.models[0].id;
       }
       modelSel.value = state.selectedModel;
       renderVariantsDropdown();
@@ -671,7 +681,11 @@
           state.selectedModel = persisted.model;
           state.selectedVariant = persisted.variant || '';
         } else {
-          state.selectedModel = res?.defaultModel || state.models[0]?.id || '';
+          const preferredModel = Array.isArray(config.preferredModels)
+            ? config.preferredModels.find((id) => state.models.some((m) => m.id === id))
+            : '';
+          state.selectedModel =
+            preferredModel || res?.defaultModel || state.models[0]?.id || '';
           state.selectedVariant = '';
         }
 

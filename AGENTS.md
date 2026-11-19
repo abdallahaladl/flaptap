@@ -70,14 +70,6 @@
 - Flexible video docking: **Transcript** (35% Video Stage · 65% Sentence Learning Canvas) and **Theater** (65% Video Cinema Stage · 35% Compact Sentence Rail), and scalable primary Studio learning modes (`Shadow` | `Read` | `Listen` | `Coach` | `Notes`) switch in 0ms client-side without reloading the page or remounting the YouTube player.
 - Timestamp and IPA spans enforce `direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums`.
 
-### Reserved Completion Green Law (Strict Invariant)
-
-- **Green is the completion channel — nothing else.** `--status-success` and its wash/border are reserved exclusively for checked, done, completed, mastered, or confirmed-success states.
-- A completed item repaints every decorative accent it owns — row hue, index tag, title highlight, example stickers, note edge — in grades of green; unchecking restores its original non-green accents.
-- Decorative accents, category/register tags, row color cycles, highlight washes, charts, and general emphasis MUST use Vox yellow, cobalt, or vermilion — never green. If an element is green, it must answer "is this done?".
-- Theming tokens such as `--accent-forest` are forbidden for decoration; never reintroduce a green accent simply to add color variety.
-- Status indicators that mean "live / healthy / info" use `--status-info` (blue), not green; green stays exclusive to completion.
-
 ### Modular Feature Architecture, Dedicated URL Routing & Primary Navigation Law (Mandatory)
 
 1. **Dedicated Page URL & Refresh Persistence (No Home-URL Trapping)**

@@ -125,9 +125,18 @@ export class GeminiAdapter implements IProviderProtocolAdapter {
         }
       }
 
+      const imageParts =
+        Array.isArray(request.images) && request.images.length > 0
+          ? request.images.map((image) => ({
+              inline_data: { mime_type: image.mimeType, data: image.base64 },
+            }))
+          : [];
+
       const payload: Record<string, any> = {
         systemInstruction: { parts: [{ text: request.systemPrompt }] },
-        contents: [{ role: 'user', parts: [{ text: request.userPrompt }] }],
+        contents: [
+          { role: 'user', parts: [{ text: request.userPrompt }, ...imageParts] },
+        ],
         generationConfig,
       };
 
@@ -185,6 +194,8 @@ export class GeminiAdapter implements IProviderProtocolAdapter {
           modelUsed: modelId,
           variantUsed: includeThinking ? variant : 'standard',
           executionTimeMs: Date.now() - start,
+          finishReason: String(data?.candidates?.[0]?.finishReason || '') || undefined,
+          truncated: String(data?.candidates?.[0]?.finishReason || '') === 'MAX_TOKENS',
         };
       } finally {
         clearTimeout(timer);

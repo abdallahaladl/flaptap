@@ -15,6 +15,8 @@
     "prod:url": "./scripts/daemon_manager.sh url",
     "deploy": "./scripts/deploy.sh",
     "test:e2e": "NODE_PATH=./node_modules node scripts/test_production_e2e.js",
+    "test:extractor": "NODE_PATH=./node_modules node scripts/test_american_extractor_e2e.js",
+    "test:extractor:unit": "node scripts/test_american_extractor_unit.js",
     "migrate:timings": "NODE_PATH=./node_modules node scripts/migrate_timings.js",
     "test:timing": "python3 scripts/test_timing_extractor.py"
   },

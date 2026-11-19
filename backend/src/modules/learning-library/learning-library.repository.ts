@@ -60,6 +60,7 @@ export class LearningLibraryRepository {
       ...(item.combinations || []),
       ...(item.relatedExpressions || []),
       ...(item.usagePatterns || []).flatMap((p) => [p.pattern, p.meaning, p.example]),
+      ...(item.patternSlots || []).flatMap((s) => [s.slot, s.role, s.example]),
       ...(item.examples || []).flatMap((e) => [e.speakerContext, e.sentence, e.explanation]),
     ];
     return parts
@@ -114,6 +115,7 @@ export class LearningLibraryRepository {
       variations: this.parseJsonArray<string>(row.variations_json),
       combinations: this.parseJsonArray<string>(row.combinations_json),
       usagePatterns: this.parseJsonArray(row.usage_patterns_json),
+      patternSlots: this.parseJsonArray(row.pattern_slots_json),
       examples: this.parseJsonArray(row.examples_json),
       relatedExpressions: this.parseJsonArray<string>(row.related_json),
       isFavorite: Boolean(row.is_favorite),
@@ -216,10 +218,10 @@ export class LearningLibraryRepository {
         core_meaning, localized_meaning, target_language,
         textbook_equivalent, native_context, mistakes_to_avoid,
         variations_json, combinations_json, usage_patterns_json,
-        examples_json, related_json, search_blob,
+        pattern_slots_json, examples_json, related_json, search_blob,
         is_favorite, mastery_status, review_count, user_notes,
         agent_name, model_name, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'new', 0, '', ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'new', 0, '', ?, ?, ?, ?)`,
     );
 
     for (const c of candidates) {
@@ -256,6 +258,7 @@ export class LearningLibraryRepository {
         JSON.stringify(c.variations || []),
         JSON.stringify(c.combinations || []),
         JSON.stringify(c.usagePatterns || []),
+        JSON.stringify(c.patternSlots || []),
         JSON.stringify(c.examples || []),
         JSON.stringify(c.relatedExpressions || []),
         this.buildSearchBlob(c),

@@ -90,11 +90,19 @@ export interface LiveModelsResponse {
   models: DiscoveredModelOption[];
 }
 
+export interface ProviderImageAttachment {
+  mimeType: string;
+  /** Base64 payload without the `data:` prefix. */
+  base64: string;
+}
+
 export interface ProviderChatRequest {
   model: string;
   variant?: string;
   systemPrompt: string;
   userPrompt: string;
+  /** Optional multimodal attachments (OCR, screenshot understanding). */
+  images?: ProviderImageAttachment[];
   temperature?: number;
   supportsTemperature?: boolean;
   maxTokens?: number;
@@ -102,6 +110,8 @@ export interface ProviderChatRequest {
   timeoutMs?: number;
   signal?: AbortSignal;
   onContentDelta?: (delta: string, accumulated: string) => void;
+  /** Return whatever streamed before a stall/timeout instead of throwing. */
+  allowPartialOnTimeout?: boolean;
 }
 
 export interface ProviderChatResponse {
@@ -113,6 +123,12 @@ export interface ProviderChatResponse {
   variantUsed: string;
   executionTimeMs: number;
   fallbackFrom?: string;
+  /** Upstream stop reason (e.g. "length", "max_tokens", "MAX_TOKENS", "stop"). */
+  finishReason?: string;
+  /** True when the provider stopped at the token ceiling, so JSON may be cut off. */
+  truncated?: boolean;
+  /** Characters of reasoning emitted before the visible answer, for diagnostics. */
+  reasoningChars?: number;
 }
 
 export interface IProviderProtocolAdapter {

@@ -55,7 +55,12 @@ export function extractYoutubeId(raw: string): string {
   return match ? match[1] : '';
 }
 
-function isBlockedHost(hostname: string): boolean {
+/**
+ * Reject localhost, link-local, private, CGNAT, multicast, and non-public hosts.
+ * Shared by every server-side URL fetch (media ingestion, article reading, OCR
+ * image downloads) so untrusted URLs can never reach the internal network.
+ */
+export function isBlockedNetworkHost(hostname: string): boolean {
   const host = (hostname || '').trim().toLowerCase().replace(/\.$/, '').replace(/^\[|\]$/g, '');
   if (!host || host === 'localhost' || host === '0.0.0.0' || host === 'broadcasthost') return true;
   if (/\.(local|internal|localhost|lan)$/.test(host)) return true;
@@ -124,7 +129,7 @@ export function classifyMediaUrl(raw: string): MediaUrlInfo | null {
   }
   const scheme = parsed.protocol.replace(':', '').toLowerCase();
   const hostname = parsed.hostname.toLowerCase();
-  if ((scheme !== 'http' && scheme !== 'https') || isBlockedHost(hostname)) return null;
+  if ((scheme !== 'http' && scheme !== 'https') || isBlockedNetworkHost(hostname)) return null;
   if (YOUTUBE_DOMAINS.some((d) => hostMatches(hostname, d))) return null;
 
   const kept: string[] = [];

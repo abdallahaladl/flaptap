@@ -164,7 +164,9 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  overflow-x: hidden;
+  /* clip (not hidden): hidden makes the root a scroll container, which detaches
+     the sticky rail and topbar from the viewport. */
+  overflow-x: clip;
   -webkit-overflow-scrolling: touch;
   touch-action: manipulation;
   -webkit-text-size-adjust: 100%;
@@ -176,7 +178,7 @@ body {
   background-color: var(--bg-paper);
   color: var(--ink);
   position: relative;
-  overflow-x: hidden;
+  overflow-x: clip;
   -webkit-overflow-scrolling: touch;
   transition: background-color 0.22s var(--ease-editorial), color 0.22s var(--ease-editorial);
 }
@@ -338,9 +340,7 @@ html[data-sidebar="collapsed"] .app-shell {
   display: flex;
   flex-direction: column;
   z-index: 120;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
+  overflow: hidden;
 }
 
 .sidebar-backdrop {
@@ -432,6 +432,11 @@ html[data-sidebar="collapsed"] .app-shell {
   flex-direction: column;
   gap: 18px;
   flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
 .sidebar-group {
@@ -4396,15 +4401,14 @@ button:disabled {
   color: var(--ink);
 }
 
-/* Shared Contextual Word Lookup & Clickable Words (Lessons + Tech Lexicon) */
+/* Shared Contextual Word Lookup & Selectable Words */
 .clickable-word {
   border-radius: 3px;
   padding: 0 1px;
-  cursor: pointer;
-  transition: background-color 0.12s ease, color 0.12s ease;
+  cursor: text;
+  transition: color 0.12s ease;
 }
 
-.clickable-word:hover,
 .clickable-word.selected-word {
   background: var(--vox-yellow, #fff04b);
   color: #141413;
@@ -4603,10 +4607,118 @@ button:disabled {
   }
 }
 
+/* Selection action bar — shown after selecting text, before any lookup runs. */
+.selection-menu {
+  position: fixed;
+  z-index: 660;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(440px, calc(100vw - 20px));
+  padding: 5px 5px 5px 12px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--bg-sheet);
+  box-shadow: var(--shadow-float);
+  animation: selectionMenuIn 0.14s var(--ease-editorial);
+}
+
+.selection-menu[hidden] {
+  display: none;
+}
+
+.selection-menu::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  background: var(--bg-sheet);
+  border-right: 1.5px solid var(--ink);
+  border-bottom: 1.5px solid var(--ink);
+  transform: rotate(45deg);
+}
+
+.selection-menu[data-placement='below']::after {
+  top: -5px;
+  bottom: auto;
+  transform: rotate(-135deg);
+}
+
+.selection-menu-text {
+  min-width: 0;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-serif);
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--ink-secondary);
+}
+
+.selection-menu-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.selection-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg-sheet);
+  font-family: var(--font-sans);
+  font-size: 0.74rem;
+  font-weight: 650;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: opacity 0.14s ease, transform 0.1s ease;
+}
+
+.selection-menu-btn:hover {
+  opacity: 0.86;
+}
+
+.selection-menu-btn:active {
+  transform: scale(0.97);
+}
+
+.selection-menu-btn:focus-visible {
+  outline: 2px solid var(--status-info);
+  outline-offset: 2px;
+}
+
+@keyframes selectionMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .word-popover,
-  .word-popover.is-loading::before {
+  .word-popover.is-loading::before,
+  .selection-menu {
     animation: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .selection-menu-text {
+    max-width: 110px;
   }
 }
 
@@ -5583,6 +5695,45 @@ button:disabled {
 
 .subject-progress-bar[hidden] {
   display: none;
+}
+
+/* Study state chip: neutral = untouched, amber = in progress, green = done. */
+.sp-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--status-neutral-border);
+  background: var(--status-neutral-wash);
+  color: var(--status-neutral);
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sp-state::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.sp-state--progress {
+  border-color: var(--status-warning-border);
+  background: var(--status-warning-wash);
+  color: var(--status-warning);
+}
+
+.sp-state--done {
+  border-color: var(--status-success-border);
+  background: var(--status-success-wash);
+  color: var(--status-success);
 }
 
 .subject-progress-stats {

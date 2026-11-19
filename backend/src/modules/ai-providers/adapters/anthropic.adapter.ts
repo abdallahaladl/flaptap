@@ -79,10 +79,25 @@ export class AnthropicAdapter implements IProviderProtocolAdapter {
       }
 
       const maxTokens = Math.max(256, Math.min(request.maxTokens ?? 4096, 16384));
+      const userContent =
+        Array.isArray(request.images) && request.images.length > 0
+          ? [
+              { type: 'text', text: request.userPrompt },
+              ...request.images.map((image) => ({
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: image.mimeType,
+                  data: image.base64,
+                },
+              })),
+            ]
+          : request.userPrompt;
+
       const payload: Record<string, any> = {
         model: modelId,
         system: request.systemPrompt,
-        messages: [{ role: 'user', content: request.userPrompt }],
+        messages: [{ role: 'user', content: userContent }],
         max_tokens: maxTokens,
       };
 
@@ -146,6 +161,8 @@ export class AnthropicAdapter implements IProviderProtocolAdapter {
           modelUsed: modelId,
           variantUsed: includeThinking ? variant : 'standard',
           executionTimeMs: Date.now() - start,
+          finishReason: String(data?.stop_reason || '') || undefined,
+          truncated: String(data?.stop_reason || '') === 'max_tokens',
         };
       } finally {
         clearTimeout(timer);

@@ -174,6 +174,34 @@ export class SqliteService implements OnModuleDestroy {
       CREATE INDEX IF NOT EXISTS idx_tech_linguist_user ON tech_linguist_extractions(user_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_tech_linguist_guest ON tech_linguist_extractions(guest_token, created_at DESC);
 
+      CREATE TABLE IF NOT EXISTS american_extractor_notes (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        creator TEXT NOT NULL DEFAULT '',
+        summary TEXT NOT NULL DEFAULT '',
+        speaker_style TEXT NOT NULL DEFAULT '',
+        source_type TEXT NOT NULL DEFAULT 'text',
+        source_url TEXT NOT NULL DEFAULT '',
+        source_label TEXT NOT NULL DEFAULT '',
+        source_meta_json TEXT NOT NULL DEFAULT '{}',
+        target_language TEXT NOT NULL DEFAULT 'ar',
+        agent_name TEXT NOT NULL DEFAULT '',
+        model_name TEXT NOT NULL DEFAULT '',
+        reasoning_level TEXT NOT NULL DEFAULT '',
+        execution_time_ms INTEGER NOT NULL DEFAULT 0,
+        fallback_from TEXT NOT NULL DEFAULT '',
+        item_count INTEGER NOT NULL DEFAULT 0,
+        items_json TEXT NOT NULL DEFAULT '[]',
+        source_text TEXT NOT NULL DEFAULT '',
+        is_completed INTEGER NOT NULL DEFAULT 0,
+        completion_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_aex_notes_user_created
+        ON american_extractor_notes(user_id, created_at DESC);
+
       CREATE TABLE IF NOT EXISTS learning_library_batches (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -221,6 +249,7 @@ export class SqliteService implements OnModuleDestroy {
         variations_json TEXT NOT NULL DEFAULT '[]',
         combinations_json TEXT NOT NULL DEFAULT '[]',
         usage_patterns_json TEXT NOT NULL DEFAULT '[]',
+        pattern_slots_json TEXT NOT NULL DEFAULT '[]',
         examples_json TEXT NOT NULL DEFAULT '[]',
         related_json TEXT NOT NULL DEFAULT '[]',
         search_blob TEXT NOT NULL DEFAULT '',
@@ -284,8 +313,15 @@ export class SqliteService implements OnModuleDestroy {
     this.ensureColumn('lessons', 'cached_langs', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('lessons', 'ai_insights_count', 'INTEGER NOT NULL DEFAULT 0');
     this.ensureColumn('lessons', 'is_completed', 'INTEGER NOT NULL DEFAULT 0');
+    this.ensureColumn('lessons', 'completed_items_count', 'INTEGER NOT NULL DEFAULT 0');
+    this.ensureColumn('lessons', 'total_items_count', 'INTEGER NOT NULL DEFAULT 0');
     this.ensureColumn('vocabulary_items', 'is_completed', 'INTEGER NOT NULL DEFAULT 0');
     this.ensureColumn('learning_library_items', 'is_completed', 'INTEGER NOT NULL DEFAULT 0');
+    this.ensureColumn(
+      'learning_library_items',
+      'pattern_slots_json',
+      "TEXT NOT NULL DEFAULT '[]'",
+    );
     this.ensureColumn('tech_linguist_extractions', 'is_completed', 'INTEGER NOT NULL DEFAULT 0');
     this.ensureColumn('tech_linguist_extractions', 'completion_json', "TEXT NOT NULL DEFAULT '{}'");
 

@@ -144,6 +144,25 @@ export interface HistoryItem {
   completedDrills: number;
   isCompleted?: boolean;
   completionProgress?: LessonCompletionProgress;
+  itemProgress?: LessonProgressStats;
+}
+
+export interface LessonModeProgress {
+  done: number;
+  total: number;
+}
+
+export interface LessonProgressStats {
+  doneItems: number;
+  totalItems: number;
+  percent: number;
+  isCompleted: boolean;
+  byMode?: {
+    shadow: LessonModeProgress;
+    read: LessonModeProgress;
+    listen: LessonModeProgress;
+    coach: LessonModeProgress;
+  };
 }
 
 export type LessonCompletionSubject =
@@ -182,6 +201,138 @@ export class HistoryRepository {
 
   constructor(private readonly sqlite: SqliteService) {
     this.backfillCacheMetadataColumns();
+    this.backfillRealProgressColumns();
+  }
+
+  /**
+   * Computes exact item-level completion counts directly from valid indices
+   * across every checkable Studio mode (Shadow, Read, Listen, AI Coach).
+   * A lesson is marked completed ONLY when totalItems > 0 && doneItems === totalItems.
+   */
+  public computeLessonProgress(item: HistoryItem): LessonProgressStats {
+    const progress: LessonCompletionProgress =
+      item.completionProgress && typeof item.completionProgress === 'object'
+        ? item.completionProgress
+        : {};
+
+    const sentences = Array.isArray(item.sentences) ? item.sentences : [];
+    const sentIndices = new Set<number>(
+      sentences
+        .map((s) => Number(s.index))
+        .filter((n) => Number.isInteger(n) && n >= 0),
+    );
+    const sentTotal = sentIndices.size > 0 ? sentIndices.size : Math.max(0, Number(item.sentencesCount) || 0);
+
+    const countChecked = (raw: unknown, validFn: (n: number) => boolean): number => {
+      if (!Array.isArray(raw)) return 0;
+      const seen = new Set<number>();
+      for (const entry of raw) {
+        const idx = Number(entry);
+        if (Number.isInteger(idx) && idx >= 0 && validFn(idx)) {
+          seen.add(idx);
+        }
+      }
+      return seen.size;
+    };
+
+    const shadowDone = Math.min(
+      sentTotal,
+      countChecked(progress.sentences, (idx) => (sentIndices.size > 0 ? sentIndices.has(idx) : idx >= 1 && idx <= sentTotal)),
+    );
+
+    const paraTotal = Array.isArray(item.chunks)
+      ? item.chunks.length
+      : Math.max(0, Number(item.chunksCount) || 0);
+    const paraDone = Math.min(
+      paraTotal,
+      countChecked(progress.paragraphs, (idx) => idx >= 1 && idx <= paraTotal),
+    );
+
+    const listenDone = Math.min(
+      sentTotal,
+      countChecked(progress.listen, (idx) => (sentIndices.size > 0 ? sentIndices.has(idx) : idx >= 1 && idx <= sentTotal)),
+    );
+
+    const analysis = item.aiAnalysis;
+    const connTotal = Array.isArray(analysis?.connectedSpeech) ? analysis.connectedSpeech.length : 0;
+    const exprTotal = Array.isArray(analysis?.expressions) ? analysis.expressions.length : 0;
+    const vocabTotal = Array.isArray(analysis?.vocabulary) ? analysis.vocabulary.length : 0;
+
+    const connDone = Math.min(connTotal, countChecked(progress.coachConnected, (idx) => idx < connTotal));
+    const exprDone = Math.min(exprTotal, countChecked(progress.coachExpressions, (idx) => idx < exprTotal));
+    const vocabDone = Math.min(vocabTotal, countChecked(progress.coachVocabulary, (idx) => idx < vocabTotal));
+
+    const coachTotal = connTotal + exprTotal + vocabTotal;
+    const coachDone = connDone + exprDone + vocabDone;
+
+    // Overall lesson completion & progress strictly track Shadowing sentences.
+    const totalItems = sentTotal;
+    const doneItems = shadowDone;
+    const percent = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
+    const isCompleted = totalItems > 0 && doneItems === totalItems;
+
+    return {
+      doneItems,
+      totalItems,
+      percent,
+      isCompleted,
+      byMode: {
+        shadow: { done: shadowDone, total: sentTotal },
+        read: { done: paraDone, total: paraTotal },
+        listen: { done: listenDone, total: sentTotal },
+        coach: { done: coachDone, total: coachTotal },
+      },
+    };
+  }
+
+  private backfillRealProgressColumns(): void {
+    try {
+      const rows = this.sqlite.db
+        .prepare(
+          `SELECT id, payload_json, is_completed, completed_drills, completed_items_count, total_items_count, sentences_count
+           FROM lessons
+           WHERE total_items_count = 0
+              OR total_items_count != sentences_count
+              OR completed_drills != completed_items_count
+              OR is_completed = 1
+           LIMIT 500`,
+        )
+        .all() as Array<Record<string, any>>;
+
+      for (const r of rows) {
+        try {
+          const parsed: HistoryItem = JSON.parse(String(r.payload_json));
+          const stats = this.computeLessonProgress(parsed);
+          parsed.isCompleted = stats.isCompleted;
+          parsed.completedDrills = stats.doneItems;
+          delete parsed.itemProgress;
+          const updatedJson = JSON.stringify(parsed);
+
+          this.sqlite.db
+            .prepare(
+              `UPDATE lessons
+               SET completed_items_count = ?,
+                   total_items_count = ?,
+                   completed_drills = ?,
+                   is_completed = ?,
+                   payload_json = ?
+               WHERE id = ?`,
+            )
+            .run(
+              stats.doneItems,
+              stats.totalItems,
+              stats.doneItems,
+              stats.isCompleted ? 1 : 0,
+              updatedJson,
+              String(r.id),
+            );
+        } catch {
+          // Ignore malformed legacy row
+        }
+      }
+    } catch {
+      // Non-fatal
+    }
   }
 
   private backfillCacheMetadataColumns(): void {
@@ -359,6 +510,10 @@ export class HistoryRepository {
       payload.chunksCount = Number(row.chunks_count ?? payload.chunks?.length ?? 0);
       payload.createdAt = String(row.created_at || payload.createdAt);
       payload.updatedAt = String(row.updated_at || payload.updatedAt || payload.createdAt);
+      const realStats = this.computeLessonProgress(payload);
+      payload.itemProgress = realStats;
+      payload.isCompleted = realStats.isCompleted;
+      payload.completedDrills = realStats.doneItems;
       return payload;
     } catch (error: any) {
       this.logger.warn(`Corrupt lesson row ${row?.id}: ${error.message}`);
@@ -386,12 +541,15 @@ export class HistoryRepository {
         (item.aiAnalysis.vocabulary?.length || 0)
       : 0;
 
+    const progressStats = this.computeLessonProgress(item);
     item.userId = userId;
     item.guestToken = guestToken;
     item.sentencesCount = sentencesCount;
     item.chunksCount = chunksCount;
     item.analysisStatus = analysisStatus;
     item.cefrLevel = cefrLevel;
+    item.isCompleted = progressStats.isCompleted;
+    item.completedDrills = progressStats.doneItems;
     item.updatedAt = now;
     if (!item.createdAt) item.createdAt = now;
 
@@ -407,6 +565,7 @@ export class HistoryRepository {
     const serializable = { ...item };
     delete serializable.payloadBytes;
     delete serializable.cacheInfo;
+    delete serializable.itemProgress;
     const payloadJson = JSON.stringify(serializable);
 
     this.sqlite.db
@@ -414,9 +573,10 @@ export class HistoryRepository {
         INSERT INTO lessons (
           id, user_id, guest_token, track, video_id, source_url, title, creator,
           thumbnail_url, accent_dialect, duration_seconds, pacing_wpm, difficulty,
-          cefr_level, sentences_count, chunks_count, completed_drills, is_completed, study_notes,
+          cefr_level, sentences_count, chunks_count, completed_drills, is_completed,
+          completed_items_count, total_items_count, study_notes,
           analysis_status, cached_langs, ai_insights_count, payload_json, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           user_id = COALESCE(excluded.user_id, lessons.user_id),
           guest_token = CASE WHEN COALESCE(excluded.user_id, lessons.user_id) IS NOT NULL THEN NULL ELSE COALESCE(excluded.guest_token, lessons.guest_token) END,
@@ -435,6 +595,8 @@ export class HistoryRepository {
           chunks_count = excluded.chunks_count,
           completed_drills = excluded.completed_drills,
           is_completed = excluded.is_completed,
+          completed_items_count = excluded.completed_items_count,
+          total_items_count = excluded.total_items_count,
           study_notes = excluded.study_notes,
           analysis_status = excluded.analysis_status,
           cached_langs = excluded.cached_langs,
@@ -459,8 +621,10 @@ export class HistoryRepository {
         cefrLevel,
         sentencesCount,
         chunksCount,
-        Number(item.completedDrills) || 0,
-        item.isCompleted ? 1 : 0,
+        progressStats.doneItems,
+        progressStats.isCompleted ? 1 : 0,
+        progressStats.doneItems,
+        progressStats.totalItems,
         item.studyNotes || '',
         analysisStatus,
         cachedLangs,
@@ -483,7 +647,8 @@ export class HistoryRepository {
       SELECT
         id, user_id, guest_token, track, video_id, source_url, title, creator,
         thumbnail_url, accent_dialect, duration_seconds, pacing_wpm, difficulty,
-        cefr_level, sentences_count, chunks_count, completed_drills, is_completed, study_notes,
+        cefr_level, sentences_count, chunks_count, completed_drills, is_completed,
+        completed_items_count, total_items_count, study_notes,
         analysis_status, cached_langs, ai_insights_count,
         LENGTH(payload_json) AS payload_bytes,
         created_at, updated_at
@@ -509,6 +674,10 @@ export class HistoryRepository {
       const notes = String(row.study_notes || '');
       const analysisStatus = (row.analysis_status as 'pending' | 'ready') || 'pending';
       const insightsCount = Number(row.ai_insights_count) || 0;
+      const doneItems = Math.max(0, Number(row.completed_items_count) || 0);
+      const totalItems = Math.max(0, Number(row.total_items_count) || 0);
+      const pct = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
+      const realCompleted = totalItems > 0 && doneItems >= totalItems;
 
       return {
         id: String(row.id),
@@ -550,8 +719,14 @@ export class HistoryRepository {
         },
         createdAt: String(row.created_at),
         updatedAt: String(row.updated_at),
-        completedDrills: Number(row.completed_drills) || 0,
-        isCompleted: Boolean(row.is_completed),
+        completedDrills: doneItems,
+        isCompleted: realCompleted,
+        itemProgress: {
+          doneItems,
+          totalItems,
+          percent: pct,
+          isCompleted: realCompleted,
+        },
       };
     });
   }
@@ -605,6 +780,9 @@ export class HistoryRepository {
       item.createdAt = existing.createdAt;
       item.completedDrills = Math.max(item.completedDrills || 0, existing.completedDrills || 0);
       item.studyNotes = item.studyNotes || existing.studyNotes || '';
+      if (!item.completionProgress && existing.completionProgress) {
+        item.completionProgress = existing.completionProgress;
+      }
       if (!item.aiAnalysis && existing.aiAnalysis) {
         item.aiAnalysis = existing.aiAnalysis;
         item.analysisStatus = existing.analysisStatus;
@@ -799,7 +977,26 @@ export class HistoryRepository {
     const item = this.findById(id, scope);
     if (!item) return undefined;
 
-    item.isCompleted = Boolean(isCompleted);
+    if (isCompleted) {
+      const sentIndices = Array.from(
+        new Set(
+          (item.sentences || [])
+            .map((s) => Number(s.index))
+            .filter((n) => Number.isInteger(n) && n >= 0),
+        ),
+      ).sort((a, b) => a - b);
+
+      item.completionProgress = {
+        ...(item.completionProgress || {}),
+        sentences: sentIndices,
+      };
+    } else {
+      item.completionProgress = {
+        ...(item.completionProgress || {}),
+        sentences: [],
+      };
+    }
+
     this.insertOrReplaceRow(item, scope);
     return this.findSummaries(undefined, scope).find((s) => s.id === id);
   }
@@ -815,6 +1012,8 @@ export class HistoryRepository {
         id: string;
         subject: LessonCompletionSubject;
         completionProgress: LessonCompletionProgress;
+        isCompleted: boolean;
+        itemProgress: LessonProgressStats;
       }
     | undefined {
     const item = this.findById(id, scope);
@@ -839,10 +1038,18 @@ export class HistoryRepository {
     item.completionProgress = progress;
     this.insertOrReplaceRow(item, scope);
 
+    const logUserId = scope?.userId || item.userId || null;
+    if (completed && logUserId) {
+      this.updateUserStreak(logUserId);
+    }
+
+    const itemProgress = this.computeLessonProgress(item);
     return {
       id: item.id,
       subject,
       completionProgress: item.completionProgress,
+      isCompleted: itemProgress.isCompleted,
+      itemProgress,
     };
   }
 
@@ -867,31 +1074,9 @@ export class HistoryRepository {
     return { affectedCount: affected };
   }
 
-  incrementDrill(id: string, scope?: RequestIdentityScope, mode = 'shadow'): HistoryItem | undefined {
-    const item = this.findById(id, scope);
-    if (!item) return undefined;
-
-    item.completedDrills = (item.completedDrills || 0) + 1;
-    this.insertOrReplaceRow(item, {
-      userId: item.userId ?? scope?.userId ?? null,
-      guestToken: null,
-    });
-
-    const now = new Date().toISOString();
-    const logUserId = scope?.userId || item.userId || null;
-
-    this.sqlite.db
-      .prepare(`
-        INSERT INTO practice_logs (id, user_id, guest_token, lesson_id, mode, drills_count, duration_sec, created_at)
-        VALUES (?, ?, NULL, ?, ?, 1, 60, ?)
-      `)
-      .run(uuidv4(), logUserId, id, mode || 'shadow', now);
-
-    if (logUserId) {
-      this.updateUserStreak(logUserId);
-    }
-
-    return item;
+  incrementDrill(id: string, scope?: RequestIdentityScope, _mode = 'shadow'): HistoryItem | undefined {
+    // Fake press-to-complete increments are disabled; return real item-computed progress state.
+    return this.findById(id, scope);
   }
 
   private updateUserStreak(userId: string): void {
@@ -946,7 +1131,9 @@ export class HistoryRepository {
 
     const lessonRow = this.sqlite.db
       .prepare(
-        `SELECT COUNT(*) AS lessonsCount, COALESCE(SUM(completed_drills), 0) AS completedDrills
+        `SELECT COUNT(*) AS lessonsCount,
+                COALESCE(SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END), 0) AS completedLessonsCount,
+                COALESCE(SUM(completed_items_count), 0) AS completedItemsCount
          FROM lessons WHERE user_id = ?`,
       )
       .get(scope.userId) as Record<string, any> | undefined;
@@ -986,13 +1173,14 @@ export class HistoryRepository {
 
     return {
       lessonsCount: Number(lessonRow?.lessonsCount) || 0,
-      completedDrills: Number(lessonRow?.completedDrills) || 0,
+      completedDrills: Number(lessonRow?.completedLessonsCount) || 0,
+      completedItemsCount: Number(lessonRow?.completedItemsCount) || 0,
       vocabularyCount: Number(vocabRow?.total) || 0,
       dueVocabularyCount: Number(vocabRow?.due) || 0,
       masteredVocabularyCount: Number(vocabRow?.mastered) || 0,
       practiceMinutes: Math.max(
         Math.round((Number(logsRow?.totalSec) || 0) / 60),
-        Number(lessonRow?.completedDrills) || 0,
+        Number(lessonRow?.completedLessonsCount) || 0,
       ),
       todayMinutes: Math.round((Number(todayLogsRow?.todaySec) || 0) / 60),
       streakDays,

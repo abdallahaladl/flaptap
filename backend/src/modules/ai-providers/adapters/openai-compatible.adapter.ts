@@ -125,6 +125,7 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
     idleTimeoutMs: number,
     onActivity: () => void,
     onContentDelta?: (delta: string, accumulated: string) => void,
+    allowPartialOnTimeout = false,
   ): Promise<{ content: string; finishReason: string; reasoningChars: number }> {
     if (!res.body || !res.body.getReader) {
       const json: any = await res.json();
@@ -209,6 +210,13 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
           }
         }
       }
+    } catch (err: any) {
+      // A stall mid-stream still carries complete items. Let the caller salvage
+      // them instead of discarding minutes of generation.
+      if (allowPartialOnTimeout && contentAcc.trim().length > 0) {
+        return { content: contentAcc, finishReason: 'partial', reasoningChars };
+      }
+      throw err;
     } finally {
       reader.cancel().catch(() => {});
     }
@@ -248,11 +256,22 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
         throw new Error('Request cancelled.');
       }
 
+      const userContent =
+        Array.isArray(request.images) && request.images.length > 0
+          ? [
+              { type: 'text', text: request.userPrompt },
+              ...request.images.map((image) => ({
+                type: 'image_url',
+                image_url: { url: `data:${image.mimeType};base64,${image.base64}` },
+              })),
+            ]
+          : request.userPrompt;
+
       const payload: Record<string, any> = {
         model: modelId,
         messages: [
           { role: 'system', content: request.systemPrompt },
-          { role: 'user', content: request.userPrompt },
+          { role: 'user', content: userContent },
         ],
         max_tokens: Math.max(64, Math.min(maxTokensOverride, 32768)),
         stream: useStream,
@@ -313,6 +332,7 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
         const contentType = (res.headers.get('content-type') || '').toLowerCase();
         let rawText = '';
         let finishReason = '';
+        let reasoningChars = 0;
 
         if (useStream && contentType.includes('text/event-stream')) {
           const streamed = await this.readStreamingChatCompletion(
@@ -320,13 +340,20 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
             idleTimeoutMs,
             () => {},
             request.onContentDelta,
+            Boolean(request.allowPartialOnTimeout),
           );
           rawText = streamed.content;
           finishReason = streamed.finishReason;
+          reasoningChars = streamed.reasoningChars;
         } else {
           const data: any = await res.json();
           const raw = data?.choices?.[0]?.message?.content;
           finishReason = String(data?.choices?.[0]?.finish_reason || '');
+          reasoningChars = String(
+            data?.choices?.[0]?.message?.reasoning_content ||
+              data?.choices?.[0]?.message?.reasoning ||
+              '',
+          ).length;
           rawText = Array.isArray(raw)
             ? raw.map((part: any) => part?.text || '').join('')
             : String(raw || '');
@@ -359,6 +386,9 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
           modelUsed: modelId,
           variantUsed: includeEffort ? variant : 'standard',
           executionTimeMs: Date.now() - start,
+          finishReason: finishReason || undefined,
+          truncated: finishReason === 'length' || finishReason === 'max_tokens',
+          reasoningChars: reasoningChars || undefined,
         };
       } catch (err: any) {
         if (request.signal?.aborted) {

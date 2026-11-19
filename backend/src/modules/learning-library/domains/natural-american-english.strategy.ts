@@ -104,6 +104,7 @@ export class NaturalAmericanEnglishDomainStrategy extends BaseLearningDomainStra
       variationsHeading: 'Variations & Shortcuts',
       combinationsHeading: 'Combinations & Collocations',
       patternsHeading: 'Usage Patterns',
+      patternHeading: 'Reusable Pattern',
       examplesHeading: 'Natural Real-Life Examples',
       mechanicsHeading: 'Connected Speech & Pronunciation Mechanics',
       nuanceHeading: 'Social Context & Mistakes to Avoid',

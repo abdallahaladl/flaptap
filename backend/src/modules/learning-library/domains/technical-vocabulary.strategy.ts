@@ -66,6 +66,7 @@ export class TechnicalVocabularyDomainStrategy extends BaseLearningDomainStrateg
       variationsHeading: 'Acronyms & Related Forms',
       combinationsHeading: 'Engineering Collocations',
       patternsHeading: 'Design Review & RFC Patterns',
+      patternHeading: 'Reusable Engineering Frame',
       examplesHeading: 'Real Engineering Usage Examples',
       mechanicsHeading: 'Spoken Delivery & Stress Cues',
       nuanceHeading: 'Architecture Nuance & Pitfalls',
