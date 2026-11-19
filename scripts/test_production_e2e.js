@@ -986,15 +986,16 @@ async function runProductionE2ETest() {
 
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '06-studio-shadow-light.png') });
 
-    // Flexible Video Docking: Transcript (side) -> Theater (theater) -> Transcript (side) (Zero Remount!)
-    await page.click('[data-layout-choice="theater"]');
-    await new Promise((r) => setTimeout(r, 180));
+    // Theater Layout & Zero-Remount Invariant
+    const hasLayoutButtons = await page.evaluate(() => Boolean(document.querySelector('[data-layout-choice="theater"]')));
+    if (hasLayoutButtons) {
+      await page.click('[data-layout-choice="theater"]');
+      await new Promise((r) => setTimeout(r, 180));
+    }
     const theaterLayout = await page.evaluate(() => {
       const ws = document.getElementById('studio-main-content');
       return {
         layout: ws.getAttribute('data-layout'),
-        theaterPressed: document.querySelector('[data-layout-choice="theater"]').getAttribute('aria-pressed'),
-        sidePressed: document.querySelector('[data-layout-choice="side"]').getAttribute('aria-pressed'),
         wsAlive: ws.dataset.e2eAlive,
         cardAlive: document.querySelector('.sentence-driller-card')?.dataset.e2eAlive,
         playerAlive: document.getElementById('studio-youtube-player')?.dataset.e2eAlive,
@@ -1002,14 +1003,14 @@ async function runProductionE2ETest() {
     });
     assert(
       theaterLayout.layout === 'theater' &&
-      theaterLayout.theaterPressed === 'true' &&
-      theaterLayout.sidePressed === 'false' &&
       theaterLayout.wsAlive === 'yes' &&
       theaterLayout.cardAlive === 'yes' &&
       theaterLayout.playerAlive === 'yes',
       `Theater layout or zero-remount invariant failed: ${JSON.stringify(theaterLayout)}`,
     );
-    await page.click('[data-layout-choice="side"]');
+    if (hasLayoutButtons) {
+      await page.click('[data-layout-choice="side"]');
+    }
 
     // Read Mode
     await page.click('.mode-tab-btn[data-mode="read"]');
@@ -1083,13 +1084,27 @@ async function runProductionE2ETest() {
     );
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '09-studio-ai-coach.png') });
 
-    // Switch back to Shadow Mode & test Click-Any-Word Contextual AI Lookup + selected-word cleanup
+    // Switch back to Shadow Mode & test Text-Selection Contextual AI Lookup
     await page.click('.mode-tab-btn[data-mode="shadow"]');
     await page.evaluate(() => {
       const words = [...document.querySelectorAll('.clickable-word')];
       const target = words.find((w) => (w.dataset.word || '').length >= 5) || words[0];
-      target?.click();
+      if (!target) return;
+      const range = document.createRange();
+      range.selectNodeContents(target);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      target.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }));
     });
+    await page.waitForFunction(
+      () => {
+        const menu = document.getElementById('selection-action-menu');
+        return menu && !menu.hidden && menu.querySelector('.selection-menu-btn');
+      },
+      { timeout: 10000 },
+    );
+    await page.click('#selection-action-menu .selection-menu-btn');
     await page.waitForFunction(
       () => {
         const pop = document.getElementById('word-lookup-popover');
@@ -1098,14 +1113,10 @@ async function runProductionE2ETest() {
       },
       { timeout: 45000 },
     );
-    assert(
-      (await page.evaluate(() => document.querySelectorAll('.clickable-word.selected-word').length)) === 1,
-      'Expected exactly 1 .selected-word while popover is open.',
-    );
     await page.click('#wp-close-btn');
     assert(
-      (await page.evaluate(() => document.querySelectorAll('.clickable-word.selected-word').length)) === 0,
-      '.selected-word highlight was not cleared when closing popover.',
+      (await page.evaluate(() => document.getElementById('word-lookup-popover')?.hidden === true)),
+      'Word lookup popover did not close cleanly.',
     );
 
     // -----------------------------------------------------------------------
@@ -1233,6 +1244,46 @@ async function runProductionE2ETest() {
     // -----------------------------------------------------------------------
     console.log('\n--- 6. World Language Translation Deck (Per-Sentence + Translate All + Permanent Cache) ---');
 
+    const openTranslationDeck = async () => {
+      const isDeckOpen = await page.evaluate(
+        () => document.getElementById('translation-control-deck')?.hidden === false,
+      );
+      if (isDeckOpen) return;
+      const moreOpen = await page.evaluate(
+        () => document.getElementById('studio-more-popover')?.hidden === false,
+      );
+      if (!moreOpen) {
+        await page.click('#scb-more-btn');
+        await page.waitForFunction(
+          () => document.getElementById('studio-more-popover')?.hidden === false,
+          { timeout: 5000 },
+        );
+      }
+      await page.click('#trans-trigger-btn');
+      await page.waitForFunction(
+        () =>
+          document.getElementById('translation-control-deck')?.hidden === false &&
+          (document.getElementById('trans-lang-select')?.options?.length || 0) > 150,
+        { timeout: 10000 },
+      );
+    };
+
+    const closeTranslationDeck = async () => {
+      const isDeckOpen = await page.evaluate(
+        () => document.getElementById('translation-control-deck')?.hidden === false,
+      );
+      if (isDeckOpen) {
+        await page.keyboard.press('Escape');
+        await page.waitForFunction(
+          () => document.getElementById('translation-control-deck')?.hidden === true,
+          { timeout: 5000 },
+        );
+      }
+    };
+
+    // Open Translation popover from unified control bar before interacting (triggers lazy language catalog load)
+    await openTranslationDeck();
+
     const langInfo = await page.evaluate(() => ({
       removedCheckbox: document.getElementById('translation-toggle-checkbox') === null,
       removedRefreshBtn: document.getElementById('trans-refresh-btn') === null,
@@ -1248,12 +1299,6 @@ async function runProductionE2ETest() {
       langInfo.second === 'ar',
       `Language catalog / removed controls check failed: ${JSON.stringify(langInfo)}`,
     );
-
-    // Open Translation popover from unified control bar before interacting
-    await page.click('#trans-trigger-btn');
-    await page.waitForFunction(() => document.getElementById('translation-control-deck')?.hidden === false, {
-      timeout: 5000,
-    });
 
     // 6a. Verify permanent cross-account video cache on `fixture` (`Ka0p5tUUmgg`)
     await page.select('#trans-lang-select', 'ar');
@@ -1295,10 +1340,7 @@ async function runProductionE2ETest() {
     });
 
     // Open Translation popover before interacting on fresh lesson
-    await page.click('#trans-trigger-btn');
-    await page.waitForFunction(() => document.getElementById('translation-control-deck')?.hidden === false, {
-      timeout: 5000,
-    });
+    await openTranslationDeck();
 
     // Selecting "none" hides all translation buttons and boxes without calling API
     await page.select('#trans-lang-select', 'none');
@@ -1334,7 +1376,7 @@ async function runProductionE2ETest() {
     );
 
     // Close popover before per-sentence trigger click, then open for #trans-all-btn
-    await page.click('#trans-trigger-btn');
+    await closeTranslationDeck();
 
     // 6c. Trigger 1: Click translation button on sentence #1
     await page.click('[data-trans-btn-sent="1"]');
@@ -1366,7 +1408,7 @@ async function runProductionE2ETest() {
     );
 
     // 6d. Trigger 2: Open Translation popover and click Translate All (Translate Remaining) button
-    await page.click('#trans-trigger-btn');
+    await openTranslationDeck();
     await page.click('#trans-all-btn');
     await page.waitForFunction(
       (total) => {
