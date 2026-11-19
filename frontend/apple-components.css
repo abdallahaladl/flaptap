@@ -1825,10 +1825,36 @@ select.field-input {
 }
 
 .ft-ai-col {
+  position: relative;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.ft-ai-col:has(> .ft-ai-select)::after {
+  content: '';
+  position: absolute;
+  bottom: 1px;
+  inset-inline-end: 1px;
+  width: 38px;
+  height: 36px;
+  border-radius: 0 10px 10px 0;
+  pointer-events: none;
+  z-index: 2;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"),
+    linear-gradient(90deg, transparent 0%, var(--ap-surface) 44%);
+  background-repeat: no-repeat;
+  background-position: right 11px center, 0 0;
+}
+
+[dir="rtl"] .ft-ai-col:has(> .ft-ai-select)::after {
+  border-radius: 10px 0 0 10px;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"),
+    linear-gradient(270deg, transparent 0%, var(--ap-surface) 44%);
+  background-position: left 11px center, 0 0;
 }
 
 .ft-ai-label {
@@ -1846,6 +1872,7 @@ select.field-input {
   height: 38px;
   padding: 0 36px 0 12px;
   background-color: var(--ap-surface);
+  background-image: none !important;
   font-size: 0.83rem;
   font-weight: 500;
   border-radius: 11px;

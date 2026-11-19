@@ -105,7 +105,7 @@
       cacheStorageTitle: 'Cache & Storage Footprint',
       transcriptCachesLabel: 'Raw Video Transcript Caches',
       aiCoachCachesLabel: 'Cached AI Coach Analyses',
-      translationCachesLabel: 'Cached Translations',
+      translationCachesLabel: 'Translations',
       studyNotesSavedLabel: 'Lessons with Study Notes',
       cacheControlsHeading: 'Global Cache & Data Controls',
       cacheControlsDesc: 'Clear cached AI layers to force fresh generation without losing your lessons or notes, or wipe specific datasets.',
