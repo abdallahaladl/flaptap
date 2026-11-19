@@ -422,75 +422,30 @@
     return dict[key] !== undefined ? dict[key] : (I18N.en[key] || key);
   }
 
-  function escapeHtml(str) {
-    return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+  const U = window.FlaptapUtils;
+  const escapeHtml = U.escapeHtml;
+  const formatDuration = U.formatDuration;
+  const formatBytes = U.formatBytes;
+  const formatShortDate = U.formatShortDate;
 
   /** Sprite icon markup (frontend/icons.svg) — icon-only controls always get a label. */
   function icon(name, options) {
     return window.FlaptapIcon ? window.FlaptapIcon(name, options) : '';
   }
 
-  function formatDuration(sec) {
-    const total = Math.max(0, Math.round(Number(sec) || 0));
-    const m = Math.floor(total / 60);
-    const s = total % 60;
-    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-  }
-
-  function formatBytes(bytes) {
-    const num = Math.max(0, Number(bytes) || 0);
-    if (num < 1024) return `${num} B`;
-    if (num < 1024 * 1024) return `${(num / 1024).toFixed(1)} KB`;
-    return `${(num / (1024 * 1024)).toFixed(2)} MB`;
-  }
-
-  function formatShortDate(iso) {
-    if (!iso) return '—';
-    try {
-      const d = new Date(iso);
-      return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    } catch {
-      return String(iso).slice(0, 16);
-    }
-  }
-
   function apiHeaders(extra) {
-    const headers = Object.assign({ 'Content-Type': 'application/json' }, extra || {});
-    if (state.guestToken) headers['x-guest-token'] = state.guestToken;
-    if (state.authToken) headers['Authorization'] = `Bearer ${state.authToken}`;
-    return headers;
+    return U.buildAuthHeaders({
+      guestToken: state.guestToken,
+      authToken: state.authToken,
+      extra,
+    });
   }
 
   async function apiFetch(url, options) {
-    const opts = Object.assign({ credentials: 'same-origin' }, options || {});
-    opts.headers = apiHeaders(opts.headers);
-    let res;
-    try {
-      res = await fetch(url, opts);
-    } catch {
-      const isMobileOnLocalhost =
-        location.hostname === 'localhost' &&
-        /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent || '');
-      throw new Error(
-        isMobileOnLocalhost
-          ? 'Cannot reach Flaptap on localhost. Open your computer’s same-Wi-Fi URL instead (for example http://192.168.x.x:3333).'
-          : 'Cannot connect to Flaptap right now. Check that the server is running on the same Wi-Fi network.',
-      );
-    }
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const err = new Error(body?.message || `Request failed (${res.status})`);
-      err.status = res.status;
-      err.code = body?.code;
-      throw err;
-    }
-    return body;
+    return U.apiFetch(url, options, {
+      direct: true,
+      getHeaders: apiHeaders,
+    });
   }
 
   async function withButtonLoading(btn, loadingLabel, fn) {
@@ -506,14 +461,8 @@
     }
   }
 
-  let toastTimer = null;
   function showToast(message) {
-    const el = document.getElementById('workspace-toast');
-    if (!el) return;
-    el.textContent = message;
-    el.classList.add('visible');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('visible'), 3400);
+    U.showToast(message, 'workspace-toast', 3400);
   }
 
   /* ========================================================================
@@ -980,7 +929,7 @@
 
       listEl.innerHTML = state.activeSessions
         .map((s) => {
-          const ua = (s.userAgent || 'Browser session').slice(0, 48);
+          const ua = U.parseUserAgent(s.userAgent);
           return `
             <div class="session-item">
               <div class="session-item-meta">
@@ -1725,17 +1674,12 @@
     if (!requireAuthBeforeAction({ type: 'export_backup' })) return;
     try {
       const payload = await apiFetch('/api/history/export', { method: 'GET' });
-      const blob = new Blob([JSON.stringify(payload, null, 2)], {
-        type: 'application/json;charset=utf-8',
-      });
-      const a = document.createElement('a');
       const stamp = new Date().toISOString().slice(0, 10);
-      a.href = URL.createObjectURL(blob);
-      a.download = `flaptap-account-backup-${stamp}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+      U.downloadBlob(
+        JSON.stringify(payload, null, 2),
+        `flaptap-account-backup-${stamp}.json`,
+        'application/json;charset=utf-8',
+      );
       showToast('Full account backup downloaded (.json)');
     } catch (err) {
       showToast(err.message);

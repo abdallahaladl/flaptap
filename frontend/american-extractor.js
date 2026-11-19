@@ -185,34 +185,19 @@
     return global.FlaptapRouter || null;
   }
 
-  function escapeHtml(value) {
-    return String(value ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+  const U = global.FlaptapUtils;
+  const escapeHtml = U.escapeHtml;
 
   function icon(name, options) {
     return global.FlaptapIcon ? global.FlaptapIcon(name, options) : '';
   }
 
   function showToast(message) {
-    ws()?.showToast?.(message);
+    U.showToast(message);
   }
 
   async function apiFetch(url, options) {
-    if (ws()?.apiFetch) return ws().apiFetch(url, options);
-    const res = await fetch(url, Object.assign({ credentials: 'same-origin' }, options || {}));
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const error = new Error(data?.message || `Request failed (${res.status})`);
-      error.status = res.status;
-      error.code = data?.code;
-      throw error;
-    }
-    return data;
+    return U.apiFetch(url, options);
   }
 
   async function uploadFetch(url, formData) {

@@ -15,42 +15,19 @@
   let sharedModalEl = null;
   const activeWidgets = new Set();
 
-  function escapeHtml(str) {
-    return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function formatTokens(n) {
-    const num = Number(n);
-    if (!Number.isFinite(num) || num <= 0) return '—';
-    if (num >= 1000000) return `${(num / 1000000).toFixed(1).replace(/\.0$/, '')}M`;
-    if (num >= 1000) return `${Math.round(num / 1000)}k`;
-    return String(num);
-  }
+  const U = global.FlaptapUtils;
+  const escapeHtml = U.escapeHtml;
+  const formatTokens = U.formatTokens;
 
   async function defaultFetcher(url, options = {}) {
-    const ws = global.FlaptapWorkspace;
-    if (ws?.apiFetch) {
-      return ws.apiFetch(url, options);
-    }
-    const headers = Object.assign(
-      { 'Content-Type': 'application/json' },
-      ws?.getAuthHeaders ? ws.getAuthHeaders() : {},
-      options.headers || {},
-    );
-    const res = await fetch(url, Object.assign({ credentials: 'same-origin' }, options, { headers }));
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const err = new Error(data?.message || `Request failed (${res.status})`);
-      err.status = res.status;
-      err.code = data?.code;
-      throw err;
-    }
-    return data;
+    return U.apiFetch(url, options, {
+      getHeaders: (extra) =>
+        Object.assign(
+          { 'Content-Type': 'application/json' },
+          global.FlaptapWorkspace?.getAuthHeaders ? global.FlaptapWorkspace.getAuthHeaders() : {},
+          extra || {},
+        ),
+    });
   }
 
   function loadPersistedSelection(persistenceKey) {

@@ -36,36 +36,19 @@
     return global.FlaptapTechLexiconModes || null;
   }
 
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+  const U = global.FlaptapUtils;
+  const escapeHtml = U.escapeHtml;
 
   function icon(name, options) {
     return global.FlaptapIcon ? global.FlaptapIcon(name, options) : '';
   }
 
   function showToast(msg) {
-    ws()?.showToast?.(msg);
+    U.showToast(msg);
   }
 
   async function apiFetch(url, options) {
-    if (ws()?.apiFetch) {
-      return ws().apiFetch(url, options);
-    }
-    const res = await fetch(url, options);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const err = new Error(data?.message || `Request failed (${res.status})`);
-      err.status = res.status;
-      throw err;
-    }
-    return data;
+    return U.apiFetch(url, options);
   }
 
   /* ========================================================================

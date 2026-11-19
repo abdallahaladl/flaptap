@@ -425,21 +425,9 @@
     return dict[key] !== undefined ? dict[key] : (I18N.en[key] || key);
   }
 
-  function escapeHtml(str) {
-    return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function normalizeTermKey(term) {
-    return String(term || '')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .toLowerCase();
-  }
+  const U = window.FlaptapUtils;
+  const escapeHtml = U.escapeHtml;
+  const normalizeTermKey = U.normalizeTermKey;
 
   function redirectToSignInGate() {
     const nextPath = window.location.pathname + window.location.search;
@@ -447,41 +435,23 @@
   }
 
   function apiHeaders(extra) {
-    const headers = Object.assign({ 'Content-Type': 'application/json' }, extra || {});
-    if (studioState.guestToken) headers['x-guest-token'] = studioState.guestToken;
-    if (studioState.authToken) headers['Authorization'] = `Bearer ${studioState.authToken}`;
-    return headers;
+    return U.buildAuthHeaders({
+      guestToken: studioState.guestToken,
+      authToken: studioState.authToken,
+      extra,
+    });
   }
 
   async function apiFetch(url, options) {
-    const opts = Object.assign({ credentials: 'same-origin' }, options || {});
-    opts.headers = apiHeaders(opts.headers);
-    const res = await fetch(url, opts);
-    const body = await res.json().catch(() => ({}));
-    if (res.status === 401) {
-      redirectToSignInGate();
-      const authErr = new Error(body?.message || 'Authentication required');
-      authErr.status = 401;
-      authErr.code = 'auth_required';
-      throw authErr;
-    }
-    if (!res.ok) {
-      const err = new Error(body?.message || `HTTP ${res.status}`);
-      err.status = res.status;
-      err.code = body?.code;
-      throw err;
-    }
-    return body;
+    return U.apiFetch(url, options, {
+      direct: true,
+      getHeaders: apiHeaders,
+      onUnauthorized: redirectToSignInGate,
+    });
   }
 
-  let toastTimer = null;
   function showToast(msg) {
-    const el = document.getElementById('studio-toast');
-    if (!el) return;
-    el.textContent = msg;
-    el.classList.add('visible');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove('visible'), 3200);
+    U.showToast(msg, 'studio-toast', 3200);
   }
 
   /* Theme & UI Language */
@@ -5246,20 +5216,13 @@
       if (notesVal && !md.includes(notesVal)) {
         md = `# ${studioState.item.title}\n\n## Personal Study Notes\n\n${notesVal}\n\n---\n\n${md}`;
       }
-      const blob = new Blob([md], { type: 'text/markdown;charset=utf-8' });
-      const a = document.createElement('a');
       const slug = (studioState.item.title || 'flaptap-lesson')
         .toLowerCase()
         .replace(/[^\w\s-]/g, '')
         .trim()
         .replace(/\s+/g, '-')
         .slice(0, 60);
-      a.href = URL.createObjectURL(blob);
-      a.download = `${slug || 'lesson'}.md`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+      U.downloadBlob(md, `${slug || 'lesson'}.md`, 'text/markdown;charset=utf-8');
       showToast(t('mdExportedToast'));
     });
 

@@ -63,14 +63,8 @@
     return global.FlaptapRouter || null;
   }
 
-  function escapeHtml(str) {
-    return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
+  const U = global.FlaptapUtils;
+  const escapeHtml = U.escapeHtml;
 
   function icon(name, options) {
     return global.FlaptapIcon ? global.FlaptapIcon(name, options) : '';
@@ -90,22 +84,11 @@
   }
 
   function showToast(msg) {
-    ws()?.showToast?.(msg);
+    U.showToast(msg);
   }
 
   async function apiFetch(url, options) {
-    if (ws()?.apiFetch) {
-      return ws().apiFetch(url, options);
-    }
-    const res = await fetch(url, options);
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      const err = new Error(data?.message || `Request failed (${res.status})`);
-      err.status = res.status;
-      err.code = data?.code;
-      throw err;
-    }
-    return data;
+    return U.apiFetch(url, options);
   }
 
   function getCurrentUser() {
@@ -1924,14 +1907,7 @@
   }
 
   function downloadFile(filename, content, mimeType) {
-    const blob = new Blob([content], { type: mimeType });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    U.downloadBlob(content, filename, mimeType);
   }
 
   async function handleExportJson() {
