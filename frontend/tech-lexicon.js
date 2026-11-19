@@ -198,9 +198,8 @@
       });
     }
 
-    const desk = document.querySelector('.lexicon-desk');
-    if (desk && !opts.skipUrlSync) {
-      desk.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (!opts.skipUrlSync) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   }
 

@@ -311,6 +311,11 @@ svg[hidden] {
   display: none !important;
 }
 
+/* Remove native Chromium customizable-select picker-icon so custom Apple chevrons never double-render */
+select::picker-icon {
+  display: none !important;
+}
+
 /* Shared entrance animation */
 @keyframes appleFadeRise {
   from {

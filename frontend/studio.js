@@ -462,8 +462,8 @@
     const sun = document.getElementById('studio-icon-sun');
     const moon = document.getElementById('studio-icon-moon');
     if (sun && moon) {
-      sun.hidden = studioState.theme !== 'dark';
-      moon.hidden = studioState.theme === 'dark';
+      sun.toggleAttribute('hidden', studioState.theme !== 'dark');
+      moon.toggleAttribute('hidden', studioState.theme === 'dark');
     }
   }
 

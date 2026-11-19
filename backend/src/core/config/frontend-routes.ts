@@ -21,9 +21,20 @@ const WORKSPACE_EXACT_PATHS = new Set<string>([
   '/library',
   '/learning-library',
   '/extractor',
+  '/american-extractor',
+  '/american-english',
 ]);
 
-const WORKSPACE_SUBROUTE_PREFIXES = ['/lexicon/', '/library/', '/extractor/'];
+const WORKSPACE_SUBROUTE_PREFIXES = [
+  '/lexicon/',
+  '/tech-lexicon/',
+  '/tech-linguist/',
+  '/library/',
+  '/learning-library/',
+  '/extractor/',
+  '/american-extractor/',
+  '/american-english/',
+];
 
 export function normalizePathname(pathname: string): string {
   const clean = (pathname || '/').split('?')[0].trim();

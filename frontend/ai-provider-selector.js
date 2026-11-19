@@ -873,5 +873,6 @@
   global.FlaptapAiSelector = {
     create,
     openKeysManager: (fetcher) => openKeysManagerModal(fetcher || defaultFetcher),
+    openKeysModal: (fetcher) => openKeysManagerModal(fetcher || defaultFetcher),
   };
 })(window);

@@ -325,7 +325,8 @@
       const shelf = document.getElementById('ll-library-shelf');
       if (shelf) {
         requestAnimationFrame(() => {
-          shelf.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          const targetTop = Math.max(0, shelf.getBoundingClientRect().top + window.scrollY - 78);
+          window.scrollTo({ top: targetTop, behavior: 'smooth' });
         });
       }
     }

@@ -1130,6 +1130,20 @@ body::before {
   box-shadow: var(--ap-shadow-pill);
 }
 
+[data-theme="dark"] .filter-pill.active,
+[data-theme="dark"] .lexicon-view-tab.active,
+[data-theme="dark"] .linguist-tab-btn.active,
+[data-theme="dark"] .auth-tab.active,
+[data-theme="dark"] .preset-pill.active {
+  background: var(--ap-surface-elevated);
+  color: var(--ap-text-primary);
+}
+
+[data-theme="dark"] .lexicon-view-tab.active svg,
+[data-theme="dark"] .linguist-tab-btn.active svg {
+  color: var(--ap-blue);
+}
+
 .filter-pill .ft-icon {
   color: currentColor;
   opacity: 0.72;
@@ -1825,14 +1839,28 @@ select.field-input {
   text-transform: none;
 }
 
-.ft-ai-select {
+.ft-ai-select,
+.ft-ai-selector--compact .ft-ai-select {
   width: 100%;
   min-width: 0;
   height: 38px;
+  padding: 0 36px 0 12px;
   background-color: var(--ap-surface);
   font-size: 0.83rem;
   font-weight: 500;
   border-radius: 11px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+[dir="rtl"] .ft-ai-select,
+[dir="rtl"] .ft-ai-selector--compact .ft-ai-select {
+  padding: 0 12px 0 36px;
+}
+
+#ll-library-shelf .ll-compact-select {
+  min-width: 132px;
 }
 
 .btn-refresh-agents {
@@ -2133,6 +2161,8 @@ select.field-input {
   margin-bottom: 20px;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  text-align: start;
   gap: 14px;
 }
 
@@ -2513,6 +2543,34 @@ select.field-input {
 }
 
 @media (max-width: 640px) {
+  .topbar-left {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .topbar-breadcrumb {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ll-domain-pills {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    border-radius: 16px;
+    padding: 4px;
+  }
+
+  .ll-domain-pills .filter-pill {
+    width: 100%;
+    justify-content: flex-start;
+    border-radius: 12px;
+    padding: 8px 12px;
+  }
+
   .workspace-main {
     padding: 16px 14px 44px;
   }
@@ -2600,6 +2658,13 @@ select.field-input {
     flex: 1 1 0%;
     min-width: 0;
     height: 38px;
+  }
+}
+
+@media (max-width: 520px) {
+  .crumb-group,
+  .topbar-breadcrumb > .crumb-sep:nth-of-type(2) {
+    display: none;
   }
 }
 

@@ -101,11 +101,11 @@
       currentStreakLabel: 'Current Streak',
       quickGoalLabel: 'Target:',
       libraryBreakdownTitle: 'Library & Recall Breakdown',
-      vocabDueMasteredLabel: 'Vocabulary (Due / Mastered / Total)',
+      vocabDueMasteredLabel: 'Vocabulary (Due / Done / All)',
       cacheStorageTitle: 'Cache & Storage Footprint',
       transcriptCachesLabel: 'Raw Video Transcript Caches',
       aiCoachCachesLabel: 'Cached AI Coach Analyses',
-      translationCachesLabel: 'Cached World Translations',
+      translationCachesLabel: 'Cached Translations',
       studyNotesSavedLabel: 'Lessons with Study Notes',
       cacheControlsHeading: 'Global Cache & Data Controls',
       cacheControlsDesc: 'Clear cached AI layers to force fresh generation without losing your lessons or notes, or wipe specific datasets.',
@@ -589,8 +589,8 @@
     const sun = document.getElementById('theme-icon-sun');
     const moon = document.getElementById('theme-icon-moon');
     if (sun && moon) {
-      sun.hidden = state.theme !== 'dark';
-      moon.hidden = state.theme === 'dark';
+      sun.toggleAttribute('hidden', state.theme !== 'dark');
+      moon.toggleAttribute('hidden', state.theme === 'dark');
     }
   }
 
@@ -2481,7 +2481,7 @@
 
     document.getElementById('drawer-open-ai-keys-btn')?.addEventListener('click', () => {
       closeAccountDrawer();
-      window.FlaptapAiSelector?.openKeysModal?.();
+      window.FlaptapAiSelector?.openKeysManager?.(apiFetch);
     });
     document.getElementById('drawer-open-history-btn')?.addEventListener('click', () => {
       closeAccountDrawer();
