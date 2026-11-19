@@ -149,7 +149,7 @@
       activeSessionsHeading: 'Active Sessions',
       revokeOtherSessionsBtn: 'Sign out others',
       deleteAccountBtn: 'Delete account & all data',
-      guestSyncNote: 'Sign in or create an account to unlock video extraction, dynamic AI coaching, world translations, vocabulary flashcards, and full history & cache control.',
+      guestSyncNote: 'Sign in or create an account to unlock video extraction, dynamic AI coaching, multilingual translations, vocabulary flashcards, and full history & cache control.',
       openLesson: 'Study',
       reextractBtn: 'Re-extract',
       clearCacheItemBtn: 'Clear Cache',
@@ -644,13 +644,18 @@
     if (!['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'tech-linguist', 'american-extractor', 'learning-library'].includes(section)) {
       section = 'lessons';
     }
+    const changed = state.section !== section;
     state.section = section;
+    document.body.dataset.activeSection = section;
     document.body.classList.toggle('is-lessons-view', section === 'lessons');
     document.body.classList.toggle('is-extractor-view', section === 'american-extractor');
     ['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'tech-linguist', 'american-extractor', 'learning-library'].forEach((name) => {
       const panel = document.getElementById(`section-${name}`);
       if (panel) panel.hidden = name !== section;
     });
+    if (changed) {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
     return section;
   }
 
@@ -2457,6 +2462,33 @@
 
     document.querySelectorAll('.auth-tab[data-auth-tab]').forEach((tab) => {
       tab.addEventListener('click', () => setAuthDrawerTab(tab.dataset.authTab));
+    });
+
+    // Authenticated Account Drawer Tabs (Profile | Security | Workspace)
+    document.querySelectorAll('.drawer-tab[data-drawer-tab]').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        const target = tab.dataset.drawerTab || 'profile';
+        document.querySelectorAll('.drawer-tab[data-drawer-tab]').forEach((btn) => {
+          const isAct = btn.dataset.drawerTab === target;
+          btn.classList.toggle('active', isAct);
+          btn.setAttribute('aria-selected', isAct ? 'true' : 'false');
+        });
+        document.querySelectorAll('[data-drawer-panel]').forEach((panel) => {
+          panel.hidden = panel.getAttribute('data-drawer-panel') !== target;
+        });
+      });
+    });
+
+    document.getElementById('drawer-open-ai-keys-btn')?.addEventListener('click', () => {
+      closeAccountDrawer();
+      window.FlaptapAiSelector?.openKeysModal?.();
+    });
+    document.getElementById('drawer-open-history-btn')?.addEventListener('click', () => {
+      closeAccountDrawer();
+      switchSection('history');
+    });
+    document.getElementById('drawer-export-json-btn')?.addEventListener('click', () => {
+      exportFullAccountJson();
     });
 
     document.getElementById('login-form')?.addEventListener('submit', async (e) => {

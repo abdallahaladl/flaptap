@@ -730,6 +730,12 @@ body::before {
   transform: translateX(-2px);
 }
 
+.btn-vox.btn-flashcards-trigger {
+  height: 36px;
+  padding: 0 16px;
+  font-size: 0.83rem;
+}
+
 .btn-secondary {
   display: inline-flex;
   align-items: center;

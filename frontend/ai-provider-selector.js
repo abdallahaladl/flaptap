@@ -397,21 +397,21 @@
 
         <div class="ft-ai-grid">
           <div class="ft-ai-col">
-            <label class="ft-ai-label" for="${escapeHtml(ids.keySelect)}">${isCompact ? 'Provider' : '1. Provider / API Key'}</label>
+            <label class="ft-ai-label" for="${escapeHtml(ids.keySelect)}">Provider</label>
             <select id="${escapeHtml(ids.keySelect)}" class="ft-ai-select" aria-label="Provider or API Key">
               <option value="">Detecting available keys...</option>
             </select>
           </div>
 
           <div class="ft-ai-col">
-            <label class="ft-ai-label" for="${escapeHtml(ids.modelSelect)}">${isCompact ? 'Model' : '2. Live Models (From Key)'}</label>
+            <label class="ft-ai-label" for="${escapeHtml(ids.modelSelect)}">Model</label>
             <select id="${escapeHtml(ids.modelSelect)}" class="ft-ai-select" aria-label="Available Models from Key">
               <option value="">Select API key first</option>
             </select>
           </div>
 
           <div class="ft-ai-col">
-            <label class="ft-ai-label" for="${escapeHtml(ids.variantSelect)}">${isCompact ? 'Thinking' : '3. Thinking / Reasoning'}</label>
+            <label class="ft-ai-label" for="${escapeHtml(ids.variantSelect)}">Thinking</label>
             <select id="${escapeHtml(ids.variantSelect)}" class="ft-ai-select" aria-label="Thinking or Reasoning Effort">
               <option value="">Select model first</option>
             </select>
@@ -433,7 +433,7 @@
             }
             ${
               extraSummaryHtml
-                ? `<div class="ll-direct-blueprint">${extraSummaryHtml}<span class="ll-bp-chip"><span class="ll-bp-k">Mode:</span> <strong>Live Direct API</strong></span></div>`
+                ? `<div class="ll-direct-blueprint">${extraSummaryHtml}<span class="ll-bp-chip"><span class="ll-bp-k">Transport:</span> <strong>Direct API</strong></span></div>`
                 : ''
             }
           </div>

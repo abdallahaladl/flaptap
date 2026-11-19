@@ -454,6 +454,8 @@
     if (libHeadingEl) {
       const plural = capitalize(domain.itemNounPlural || 'Expressions');
       libHeadingEl.textContent = `${plural} Library`;
+      const statTotalLabel = document.getElementById('ll-stat-total-label');
+      if (statTotalLabel) statTotalLabel.textContent = `Saved ${plural}`;
     }
     if (focusInput && domain.suggestedFocusTopics?.length) {
       focusInput.placeholder = `Optional situation or topic (e.g. ${domain.suggestedFocusTopics.slice(0, 2).join(', ')})...`;

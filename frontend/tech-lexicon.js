@@ -1249,7 +1249,23 @@
       completed: filtered.filter((it) => Boolean(it.isCompleted ?? it.is_completed)).length,
     });
 
-    if (emptyState) emptyState.hidden = filtered.length > 0;
+    if (emptyState) {
+      emptyState.hidden = filtered.length > 0;
+      if (filtered.length === 0) {
+        const titleEl = document.getElementById('lexicon-library-empty-title');
+        const descEl = document.getElementById('lexicon-library-empty-desc');
+        if (query) {
+          if (titleEl) titleEl.textContent = 'No matching notes found';
+          if (descEl) descEl.textContent = 'Try a different search query or clear your search filter.';
+        } else {
+          if (titleEl) titleEl.textContent = 'No study notes yet';
+          if (descEl) {
+            descEl.textContent =
+              'Extract a tech talk, interview, or transcript in Extractor Studio to start building your study library.';
+          }
+        }
+      }
+    }
     if (filtered.length === 0) {
       grid.innerHTML = '';
       return;

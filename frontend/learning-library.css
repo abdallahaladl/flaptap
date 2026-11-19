@@ -7,6 +7,10 @@
   margin-bottom: 24px;
 }
 
+#ll-library-shelf {
+  scroll-margin-top: 80px;
+}
+
 .ll-desk-top {
   display: flex;
   align-items: center;
