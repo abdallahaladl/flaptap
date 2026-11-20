@@ -74,7 +74,7 @@
   --aex-done-solid: #136B46;
   --aex-done-solid-hover: #177F53;
   --aex-done-track: #22C57E;
-  --aex-done-on-solid: #D6F5E5;
+  --aex-done-on-solid: #FFFFFF;
   --aex-done-surface: #131E19;
   --aex-done-border: rgba(52, 211, 153, 0.28);
   --aex-done-wash: rgba(52, 211, 153, 0.15);
@@ -379,13 +379,13 @@
 
 [data-theme="dark"] #section-american-extractor .btn-vox {
   background: #0A74DE;
-  color: #E4F0FF;
+  color: #FFFFFF;
   box-shadow: 0 2px 10px rgba(10, 116, 222, 0.28);
 }
 
 [data-theme="dark"] #section-american-extractor .btn-vox:hover {
   background: #1480EC;
-  color: #EEF6FF;
+  color: #FFFFFF;
 }
 
 #section-american-extractor .btn-vox:active,
@@ -406,11 +406,11 @@
 }
 
 [data-theme="dark"] #section-american-extractor .btn-secondary {
-  color: #D6D6DC;
+  color: #FFFFFF;
 }
 
 [data-theme="dark"] #section-american-extractor .btn-secondary:hover {
-  color: #ECECF2;
+  color: #FFFFFF;
 }
 
 #section-american-extractor .btn-sm {
@@ -2497,7 +2497,7 @@
 [data-theme="dark"] #section-american-extractor .filter-pill.active {
   background: rgba(10, 132, 255, 0.20);
   border-color: rgba(10, 132, 255, 0.44);
-  color: #CFE4FF;
+  color: #FFFFFF;
 }
 
 #section-american-extractor .aex-filter-dot {
