@@ -22,6 +22,7 @@ import {
 } from './american-extractor.types';
 import {
   buildExtractionPrompts,
+  EXTRACTION_CATEGORIES_CATALOG,
   EXTRACTION_DEPTHS,
   EXTRACTION_FOCUSES,
   EXTRACTION_GOALS,
@@ -36,6 +37,7 @@ import {
   normalizeOrder,
   normalizeStyle,
   normalizeStudyGoal,
+  resolveEffectiveCategories,
 } from './extraction.prompt';
 import { SourceResolverService } from './sources/source-resolver.service';
 import {
@@ -52,18 +54,7 @@ import {
   normalizeWhitespace,
   splitSourceIntoChunks,
 } from './utils/source-text.util';
-
-const EXTRACTION_CATEGORIES = [
-  { id: 'all', label: 'All items', hint: 'Every extracted American English item.' },
-  { id: 'idiom', label: 'Idioms & expressions', hint: 'Figurative multi-word expressions.' },
-  { id: 'slang', label: 'Slang', hint: 'Current casual and internet-native language.' },
-  { id: 'phrasal_verb', label: 'Phrasal verbs', hint: 'Verb + particle units with shifted meaning.' },
-  { id: 'vocabulary', label: 'Advanced vocabulary', hint: 'High-value words above B1.' },
-  { id: 'collocation', label: 'Collocations', hint: 'Natural word partnerships.' },
-  { id: 'connected_speech', label: 'Connected speech', hint: 'Reductions, linking, and fast-speech forms.' },
-  { id: 'discourse_marker', label: 'Discourse markers', hint: 'Spoken pivots and framing moves.' },
-  { id: 'pattern', label: 'Patterns', hint: 'Reusable sentence frames.' },
-] as const;
+import { anchorItemsToSegments } from './utils/timestamp-anchor.util';
 
 const MAX_UPLOAD_MB = 50;
 const EXTRACTOR_PREFERRED_MODELS = ['gpt-6-luna', 'gpt-5.6-luna'];
@@ -76,8 +67,10 @@ export interface ExtractRequest {
   text?: string;
   title?: string;
   lessonId?: string;
+  sourceId?: string;
   language?: string;
   extractionType?: string;
+  categories?: string[];
   style?: string;
   level?: string;
   focus?: string;
@@ -113,7 +106,7 @@ export class AmericanExtractorService {
   getConfig(): ExtractorConfig {
     const summary = this.aiProviders.getDefaultSummary();
     return {
-      categories: EXTRACTION_CATEGORIES.map((category) => ({ ...category })),
+      categories: EXTRACTION_CATEGORIES_CATALOG.map((category) => ({ ...category })),
       focuses: EXTRACTION_FOCUSES.map((focus) => ({ ...focus })),
       extractionTypes: EXTRACTION_TYPES.map((item) => ({ ...item })),
       styles: EXTRACTION_STYLES.map((item) => ({ ...item })),
@@ -125,7 +118,7 @@ export class AmericanExtractorService {
       defaultVariant: EXTRACTOR_PREFERRED_VARIANTS[0],
       maxUploadMb: MAX_UPLOAD_MB,
       acceptedUploadTypes: [
-        '.txt', '.md', '.markdown', '.srt', '.vtt', '.json',
+        '.pdf', '.txt', '.md', '.markdown', '.srt', '.vtt', '.json',
         '.png', '.jpg', '.jpeg', '.webp', '.gif',
         '.mp3', '.m4a', '.wav', '.aac', '.flac', '.ogg', '.opus',
         '.mp4', '.mov', '.webm', '.mkv',
@@ -144,49 +137,64 @@ export class AmericanExtractorService {
 
     const inputKind: ExtractorInputKind =
       request.inputKind ||
-      (request.url ? 'url' : request.lessonId ? 'lesson' : 'text');
+      (request.sourceId
+        ? 'source'
+        : request.url
+          ? 'url'
+          : request.lessonId
+            ? 'lesson'
+            : 'text');
 
     hooks.onStage?.({
       stage: 'detecting',
       label: 'Detecting source',
       detail:
-        inputKind === 'url'
-          ? 'Checking URL platform and readability'
-          : inputKind === 'lesson'
-            ? 'Locating your saved Flaptap lesson'
-            : 'Inspecting pasted text',
+        inputKind === 'source'
+          ? 'Reusing your cached Flaptap source'
+          : inputKind === 'url'
+            ? 'Checking URL platform and shared cache'
+            : inputKind === 'lesson'
+              ? 'Locating your saved Flaptap lesson'
+              : 'Inspecting pasted text',
       progress: 8,
     });
 
     hooks.onStage?.({
       stage: 'resolving',
       label:
-        inputKind === 'url'
-          ? 'Reading link source'
-          : inputKind === 'lesson'
-            ? 'Loading saved transcript'
-            : 'Preparing text',
+        inputKind === 'source'
+          ? 'Loading shared source'
+          : inputKind === 'url'
+            ? 'Reading link source'
+            : inputKind === 'lesson'
+              ? 'Loading saved transcript'
+              : 'Preparing text',
       detail:
-        inputKind === 'url'
-          ? 'Fetching captions, readable article, or audio transcription'
-          : inputKind === 'lesson'
-            ? 'Importing transcript from your Flaptap Library'
-            : 'Normalizing formatting and punctuation',
+        inputKind === 'source'
+          ? 'Reusing stored transcript and timestamps without re-fetching'
+          : inputKind === 'url'
+            ? 'Reusing cache or fetching captions, article, or audio transcription'
+            : inputKind === 'lesson'
+              ? 'Importing timed transcript from your Flaptap Library'
+              : 'Normalizing formatting and punctuation',
       progress: 18,
     });
 
     let source: ResolvedSource;
-    if (inputKind === 'url') {
+    if (inputKind === 'source' && request.sourceId) {
+      source = await this.resolver.resolveSharedSource(userId, String(request.sourceId));
+    } else if (inputKind === 'url') {
       source = await this.resolver.resolveUrl(String(request.url || ''), {
         userId,
         keyId: request.keyId,
         model: request.model,
         variant: request.variant,
+        force: request.force,
       });
     } else if (inputKind === 'lesson') {
       source = await this.resolver.resolveLesson(userId, String(request.lessonId || ''));
     } else {
-      source = await this.resolver.resolveText(String(request.text || ''), request.title);
+      source = await this.resolver.resolveText(String(request.text || ''), request.title, userId);
     }
 
     throwIfAborted(hooks.signal);
@@ -201,6 +209,7 @@ export class AmericanExtractorService {
       mimeType?: string;
       language?: string;
       extractionType?: string;
+      categories?: string[];
       style?: string;
       level?: string;
       focus?: string;
@@ -233,7 +242,7 @@ export class AmericanExtractorService {
     hooks.onStage?.({
       stage: 'resolving',
       label: 'Reading uploaded file',
-      detail: 'Running OCR, speech-to-text, or document parsing',
+      detail: 'Checking shared cache, or running PDF parse, OCR, or speech-to-text',
       progress: 20,
     });
 
@@ -245,6 +254,7 @@ export class AmericanExtractorService {
       keyId: params.keyId,
       model: params.model,
       variant: params.variant,
+      force: params.force,
     });
 
     throwIfAborted(hooks.signal);
@@ -255,6 +265,7 @@ export class AmericanExtractorService {
         userId: params.userId,
         language: params.language,
         extractionType: params.extractionType,
+        categories: params.categories,
         style: params.style,
         level: params.level,
         focus: params.focus,
@@ -278,7 +289,20 @@ export class AmericanExtractorService {
   ): Promise<ExtractionResult> {
     const startedAt = Date.now();
     const language = getLanguage(request.language);
+    const hasAudio = Boolean(source.hasAudio);
     const extractionType = normalizeExtractionType(request.extractionType);
+    const { selectedCategories, isAll, rejectedAudioOnly } = resolveEffectiveCategories({
+      categories: request.categories,
+      extractionType: extractionType.id,
+      hasAudio,
+    });
+
+    if (rejectedAudioOnly) {
+      throw new BadRequestException(
+        'Audio-dependent categories (Connected Speech, Pronunciation & Phonetics, Word & Sentence Stress, Linking & Sound Changes) require a source with real audio such as a YouTube video, audio/video upload, or video lesson.',
+      );
+    }
+
     const style = normalizeStyle(request.style);
     const level = normalizeLevel(request.level);
     const focus = normalizeFocus(request.focus);
@@ -290,6 +314,8 @@ export class AmericanExtractorService {
       sourceText: source.text,
       targetLanguage: language.code,
       extractionType: extractionType.id,
+      categories: isAll ? undefined : selectedCategories,
+      hasAudio,
       style: style.id,
       level: level.id,
       focus: focus.id,
@@ -320,6 +346,8 @@ export class AmericanExtractorService {
           truncated: source.truncated,
           chunkCount: chunks.length,
           cached: true,
+          hasAudio: Boolean(cached.media?.hasAudio ?? hasAudio),
+          hasVideo: Boolean(cached.media?.hasVideo ?? source.hasVideo),
         });
         hooks.onStage?.({
           stage: 'saving',
@@ -341,6 +369,8 @@ export class AmericanExtractorService {
       truncated: source.truncated,
       chunkCount: chunks.length,
       cached: false,
+      hasAudio,
+      hasVideo: Boolean(source.hasVideo),
     });
 
     if (chunks.length > 1) {
@@ -390,6 +420,8 @@ export class AmericanExtractorService {
         excludeTerms: seenTerms,
         targetLanguage: language.code,
         extractionType: extractionType.id,
+        categories: isAll ? undefined : selectedCategories,
+        hasAudio,
         style: style.id,
         level: level.id,
         focus: focus.id,
@@ -450,6 +482,8 @@ export class AmericanExtractorService {
         fallbackTitle: source.title,
         targetLanguage: language.code,
         extractionType: extractionType.id,
+        selectedCategories: isAll ? undefined : selectedCategories,
+        hasAudio,
         allowEmpty: chunks.length > 1,
       });
 
@@ -468,7 +502,7 @@ export class AmericanExtractorService {
       progress: 88,
     });
 
-    const normalized =
+    const merged =
       chunkResults.length === 1
         ? chunkResults[0]
         : mergeChunkExtractions({
@@ -477,6 +511,17 @@ export class AmericanExtractorService {
             fallbackTitle: source.title,
             order: order.id,
           });
+
+    // Anchor exact millisecond source timestamps onto every extracted item when segments exist
+    const anchoredItems =
+      Array.isArray(source.segments) && source.segments.length > 0
+        ? anchorItemsToSegments(merged.items, source.segments, source.text)
+        : merged.items;
+
+    const normalized = {
+      ...merged,
+      items: anchoredItems,
+    };
 
     const title =
       source.title &&
@@ -488,14 +533,41 @@ export class AmericanExtractorService {
     const id = `aex_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
     const executionTimeMs = Date.now() - startedAt;
 
+    const mediaKind = source.mediaKind || 'none';
+    const mediaId = source.mediaId || '';
+    const streamUrl =
+      (mediaKind === 'audio' || mediaKind === 'video') && mediaId
+        ? `/api/sources/media/${encodeURIComponent(mediaId)}`
+        : undefined;
+
+    const mediaInfo = {
+      hasAudio,
+      hasVideo: Boolean(source.hasVideo),
+      mediaKind,
+      mediaId,
+      durationSeconds: Number(source.durationSeconds) || 0,
+      ...(streamUrl ? { streamUrl } : {}),
+    };
+
     const enrichedMeta = {
       ...source.sourceMeta,
+      ...(source.sourceId ? { sourceId: source.sourceId } : {}),
+      hasAudio,
+      hasVideo: Boolean(source.hasVideo),
+      mediaKind,
+      ...(mediaId ? { mediaId } : {}),
       warnings: source.warnings,
       truncated: source.truncated,
       chunkCount: chunks.length,
+      timedItemCount: anchoredItems.filter((it) => typeof it.startSec === 'number').length,
       extractionOptions: {
-        extractionType: extractionType.id,
-        extractionTypeLabel: extractionType.shortLabel || extractionType.label,
+        extractionType: isAll ? 'all' : selectedCategories.length === 1 ? selectedCategories[0] : 'custom',
+        extractionTypeLabel: isAll
+          ? 'All categories'
+          : selectedCategories.length === 1
+            ? EXTRACTION_CATEGORIES_CATALOG.find((c) => c.id === selectedCategories[0])?.label || selectedCategories[0]
+            : `${selectedCategories.length} selected categories`,
+        categories: isAll ? ['all'] : selectedCategories,
         style: style.id,
         styleLabel: style.shortLabel || style.label,
         level: level.id,
@@ -521,6 +593,7 @@ export class AmericanExtractorService {
     this.repository.save({
       id,
       userId,
+      sourceId: source.sourceId || '',
       title,
       creator: source.creator,
       summary: normalized.summary,
@@ -543,12 +616,13 @@ export class AmericanExtractorService {
 
     this.logger.log(
       `Extractor note ${id}: ${normalized.items.length} items from ${source.sourceType} ` +
-        `(${chunks.length} chunk${chunks.length === 1 ? '' : 's'}, ${extractionType.id}/${style.id}/${level.id}) ` +
-        `via ${lastProviderName}/${lastModelUsed} in ${executionTimeMs}ms`,
+        `(${chunks.length} chunk${chunks.length === 1 ? '' : 's'}, audio=${hasAudio ? 'yes' : 'no'}, ` +
+        `timed=${enrichedMeta.timedItemCount}) via ${lastProviderName}/${lastModelUsed} in ${executionTimeMs}ms`,
     );
 
     return {
       id,
+      ...(source.sourceId ? { sourceId: source.sourceId } : {}),
       title,
       creator: source.creator,
       summary: normalized.summary,
@@ -557,6 +631,7 @@ export class AmericanExtractorService {
       sourceUrl: source.sourceUrl,
       sourceLabel: source.sourceLabel,
       sourceMeta: enrichedMeta,
+      media: mediaInfo,
       targetLanguage: language.code,
       targetLanguageName: language.name,
       rtl: Boolean(language.rtl),
@@ -630,6 +705,9 @@ export class AmericanExtractorService {
         track: item.track,
         trackTitle: item.trackTitle,
         sourceUrl: item.sourceUrl,
+        videoId: item.videoId || '',
+        hasAudio: Boolean(item.videoId),
+        hasVideo: Boolean(item.videoId),
         sentencesCount: item.sentencesCount || 0,
         createdAt: item.createdAt,
       }));

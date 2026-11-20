@@ -16,6 +16,7 @@ import { getLanguage } from '../../core/ai/languages';
 export interface SaveExtractorNoteInput {
   id: string;
   userId: string;
+  sourceId?: string;
   title: string;
   creator: string;
   summary: string;
@@ -62,7 +63,7 @@ function matchesSourceTypeFilter(sourceType: ExtractorSourceType, filter: string
   const f = filter.trim().toLowerCase();
   if (!f || f === 'all') return true;
   if (f === 'video') return ['youtube', 'social_video', 'video'].includes(sourceType);
-  if (f === 'file') return ['markdown', 'image', 'audio'].includes(sourceType);
+  if (f === 'file') return ['pdf', 'markdown', 'image', 'audio'].includes(sourceType);
   return sourceType === f;
 }
 
@@ -77,15 +78,16 @@ export class AmericanExtractorRepository {
     this.sqlite.db
       .prepare(
         `INSERT INTO american_extractor_notes (
-          id, user_id, title, creator, summary, speaker_style, source_type, source_url,
+          id, user_id, source_id, title, creator, summary, speaker_style, source_type, source_url,
           source_label, source_meta_json, target_language, agent_name, model_name,
           reasoning_level, execution_time_ms, fallback_from, item_count, items_json,
           source_text, is_completed, completion_json, content_hash, updated_at, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, '{}', ?, ?, ?)`,
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, '{}', ?, ?, ?)`,
       )
       .run(
         input.id,
         input.userId,
+        input.sourceId || '',
         input.title,
         input.creator,
         input.summary,
@@ -371,9 +373,37 @@ export class AmericanExtractorRepository {
     const itemCount = Number(row.item_count) || items.length;
     const completedCount = countCompletedItems(row.completion_json, itemCount);
     const isCompleted = itemCount > 0 && completedCount >= itemCount;
+    const sourceId = String(row.source_id || sourceMeta?.sourceId || '');
+
+    const rawMediaKind = String(sourceMeta?.mediaKind || '').toLowerCase();
+    const fallbackYtId =
+      String(sourceMeta?.videoId || '') ||
+      (/youtube\.com|youtu\.be/i.test(String(row.source_url || ''))
+        ? String(row.source_url || '').match(/(?:v=|youtu\.be\/|\/shorts\/|\/embed\/)([\w-]{11})/)?.[1] || ''
+        : '');
+    const mediaKind =
+      rawMediaKind === 'youtube' || rawMediaKind === 'audio' || rawMediaKind === 'video'
+        ? rawMediaKind
+        : fallbackYtId
+          ? 'youtube'
+          : 'none';
+    const mediaId = String(sourceMeta?.mediaId || fallbackYtId || '');
+    const hasAudio =
+      Boolean(sourceMeta?.hasAudio) ||
+      mediaKind !== 'none' ||
+      ['youtube', 'audio', 'video', 'social_video'].includes(String(row.source_type || ''));
+    const hasVideo =
+      Boolean(sourceMeta?.hasVideo) ||
+      mediaKind === 'youtube' ||
+      mediaKind === 'video';
+    const streamUrl =
+      (mediaKind === 'audio' || mediaKind === 'video') && mediaId
+        ? `/api/sources/media/${encodeURIComponent(mediaId)}`
+        : undefined;
 
     return {
       id: String(row.id),
+      ...(sourceId ? { sourceId } : {}),
       title: String(row.title || ''),
       creator: String(row.creator || ''),
       summary: String(row.summary || ''),
@@ -382,6 +412,14 @@ export class AmericanExtractorRepository {
       sourceUrl: String(row.source_url || ''),
       sourceLabel: String(row.source_label || ''),
       sourceMeta,
+      media: {
+        hasAudio,
+        hasVideo,
+        mediaKind: mediaKind as any,
+        mediaId,
+        durationSeconds: Number(sourceMeta?.durationSeconds) || 0,
+        ...(streamUrl ? { streamUrl } : {}),
+      },
       targetLanguage: language.code,
       targetLanguageName: language.name,
       rtl: Boolean(language.rtl),

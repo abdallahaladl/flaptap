@@ -4,7 +4,9 @@ import {
   ExtractorItemCategory,
 } from '../american-extractor.types';
 import {
+  ALL_CATEGORIES,
   findContextSentence,
+  isAudioDependentCategory,
   isGroundedInText,
   normalizeCategory,
   normalizeTermKey,
@@ -23,16 +25,7 @@ export interface NormalizedExtraction {
 const VALID_CEFR = new Set(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']);
 const VALID_FREQUENCY = new Set(['very common', 'common', 'niche']);
 const VALID_REGISTERS = new Set(['neutral', 'casual', 'professional', 'slang', 'formal', 'spoken']);
-const STRICT_SINGLE_CATEGORIES = new Set<string>([
-  'idiom',
-  'slang',
-  'phrasal_verb',
-  'vocabulary',
-  'collocation',
-  'connected_speech',
-  'discourse_marker',
-  'pattern',
-]);
+const STRICT_SINGLE_CATEGORIES = new Set<string>(ALL_CATEGORIES);
 
 const CEFR_RANK: Record<string, number> = {
   C2: 6,
@@ -211,10 +204,13 @@ export function normalizeExtraction(params: {
   fallbackTitle: string;
   targetLanguage: string;
   extractionType?: string;
+  selectedCategories?: ExtractorItemCategory[];
+  hasAudio?: boolean;
   allowEmpty?: boolean;
 }): NormalizedExtraction {
   const { parsed, sourceText, fallbackTitle, targetLanguage } = params;
   const requestedType = String(params.extractionType || 'all').trim().toLowerCase();
+  const hasAudio = params.hasAudio !== false;
   const rawItems: any[] = Array.isArray(parsed)
     ? parsed
     : Array.isArray(parsed?.items)
@@ -237,6 +233,7 @@ export function normalizeExtraction(params: {
     const validated = validateAndNormalizeItem(raw, {
       sourceText,
       targetLanguage,
+      hasAudio,
       seen,
       nextIndex: items.length,
     });
@@ -257,7 +254,17 @@ export function normalizeExtraction(params: {
   }
 
   let finalItems = items;
-  if (STRICT_SINGLE_CATEGORIES.has(requestedType)) {
+  const selectedList = Array.isArray(params.selectedCategories)
+    ? params.selectedCategories.filter((c) => hasAudio || !isAudioDependentCategory(c))
+    : [];
+
+  if (selectedList.length > 0 && selectedList.length < ALL_CATEGORIES.length) {
+    const allowedSet = new Set<string>(selectedList);
+    const matched = items.filter((item) => allowedSet.has(item.category));
+    if (matched.length > 0) {
+      finalItems = matched.map((item, idx) => ({ ...item, index: idx }));
+    }
+  } else if (STRICT_SINGLE_CATEGORIES.has(requestedType)) {
     const matched = items.filter((item) => item.category === requestedType);
     if (matched.length > 0) {
       finalItems = matched.map((item, idx) => ({ ...item, index: idx }));
@@ -281,7 +288,13 @@ export function normalizeExtraction(params: {
 
 function validateAndNormalizeItem(
   raw: any,
-  ctx: { sourceText: string; targetLanguage: string; seen: Set<string>; nextIndex: number },
+  ctx: {
+    sourceText: string;
+    targetLanguage: string;
+    hasAudio: boolean;
+    seen: Set<string>;
+    nextIndex: number;
+  },
 ): ExtractorItem | null {
   if (!raw || typeof raw !== 'object') return null;
 
@@ -301,6 +314,12 @@ function validateAndNormalizeItem(
     ) || term;
 
   if (!isGroundedInText(ctx.sourceText, term, surface)) {
+    return null;
+  }
+
+  const category = normalizeCategory(raw?.category ?? raw?.type);
+  // Strict anti-fabrication gate: never allow audio-dependent items on text-only sources
+  if (!ctx.hasAudio && isAudioDependentCategory(category)) {
     return null;
   }
 
@@ -325,7 +344,6 @@ function validateAndNormalizeItem(
       ? modelContext
       : '');
 
-  const category = normalizeCategory(raw?.category ?? raw?.type);
   const rawRegister = safeText(raw?.register, 40).toLowerCase();
   const register = VALID_REGISTERS.has(rawRegister) ? rawRegister : registerForCategory(category);
   const cefrUpper = String(raw?.cefr || '').trim().toUpperCase();
@@ -452,9 +470,16 @@ function normalizeIpa(value: string): string {
 }
 
 function registerForCategory(category: ExtractorItemCategory): string {
-  if (category === 'slang') return 'casual';
-  if (category === 'idiom' || category === 'phrasal_verb') return 'neutral';
-  if (category === 'connected_speech') return 'spoken';
+  if (category === 'slang' || category === 'filler' || category === 'interjection') return 'casual';
+  if (
+    category === 'connected_speech' ||
+    category === 'pronunciation_phonetics' ||
+    category === 'word_sentence_stress' ||
+    category === 'linking_sound_changes' ||
+    category === 'contraction_reduction'
+  ) {
+    return 'spoken';
+  }
   return 'neutral';
 }
 

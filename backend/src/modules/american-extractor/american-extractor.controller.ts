@@ -33,8 +33,10 @@ interface ExtractBody {
   text?: string;
   title?: string;
   lessonId?: string;
+  sourceId?: string;
   language?: string;
   extractionType?: string;
+  categories?: string[] | string;
   style?: string;
   level?: string;
   focus?: string;
@@ -129,8 +131,10 @@ export class AmericanExtractorController {
         text: body.text,
         title: body.title,
         lessonId: body.lessonId,
+        sourceId: body.sourceId,
         language: body.language,
         extractionType: body.extractionType,
+        categories: parseCategoriesParam(body.categories),
         style: body.style,
         level: body.level,
         focus: body.focus,
@@ -179,8 +183,10 @@ export class AmericanExtractorController {
           text: body.text,
           title: body.title,
           lessonId: body.lessonId,
+          sourceId: body.sourceId,
           language: body.language,
           extractionType: body.extractionType,
+          categories: parseCategoriesParam(body.categories),
           style: body.style,
           level: body.level,
           focus: body.focus,
@@ -243,6 +249,7 @@ export class AmericanExtractorController {
         mimeType: file.mimetype || '',
         language: body?.language,
         extractionType: body?.extractionType,
+        categories: parseCategoriesParam(body?.categories),
         style: body?.style,
         level: body?.level,
         focus: body?.focus,
@@ -299,6 +306,7 @@ export class AmericanExtractorController {
           mimeType: file.mimetype || '',
           language: body?.language,
           extractionType: body?.extractionType,
+          categories: parseCategoriesParam(body?.categories),
           style: body?.style,
           level: body?.level,
           focus: body?.focus,
@@ -416,15 +424,24 @@ export class AmericanExtractorController {
 
 function normalizeInputKind(body: ExtractBody): ExtractorInputKind {
   const requested = String(body?.inputKind || '').trim().toLowerCase();
-  if (requested === 'url' || requested === 'text' || requested === 'lesson') {
+  if (
+    requested === 'url' ||
+    requested === 'text' ||
+    requested === 'lesson' ||
+    requested === 'source'
+  ) {
     return requested as ExtractorInputKind;
   }
+  if (String(body?.sourceId || '').trim()) return 'source';
   if (String(body?.url || '').trim()) return 'url';
   if (String(body?.lessonId || '').trim()) return 'lesson';
   return 'text';
 }
 
 function validateExtractBody(inputKind: ExtractorInputKind, body: ExtractBody): void {
+  if (inputKind === 'source' && !String(body?.sourceId || '').trim()) {
+    throw new BadRequestException('Choose a saved Flaptap source.');
+  }
   if (inputKind === 'url' && !String(body?.url || '').trim()) {
     throw new BadRequestException('Paste a video, social, audio, or article URL.');
   }
@@ -434,6 +451,28 @@ function validateExtractBody(inputKind: ExtractorInputKind, body: ExtractBody): 
   if (inputKind === 'lesson' && !String(body?.lessonId || '').trim()) {
     throw new BadRequestException('Choose a saved lesson transcript.');
   }
+}
+
+function parseCategoriesParam(raw: unknown): string[] | undefined {
+  if (Array.isArray(raw)) {
+    const cleaned = raw.map((v) => String(v || '').trim()).filter(Boolean);
+    return cleaned.length > 0 ? cleaned : undefined;
+  }
+  if (typeof raw === 'string' && raw.trim()) {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          const cleaned = parsed.map((v) => String(v || '').trim()).filter(Boolean);
+          return cleaned.length > 0 ? cleaned : undefined;
+        }
+      } catch {}
+    }
+    const parts = trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+    return parts.length > 0 ? parts : undefined;
+  }
+  return undefined;
 }
 
 function parseBool(value: unknown): boolean {

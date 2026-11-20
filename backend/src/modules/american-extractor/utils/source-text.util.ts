@@ -1,5 +1,46 @@
 import { createHash } from 'crypto';
-import { ExtractorItemCategory } from '../american-extractor.types';
+import {
+  AudioExtractorCategory,
+  CoreExtractorCategory,
+  ExtractorItemCategory,
+} from '../american-extractor.types';
+
+export const CORE_CATEGORIES: readonly CoreExtractorCategory[] = [
+  'pattern',
+  'vocabulary',
+  'idiom',
+  'phrasal_verb',
+  'collocation',
+  'slang',
+  'conversational_expression',
+  'grammar_structure',
+  'discourse_marker',
+  'filler',
+  'interjection',
+  'contraction_reduction',
+  'metaphor_figurative',
+  'cultural_reference',
+  'pragmatics_context',
+  'native_response',
+] as const;
+
+export const AUDIO_DEPENDENT_CATEGORIES: readonly AudioExtractorCategory[] = [
+  'connected_speech',
+  'pronunciation_phonetics',
+  'word_sentence_stress',
+  'linking_sound_changes',
+] as const;
+
+export const ALL_CATEGORIES: readonly ExtractorItemCategory[] = [
+  ...CORE_CATEGORIES,
+  ...AUDIO_DEPENDENT_CATEGORIES,
+] as const;
+
+const AUDIO_CATEGORY_SET = new Set<string>(AUDIO_DEPENDENT_CATEGORIES);
+
+export function isAudioDependentCategory(category: string): boolean {
+  return AUDIO_CATEGORY_SET.has(String(category || '').trim().toLowerCase());
+}
 
 /** Hard ceiling for stored/processed source text (~13k words / ~85 min of speech). */
 export const MAX_SOURCE_CHARS = 72000;
@@ -165,6 +206,8 @@ export function computeExtractionHash(params: {
   sourceText: string;
   targetLanguage: string;
   extractionType: string;
+  categories?: string[];
+  hasAudio?: boolean;
   style: string;
   level: string;
   focus: string;
@@ -173,11 +216,17 @@ export function computeExtractionHash(params: {
   order: string;
 }): string {
   const normalizedText = normalizeWhitespace(params.sourceText).toLowerCase();
+  const sortedCats =
+    Array.isArray(params.categories) && params.categories.length > 0
+      ? Array.from(new Set(params.categories.map((c) => String(c).trim().toLowerCase()))).sort().join(',')
+      : '';
   const payload = [
-    'v2',
+    'v3',
     normalizedText,
     params.targetLanguage || 'ar',
     params.extractionType || 'all',
+    sortedCats,
+    params.hasAudio ? 'audio:1' : 'audio:0',
     params.style || 'auto',
     params.level || 'all',
     params.focus || 'balanced',
@@ -314,40 +363,96 @@ function capSentence(sentence: string, matchKey = ''): string {
   return clean.slice(0, cut > 200 ? cut : 417).trim();
 }
 
-const VALID_CATEGORIES = new Set<ExtractorItemCategory>([
-  'idiom',
-  'slang',
-  'phrasal_verb',
-  'vocabulary',
-  'collocation',
-  'connected_speech',
-  'discourse_marker',
-  'pattern',
-]);
+const VALID_CATEGORIES = new Set<ExtractorItemCategory>(ALL_CATEGORIES);
 
 export function normalizeCategory(value: unknown): ExtractorItemCategory {
-  const clean = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  const clean = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[&/]+/g, '_')
+    .replace(/[\s-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+
   const aliases: Record<string, ExtractorItemCategory> = {
+    pattern: 'pattern',
+    patterns: 'pattern',
+    sentence_pattern: 'pattern',
+    sentence_patterns: 'pattern',
+    pattern_frame: 'pattern',
+    vocabulary: 'vocabulary',
+    vocab: 'vocabulary',
+    word: 'vocabulary',
+    words: 'vocabulary',
     idiom: 'idiom',
     idioms: 'idiom',
     expression: 'idiom',
     expressions: 'idiom',
-    slang: 'slang',
     phrasal: 'phrasal_verb',
     phrasal_verb: 'phrasal_verb',
     phrasal_verbs: 'phrasal_verb',
-    vocabulary: 'vocabulary',
-    word: 'vocabulary',
     collocation: 'collocation',
     collocations: 'collocation',
+    slang: 'slang',
+    slang_informal: 'slang',
+    slang_informal_expressions: 'slang',
+    informal: 'slang',
+    informal_expression: 'slang',
+    conversational: 'conversational_expression',
+    conversational_expression: 'conversational_expression',
+    conversational_expressions: 'conversational_expression',
+    grammar: 'grammar_structure',
+    grammar_structure: 'grammar_structure',
+    grammar_structures: 'grammar_structure',
+    discourse: 'discourse_marker',
+    discourse_marker: 'discourse_marker',
+    discourse_markers: 'discourse_marker',
+    filler: 'filler',
+    fillers: 'filler',
+    interjection: 'interjection',
+    interjections: 'interjection',
+    contraction: 'contraction_reduction',
+    contractions: 'contraction_reduction',
+    reduction: 'contraction_reduction',
+    reductions: 'contraction_reduction',
+    contraction_reduction: 'contraction_reduction',
+    contractions_reductions: 'contraction_reduction',
+    metaphor: 'metaphor_figurative',
+    metaphors: 'metaphor_figurative',
+    figurative: 'metaphor_figurative',
+    figurative_language: 'metaphor_figurative',
+    metaphor_figurative: 'metaphor_figurative',
+    metaphors_figurative_language: 'metaphor_figurative',
+    cultural: 'cultural_reference',
+    cultural_reference: 'cultural_reference',
+    cultural_references: 'cultural_reference',
+    american_cultural_reference: 'cultural_reference',
+    american_cultural_references: 'cultural_reference',
+    pragmatics: 'pragmatics_context',
+    social_context: 'pragmatics_context',
+    pragmatics_context: 'pragmatics_context',
+    pragmatics_social_context: 'pragmatics_context',
+    native_response: 'native_response',
+    native_responses: 'native_response',
+    native_like_response: 'native_response',
+    native_like_responses: 'native_response',
+    native_like_responses_reactions: 'native_response',
+    reaction: 'native_response',
+    reactions: 'native_response',
+    response: 'native_response',
     connected_speech: 'connected_speech',
     connected_speech_reduction: 'connected_speech',
-    reduction: 'connected_speech',
-    discourse_marker: 'discourse_marker',
-    discourse: 'discourse_marker',
-    pattern: 'pattern',
-    sentence_pattern: 'pattern',
-    pattern_frame: 'pattern',
+    pronunciation: 'pronunciation_phonetics',
+    phonetics: 'pronunciation_phonetics',
+    pronunciation_phonetics: 'pronunciation_phonetics',
+    stress: 'word_sentence_stress',
+    word_stress: 'word_sentence_stress',
+    sentence_stress: 'word_sentence_stress',
+    word_sentence_stress: 'word_sentence_stress',
+    word_stress_sentence_stress: 'word_sentence_stress',
+    linking: 'linking_sound_changes',
+    sound_changes: 'linking_sound_changes',
+    linking_sound_changes: 'linking_sound_changes',
   };
   if (aliases[clean]) return aliases[clean];
   return VALID_CATEGORIES.has(clean as ExtractorItemCategory)

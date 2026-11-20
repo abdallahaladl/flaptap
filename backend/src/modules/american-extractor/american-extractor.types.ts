@@ -1,9 +1,11 @@
+import { SharedMediaKind, SourceSegment } from '../shared-sources/shared-sources.types';
+
 /**
  * Anything to Phrases (American English Extractor) — shared backend contracts.
  *
- * One extraction guide is a resolved source (video, social clip, audio, article,
- * text/Markdown, image OCR, or saved Flaptap lesson transcript) plus the
- * source-grounded American English phrases extracted and validated for it.
+ * One extraction guide is a resolved source (YouTube, video, audio, social clip,
+ * article, PDF, text/Markdown, image OCR, saved lesson, or shared Flaptap source)
+ * plus the source-grounded American English items extracted and validated for it.
  */
 
 export type ExtractorSourceType =
@@ -12,22 +14,39 @@ export type ExtractorSourceType =
   | 'audio'
   | 'video'
   | 'article'
+  | 'pdf'
   | 'text'
   | 'markdown'
   | 'image'
   | 'lesson';
 
-export type ExtractorInputKind = 'url' | 'text' | 'upload' | 'lesson';
+export type ExtractorInputKind = 'url' | 'text' | 'upload' | 'lesson' | 'source';
 
-export type ExtractorItemCategory =
-  | 'idiom'
-  | 'slang'
-  | 'phrasal_verb'
+export type CoreExtractorCategory =
+  | 'pattern'
   | 'vocabulary'
+  | 'idiom'
+  | 'phrasal_verb'
   | 'collocation'
-  | 'connected_speech'
+  | 'slang'
+  | 'conversational_expression'
+  | 'grammar_structure'
   | 'discourse_marker'
-  | 'pattern';
+  | 'filler'
+  | 'interjection'
+  | 'contraction_reduction'
+  | 'metaphor_figurative'
+  | 'cultural_reference'
+  | 'pragmatics_context'
+  | 'native_response';
+
+export type AudioExtractorCategory =
+  | 'connected_speech'
+  | 'pronunciation_phonetics'
+  | 'word_sentence_stress'
+  | 'linking_sound_changes';
+
+export type ExtractorItemCategory = CoreExtractorCategory | AudioExtractorCategory;
 
 export type ExtractionTypeId = 'all' | 'phrases' | ExtractorItemCategory;
 
@@ -58,6 +77,8 @@ export interface ExtractionSourceReadyEvent {
   truncated: boolean;
   chunkCount: number;
   cached?: boolean;
+  hasAudio?: boolean;
+  hasVideo?: boolean;
 }
 
 export interface ExtractionItemPreviewEvent {
@@ -94,6 +115,9 @@ export interface ExtractorItem {
   example: string;
   techNote?: string;
   tags?: string[];
+  /** Exact millisecond-accurate playback boundaries in source audio/video when available. */
+  startSec?: number;
+  endSec?: number;
   grounded: boolean;
 }
 
@@ -101,8 +125,18 @@ export interface ExtractorCompletionProgress {
   items?: number[];
 }
 
+export interface ExtractionMediaInfo {
+  hasAudio: boolean;
+  hasVideo: boolean;
+  mediaKind: SharedMediaKind;
+  mediaId: string;
+  durationSeconds: number;
+  streamUrl?: string;
+}
+
 export interface ExtractionResult {
   id: string;
+  sourceId?: string;
   title: string;
   creator: string;
   summary: string;
@@ -111,6 +145,7 @@ export interface ExtractionResult {
   sourceUrl: string;
   sourceLabel: string;
   sourceMeta: Record<string, any>;
+  media?: ExtractionMediaInfo;
   targetLanguage: string;
   targetLanguageName: string;
   rtl: boolean;
@@ -131,6 +166,7 @@ export interface ExtractionResult {
 
 export interface ExtractionHistoryItem {
   id: string;
+  source_id?: string;
   title: string;
   creator: string;
   summary: string;
@@ -178,12 +214,20 @@ export interface PaginatedHistoryResult {
 }
 
 export interface ResolvedSource {
+  sourceId?: string;
+  sourceKey?: string;
   title: string;
   creator: string;
   sourceType: ExtractorSourceType;
   sourceUrl: string;
   sourceLabel: string;
   text: string;
+  hasAudio?: boolean;
+  hasVideo?: boolean;
+  mediaKind?: SharedMediaKind;
+  mediaId?: string;
+  durationSeconds?: number;
+  segments?: SourceSegment[];
   sourceMeta: Record<string, any>;
   warnings: string[];
   truncated: boolean;
@@ -193,6 +237,8 @@ export interface ExtractionCategoryMetadata {
   id: ExtractorItemCategory | 'all';
   label: string;
   hint: string;
+  group?: 'all' | 'core' | 'audio';
+  audioDependent?: boolean;
 }
 
 export interface ExtractionFocusOption {
@@ -200,6 +246,8 @@ export interface ExtractionFocusOption {
   label: string;
   shortLabel?: string;
   prompt: string;
+  group?: 'all' | 'core' | 'audio';
+  audioDependent?: boolean;
 }
 
 export interface ExtractorConfig {
