@@ -460,7 +460,7 @@ export function buildExtractionPrompts(params: {
     '- Level & frequency: Tag each item honestly with its CEFR level (A1–C2) and everyday US frequency ("very common", "common", or "niche").',
     '- Collocations & usage: In "usageNote", tell the learner *how* Americans actually deploy it (register, tone, typical preposition/collocation, or mistake to avoid).',
     isEnglishTarget
-      ? '- Target language: English only (omit "localizedMeaning").'
+      ? '- Target language: English only (no translation field needed).'
       : `- Translation: "localizedMeaning" MUST be natural, idiomatic ${language.name} (${language.native}) matching the exact context in the source. Keep proper names and English technical terms in Latin script.`,
     totalChunks > 1
       ? `- Multi-part source: You are analyzing part ${chunkIndex + 1} of ${totalChunks}. Extract ONLY items grounded in THIS part, and do NOT repeat any already-extracted terms listed below.`

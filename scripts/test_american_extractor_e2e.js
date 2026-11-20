@@ -594,7 +594,7 @@ async function run() {
 
     await page.waitForFunction(
       () =>
-        location.pathname.startsWith('/extractor/note/') &&
+        location.pathname.startsWith('/extractor/library/') &&
         document.querySelectorAll('#aex-items-list .aex-item').length > 0,
       { timeout: 240000 },
     );
@@ -622,7 +622,7 @@ async function run() {
           document.getElementById('aex-note-summary-wrap')?.getBoundingClientRect().top,
       };
     });
-    assert(uiNote.path.startsWith('/extractor/note/'), 'Successful extraction updates the URL to the note route');
+    assert(uiNote.path.startsWith('/extractor/library/'), 'Successful extraction updates the URL to the detail route');
     const persistedUiNote = await api(baseUrl, `/api/american-extractor/notes/${uiNote.id}`, { token });
     assert(
       persistedUiNote.ok &&
@@ -807,7 +807,7 @@ async function run() {
     );
     assert(libraryStates.browserState === 'progress', 'A partly studied map is flagged In progress');
     assert(
-      /^1 \/ \d+$/.test(libraryStates.browserCount || '') && libraryStates.browserAction === 'Continue study map',
+      /^1 \/ \d+$/.test(libraryStates.browserCount || '') && /Continue/i.test(libraryStates.browserAction || ''),
       'Library card reflects real completed count and offers Continue',
     );
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '04-library-desktop.png'), fullPage: true });

@@ -14,16 +14,20 @@ const path = require('path');
 const dist = path.resolve(__dirname, '../backend/dist/modules/american-extractor');
 const {
   cleanSourceText,
+  computeExtractionHash,
   countWords,
   findContextSentence,
   isGroundedInText,
   normalizeCategory,
   normalizeTermKey,
   safeList,
+  splitSourceIntoChunks,
   truncateSource,
   MAX_SOURCE_CHARS,
 } = require(path.join(dist, 'utils/source-text.util.js'));
 const {
+  extractCompletedItemsFromStream,
+  mergeChunkExtractions,
   normalizeExtraction,
   parseModelJson,
 } = require(path.join(dist, 'utils/extraction-normalize.util.js'));
@@ -37,6 +41,10 @@ const {
   EXTRACTION_GOALS,
   EXTRACTION_ORDERS,
 } = require(path.join(dist, 'extraction.prompt.js'));
+const fs = require('fs');
+const os = require('os');
+const { SqliteService } = require(path.resolve(__dirname, '../backend/dist/core/database/sqlite.service.js'));
+const { AmericanExtractorRepository } = require(path.join(dist, 'american-extractor.repository.js'));
 
 let passed = 0;
 function check(condition, message) {
@@ -286,10 +294,11 @@ check(
     !enPrompt.systemPrompt.includes('"tags"') &&
     !enPrompt.systemPrompt.includes('"generalMeaning"') &&
     !enPrompt.systemPrompt.includes('"techNote"') &&
-    !enPrompt.systemPrompt.includes('"cefr"') &&
-    !enPrompt.systemPrompt.includes('"frequency"') &&
-    !enPrompt.systemPrompt.includes('"localizedMeaning"'),
-  'Lean English extraction prompt omits redundant and backend-derived fields',
+    !enPrompt.systemPrompt.includes('"localizedMeaning"') &&
+    enPrompt.systemPrompt.includes('"cefr"') &&
+    enPrompt.systemPrompt.includes('"frequency"') &&
+    enPrompt.systemPrompt.includes('Anything to Phrases'),
+  'Rewritten American English prompt includes CEFR & frequency while omitting backend-derived fields and English translation',
 );
 
 const arPrompt = buildExtractionPrompts({
@@ -487,6 +496,278 @@ check(
   phrasesFiltered.items.length === 1 && phrasesFiltered.items[0].term === 'double down on',
   'Phrases extractionType filters out isolated single vocabulary words when phrases exist',
 );
+
+// ---------------------------------------------------------------------------
+// Chunking, hashing, streaming previews, multi-chunk merge, and repository
+// ---------------------------------------------------------------------------
+const shortChunks = splitSourceIntoChunks(source);
+check(shortChunks.length === 1 && shortChunks[0] === source.trim(), 'Short sources stay in a single chunk');
+
+const longMultiPara = Array.from({ length: 120 }, (_, i) =>
+  `Paragraph ${i + 1}: We had to double down on reliability before we could ship the rollback cleanly.`,
+).join('\n\n');
+const multiChunks = splitSourceIntoChunks(longMultiPara, { maxChunkChars: 3500, maxChunks: 4 });
+check(
+  multiChunks.length === 4 && multiChunks.every((c) => c.length <= 3600 && c.length > 0),
+  `Long sources split cleanly into ${multiChunks.length} bounded chunks`,
+);
+
+const chunkPrompt = buildExtractionPrompts({
+  source: {
+    title: 'Long Podcast',
+    creator: 'Host',
+    sourceType: 'audio',
+    sourceUrl: '',
+    sourceLabel: 'Audio',
+    text: longMultiPara,
+    sourceMeta: {},
+    warnings: [],
+    truncated: false,
+  },
+  chunkText: multiChunks[1],
+  chunkIndex: 1,
+  totalChunks: 4,
+  excludeTerms: ['double down on', 'kick off'],
+  targetLanguage: 'ar',
+});
+check(
+  chunkPrompt.systemPrompt.includes('part 2 of 4') &&
+    chunkPrompt.userPrompt.includes('Already extracted (skip these): double down on, kick off'),
+  'Chunked prompt injects part indicator and exclusion list to prevent cross-chunk duplicates',
+);
+
+const hashA = computeExtractionHash({
+  sourceText: 'Let us   double down on latency.',
+  targetLanguage: 'ar',
+  extractionType: 'all',
+  style: 'auto',
+  level: 'all',
+  focus: 'balanced',
+  depth: 'adaptive',
+  studyGoal: 'full',
+  order: 'appearance',
+});
+const hashB = computeExtractionHash({
+  sourceText: 'let us double down on latency.',
+  targetLanguage: 'ar',
+  extractionType: 'all',
+  style: 'auto',
+  level: 'all',
+  focus: 'balanced',
+  depth: 'adaptive',
+  studyGoal: 'full',
+  order: 'appearance',
+});
+const hashC = computeExtractionHash({
+  sourceText: 'let us double down on latency.',
+  targetLanguage: 'es',
+  extractionType: 'all',
+  style: 'auto',
+  level: 'all',
+  focus: 'balanced',
+  depth: 'adaptive',
+  studyGoal: 'full',
+  order: 'appearance',
+});
+check(hashA === hashB && hashA !== hashC, 'Content hash is whitespace/case-stable and sensitive to options');
+
+const partialStream = '{"title":"Standup","items":[{"term":"kick this off","surface":"kick this off","category":"phrasal_verb","ipa":"/kɪk ðɪs ɔf/","cefr":"B2","meaning":"start"},{"term":"fake idiom","surface":"fake idiom","category":"idiom","meaning":"hallucinated"},{"term":"double down on","surface":"double down';
+const emitted = new Set();
+const previews1 = extractCompletedItemsFromStream(partialStream, emitted, source);
+check(
+  previews1.length === 1 && previews1[0].term === 'kick this off' && previews1[0].cefr === 'B2',
+  'Streaming preview parser emits grounded completed objects and drops hallucinated ones',
+);
+const previews2 = extractCompletedItemsFromStream(
+  `${partialStream} on","category":"phrasal_verb","ipa":"/ˈdʌbəl daʊn ɑn/","cefr":"C1","meaning":"commit"}]`,
+  emitted,
+  source,
+);
+check(
+  previews2.length === 1 && previews2[0].term === 'double down on' && previews2[0].count === 2,
+  'Streaming preview parser emits only newly completed items on subsequent deltas',
+);
+
+const mergedByAppearance = mergeChunkExtractions({
+  sourceText: source,
+  fallbackTitle: 'Standup',
+  order: 'appearance',
+  chunks: [
+    {
+      title: 'Standup Guide',
+      summary: 'Summary from chunk 1',
+      speakerStyle: 'Casual engineering',
+      items: [
+        {
+          index: 0,
+          term: "chase one's tail",
+          surface: 'chasing our tail',
+          category: 'idiom',
+          register: 'casual',
+          ipa: '/tʃeɪs/',
+          cefr: 'C1',
+          frequency: 'common',
+          meaning: 'work hard with no progress',
+          localizedMeaning: 'work hard with no progress',
+          contextSentence: '',
+          usageNote: '',
+          spokenNote: '',
+          example: '',
+          grounded: true,
+        },
+      ],
+    },
+    {
+      title: '',
+      summary: '',
+      speakerStyle: '',
+      items: [
+        {
+          index: 0,
+          term: 'kick this off',
+          surface: 'kick this off',
+          category: 'phrasal_verb',
+          register: 'casual',
+          ipa: '/kɪk/',
+          cefr: 'B1',
+          frequency: 'very common',
+          meaning: 'start',
+          localizedMeaning: 'start',
+          contextSentence: '',
+          usageNote: '',
+          spokenNote: '',
+          example: '',
+          grounded: true,
+        },
+        {
+          index: 1,
+          term: "chase one's tail",
+          surface: 'chasing our tail',
+          category: 'idiom',
+          register: 'casual',
+          ipa: '/tʃeɪs/',
+          cefr: 'C1',
+          frequency: 'common',
+          meaning: 'duplicate across chunks',
+          localizedMeaning: 'duplicate',
+          contextSentence: '',
+          usageNote: '',
+          spokenNote: '',
+          example: '',
+          grounded: true,
+        },
+      ],
+    },
+  ],
+});
+check(
+  mergedByAppearance.items.length === 2 &&
+    mergedByAppearance.items[0].term === 'kick this off' &&
+    mergedByAppearance.items[1].term === "chase one's tail" &&
+    mergedByAppearance.items[1].contextSentence === "We're kind of chasing our tail here.",
+  'mergeChunkExtractions deduplicates across chunks, restores source order, and re-anchors context',
+);
+
+const mergedByDifficulty = mergeChunkExtractions({
+  sourceText: source,
+  fallbackTitle: 'Standup',
+  order: 'difficulty',
+  chunks: [mergedByAppearance],
+});
+check(
+  mergedByDifficulty.items[0].cefr === 'C1' && mergedByDifficulty.items[1].cefr === 'B1',
+  'mergeChunkExtractions supports difficulty (CEFR) sorting',
+);
+
+// Repository SQLite integration (cache hit, rename, filtered/sorted/paginated library)
+const tempDb = path.join(os.tmpdir(), `flaptap-aex-unit-${Date.now()}.sqlite`);
+const prevDbEnv = process.env.FLAPTAP_SQLITE_PATH;
+process.env.FLAPTAP_SQLITE_PATH = tempDb;
+const sqlite = new SqliteService();
+try {
+  const userId = 'u_unit_test';
+  sqlite.db
+    .prepare(
+      `INSERT INTO users (id, email, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(userId, 'unit@test.local', 'Unit Tester', 'hash', new Date().toISOString());
+
+  const repo = new AmericanExtractorRepository(sqlite);
+  repo.save({
+    id: 'aex_unit_1',
+    userId,
+    title: 'Beta Standup',
+    creator: 'Tester',
+    summary: 'Latency notes',
+    speakerStyle: 'Casual',
+    sourceType: 'text',
+    sourceUrl: '',
+    sourceLabel: 'Text',
+    sourceMeta: {},
+    targetLanguage: 'ar',
+    agentName: 'OpenCode',
+    modelName: 'gpt-6-luna',
+    reasoningLevel: 'medium',
+    executionTimeMs: 1200,
+    items: mergedByAppearance.items,
+    sourceText: source,
+    contentHash: hashA,
+    createdAt: '2026-11-18T10:00:00.000Z',
+  });
+  repo.save({
+    id: 'aex_unit_2',
+    userId,
+    title: 'Alpha YouTube Talk',
+    creator: 'Channel',
+    summary: 'Product scaling',
+    speakerStyle: 'Professional',
+    sourceType: 'youtube',
+    sourceUrl: 'https://youtube.com/watch?v=12345678901',
+    sourceLabel: 'YouTube · captions',
+    sourceMeta: {},
+    targetLanguage: 'ar',
+    agentName: 'OpenCode',
+    modelName: 'gpt-6-luna',
+    reasoningLevel: 'medium',
+    executionTimeMs: 2400,
+    items: [mergedByAppearance.items[0]],
+    sourceText: source,
+    contentHash: 'other_hash',
+    createdAt: '2026-11-19T10:00:00.000Z',
+  });
+
+  const cachedHit = repo.findByContentHash(userId, hashA);
+  check(cachedHit && cachedHit.id === 'aex_unit_1', 'Repository resolves instant cache hit by content_hash');
+
+  const renamed = repo.rename(userId, 'aex_unit_1', 'Renamed Standup Guide');
+  check(renamed && renamed.title === 'Renamed Standup Guide', 'Repository persists guide rename');
+  check(repo.findById(userId, 'aex_unit_1')?.title === 'Renamed Standup Guide', 'Renamed title rehydrates from SQLite');
+
+  repo.setItemCompletion(userId, 'aex_unit_1', 0, true);
+  const byVideo = repo.listPaginated(userId, { sourceType: 'video' });
+  check(byVideo.filteredTotal === 1 && byVideo.items[0].id === 'aex_unit_2', 'Library sourceType=video groups YouTube sources');
+
+  const byProgress = repo.listPaginated(userId, { status: 'progress' });
+  check(byProgress.filteredTotal === 1 && byProgress.items[0].id === 'aex_unit_1', 'Library status=progress filters partly studied guides');
+
+  const sortedTitle = repo.listPaginated(userId, { sort: 'title', page: 1, limit: 1 });
+  check(
+    sortedTitle.items.length === 1 &&
+      sortedTitle.items[0].id === 'aex_unit_2' &&
+      sortedTitle.hasMore === true &&
+      sortedTitle.stats.totalGuides === 2,
+    'Library supports title sorting, pagination, and accurate stats',
+  );
+} finally {
+  sqlite.onModuleDestroy();
+  if (prevDbEnv === undefined) delete process.env.FLAPTAP_SQLITE_PATH;
+  else process.env.FLAPTAP_SQLITE_PATH = prevDbEnv;
+  for (const sfx of ['', '-wal', '-shm']) {
+    try {
+      if (fs.existsSync(`${tempDb}${sfx}`)) fs.unlinkSync(`${tempDb}${sfx}`);
+    } catch {}
+  }
+}
 
 console.log('\n==================================================');
 console.log(`🎉 ALL EXTRACTOR UNIT TESTS PASSED (${passed} assertions)`);
