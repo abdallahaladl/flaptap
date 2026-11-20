@@ -321,8 +321,8 @@
         btn.setAttribute('aria-pressed', playing ? 'true' : 'false');
         const playSvg = btn.querySelector('.aex-clip-ico-play');
         const pauseSvg = btn.querySelector('.aex-clip-ico-pause');
-        if (playSvg) playSvg.hidden = playing;
-        if (pauseSvg) pauseSvg.hidden = !playing;
+        if (playSvg) playSvg.toggleAttribute('hidden', playing);
+        if (pauseSvg) pauseSvg.toggleAttribute('hidden', !playing);
       });
     }
 

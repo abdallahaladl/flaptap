@@ -214,6 +214,7 @@
       if (!state.mountEl) return;
       const stage = state.mountEl.querySelector('#aex-media-stage');
       const videoWrap = state.mountEl.querySelector('#aex-media-video-wrap');
+      const playBtn = state.mountEl.querySelector('#aex-media-toggle-btn');
       const playIco = state.mountEl.querySelector('.aex-media-ico-play');
       const pauseIco = state.mountEl.querySelector('.aex-media-ico-pause');
       const replayBtn = state.mountEl.querySelector('#aex-media-replay-btn');
@@ -226,14 +227,18 @@
         stage.dataset.mode = state.mode;
         stage.classList.toggle('is-playing', state.playing);
       }
+      if (playBtn) {
+        playBtn.classList.toggle('is-playing', state.playing);
+        playBtn.setAttribute('aria-pressed', state.playing ? 'true' : 'false');
+      }
       if (videoWrap) {
         // Keep DOM mounted for YouTube audio engine while visually collapsing in audio-only mode
         const showVideo = state.mode === 'video' && Boolean(state.media?.hasVideo);
         videoWrap.hidden = !showVideo && !state.ytPlayer && !state.htmlMediaEl;
         videoWrap.classList.toggle('is-audio-hidden', !showVideo);
       }
-      if (playIco) playIco.hidden = state.playing;
-      if (pauseIco) pauseIco.hidden = !state.playing;
+      if (playIco) playIco.toggleAttribute('hidden', state.playing);
+      if (pauseIco) pauseIco.toggleAttribute('hidden', !state.playing);
       if (replayBtn) replayBtn.disabled = !state.activeClip;
 
       if (titleEl && state.activeClip) {
