@@ -2286,25 +2286,40 @@
    11. PHRASE CARDS (.aex-item)
    -------------------------------------------------------------------------- */
 
-#section-american-extractor .aex-items-column {
+/* Root-level Detail Wrapper & Items Section (aligned 1:1 with title card) */
+#section-american-extractor .aex-detail-ready {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+}
+
+#section-american-extractor .aex-items-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+#section-american-extractor .aex-items-root .aex-items-toolbar {
+  padding: 2px 2px 0;
 }
 
 #section-american-extractor .aex-items-list {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 #section-american-extractor .aex-item {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   padding: 20px 22px;
-  border-radius: 20px;
+  border-radius: 22px;
   background: var(--aex-surface);
   border: 1px solid var(--aex-border);
   box-shadow: var(--aex-shadow-card), var(--aex-specular);
@@ -2335,46 +2350,103 @@
 #section-american-extractor .aex-item-head {
   display: flex;
   align-items: flex-start;
-  gap: 14px;
+  gap: 12px;
 }
 
+/* Clean Typographic Hash Number (Zero box background, zero wasted gutter) */
 #section-american-extractor .aex-item-index {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 7px;
-  border-radius: 9px;
-  background: var(--aex-fill-subtle);
-  border: 1px solid var(--aex-border);
+  align-items: baseline;
+  justify-content: flex-start;
+  min-width: auto;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
   font-family: var(--aex-font-mono);
-  font-size: 0.78rem;
+  font-size: 0.96rem;
   font-weight: 700;
-  color: var(--aex-text-secondary);
+  line-height: 1.55;
+  letter-spacing: -0.02em;
+  color: var(--aex-text-tertiary);
   flex-shrink: 0;
-  margin-top: 2px;
+  margin-top: 1px;
+  user-select: none;
+}
+
+#section-american-extractor .aex-index-hash {
+  font-weight: 500;
+  opacity: 0.55;
+  margin-inline-end: 1px;
 }
 
 #section-american-extractor .aex-item.is-completed .aex-item-index {
-  background: var(--aex-green-wash);
-  border-color: rgba(52, 199, 89, 0.25);
+  background: transparent;
+  border: none;
   color: var(--aex-green);
 }
 
+#section-american-extractor .aex-item.is-completed .aex-index-hash {
+  opacity: 0.72;
+}
+
+/* Strictly 2 organized lines beside the # index */
 #section-american-extractor .aex-item-heading {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 5px;
 }
 
-#section-american-extractor .aex-item-term-line {
+#section-american-extractor .aex-item-line-1 {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
+  gap: 8px;
+}
+
+#section-american-extractor .aex-item-line-2 {
+  display: flex;
+  align-items: center;
   gap: 10px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+#section-american-extractor .aex-head-translation {
+  margin: 0;
+  font-size: 0.98rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--aex-text-secondary);
+}
+
+#section-american-extractor .aex-item-line-2.is-masked {
+  position: relative;
+  cursor: pointer;
+  padding: 2px 10px;
+  border-radius: 10px;
+  background: var(--aex-fill-subtle);
+  border: 1px dashed var(--aex-border-strong);
+}
+
+#section-american-extractor .aex-item-line-2.is-masked .aex-head-translation {
+  filter: blur(7px);
+  user-select: none;
+  pointer-events: none;
+}
+
+#section-american-extractor .aex-recall-inline-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--aex-text-primary);
 }
 
 #section-american-extractor .aex-item-term {
@@ -2546,19 +2618,84 @@
 #section-american-extractor .aex-check-btn.is-checked {
   background: var(--aex-green-solid);
   border-color: var(--aex-green-solid);
-  color: #FFFFFF;
+  color: #06210E;
 }
 
 #section-american-extractor .aex-check-btn.is-checked .aex-check-svg {
   opacity: 1;
 }
 
-/* Card Body Grid (Meaning, Translation, Context, Usage Tips) */
+/* Full-Width Card Body (ZERO left gutter under # index, strictly 2 rows of separate boxes) */
 #section-american-extractor .aex-item-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-inline-start: 42px;
+  gap: 10px;
+  padding-inline-start: 0;
+}
+
+#section-american-extractor .aex-box-row {
+  display: grid;
+  gap: 10px;
+}
+
+#section-american-extractor .aex-row-quotes[data-cols="2"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#section-american-extractor .aex-row-quotes[data-cols="1"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#section-american-extractor .aex-row-insights[data-cols="3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#section-american-extractor .aex-row-insights[data-cols="2"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#section-american-extractor .aex-row-insights[data-cols="1"] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+#section-american-extractor .aex-card-box {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 15px;
+  border-radius: 14px;
+  background: var(--aex-surface-inset);
+  border: 1px solid var(--aex-border);
+  min-width: 0;
+}
+
+#section-american-extractor .aex-box-context {
+  background: var(--aex-fill-subtle);
+}
+
+#section-american-extractor .aex-box-example {
+  background: var(--aex-fill-subtle);
+}
+
+#section-american-extractor .aex-box-meaning.is-masked {
+  cursor: pointer;
+  overflow: hidden;
+}
+
+#section-american-extractor .aex-box-meaning.is-masked .aex-meaning,
+#section-american-extractor .aex-box-meaning.is-masked .aex-general-sense {
+  filter: blur(8px);
+  user-select: none;
+  pointer-events: none;
+}
+
+@media (max-width: 820px) {
+  #section-american-extractor .aex-row-quotes[data-cols="2"],
+  #section-american-extractor .aex-row-insights[data-cols="3"],
+  #section-american-extractor .aex-row-insights[data-cols="2"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 #section-american-extractor .aex-sense-grid {

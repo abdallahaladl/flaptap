@@ -1808,137 +1808,138 @@
             </div>
           </div>
 
-          <!-- Ready Study Guide -->
-          <div class="aex-note-card" id="aex-note-card">
-            <div class="aex-note-head">
-              <div class="aex-note-head-top">
-                <div class="aex-note-breadcrumbs">
-                  <button type="button" class="btn-back-crumb" id="aex-back-to-library">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    <span>Library</span>
-                  </button>
-                  <span class="crumb-sep">/</span>
-                  <span class="crumb-current" id="aex-note-creator">Source</span>
-                </div>
-
-                <div class="aex-note-actions">
-                  <div class="aex-note-inspectors">
-                    <button type="button" class="aex-icon-btn" id="aex-source-toggle" aria-expanded="false" aria-controls="aex-source-panel" title="Show original source text" aria-label="Show original source text">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
+          <!-- Ready Study Guide (Header Card + Root-Level Phrase Cards aligned 1:1) -->
+          <div class="aex-detail-ready" id="aex-detail-ready">
+            <div class="aex-note-card" id="aex-note-card">
+              <div class="aex-note-head">
+                <div class="aex-note-head-top">
+                  <div class="aex-note-breadcrumbs">
+                    <button type="button" class="btn-back-crumb" id="aex-back-to-library">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                      <span>Library</span>
                     </button>
-                    <span class="aex-info-anchor">
-                      <button type="button" class="aex-icon-btn" id="aex-info-toggle" aria-expanded="false" aria-controls="aex-source-meta" title="Extraction details" aria-label="Extraction details">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 8h.01"></path></svg>
+                    <span class="crumb-sep">/</span>
+                    <span class="crumb-current" id="aex-note-creator">Source</span>
+                  </div>
+
+                  <div class="aex-note-actions">
+                    <div class="aex-note-inspectors">
+                      <button type="button" class="aex-icon-btn" id="aex-source-toggle" aria-expanded="false" aria-controls="aex-source-panel" title="Show original source text" aria-label="Show original source text">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
                       </button>
-                      <div class="aex-source-meta-card" id="aex-source-meta" role="dialog" aria-label="Source details" hidden></div>
-                    </span>
-                  </div>
-                  <div class="lexicon-lang-pill" title="Lookup translation language">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>
-                    <select id="aex-note-lang-select" aria-label="Translation language"></select>
-                  </div>
-                  <button type="button" class="btn-secondary btn-sm" id="aex-copy-btn">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                    <span>Copy</span>
-                  </button>
-                  <button type="button" class="btn-secondary btn-sm" id="aex-export-btn" title="Download Markdown file">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    <span>Export</span>
-                  </button>
-                  <button type="button" class="btn-secondary btn-sm" id="aex-open-source-btn" hidden>
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                    <span>Source</span>
-                  </button>
-                  <button type="button" class="btn-secondary btn-sm" id="aex-studio-btn" hidden title="Open in Flaptap Studio">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                    <span>Studio</span>
-                  </button>
-                  <button type="button" class="btn-secondary btn-sm" id="aex-reextract-btn" hidden title="Re-extract fresh with AI">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-                    <span>Re-extract</span>
-                  </button>
-                  <button type="button" class="btn-secondary btn-sm" id="aex-new-btn" title="New extraction">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    <span>New</span>
-                  </button>
-                  <button type="button" class="btn-vox btn-sm" id="aex-save-all-btn" title="Save all phrases to Vocabulary Vault">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
-                    <span>Save All</span>
-                  </button>
-                </div>
-              </div>
-
-              <div class="aex-note-head-main">
-                <div id="aex-note-title-wrap">
-                  <h2 class="aex-note-title" id="aex-note-title">Study guide</h2>
-                </div>
-                <div class="aex-note-meta" id="aex-note-meta">
-                  <span class="meta-tag" id="aex-note-source-label">Source</span>
-                  <span class="meta-tag" id="aex-note-model">Model</span>
-                  <span class="meta-tag" id="aex-note-time">Time</span>
-                  <span class="meta-tag aex-count-tag" id="aex-note-count">0 phrases</span>
-                  <span class="meta-tag aex-cached-tag" id="aex-note-cached-badge" hidden>Cached</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="aex-note-progress-row">
-              <div id="aex-note-progress" class="subject-progress-bar" hidden></div>
-              <div class="aex-study-toggles">
-                <button type="button" class="aex-scope-toggle" id="aex-note-scope" aria-pressed="false" title="Show only phrases you haven't studied yet">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
-                  <span>Remaining only</span>
-                  <span class="aex-scope-count ltr-num" id="aex-study-count">0</span>
-                </button>
-                <button type="button" class="aex-scope-toggle" id="aex-recall-toggle" aria-pressed="false" title="Hide meanings to test active recall">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                  <span>Recall mode</span>
-                </button>
-                <button type="button" class="btn-secondary btn-sm aex-complete-note-btn" id="aex-complete-note-btn" aria-pressed="false">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                  <span>Mark Complete</span>
-                </button>
-              </div>
-            </div>
-
-            <div class="aex-summary-banner" id="aex-note-summary-wrap" hidden>
-              <div class="aex-summary-head">
-                <span class="aex-summary-kicker">Takeaway</span>
-                <span class="aex-summary-style" id="aex-note-style"></span>
-              </div>
-              <p class="aex-summary-body" id="aex-note-summary"></p>
-            </div>
-
-            <section class="aex-source-panel" id="aex-source-panel" aria-label="Selectable source text" hidden>
-              <div class="aex-source-panel-head">
-                <div>
-                  <div class="aex-section-label">Original source text</div>
-                  <p class="aex-source-reader-hint">Highlight any word or phrase for instant contextual definition &amp; IPA.</p>
-                </div>
-                <button type="button" class="aex-icon-btn" id="aex-source-close" aria-label="Close source text" title="Close">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
-                </button>
-              </div>
-              <div class="aex-source-content" id="aex-source-content"></div>
-            </section>
-
-            <div class="aex-note-body-grid">
-              <div class="aex-items-column">
-                <div class="aex-items-toolbar">
-                  <div class="filter-pills" id="aex-category-filters" role="group" aria-label="Filter by category"></div>
-                  <div class="aex-toolbar-right">
-                    <select id="aex-note-level-filter" class="aex-select aex-note-level-select" aria-label="Filter by CEFR level" hidden></select>
-                    <div class="aex-item-search">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                      <input type="search" id="aex-note-search" placeholder="Filter phrases..." aria-label="Filter phrases" autocomplete="off" />
+                      <span class="aex-info-anchor">
+                        <button type="button" class="aex-icon-btn" id="aex-info-toggle" aria-expanded="false" aria-controls="aex-source-meta" title="Extraction details" aria-label="Extraction details">
+                          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 8h.01"></path></svg>
+                        </button>
+                        <div class="aex-source-meta-card" id="aex-source-meta" role="dialog" aria-label="Source details" hidden></div>
+                      </span>
                     </div>
+                    <div class="lexicon-lang-pill" title="Lookup translation language">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>
+                      <select id="aex-note-lang-select" aria-label="Translation language"></select>
+                    </div>
+                    <button type="button" class="btn-secondary btn-sm" id="aex-copy-btn">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      <span>Copy</span>
+                    </button>
+                    <button type="button" class="btn-secondary btn-sm" id="aex-export-btn" title="Download Markdown file">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                      <span>Export</span>
+                    </button>
+                    <button type="button" class="btn-secondary btn-sm" id="aex-open-source-btn" hidden>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                      <span>Source</span>
+                    </button>
+                    <button type="button" class="btn-secondary btn-sm" id="aex-studio-btn" hidden title="Open in Flaptap Studio">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                      <span>Studio</span>
+                    </button>
+                    <button type="button" class="btn-secondary btn-sm" id="aex-reextract-btn" hidden title="Re-extract fresh with AI">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                      <span>Re-extract</span>
+                    </button>
+                    <button type="button" class="btn-secondary btn-sm" id="aex-new-btn" title="New extraction">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                      <span>New</span>
+                    </button>
+                    <button type="button" class="btn-vox btn-sm" id="aex-save-all-btn" title="Save all phrases to Vocabulary Vault">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
+                      <span>Save All</span>
+                    </button>
                   </div>
                 </div>
-                <div class="aex-items-list" id="aex-items-list"></div>
-                <div class="aex-empty-filter" id="aex-empty-filter" hidden>
-                  <h4 id="aex-empty-title">No matches</h4>
-                  <p id="aex-empty-copy">Try another category, CEFR level, or clear your search.</p>
+
+                <div class="aex-note-head-main">
+                  <div id="aex-note-title-wrap">
+                    <h2 class="aex-note-title" id="aex-note-title">Study guide</h2>
+                  </div>
+                  <div class="aex-note-meta" id="aex-note-meta">
+                    <span class="meta-tag" id="aex-note-source-label">Source</span>
+                    <span class="meta-tag" id="aex-note-model">Model</span>
+                    <span class="meta-tag" id="aex-note-time">Time</span>
+                    <span class="meta-tag aex-count-tag" id="aex-note-count">0 phrases</span>
+                    <span class="meta-tag aex-cached-tag" id="aex-note-cached-badge" hidden>Cached</span>
+                  </div>
                 </div>
+              </div>
+
+              <div class="aex-note-progress-row">
+                <div id="aex-note-progress" class="subject-progress-bar" hidden></div>
+                <div class="aex-study-toggles">
+                  <button type="button" class="aex-scope-toggle" id="aex-note-scope" aria-pressed="false" title="Show only phrases you haven't studied yet">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+                    <span>Remaining only</span>
+                    <span class="aex-scope-count ltr-num" id="aex-study-count">0</span>
+                  </button>
+                  <button type="button" class="aex-scope-toggle" id="aex-recall-toggle" aria-pressed="false" title="Hide meanings to test active recall">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                    <span>Recall mode</span>
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm aex-complete-note-btn" id="aex-complete-note-btn" aria-pressed="false">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    <span>Mark Complete</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="aex-summary-banner" id="aex-note-summary-wrap" hidden>
+                <div class="aex-summary-head">
+                  <span class="aex-summary-kicker">Takeaway</span>
+                  <span class="aex-summary-style" id="aex-note-style"></span>
+                </div>
+                <p class="aex-summary-body" id="aex-note-summary"></p>
+              </div>
+
+              <section class="aex-source-panel" id="aex-source-panel" aria-label="Selectable source text" hidden>
+                <div class="aex-source-panel-head">
+                  <div>
+                    <div class="aex-section-label">Original source text</div>
+                    <p class="aex-source-reader-hint">Highlight any word or phrase for instant contextual definition &amp; IPA.</p>
+                  </div>
+                  <button type="button" class="aex-icon-btn" id="aex-source-close" aria-label="Close source text" title="Close">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                  </button>
+                </div>
+                <div class="aex-source-content" id="aex-source-content"></div>
+              </section>
+            </div>
+
+            <!-- Phrase Filter Toolbar + Phrase Cards directly in root, aligned 1:1 with header card -->
+            <div class="aex-items-root" id="aex-items-root">
+              <div class="aex-items-toolbar">
+                <div class="filter-pills" id="aex-category-filters" role="group" aria-label="Filter by category"></div>
+                <div class="aex-toolbar-right">
+                  <select id="aex-note-level-filter" class="aex-select aex-note-level-select" aria-label="Filter by CEFR level" hidden></select>
+                  <div class="aex-item-search">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    <input type="search" id="aex-note-search" placeholder="Filter phrases..." aria-label="Filter phrases" autocomplete="off" />
+                  </div>
+                </div>
+              </div>
+              <div class="aex-items-list" id="aex-items-list"></div>
+              <div class="aex-empty-filter" id="aex-empty-filter" hidden>
+                <h4 id="aex-empty-title">No matches</h4>
+                <p id="aex-empty-copy">Try another category, CEFR level, or clear your search.</p>
               </div>
             </div>
           </div>

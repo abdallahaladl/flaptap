@@ -79,10 +79,10 @@
       // mode: 'loading' | 'error' | 'ready'
       const skel = el('aex-detail-skeleton');
       const errBox = el('aex-detail-error');
-      const card = el('aex-note-card');
+      const readyWrap = el('aex-detail-ready');
       if (skel) skel.hidden = mode !== 'loading';
       if (errBox) errBox.hidden = mode !== 'error';
-      if (card) card.hidden = mode !== 'ready';
+      if (readyWrap) readyWrap.hidden = mode !== 'ready';
     }
 
     async function loadNote(id, options = {}) {
@@ -393,16 +393,6 @@
         registerValue.toLowerCase() !== 'spoken' &&
         registerValue.toLowerCase() !== categoryLabel.toLowerCase();
 
-      const showSurface =
-        item.surface &&
-        item.surface.trim().toLowerCase() !== item.term.trim().toLowerCase();
-
-      const notes = [
-        item.usageNote ? ['Usage', item.usageNote] : null,
-        item.spokenNote ? ['Pronunciation & flow', item.spokenNote] : null,
-        item.techNote ? ['In US tech', item.techNote] : null,
-      ].filter(Boolean);
-
       const contextHtml = store.highlightTerm(item.contextSentence || '', item.term, item.surface);
       const decoratedContext = global.FlaptapWordLookup
         ? global.FlaptapWordLookup.tokenizeClickableWords(contextHtml, {
@@ -429,7 +419,65 @@
         completed ? 'true' : 'false'
       }" aria-label="${completed ? 'Completed' : 'Mark phrase studied'}" title="${
         completed ? 'Completed' : 'Mark phrase studied'
-      }"><svg class="aex-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg></button>`;
+      }"><svg class="aex-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg></button>`;
+
+      // Row 1: Separate boxes for In Context + Example
+      const row1Boxes = [
+        item.contextSentence
+          ? `<div class="aex-card-box aex-box-context">
+               <span class="aex-sense-label">In context</span>
+               <blockquote class="aex-context-quote">${decoratedContext}</blockquote>
+             </div>`
+          : '',
+        item.example
+          ? `<div class="aex-card-box aex-box-example">
+               <span class="aex-sense-label">Example</span>
+               <p class="aex-example">“${escapeHtml(item.example)}”</p>
+             </div>`
+          : '',
+      ].filter(Boolean);
+
+      // Row 2: Meaning + Usage + Spoken tip (all in one single balanced row -> strictly 2 rows total)
+      const row2Boxes = [
+        item.meaning
+          ? `<div class="aex-card-box aex-box-meaning${isMasked ? ' is-masked' : ''}"${
+              isMasked
+                ? ` data-aex-reveal="${escapeHtml(idx)}" role="button" tabindex="0" aria-label="Reveal meaning for ${escapeHtml(
+                    item.term,
+                  )}"`
+                : ''
+            }>
+               ${isMasked ? '<div class="aex-recall-veil"><span>Click to reveal meaning</span></div>' : ''}
+               <span class="aex-sense-label">Meaning</span>
+               <p class="aex-meaning">${escapeHtml(item.meaning)}</p>
+               ${
+                 general
+                   ? `<p class="aex-general-sense"><span class="aex-inline-label">Broadly</span>${escapeHtml(
+                       general,
+                     )}</p>`
+                   : ''
+               }
+             </div>`
+          : '',
+        item.usageNote
+          ? `<div class="aex-card-box aex-box-usage">
+               <span class="aex-sense-label">Usage</span>
+               <p class="aex-note-copy">${escapeHtml(item.usageNote)}</p>
+             </div>`
+          : '',
+        item.spokenNote
+          ? `<div class="aex-card-box aex-box-spoken">
+               <span class="aex-sense-label">Spoken tip</span>
+               <p class="aex-note-copy">${escapeHtml(item.spokenNote)}</p>
+             </div>`
+          : '',
+        !item.spokenNote && item.techNote
+          ? `<div class="aex-card-box aex-box-usage">
+               <span class="aex-sense-label">In US tech</span>
+               <p class="aex-note-copy">${escapeHtml(item.techNote)}</p>
+             </div>`
+          : '',
+      ].filter(Boolean);
 
       return `
         <article class="aex-item${completed ? ' is-completed' : ''}${
@@ -441,32 +489,45 @@
           12,
         )}">
           <div class="aex-item-head">
-            <span class="aex-item-index ltr-num" aria-hidden="true">${idx + 1}</span>
+            <span class="aex-item-index ltr-num" aria-hidden="true"><span class="aex-index-hash">#</span>${
+              idx + 1
+            }</span>
+
             <div class="aex-item-heading">
-              <div class="aex-item-term-line">
+              <!-- Line 1: English phrase + IPA + Category (+ CEFR / Register) -->
+              <div class="aex-item-line-1">
                 <h3 class="aex-item-term"><span class="aex-term-mark"><span class="aex-term-text">${escapeHtml(
                   item.term,
                 )}</span></span></h3>
                 ${item.ipa ? `<span class="aex-item-ipa" dir="ltr">${escapeHtml(item.ipa)}</span>` : ''}
-                ${
-                  showSurface
-                    ? `<span class="aex-item-surface" title="Exact wording in source">“${escapeHtml(
-                        item.surface,
-                      )}”</span>`
-                    : ''
-                }
-              </div>
-              <div class="aex-item-meta">
                 <span class="aex-item-cat">${escapeHtml(categoryLabel)}</span>
                 ${item.cefr ? `<span class="aex-item-level ltr-num">${escapeHtml(item.cefr)}</span>` : ''}
                 ${showRegister ? `<span class="aex-item-register">${escapeHtml(registerValue)}</span>` : ''}
-                ${
-                  item.frequency
-                    ? `<span class="aex-item-freq">${escapeHtml(item.frequency)}</span>`
-                    : ''
-                }
               </div>
+
+              <!-- Line 2: Localized / Arabic translation directly under the English phrase -->
+              ${
+                showTranslation
+                  ? `<div class="aex-item-line-2${isMasked ? ' is-masked' : ''}"${
+                      isMasked
+                        ? ` data-aex-reveal="${escapeHtml(idx)}" role="button" tabindex="0" aria-label="Reveal translation for ${escapeHtml(
+                            item.term,
+                          )}"`
+                        : ''
+                    }>
+                      <p class="aex-localized aex-head-translation" dir="${rtl ? 'rtl' : 'ltr'}" lang="${escapeHtml(
+                        note.targetLanguage || 'en',
+                      )}">${escapeHtml(item.localizedMeaning)}</p>
+                      ${
+                        isMasked
+                          ? '<span class="aex-recall-inline-hint">Click to reveal</span>'
+                          : ''
+                      }
+                    </div>`
+                  : ''
+              }
             </div>
+
             <div class="aex-item-actions">
               <div class="aex-action-utils">
                 <button type="button" class="icon-action icon-action--sm aex-util-btn" data-aex-speak="${escapeHtml(
@@ -488,82 +549,26 @@
             </div>
           </div>
 
-          <div class="aex-item-body">
-            <div class="aex-sense-grid${showTranslation ? ' has-translation' : ''}${
-              isMasked ? ' is-masked' : ''
-            }"${isMasked ? ` data-aex-reveal="${escapeHtml(idx)}" role="button" tabindex="0" aria-label="Reveal meaning for ${escapeHtml(item.term)}"` : ''}>
-              ${
-                isMasked
-                  ? `<div class="aex-recall-veil">
-                       <span>Recall meaning · Click to reveal</span>
-                     </div>`
-                  : ''
-              }
-              <div class="aex-sense">
-                <span class="aex-sense-label">Meaning</span>
-                <p class="aex-meaning">${escapeHtml(item.meaning)}</p>
-                ${
-                  general
-                    ? `<p class="aex-general-sense"><span class="aex-inline-label">Broadly</span>${escapeHtml(
-                        general,
-                      )}</p>`
-                    : ''
-                }
-              </div>
-              ${
-                showTranslation
-                  ? `<div class="aex-translation" dir="${rtl ? 'rtl' : 'ltr'}" lang="${escapeHtml(
-                      note.targetLanguage || 'en',
-                    )}">
-                      <span class="aex-sense-label">${escapeHtml(language ? language.name : 'Translation')}</span>
-                      <p class="aex-localized" dir="${rtl ? 'rtl' : 'ltr'}" lang="${escapeHtml(
-                        note.targetLanguage || 'en',
-                      )}">${escapeHtml(item.localizedMeaning)}</p>
-                    </div>`
-                  : ''
-              }
-            </div>
-
-            ${
-              item.contextSentence || item.example
-                ? `<div class="aex-context-band${
-                    item.contextSentence && item.example ? ' has-both' : ''
-                  }">
-                    ${
-                      item.contextSentence
-                        ? `<div class="aex-context-block">
-                            <span class="aex-sense-label">From source</span>
-                            <blockquote class="aex-context-quote">${decoratedContext}</blockquote>
-                          </div>`
-                        : ''
-                    }
-                    ${
-                      item.example
-                        ? `<div class="aex-example-block">
-                            <span class="aex-sense-label">Spoken example</span>
-                            <p class="aex-example">“${escapeHtml(item.example)}”</p>
-                          </div>`
-                        : ''
-                    }
-                  </div>`
-                : ''
-            }
-
-            ${
-              notes.length
-                ? `<div class="aex-study-footer">
-                    <div class="aex-item-notes" data-cols="${Math.min(notes.length, 3)}">${notes
-                      .map(
-                        ([label, copy]) =>
-                          `<div class="aex-note-block"><span class="aex-note-label">${escapeHtml(
-                            label,
-                          )}</span><p class="aex-note-copy">${escapeHtml(copy)}</p></div>`,
-                      )
-                      .join('')}</div>
-                  </div>`
-                : ''
-            }
-          </div>
+          ${
+            row1Boxes.length || row2Boxes.length
+              ? `<div class="aex-item-body">
+                  ${
+                    row1Boxes.length
+                      ? `<div class="aex-box-row aex-row-quotes" data-cols="${row1Boxes.length}">${row1Boxes.join(
+                          '',
+                        )}</div>`
+                      : ''
+                  }
+                  ${
+                    row2Boxes.length
+                      ? `<div class="aex-box-row aex-row-insights" data-cols="${row2Boxes.length}">${row2Boxes.join(
+                          '',
+                        )}</div>`
+                      : ''
+                  }
+                </div>`
+              : ''
+          }
         </article>
       `;
     }
@@ -1177,12 +1182,16 @@
         if (revealEl && local.currentNote) {
           const idx = Number(revealEl.dataset.aexReveal);
           local.revealedIndices.add(idx);
-          revealEl.classList.remove('is-masked');
-          revealEl.removeAttribute('data-aex-reveal');
-          revealEl.removeAttribute('role');
-          revealEl.removeAttribute('tabindex');
-          revealEl.querySelector('.aex-recall-veil')?.remove();
-          revealEl.closest('.aex-item')?.classList.remove('is-recall-masked');
+          const card = revealEl.closest('.aex-item');
+          card?.classList.remove('is-recall-masked');
+          card?.querySelectorAll('[data-aex-reveal]').forEach((masked) => {
+            masked.classList.remove('is-masked');
+            masked.removeAttribute('data-aex-reveal');
+            masked.removeAttribute('role');
+            masked.removeAttribute('tabindex');
+            masked.querySelector('.aex-recall-veil')?.remove();
+            masked.querySelector('.aex-recall-inline-hint')?.remove();
+          });
           return;
         }
 
