@@ -33,8 +33,10 @@
   --aex-green-solid: #16A36A;
   --aex-green-wash: rgba(22, 163, 106, 0.12);
   --aex-done: #12784D;
-  --aex-done-solid: #16A36A;
-  --aex-done-check: #052014;
+  --aex-done-solid: #138050;
+  --aex-done-solid-hover: #0F6D44;
+  --aex-done-track: #16A36A;
+  --aex-done-on-solid: #FFFFFF;
   --aex-done-surface: #F3FAF6;
   --aex-done-border: rgba(22, 163, 106, 0.30);
   --aex-done-wash: rgba(22, 163, 106, 0.12);
@@ -69,8 +71,10 @@
   --aex-green-solid: #22C57E;
   --aex-green-wash: rgba(52, 211, 153, 0.15);
   --aex-done: #34D399;
-  --aex-done-solid: #22C57E;
-  --aex-done-check: #041D12;
+  --aex-done-solid: #136B46;
+  --aex-done-solid-hover: #177F53;
+  --aex-done-track: #22C57E;
+  --aex-done-on-solid: #D6F5E5;
   --aex-done-surface: #131E19;
   --aex-done-border: rgba(52, 211, 153, 0.28);
   --aex-done-wash: rgba(52, 211, 153, 0.15);
@@ -373,6 +377,17 @@
   box-shadow: 0 4px 16px rgba(0, 113, 227, 0.34);
 }
 
+[data-theme="dark"] #section-american-extractor .btn-vox {
+  background: #0A74DE;
+  color: #E4F0FF;
+  box-shadow: 0 2px 10px rgba(10, 116, 222, 0.28);
+}
+
+[data-theme="dark"] #section-american-extractor .btn-vox:hover {
+  background: #1480EC;
+  color: #EEF6FF;
+}
+
 #section-american-extractor .btn-vox:active,
 #section-american-extractor .btn-secondary:active {
   transform: scale(0.97);
@@ -388,6 +403,14 @@
 #section-american-extractor .btn-secondary:hover {
   background: var(--aex-fill);
   border-color: var(--aex-border-strong);
+}
+
+[data-theme="dark"] #section-american-extractor .btn-secondary {
+  color: #D6D6DC;
+}
+
+[data-theme="dark"] #section-american-extractor .btn-secondary:hover {
+  color: #ECECF2;
 }
 
 #section-american-extractor .btn-sm {
@@ -1421,8 +1444,8 @@
 }
 
 #section-american-extractor .aex-pstep.is-done .aex-pstep-num {
-  background: var(--aex-green-solid);
-  color: #FFFFFF;
+  background: var(--aex-done-solid);
+  color: var(--aex-done-on-solid);
 }
 
 /* --------------------------------------------------------------------------
@@ -1489,7 +1512,7 @@
 
 #section-american-extractor .aex-recent-mini[data-state="done"]::before,
 #section-american-extractor .aex-library-card-item[data-state="done"]::before {
-  background: var(--aex-done-solid);
+  background: var(--aex-done-track);
 }
 
 #section-american-extractor .aex-recent-mini:hover,
@@ -1506,11 +1529,6 @@
 #section-american-extractor .aex-library-card-item {
   cursor: default;
   animation: aexFadeRise 0.36s var(--aex-spring) both;
-}
-
-#section-american-extractor .aex-recent-mini[data-state="done"],
-#section-american-extractor .aex-library-card-item[data-state="done"] {
-  border-color: rgba(52, 199, 89, 0.30);
 }
 
 #section-american-extractor .aex-recent-top {
@@ -1817,7 +1835,7 @@
 }
 
 #section-american-extractor .aex-note-card[data-guide-state="done"] .aex-guide-top-fill {
-  background: linear-gradient(90deg, var(--aex-done-solid) 0%, var(--aex-done) 100%);
+  background: linear-gradient(90deg, var(--aex-done-track) 0%, var(--aex-done) 100%);
 }
 
 /* Subtle Top Ambient State Wash (instant glance done vs in-progress) */
@@ -2111,7 +2129,7 @@
 
 #section-american-extractor .aex-ring-badge.is-done {
   background: var(--aex-done-solid);
-  color: var(--aex-done-check);
+  color: var(--aex-done-on-solid);
   box-shadow: 0 0 0 4px var(--aex-done-wash);
 }
 
@@ -2213,7 +2231,7 @@
 }
 
 #section-american-extractor .aex-pip.is-done {
-  background: var(--aex-done-solid);
+  background: var(--aex-done-track);
 }
 
 #section-american-extractor .aex-pip.is-guide-done {
@@ -2227,12 +2245,14 @@
 #section-american-extractor .aex-complete-note-btn.is-checked {
   background: var(--aex-done-solid);
   border-color: var(--aex-done-solid);
-  color: var(--aex-done-check);
-  font-weight: 700;
+  color: var(--aex-done-on-solid);
+  font-weight: 600;
 }
 
 #section-american-extractor .aex-complete-note-btn.is-checked:hover {
-  filter: brightness(0.95);
+  background: var(--aex-done-solid-hover);
+  border-color: var(--aex-done-solid-hover);
+  color: var(--aex-done-on-solid);
 }
 
 #section-american-extractor .subject-progress-bar {
@@ -2474,6 +2494,12 @@
   color: var(--aex-surface);
 }
 
+[data-theme="dark"] #section-american-extractor .filter-pill.active {
+  background: rgba(10, 132, 255, 0.20);
+  border-color: rgba(10, 132, 255, 0.44);
+  color: #CFE4FF;
+}
+
 #section-american-extractor .aex-filter-dot {
   width: 7px;
   height: 7px;
@@ -2614,7 +2640,7 @@
 }
 
 #section-american-extractor .aex-item.is-completed::before {
-  background: var(--aex-done-solid);
+  background: var(--aex-done-track);
 }
 
 #section-american-extractor .aex-item.is-completed .aex-item-body {
@@ -2920,7 +2946,7 @@
 #section-american-extractor .aex-check-btn.is-checked {
   background: var(--aex-done-solid);
   border-color: var(--aex-done-solid);
-  color: var(--aex-done-check);
+  color: var(--aex-done-on-solid);
   box-shadow: 0 0 0 3px var(--aex-done-wash);
 }
 
