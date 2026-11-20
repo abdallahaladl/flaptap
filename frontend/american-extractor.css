@@ -29,9 +29,16 @@
   --aex-blue: var(--ap-blue);
   --aex-blue-hover: var(--ap-blue-hover);
   --aex-blue-wash: var(--ap-blue-wash);
-  --aex-green: var(--ap-green);
-  --aex-green-solid: var(--ap-green-solid);
-  --aex-green-wash: var(--ap-green-wash);
+  --aex-green: #12784D;
+  --aex-green-solid: #16A36A;
+  --aex-green-wash: rgba(22, 163, 106, 0.12);
+  --aex-done: #12784D;
+  --aex-done-solid: #16A36A;
+  --aex-done-check: #052014;
+  --aex-done-surface: #F3FAF6;
+  --aex-done-border: rgba(22, 163, 106, 0.30);
+  --aex-done-wash: rgba(22, 163, 106, 0.12);
+  --aex-done-glow: rgba(22, 163, 106, 0.08);
   --aex-orange: var(--ap-orange);
   --aex-orange-wash: var(--ap-orange-wash);
   --aex-indigo: var(--ap-indigo);
@@ -58,6 +65,16 @@
 [data-theme="dark"] #section-american-extractor {
   --aex-teal: #40CBE0;
   --aex-teal-wash: rgba(64, 203, 224, 0.17);
+  --aex-green: #34D399;
+  --aex-green-solid: #22C57E;
+  --aex-green-wash: rgba(52, 211, 153, 0.15);
+  --aex-done: #34D399;
+  --aex-done-solid: #22C57E;
+  --aex-done-check: #041D12;
+  --aex-done-surface: #131E19;
+  --aex-done-border: rgba(52, 211, 153, 0.28);
+  --aex-done-wash: rgba(52, 211, 153, 0.15);
+  --aex-done-glow: rgba(34, 197, 126, 0.12);
 }
 
 #section-american-extractor *,
@@ -1433,6 +1450,8 @@
 
 #section-american-extractor .aex-recent-mini,
 #section-american-extractor .aex-library-card-item {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -1443,7 +1462,34 @@
   box-shadow: var(--aex-shadow-card), var(--aex-specular);
   text-align: start;
   cursor: pointer;
-  transition: transform 0.28s var(--aex-spring), box-shadow 0.28s var(--aex-ease), border-color 0.22s ease;
+  transition: transform 0.28s var(--aex-spring), box-shadow 0.28s var(--aex-ease), border-color 0.22s ease, background-color 0.22s ease;
+}
+
+#section-american-extractor .aex-recent-mini::before,
+#section-american-extractor .aex-library-card-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  height: 3px;
+  background: transparent;
+  transition: background-color 0.25s ease;
+}
+
+#section-american-extractor .aex-recent-mini[data-state="progress"]::before,
+#section-american-extractor .aex-library-card-item[data-state="progress"]::before {
+  background: linear-gradient(90deg, var(--aex-blue) 0%, #38BDF8 100%);
+}
+
+#section-american-extractor .aex-recent-mini[data-state="done"],
+#section-american-extractor .aex-library-card-item[data-state="done"] {
+  border-color: var(--aex-done-border);
+  background: var(--aex-done-surface);
+}
+
+#section-american-extractor .aex-recent-mini[data-state="done"]::before,
+#section-american-extractor .aex-library-card-item[data-state="done"]::before {
+  background: var(--aex-done-solid);
 }
 
 #section-american-extractor .aex-recent-mini:hover,
@@ -1735,14 +1781,77 @@
    -------------------------------------------------------------------------- */
 
 #section-american-extractor .aex-note-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 26px 28px 32px;
+  padding: 28px 28px 26px;
   border-radius: 26px;
   background: var(--aex-surface);
   border: 1px solid var(--aex-border);
   box-shadow: var(--aex-shadow-card), var(--aex-specular);
+  transition: border-color 0.3s ease, background-color 0.3s ease;
+}
+
+#section-american-extractor .aex-note-card[data-guide-state="done"] {
+  border-color: var(--aex-done-border);
+}
+
+/* Flush 4px Top Ambient Progress Rail */
+#section-american-extractor .aex-guide-top-rail {
+  position: absolute;
+  top: 0;
+  inset-inline: 0;
+  height: 4px;
+  border-radius: 26px 26px 0 0;
+  background: var(--aex-fill-subtle);
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+
+#section-american-extractor .aex-guide-top-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--aex-blue) 0%, #38BDF8 100%);
+  transition: width 0.45s var(--aex-spring), background 0.3s ease;
+}
+
+#section-american-extractor .aex-note-card[data-guide-state="done"] .aex-guide-top-fill {
+  background: linear-gradient(90deg, var(--aex-done-solid) 0%, var(--aex-done) 100%);
+}
+
+/* Subtle Top Ambient State Wash (instant glance done vs in-progress) */
+#section-american-extractor .aex-guide-ambient {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#section-american-extractor .aex-guide-ambient::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 140px;
+  opacity: 0;
+  transition: opacity 0.35s ease, background 0.35s ease;
+}
+
+#section-american-extractor .aex-note-card[data-guide-state="progress"] .aex-guide-ambient::before {
+  opacity: 1;
+  background: radial-gradient(ellipse 85% 100% at 20% 0%, var(--aex-blue-wash) 0%, transparent 72%);
+}
+
+#section-american-extractor .aex-note-card[data-guide-state="done"] .aex-guide-ambient::before {
+  opacity: 1;
+  background: radial-gradient(ellipse 90% 110% at 20% 0%, var(--aex-done-glow) 0%, transparent 75%);
+}
+
+#section-american-extractor .aex-note-card > :not(.aex-guide-top-rail):not(.aex-guide-ambient) {
+  position: relative;
+  z-index: 1;
 }
 
 #section-american-extractor .aex-note-head {
@@ -1958,21 +2067,172 @@
   font-weight: 600;
 }
 
-/* Progress Row & Completion Controls */
+/* Progress Deck (Ring + Status + Interactive Phrase Pips + Study Controls) */
 #section-american-extractor .aex-note-progress-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
   flex-wrap: wrap;
-  padding: 14px 16px;
+  padding: 14px 18px;
   border-radius: 18px;
   background: var(--aex-surface-inset);
   border: 1px solid var(--aex-border);
+  transition: border-color 0.25s ease, background-color 0.25s ease;
+}
+
+#section-american-extractor .aex-note-card[data-guide-state="done"] .aex-note-progress-row {
+  background: var(--aex-done-wash);
+  border-color: var(--aex-done-border);
 }
 
 #section-american-extractor #aex-note-progress {
-  flex: 1 1 320px;
+  flex: 1 1 340px;
   min-width: 0;
+}
+
+#section-american-extractor .aex-progress-deck {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+#section-american-extractor .aex-ring-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+#section-american-extractor .aex-ring-badge.is-done {
+  background: var(--aex-done-solid);
+  color: var(--aex-done-check);
+  box-shadow: 0 0 0 4px var(--aex-done-wash);
+}
+
+#section-american-extractor .aex-ring-badge.is-done svg {
+  width: 20px;
+  height: 20px;
+}
+
+#section-american-extractor .aex-ring-svg {
+  width: 42px;
+  height: 42px;
+  transform: rotate(-90deg);
+}
+
+#section-american-extractor .aex-ring-bg {
+  fill: none;
+  stroke: var(--aex-fill);
+  stroke-width: 3.6;
+}
+
+#section-american-extractor .aex-ring-fg {
+  fill: none;
+  stroke: var(--aex-blue);
+  stroke-width: 3.6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.45s var(--aex-spring), stroke 0.25s ease;
+}
+
+#section-american-extractor .aex-ring-badge.is-new .aex-ring-fg {
+  stroke: var(--aex-text-tertiary);
+}
+
+#section-american-extractor .aex-ring-pct {
+  position: absolute;
+  font-family: var(--aex-font-mono);
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--aex-text-primary);
+}
+
+#section-american-extractor .aex-progress-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#section-american-extractor .aex-progress-top-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#section-american-extractor .aex-progress-headline {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--aex-text-primary);
+}
+
+#section-american-extractor .aex-progress-fraction {
+  margin-inline-start: auto;
+  font-family: var(--aex-font-mono);
+  font-size: 0.78rem;
+  color: var(--aex-text-secondary);
+}
+
+#section-american-extractor .aex-progress-fraction strong {
+  color: var(--aex-text-primary);
+}
+
+#section-american-extractor .aex-note-card[data-guide-state="done"] .aex-progress-fraction strong {
+  color: var(--aex-done);
+}
+
+/* Interactive Segmented Phrase Pip Track */
+#section-american-extractor .aex-pip-track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+#section-american-extractor .aex-pip {
+  flex: 1 1 0%;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 980px;
+  background: var(--aex-fill);
+  cursor: pointer;
+  transition: background-color 0.22s ease, transform 0.16s var(--aex-bounce), opacity 0.16s ease;
+}
+
+#section-american-extractor .aex-pip:hover {
+  transform: scaleY(1.45);
+  background: var(--aex-blue);
+}
+
+#section-american-extractor .aex-pip.is-done {
+  background: var(--aex-done-solid);
+}
+
+#section-american-extractor .aex-pip.is-guide-done {
+  background: var(--aex-done-border);
+}
+
+#section-american-extractor .aex-pip.is-done:hover {
+  background: var(--aex-done);
+}
+
+#section-american-extractor .aex-complete-note-btn.is-checked {
+  background: var(--aex-done-solid);
+  border-color: var(--aex-done-solid);
+  color: var(--aex-done-check);
+  font-weight: 700;
+}
+
+#section-american-extractor .aex-complete-note-btn.is-checked:hover {
+  filter: brightness(0.95);
 }
 
 #section-american-extractor .subject-progress-bar {
@@ -2091,12 +2351,6 @@
   border-radius: 980px;
   background: var(--aex-fill);
   font-size: 0.72rem;
-}
-
-#section-american-extractor .aex-complete-note-btn.is-checked {
-  background: var(--aex-green-wash);
-  border-color: rgba(52, 199, 89, 0.35);
-  color: var(--aex-green);
 }
 
 /* Takeaway Banner */
@@ -2336,15 +2590,63 @@
   box-shadow: var(--aex-shadow-hover), var(--aex-specular);
 }
 
-/* Soft Calm Completed State */
-#section-american-extractor .aex-item.is-completed {
-  border-color: rgba(52, 199, 89, 0.34);
-  background: linear-gradient(180deg, rgba(52, 199, 89, 0.05) 0%, var(--aex-surface) 100%);
+/* Instant-Scan Completed Phrase Card (Emerald Left Rail + Calm Surface + Visual Recession) */
+#section-american-extractor .aex-item::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 3.5px;
+  border-radius: 0 4px 4px 0;
+  background: transparent;
+  transition: background-color 0.25s ease;
 }
 
-[data-theme="dark"] #section-american-extractor .aex-item.is-completed {
-  border-color: rgba(48, 209, 88, 0.36);
-  background: linear-gradient(180deg, rgba(48, 209, 88, 0.08) 0%, var(--aex-surface) 100%);
+[dir="rtl"] #section-american-extractor .aex-item::before {
+  border-radius: 4px 0 0 4px;
+}
+
+#section-american-extractor .aex-item.is-completed {
+  border-color: var(--aex-done-border);
+  background: var(--aex-done-surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+#section-american-extractor .aex-item.is-completed::before {
+  background: var(--aex-done-solid);
+}
+
+#section-american-extractor .aex-item.is-completed .aex-item-body {
+  opacity: 0.72;
+  transition: opacity 0.2s ease;
+}
+
+#section-american-extractor .aex-item.is-completed:hover .aex-item-body,
+#section-american-extractor .aex-item.is-completed:focus-within .aex-item-body {
+  opacity: 1;
+}
+
+#section-american-extractor .aex-item-done-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 980px;
+  background: var(--aex-done-wash);
+  color: var(--aex-done);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+@keyframes aexJumpRing {
+  0% { box-shadow: 0 0 0 0 var(--aex-blue-wash); border-color: var(--aex-blue); }
+  50% { box-shadow: 0 0 0 5px var(--aex-blue-wash); border-color: var(--aex-blue); }
+  100% { box-shadow: var(--aex-shadow-card), var(--aex-specular); }
+}
+
+#section-american-extractor .aex-item.is-jump-highlight {
+  animation: aexJumpRing 1s var(--aex-ease);
 }
 
 #section-american-extractor .aex-item-head {
@@ -2616,9 +2918,10 @@
 }
 
 #section-american-extractor .aex-check-btn.is-checked {
-  background: var(--aex-green-solid);
-  border-color: var(--aex-green-solid);
-  color: #06210E;
+  background: var(--aex-done-solid);
+  border-color: var(--aex-done-solid);
+  color: var(--aex-done-check);
+  box-shadow: 0 0 0 3px var(--aex-done-wash);
 }
 
 #section-american-extractor .aex-check-btn.is-checked .aex-check-svg {

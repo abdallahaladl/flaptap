@@ -494,7 +494,7 @@
             }</span>
 
             <div class="aex-item-heading">
-              <!-- Line 1: English phrase + IPA + Category (+ CEFR / Register) -->
+              <!-- Line 1: English phrase + IPA + Category (+ CEFR / Register / Studied) -->
               <div class="aex-item-line-1">
                 <h3 class="aex-item-term"><span class="aex-term-mark"><span class="aex-term-text">${escapeHtml(
                   item.term,
@@ -503,6 +503,7 @@
                 <span class="aex-item-cat">${escapeHtml(categoryLabel)}</span>
                 ${item.cefr ? `<span class="aex-item-level ltr-num">${escapeHtml(item.cefr)}</span>` : ''}
                 ${showRegister ? `<span class="aex-item-register">${escapeHtml(registerValue)}</span>` : ''}
+                ${completed ? '<span class="aex-item-done-tag">Studied</span>' : ''}
               </div>
 
               <!-- Line 2: Localized / Arabic translation directly under the English phrase -->
@@ -637,19 +638,94 @@
 
     function renderNoteProgress(note) {
       const stats = store.noteStudyState(note);
+      const completedSet = store.completedIndexSet(note);
+      const items = Array.isArray(note?.items) ? note.items : [];
+
+      // Instant-glance whole-page state on header card & top 4px progress rim
+      const noteCard = el('aex-note-card');
+      const readyWrap = el('aex-detail-ready');
+      if (noteCard) noteCard.dataset.guideState = stats.tone;
+      if (readyWrap) readyWrap.dataset.guideState = stats.tone;
+
+      const topFill = el('aex-guide-top-fill');
+      if (topFill) {
+        topFill.style.width = `${stats.tone === 'done' ? 100 : stats.pct}%`;
+      }
 
       const bar = el('aex-note-progress');
       if (bar) {
         bar.hidden = stats.total === 0;
-        if (ws()?.renderSubjectProgressBar) {
-          ws().renderSubjectProgressBar(bar, {
-            total: stats.total,
-            completed: stats.done,
-            state: { label: stats.label, tone: stats.tone },
-          });
-        } else {
-          bar.textContent = `${stats.done} / ${stats.total} studied`;
-        }
+        bar.classList.toggle('is-all-done', stats.tone === 'done');
+
+        const radius = 17;
+        const circumference = 2 * Math.PI * radius;
+        const displayPct = stats.tone === 'done' ? 100 : stats.pct;
+        const dashOffset = circumference * (1 - displayPct / 100);
+
+        const ringSvg =
+          stats.tone === 'done'
+            ? `<div class="aex-ring-badge is-done" aria-hidden="true">
+                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+               </div>`
+            : `<div class="aex-ring-badge is-${stats.tone}" aria-hidden="true">
+                 <svg class="aex-ring-svg" viewBox="0 0 42 42">
+                   <circle class="aex-ring-bg" cx="21" cy="21" r="${radius}"></circle>
+                   <circle class="aex-ring-fg" cx="21" cy="21" r="${radius}" stroke-dasharray="${circumference.toFixed(
+                     2,
+                   )}" stroke-dashoffset="${dashOffset.toFixed(2)}"></circle>
+                 </svg>
+                 <span class="aex-ring-pct ltr-num">${displayPct}%</span>
+               </div>`;
+
+        const trackHtml =
+          items.length > 0 && items.length <= 32
+            ? `<div class="aex-pip-track" role="list" aria-label="Phrase completion map">
+                 ${items
+                   .map((item) => {
+                     const idx = Number(item.index);
+                     const itemDone = completedSet.has(idx);
+                     const pipClass = itemDone
+                       ? 'is-done'
+                       : stats.tone === 'done'
+                         ? 'is-guide-done'
+                         : '';
+                     return `<button type="button" class="aex-pip${pipClass ? ` ${pipClass}` : ''}" data-aex-jump-index="${escapeHtml(
+                       idx,
+                     )}" title="#${idx + 1} · ${escapeHtml(item.term)} (${
+                       itemDone ? 'Studied' : 'Remaining'
+                     })" aria-label="Jump to #${idx + 1} ${escapeHtml(item.term)} (${
+                       itemDone ? 'Studied' : 'Remaining'
+                     })"></button>`;
+                   })
+                   .join('')}
+               </div>`
+            : `<div class="subject-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${stats.total}" aria-valuenow="${stats.done}">
+                 <div class="subject-progress-fill" style="width: ${displayPct}%"></div>
+               </div>`;
+
+        const headline =
+          stats.tone === 'done'
+            ? 'Guide completed'
+            : stats.tone === 'progress'
+              ? `${stats.remaining} phrase${stats.remaining === 1 ? '' : 's'} left to master`
+              : 'Ready to study';
+
+        bar.innerHTML = `
+          <div class="aex-progress-deck">
+            ${ringSvg}
+            <div class="aex-progress-main">
+              <div class="aex-progress-top-line">
+                <span class="sp-state sp-state--${stats.tone}">${escapeHtml(stats.label)}</span>
+                <span class="aex-progress-headline">${escapeHtml(headline)}</span>
+                <span class="aex-progress-fraction ltr-num">
+                  <strong data-sp-completed>${stats.done}</strong>/<span data-sp-total>${stats.total}</span>
+                  <span class="visually-hidden"> (<span data-sp-remaining>${stats.remaining}</span> remaining)</span>
+                </span>
+              </div>
+              ${trackHtml}
+            </div>
+          </div>
+        `;
       }
 
       const btn = el('aex-complete-note-btn');
@@ -929,6 +1005,16 @@
         } else {
           const card = sourceButton?.closest('.aex-item');
           card?.classList.toggle('is-completed', next);
+          const line1 = card?.querySelector('.aex-item-line-1');
+          const existingTag = line1?.querySelector('.aex-item-done-tag');
+          if (next && line1 && !existingTag) {
+            const tag = document.createElement('span');
+            tag.className = 'aex-item-done-tag';
+            tag.textContent = 'Studied';
+            line1.appendChild(tag);
+          } else if (!next && existingTag) {
+            existingTag.remove();
+          }
           if (sourceButton && ws()?.setCheckButtonState) {
             ws().setCheckButtonState(sourceButton, next);
           } else if (sourceButton) {
@@ -1201,6 +1287,22 @@
           if (local.currentNote) {
             renderCategoryFilters(local.currentNote);
             renderItems(local.currentNote);
+          }
+          return;
+        }
+
+        const jumpPip = e.target.closest('[data-aex-jump-index]');
+        if (jumpPip) {
+          const targetIdx = jumpPip.dataset.aexJumpIndex;
+          const targetCard = document.querySelector(`#aex-items-list .aex-item[data-aex-index="${CSS.escape(targetIdx)}"]`);
+          if (targetCard) {
+            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetCard.classList.remove('is-jump-highlight');
+            void targetCard.offsetWidth;
+            targetCard.classList.add('is-jump-highlight');
+            setTimeout(() => targetCard.classList.remove('is-jump-highlight'), 1100);
+          } else if (local.scopeRemaining) {
+            showToast('Turn off “Remaining only” to view studied phrases.');
           }
           return;
         }
