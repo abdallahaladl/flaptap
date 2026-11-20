@@ -23,9 +23,16 @@ import { AiProvidersModule } from './modules/ai-providers/ai-providers.module';
 import { TechLinguistModule } from './modules/tech-linguist/tech-linguist.module';
 import { LearningLibraryModule } from './modules/learning-library/learning-library.module';
 import { AmericanExtractorModule } from './modules/american-extractor/american-extractor.module';
+import { SharedSourcesModule } from './modules/shared-sources/shared-sources.module';
 
 @Module({
-  imports: [AiProvidersModule, TechLinguistModule, LearningLibraryModule, AmericanExtractorModule],
+  imports: [
+    SharedSourcesModule,
+    AiProvidersModule,
+    TechLinguistModule,
+    LearningLibraryModule,
+    AmericanExtractorModule,
+  ],
   controllers: [
     HealthController,
     AuthController,

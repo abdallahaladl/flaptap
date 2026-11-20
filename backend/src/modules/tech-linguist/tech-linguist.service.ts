@@ -2,6 +2,11 @@ import { Injectable, Logger } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { WordDefinitionResponse, WordLookupService } from '../../core/ai/word-lookup.service';
 import { AiProvidersService } from '../ai-providers/ai-providers.service';
+import {
+  buildCanonicalSourceKey,
+  extractYouTubeVideoId,
+  SharedSourcesService,
+} from '../shared-sources/shared-sources.service';
 import { TranscriptService } from '../tracks/shadowing/transcript.service';
 import { ExtractionModeRegistry } from './modes/extraction-mode.registry';
 import { TechLinguistRepository } from './tech-linguist.repository';
@@ -34,6 +39,7 @@ export class TechLinguistService {
     private readonly wordLookup: WordLookupService,
     private readonly modeRegistry: ExtractionModeRegistry,
     private readonly repository: TechLinguistRepository,
+    private readonly sharedSources: SharedSourcesService,
   ) {}
 
   cleanAsrTranscript(text: string): string {
@@ -63,17 +69,46 @@ export class TechLinguistService {
     let sourceUrl = params.url || '';
     let rawTranscript = params.transcriptText || '';
 
+    let sharedSourceId = '';
     if (params.url) {
-      try {
-        const transcriptResult = await this.transcriptService.extract(params.url);
-        title = transcriptResult.title || title;
-        creator = transcriptResult.creator || creator;
-        sourceUrl = transcriptResult.url || params.url;
-        rawTranscript = transcriptResult.full_raw_transcript || '';
-      } catch (err: any) {
-        this.logger.warn(`Transcript extraction failed for ${params.url}: ${err.message}`);
-        if (!rawTranscript) {
-          throw new Error(`Could not fetch transcript from URL: ${err.message}`);
+      const urlKey = buildCanonicalSourceKey({ sourceUrl: params.url });
+      const cachedShared = params.userId ? this.sharedSources.findByKey(params.userId, urlKey) : null;
+      if (cachedShared && cachedShared.transcriptText.trim().length >= 40) {
+        sharedSourceId = cachedShared.id;
+        title = cachedShared.title || title;
+        creator = cachedShared.creator || creator;
+        sourceUrl = cachedShared.sourceUrl || params.url;
+        rawTranscript = cachedShared.transcriptText;
+      } else {
+        try {
+          const transcriptResult = await this.transcriptService.extract(params.url);
+          title = transcriptResult.title || title;
+          creator = transcriptResult.creator || creator;
+          sourceUrl = transcriptResult.url || params.url;
+          rawTranscript = transcriptResult.full_raw_transcript || '';
+          if (params.userId && rawTranscript.trim()) {
+            const ytId = transcriptResult.video_id || extractYouTubeVideoId(sourceUrl);
+            const shared = this.sharedSources.upsert(params.userId, {
+              sourceKey: buildCanonicalSourceKey({ sourceUrl, videoId: ytId }),
+              sourceType: ytId ? 'youtube' : 'article',
+              title,
+              creator,
+              sourceUrl,
+              sourceLabel: ytId ? 'YouTube · captions' : 'URL transcript',
+              hasAudio: Boolean(ytId),
+              hasVideo: Boolean(ytId),
+              mediaKind: ytId ? 'youtube' : 'none',
+              mediaId: ytId || '',
+              durationSeconds: transcriptResult.duration_seconds || 0,
+              transcriptText: rawTranscript,
+            });
+            sharedSourceId = shared.id;
+          }
+        } catch (err: any) {
+          this.logger.warn(`Transcript extraction failed for ${params.url}: ${err.message}`);
+          if (!rawTranscript) {
+            throw new Error(`Could not fetch transcript from URL: ${err.message}`);
+          }
         }
       }
     }
@@ -189,6 +224,9 @@ export class TechLinguistService {
       fullTranscript: cleanedTranscript,
       createdAt: nowIso,
     });
+    if (params.userId && sharedSourceId) {
+      this.sharedSources.linkTechExtractionToSource(params.userId, extractionId, sharedSourceId);
+    }
 
     return {
       id: extractionId,

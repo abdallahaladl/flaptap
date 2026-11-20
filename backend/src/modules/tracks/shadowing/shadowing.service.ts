@@ -23,6 +23,10 @@ import { ShadowingAnalysisService } from './shadowing.analysis.service';
 import { ShadowingCoachGlossService } from './shadowing.coach-gloss.service';
 import { segmentParagraphs, segmentSentences } from '../../../core/linguistics/segmentation';
 import { classifyMediaUrl, EXTERNAL_MEDIA_ID_PATTERN } from '../../../core/media/media-url';
+import {
+  buildCanonicalSourceKey,
+  SharedSourcesService,
+} from '../../shared-sources/shared-sources.service';
 
 @Injectable()
 export class ShadowingService {
@@ -35,6 +39,7 @@ export class ShadowingService {
     private readonly translationService: ShadowingTranslationService,
     private readonly analysisService: ShadowingAnalysisService,
     private readonly coachGlossService: ShadowingCoachGlossService,
+    private readonly sharedSources: SharedSourcesService,
   ) {}
 
   checkExisting(url: string, scope?: RequestIdentityScope) {
@@ -210,6 +215,44 @@ export class ShadowingService {
       }
 
       const saved = this.historyRepo.create(item, scope);
+      if (scope?.userId) {
+        try {
+          const videoId = saved.videoId || this.extractYoutubeId(url);
+          const sourceKey = buildCanonicalSourceKey({
+            sourceType: 'youtube',
+            sourceUrl: saved.sourceUrl || url,
+            videoId,
+          });
+          const shared = this.sharedSources.upsert(scope.userId, {
+            sourceKey,
+            sourceType: 'youtube',
+            title: saved.title || 'YouTube Video',
+            creator: saved.creator || 'YouTube creator',
+            sourceUrl: saved.sourceUrl || url,
+            sourceLabel: 'YouTube · captions',
+            hasAudio: Boolean(videoId),
+            hasVideo: Boolean(videoId),
+            mediaKind: videoId ? 'youtube' : 'none',
+            mediaId: videoId || '',
+            durationSeconds: saved.durationSeconds || 0,
+            transcriptText: (saved.sentences || []).map((s) => s.text).join(' '),
+            segments: (saved.sentences || []).map((s) => ({
+              startSec: Number(s.startSec) || 0,
+              endSec: Number(s.endSec) || 0,
+              text: String(s.text || ''),
+            })),
+            sourceMeta: {
+              platform: 'YouTube',
+              videoId,
+              lessonId: saved.id,
+              thumbnailUrl: saved.thumbnailUrl || '',
+            },
+          });
+          this.sharedSources.linkLessonToSource(scope.userId, saved.id, shared.id);
+        } catch (syncErr: any) {
+          this.logger.warn(`Shared source sync skipped for lesson ${saved.id}: ${syncErr?.message}`);
+        }
+      }
       this.logger.log(
         `Lesson ready in ${Date.now() - startedAt}ms ` +
           `(captions ${extractedAt - startedAt}ms, ${sentences.length} sentences, ${chunks.length} paragraphs)`,

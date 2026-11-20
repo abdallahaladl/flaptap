@@ -275,6 +275,36 @@ export class SqliteService implements OnModuleDestroy {
       CREATE INDEX IF NOT EXISTS idx_ll_items_user_mastery
         ON learning_library_items(user_id, domain_id, mastery_status, is_favorite);
 
+      CREATE TABLE IF NOT EXISTS shared_sources (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        source_key TEXT NOT NULL,
+        source_type TEXT NOT NULL DEFAULT 'text',
+        title TEXT NOT NULL DEFAULT '',
+        creator TEXT NOT NULL DEFAULT '',
+        source_url TEXT NOT NULL DEFAULT '',
+        source_label TEXT NOT NULL DEFAULT '',
+        mime_type TEXT NOT NULL DEFAULT '',
+        file_name TEXT NOT NULL DEFAULT '',
+        has_audio INTEGER NOT NULL DEFAULT 0,
+        has_video INTEGER NOT NULL DEFAULT 0,
+        media_kind TEXT NOT NULL DEFAULT 'none',
+        media_id TEXT NOT NULL DEFAULT '',
+        duration_seconds REAL NOT NULL DEFAULT 0,
+        transcript_text TEXT NOT NULL DEFAULT '',
+        segments_json TEXT NOT NULL DEFAULT '[]',
+        source_meta_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_shared_sources_user_key
+        ON shared_sources(user_id, source_key);
+      CREATE INDEX IF NOT EXISTS idx_shared_sources_user_updated
+        ON shared_sources(user_id, updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_shared_sources_media
+        ON shared_sources(user_id, media_id);
+
       CREATE TABLE IF NOT EXISTS user_ai_keys (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -328,10 +358,22 @@ export class SqliteService implements OnModuleDestroy {
     this.ensureColumn('tech_linguist_extractions', 'completion_json', "TEXT NOT NULL DEFAULT '{}'");
     this.ensureColumn('american_extractor_notes', 'content_hash', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('american_extractor_notes', 'updated_at', "TEXT NOT NULL DEFAULT ''");
+    this.ensureColumn('american_extractor_notes', 'source_id', "TEXT NOT NULL DEFAULT ''");
+    this.ensureColumn('lessons', 'source_id', "TEXT NOT NULL DEFAULT ''");
+    this.ensureColumn('tech_linguist_extractions', 'source_id', "TEXT NOT NULL DEFAULT ''");
 
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_aex_notes_user_hash
       ON american_extractor_notes(user_id, content_hash);
+
+      CREATE INDEX IF NOT EXISTS idx_aex_notes_user_source
+      ON american_extractor_notes(user_id, source_id);
+
+      CREATE INDEX IF NOT EXISTS idx_lessons_user_source
+      ON lessons(user_id, source_id);
+
+      CREATE INDEX IF NOT EXISTS idx_tech_linguist_user_source
+      ON tech_linguist_extractions(user_id, source_id);
 
       UPDATE american_extractor_notes
       SET updated_at = created_at
