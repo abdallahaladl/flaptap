@@ -351,6 +351,7 @@
       liveStatus: 'idle',
       liveError: '',
       probeSeq: 0,
+      pendingRefreshPromise: null,
     };
 
     const extraSummaryHtml = extraSummary
@@ -692,34 +693,47 @@
     }
 
     async function refreshKeys(forceRefreshModels = false, preferKeyId = undefined) {
-      try {
-        const res = await fetcher('/api/ai-providers/keys', { method: 'GET' });
-        state.keys = Array.isArray(res?.keys) ? res.keys : [];
-
-        const persisted = loadPersistedSelection(persistenceKey);
-        const candidates = [
-          preferKeyId,
-          state.selectedKeyId,
-          persisted?.keyId,
-          state.keys.find((k) => k.isDefault)?.id,
-          state.keys[0]?.id,
-        ].filter(Boolean);
-
-        state.selectedKeyId =
-          candidates.find((cid) => state.keys.some((k) => k.id === cid)) || '';
-
-        renderKeysDropdown();
-
-        if (state.selectedKeyId) {
-          await loadLiveModelsForKey(state.selectedKeyId, forceRefreshModels);
-        } else {
-          state.models = [];
-          setStatus('yellow', 'No API keys found');
-          renderModelsDropdown();
-        }
-      } catch (err) {
-        setStatus('red', err?.message || 'Key scan failed');
+      if (!forceRefreshModels && !preferKeyId && state.pendingRefreshPromise) {
+        return state.pendingRefreshPromise;
       }
+      const run = (async () => {
+        try {
+          const res = await fetcher('/api/ai-providers/keys', { method: 'GET' });
+          state.keys = Array.isArray(res?.keys) ? res.keys : [];
+
+          const persisted = loadPersistedSelection(persistenceKey);
+          const candidates = [
+            preferKeyId,
+            state.selectedKeyId,
+            persisted?.keyId,
+            state.keys.find((k) => k.isDefault)?.id,
+            state.keys[0]?.id,
+          ].filter(Boolean);
+
+          state.selectedKeyId =
+            candidates.find((cid) => state.keys.some((k) => k.id === cid)) || '';
+
+          renderKeysDropdown();
+
+          if (state.selectedKeyId) {
+            await loadLiveModelsForKey(state.selectedKeyId, forceRefreshModels);
+          } else {
+            state.models = [];
+            setStatus('yellow', 'No API keys found');
+            renderModelsDropdown();
+          }
+        } catch (err) {
+          setStatus('red', err?.message || 'Key scan failed');
+        } finally {
+          if (state.pendingRefreshPromise === run) {
+            state.pendingRefreshPromise = null;
+          }
+        }
+      })();
+      if (!forceRefreshModels && !preferKeyId) {
+        state.pendingRefreshPromise = run;
+      }
+      return run;
     }
 
     function applyPreset(presetName) {

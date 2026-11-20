@@ -53,8 +53,8 @@
     'american-extractor': {
       section: 'american-extractor',
       path: '/extractor',
-      aliases: ['/american-extractor', '/american-english'],
-      title: 'Phrase Lens',
+      aliases: ['/american-extractor', '/american-english', '/phrases'],
+      title: 'Anything to Phrases',
       i18nKey: 'navExtractor',
       group: 'Knowledge',
     },
@@ -90,7 +90,13 @@
     const val = String(raw || '').trim().toLowerCase();
     if (val === 'tech-lexicon' || val === 'lexicon' || val === 'tech-linguist') return 'tech-linguist';
     if (val === 'library' || val === 'learning-library') return 'learning-library';
-    if (val === 'extractor' || val === 'american-english' || val === 'american-extractor') {
+    if (
+      val === 'extractor' ||
+      val === 'american-english' ||
+      val === 'american-extractor' ||
+      val === 'phrases' ||
+      val === 'anything-to-phrases'
+    ) {
       return 'american-extractor';
     }
     if (ROUTE_TABLE[val]) return val;
@@ -137,8 +143,12 @@
       };
     }
 
-    // Sub-routes: American English Extractor
-    if (pathname === '/extractor/library' || pathname === '/american-extractor/library') {
+    // Sub-routes: Anything to Phrases (/extractor, /extractor/library, /extractor/library/:id)
+    if (
+      pathname === '/extractor/library' ||
+      pathname === '/american-extractor/library' ||
+      pathname === '/phrases/library'
+    ) {
       return {
         section: 'american-extractor',
         subview: 'library',
@@ -148,12 +158,19 @@
         canonicalizedFromQuery: false,
       };
     }
-    if (pathname.startsWith('/extractor/note/') || pathname.startsWith('/american-extractor/note/')) {
+    if (
+      pathname.startsWith('/extractor/library/') ||
+      pathname.startsWith('/american-extractor/library/') ||
+      pathname.startsWith('/phrases/library/') ||
+      pathname.startsWith('/extractor/note/') ||
+      pathname.startsWith('/american-extractor/note/') ||
+      pathname.startsWith('/phrases/note/')
+    ) {
       const parts = pathname.split('/');
       const noteId = decodeURIComponent(parts[parts.length - 1] || '');
       return {
         section: 'american-extractor',
-        subview: noteId ? 'note' : 'extract',
+        subview: noteId ? 'detail' : 'library',
         domainId: '',
         noteId,
         searchParams: params,
@@ -233,8 +250,8 @@
     } else if (section === 'american-extractor') {
       if (options.subview === 'library') {
         pathname = '/extractor/library';
-      } else if (options.subview === 'note' && options.noteId) {
-        pathname = `/extractor/note/${encodeURIComponent(options.noteId)}`;
+      } else if ((options.subview === 'detail' || options.subview === 'note') && options.noteId) {
+        pathname = `/extractor/library/${encodeURIComponent(options.noteId)}`;
       } else {
         pathname = '/extractor';
       }
@@ -277,8 +294,8 @@
       return '';
     }
     if (route.section === 'american-extractor') {
-      if (route.subview === 'library') return 'Saved Guides';
-      if (route.subview === 'note') return 'Study Guide';
+      if (route.subview === 'library') return 'Library';
+      if (route.subview === 'detail' || route.subview === 'note') return 'Study Guide';
       return '';
     }
     if (route.section === 'vocabulary') {
@@ -412,7 +429,8 @@
       normalizePath(global.location.pathname) === '/tech-lexicon' ||
       normalizePath(global.location.pathname) === '/tech-linguist' ||
       normalizePath(global.location.pathname) === '/american-extractor' ||
-      normalizePath(global.location.pathname) === '/american-english'
+      normalizePath(global.location.pathname) === '/american-english' ||
+      normalizePath(global.location.pathname) === '/phrases'
     ) {
       const clean = buildUrl(parsed.section, {
         subview: parsed.subview,
