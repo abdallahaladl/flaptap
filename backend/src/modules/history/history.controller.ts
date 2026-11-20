@@ -142,22 +142,10 @@ export class HistoryController {
   }
 
   @Patch(':id/complete')
-  setLessonCompleted(
-    @Param('id') id: string,
-    @Body() body: { completed?: boolean },
-    @Req() req: Request,
-  ) {
-    const identity = requireAuthenticatedUser(req, this.authService);
-    if (typeof body?.completed !== 'boolean') {
-      throw new BadRequestException('Field "completed" must be a boolean.');
-    }
-    const summary = this.historyRepo.setLessonCompleted(id, body.completed, identity);
-    if (!summary) throw new NotFoundException(`Lesson "${id}" not found`);
-    return {
-      success: true,
-      isCompleted: Boolean(summary.isCompleted),
-      item: summary,
-    };
+  setLessonCompleted() {
+    throw new BadRequestException(
+      'Lesson completion is derived automatically from its studied items and cannot be toggled manually.',
+    );
   }
 
   @Patch(':id/item-completion')

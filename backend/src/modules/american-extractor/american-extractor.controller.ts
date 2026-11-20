@@ -367,24 +367,22 @@ export class AmericanExtractorController {
     @Req() req: Request,
   ) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    const hasCompleted = typeof body?.completed === 'boolean';
-    const hasTitle = typeof body?.title === 'string';
-
-    if (!hasCompleted && !hasTitle) {
-      throw new BadRequestException('Provide "completed" (boolean) or "title" (string).');
+    if (typeof body?.completed === 'boolean') {
+      throw new BadRequestException(
+        'Study guide completion is derived automatically from its checked phrases and cannot be toggled manually.',
+      );
+    }
+    if (typeof body?.title !== 'string') {
+      throw new BadRequestException('Provide "title" (string).');
     }
 
-    const result: Record<string, any> = { success: true, id };
-    if (hasTitle) {
-      const renamed = this.extractor.renameNote(identity.userId, id, body.title as string);
-      result.title = renamed.title;
-      result.updatedAt = renamed.updatedAt;
-    }
-    if (hasCompleted) {
-      const updated = this.extractor.setCompleted(identity.userId, id, body.completed as boolean);
-      result.isCompleted = updated.isCompleted;
-    }
-    return result;
+    const renamed = this.extractor.renameNote(identity.userId, id, body.title);
+    return {
+      success: true,
+      id,
+      title: renamed.title,
+      updatedAt: renamed.updatedAt,
+    };
   }
 
   @Patch('notes/:id/items/:index')

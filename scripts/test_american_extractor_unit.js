@@ -743,12 +743,48 @@ try {
   check(renamed && renamed.title === 'Renamed Standup Guide', 'Repository persists guide rename');
   check(repo.findById(userId, 'aex_unit_1')?.title === 'Renamed Standup Guide', 'Renamed title rehydrates from SQLite');
 
-  repo.setItemCompletion(userId, 'aex_unit_1', 0, true);
+  const partialRes = repo.setItemCompletion(userId, 'aex_unit_1', 0, true);
+  check(
+    partialRes && partialRes.isCompleted === false,
+    'Partial item completion keeps guide strictly in-progress (never fake done)',
+  );
+
+  // Simulate legacy stale DB row with is_completed=1 despite unchecked items
+  sqlite.db.prepare('UPDATE american_extractor_notes SET is_completed = 1 WHERE id = ?').run('aex_unit_1');
+  check(
+    repo.findById(userId, 'aex_unit_1')?.isCompleted === false &&
+      repo.listPaginated(userId, { status: 'done' }).filteredTotal === 0,
+    'Stale manual is_completed=1 row is overridden by real derived item completion',
+  );
+
   const byVideo = repo.listPaginated(userId, { sourceType: 'video' });
   check(byVideo.filteredTotal === 1 && byVideo.items[0].id === 'aex_unit_2', 'Library sourceType=video groups YouTube sources');
 
   const byProgress = repo.listPaginated(userId, { status: 'progress' });
   check(byProgress.filteredTotal === 1 && byProgress.items[0].id === 'aex_unit_1', 'Library status=progress filters partly studied guides');
+
+  // Completing every remaining item flips guide to completed automatically
+  let finalRes = partialRes;
+  for (let i = 1; i < mergedByAppearance.items.length; i++) {
+    finalRes = repo.setItemCompletion(userId, 'aex_unit_1', i, true);
+  }
+  check(
+    finalRes &&
+      finalRes.isCompleted === true &&
+      repo.findById(userId, 'aex_unit_1')?.isCompleted === true &&
+      repo.listPaginated(userId, { status: 'done' }).filteredTotal === 1,
+    'Checking every phrase automatically completes the guide',
+  );
+
+  // Unchecking any item reverts completed back to in-progress immediately
+  const revertedRes = repo.setItemCompletion(userId, 'aex_unit_1', 0, false);
+  check(
+    revertedRes &&
+      revertedRes.isCompleted === false &&
+      repo.findById(userId, 'aex_unit_1')?.isCompleted === false &&
+      repo.listPaginated(userId, { status: 'done' }).filteredTotal === 0,
+    'Unchecking any item immediately reverts guide out of completed state',
+  );
 
   const sortedTitle = repo.listPaginated(userId, { sort: 'title', page: 1, limit: 1 });
   check(

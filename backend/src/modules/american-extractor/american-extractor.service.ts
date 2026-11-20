@@ -601,7 +601,7 @@ export class AmericanExtractorService {
     id: string,
     index: number,
     completed: boolean,
-  ): { id: string; completionProgress: ExtractorCompletionProgress } {
+  ): { id: string; completionProgress: ExtractorCompletionProgress; isCompleted: boolean } {
     try {
       const updated = this.repository.setItemCompletion(userId, id, index, completed);
       if (!updated) throw new NotFoundException('Extraction not found.');
@@ -610,12 +610,6 @@ export class AmericanExtractorService {
       if (error instanceof NotFoundException) throw error;
       throw new BadRequestException(error?.message || 'Could not update study progress.');
     }
-  }
-
-  setCompleted(userId: string, id: string, completed: boolean) {
-    const updated = this.repository.setCompleted(userId, id, completed);
-    if (!updated) throw new NotFoundException('Extraction not found.');
-    return updated;
   }
 
   deleteNote(userId: string, id: string): void {

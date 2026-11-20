@@ -53,7 +53,7 @@ function countCompletedItems(raw: unknown, itemCount: number): number {
 function deriveStatus(item: ExtractionHistoryItem): 'new' | 'progress' | 'done' {
   const total = Number(item.item_count) || 0;
   const done = Number(item.completed_count) || 0;
-  if (Number(item.is_completed) === 1 || (total > 0 && done >= total)) return 'done';
+  if (total > 0 && done >= total) return 'done';
   if (done > 0) return 'progress';
   return 'new';
 }
@@ -277,7 +277,7 @@ export class AmericanExtractorRepository {
     id: string,
     index: number,
     completed: boolean,
-  ): { id: string; completionProgress: ExtractorCompletionProgress } | null {
+  ): { id: string; completionProgress: ExtractorCompletionProgress; isCompleted: boolean } | null {
     const row = this.sqlite.db
       .prepare(
         `SELECT id, COALESCE(completion_json, '{}') AS completion_json, item_count
@@ -299,40 +299,24 @@ export class AmericanExtractorRepository {
 
     const existing = new Set<number>(
       Array.isArray(progress.items)
-        ? progress.items.map(Number).filter((n) => Number.isInteger(n) && n >= 0)
+        ? progress.items
+            .map(Number)
+            .filter((n) => Number.isInteger(n) && n >= 0 && (total === 0 || n < total))
         : [],
     );
     if (completed) existing.add(index);
     else existing.delete(index);
     progress.items = Array.from(existing).sort((a, b) => a - b);
 
+    const isCompleted = total > 0 && progress.items.length >= total;
     const updatedAt = new Date().toISOString();
     this.sqlite.db
       .prepare(
-        'UPDATE american_extractor_notes SET completion_json = ?, updated_at = ? WHERE id = ? AND user_id = ?',
+        'UPDATE american_extractor_notes SET completion_json = ?, is_completed = ?, updated_at = ? WHERE id = ? AND user_id = ?',
       )
-      .run(JSON.stringify(progress), updatedAt, id, userId);
+      .run(JSON.stringify(progress), isCompleted ? 1 : 0, updatedAt, id, userId);
 
-    return { id, completionProgress: progress };
-  }
-
-  setCompleted(
-    userId: string,
-    id: string,
-    completed: boolean,
-  ): { id: string; isCompleted: boolean } | null {
-    const existing = this.sqlite.db
-      .prepare('SELECT id FROM american_extractor_notes WHERE id = ? AND user_id = ?')
-      .get(id, userId);
-    if (!existing) return null;
-
-    const updatedAt = new Date().toISOString();
-    this.sqlite.db
-      .prepare(
-        'UPDATE american_extractor_notes SET is_completed = ?, updated_at = ? WHERE id = ? AND user_id = ?',
-      )
-      .run(completed ? 1 : 0, updatedAt, id, userId);
-    return { id, isCompleted: Boolean(completed) };
+    return { id, completionProgress: progress, isCompleted };
   }
 
   delete(userId: string, id: string): boolean {
@@ -352,12 +336,14 @@ export class AmericanExtractorRepository {
   private mapHistoryRow(row: ExtractionHistoryItem & { completion_json?: string }): ExtractionHistoryItem {
     const { completion_json, ...rest } = row;
     const itemCount = Number(row.item_count) || 0;
+    const completedCount = countCompletedItems(completion_json, itemCount);
+    const derivedCompleted = itemCount > 0 && completedCount >= itemCount ? 1 : 0;
     return {
       ...rest,
-      is_completed: Number(row.is_completed) || 0,
+      is_completed: derivedCompleted,
       item_count: itemCount,
       execution_time_ms: Number(row.execution_time_ms) || 0,
-      completed_count: countCompletedItems(completion_json, itemCount),
+      completed_count: completedCount,
     };
   }
 
@@ -382,6 +368,9 @@ export class AmericanExtractorRepository {
     } catch {}
 
     const language = getLanguage(String(row.target_language || 'ar'));
+    const itemCount = Number(row.item_count) || items.length;
+    const completedCount = countCompletedItems(row.completion_json, itemCount);
+    const isCompleted = itemCount > 0 && completedCount >= itemCount;
 
     return {
       id: String(row.id),
@@ -401,10 +390,10 @@ export class AmericanExtractorRepository {
       reasoningLevel: String(row.reasoning_level || ''),
       executionTimeMs: Number(row.execution_time_ms) || 0,
       fallbackFrom: String(row.fallback_from || '') || undefined,
-      itemCount: Number(row.item_count) || items.length,
+      itemCount,
       items,
       sourceText: String(row.source_text || ''),
-      isCompleted: Boolean(row.is_completed),
+      isCompleted,
       completionProgress,
       createdAt: String(row.created_at || ''),
       updatedAt: String(row.updated_at || row.created_at || ''),

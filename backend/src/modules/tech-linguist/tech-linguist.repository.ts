@@ -78,17 +78,68 @@ export class TechLinguistRepository {
     }
   }
 
+  private computeDerivedCompletion(params: {
+    extractionMode: ExtractionModeId;
+    vocabCount: number;
+    idiomsCount: number;
+    patternsCount: number;
+    completionProgress: TechLexiconCompletionProgress;
+  }): { completedItems: number; totalItems: number; isCompleted: boolean } {
+    const countSubject = (raw: unknown, maxCount: number): number => {
+      if (!Array.isArray(raw) || maxCount <= 0) return 0;
+      const seen = new Set<number>(
+        raw.map((n) => Number(n)).filter((n) => Number.isInteger(n) && n >= 0),
+      );
+      return Math.min(seen.size, maxCount);
+    };
+
+    const vocabTotal = Math.max(0, Number(params.vocabCount) || 0);
+    const idiomsTotal = Math.max(0, Number(params.idiomsCount) || 0);
+    const patternsTotal =
+      params.extractionMode === 'advanced_native' ? 0 : Math.max(0, Number(params.patternsCount) || 0);
+
+    const vocabDone = countSubject(params.completionProgress?.vocab, vocabTotal);
+    const idiomsDone = countSubject(params.completionProgress?.idioms, idiomsTotal);
+    const patternsDone = countSubject(params.completionProgress?.patterns, patternsTotal);
+
+    const totalItems = vocabTotal + idiomsTotal + patternsTotal;
+    const completedItems = vocabDone + idiomsDone + patternsDone;
+    const isCompleted = totalItems > 0 && completedItems >= totalItems;
+
+    return { completedItems, totalItems, isCompleted };
+  }
+
   getHistory(userId?: string, guestToken?: string): ExtractionHistoryItem[] {
     const query = userId
-      ? `SELECT id, COALESCE(NULLIF(extraction_mode, ''), 'comprehensive') AS extraction_mode, title, creator, summary, source_url, agent_name, model_name, reasoning_level, vocab_count, idioms_count, patterns_count, execution_time_ms, COALESCE(is_completed, 0) AS is_completed, created_at FROM tech_linguist_extractions WHERE user_id = ? ORDER BY created_at DESC LIMIT 30`
-      : `SELECT id, COALESCE(NULLIF(extraction_mode, ''), 'comprehensive') AS extraction_mode, title, creator, summary, source_url, agent_name, model_name, reasoning_level, vocab_count, idioms_count, patterns_count, execution_time_ms, COALESCE(is_completed, 0) AS is_completed, created_at FROM tech_linguist_extractions WHERE guest_token = ? OR user_id IS NULL ORDER BY created_at DESC LIMIT 30`;
+      ? `SELECT id, COALESCE(NULLIF(extraction_mode, ''), 'comprehensive') AS extraction_mode, title, creator, summary, source_url, agent_name, model_name, reasoning_level, vocab_count, idioms_count, patterns_count, execution_time_ms, COALESCE(is_completed, 0) AS is_completed, COALESCE(completion_json, '{}') AS completion_json, created_at FROM tech_linguist_extractions WHERE user_id = ? ORDER BY created_at DESC LIMIT 30`
+      : `SELECT id, COALESCE(NULLIF(extraction_mode, ''), 'comprehensive') AS extraction_mode, title, creator, summary, source_url, agent_name, model_name, reasoning_level, vocab_count, idioms_count, patterns_count, execution_time_ms, COALESCE(is_completed, 0) AS is_completed, COALESCE(completion_json, '{}') AS completion_json, created_at FROM tech_linguist_extractions WHERE guest_token = ? OR user_id IS NULL ORDER BY created_at DESC LIMIT 30`;
 
     const param = userId || guestToken || '';
-    return ((this.sqlite.db.prepare(query).all(param) as ExtractionHistoryItem[]) || []).map((row) => ({
-      ...row,
-      isCompleted: Boolean(row.is_completed),
-      extraction_mode: row.extraction_mode === 'advanced_native' ? 'advanced_native' : 'comprehensive',
-    }));
+    return ((this.sqlite.db.prepare(query).all(param) as Array<ExtractionHistoryItem & { completion_json?: string }>) || []).map((row) => {
+      const { completion_json, ...rest } = row;
+      const extractionMode: ExtractionModeId =
+        row.extraction_mode === 'advanced_native' ? 'advanced_native' : 'comprehensive';
+      let completionProgress: TechLexiconCompletionProgress = {};
+      try {
+        const parsed = JSON.parse(String(completion_json || '{}'));
+        if (parsed && typeof parsed === 'object') completionProgress = parsed;
+      } catch {}
+      const derived = this.computeDerivedCompletion({
+        extractionMode,
+        vocabCount: Number(row.vocab_count) || 0,
+        idiomsCount: Number(row.idioms_count) || 0,
+        patternsCount: Number(row.patterns_count) || 0,
+        completionProgress,
+      });
+      return {
+        ...rest,
+        is_completed: derived.isCompleted ? 1 : 0,
+        isCompleted: derived.isCompleted,
+        completed_count: derived.completedItems,
+        total_items: derived.totalItems,
+        extraction_mode: extractionMode,
+      };
+    });
   }
 
   getExtractionById(id: string): ExtractionResultPayload | null {
@@ -119,6 +170,13 @@ export class TechLinguistRepository {
 
     const extractionMode: ExtractionModeId =
       row.extraction_mode === 'advanced_native' ? 'advanced_native' : 'comprehensive';
+    const derived = this.computeDerivedCompletion({
+      extractionMode,
+      vocabCount: vocabItems.length || Number(row.vocab_count) || 0,
+      idiomsCount: idiomItems.length || Number(row.idioms_count) || 0,
+      patternsCount: thoughtPatterns.length || Number(row.patterns_count) || 0,
+      completionProgress,
+    });
 
     return {
       id: row.id,
@@ -135,42 +193,58 @@ export class TechLinguistRepository {
       idiomItems,
       thoughtPatterns: extractionMode === 'advanced_native' ? [] : thoughtPatterns,
       fullTranscript: row.full_transcript || '',
-      isCompleted: Boolean(row.is_completed),
+      isCompleted: derived.isCompleted,
       completionProgress,
       createdAt: row.created_at,
     };
   }
 
   private findOwnedRow(id: string, userId?: string, guestToken?: string): Record<string, any> | undefined {
+    const cols = `id, COALESCE(NULLIF(extraction_mode, ''), 'comprehensive') AS extraction_mode, vocab_count, idioms_count, patterns_count, COALESCE(completion_json, '{}') AS completion_json`;
     if (userId) {
       return this.sqlite.db
-        .prepare(`SELECT id, COALESCE(completion_json, '{}') AS completion_json FROM tech_linguist_extractions WHERE id = ? AND user_id = ?`)
+        .prepare(`SELECT ${cols} FROM tech_linguist_extractions WHERE id = ? AND user_id = ?`)
         .get(id, userId) as Record<string, any> | undefined;
     }
     if (guestToken) {
       return this.sqlite.db
-        .prepare(`SELECT id, COALESCE(completion_json, '{}') AS completion_json FROM tech_linguist_extractions WHERE id = ? AND (guest_token = ? OR user_id IS NULL)`)
+        .prepare(`SELECT ${cols} FROM tech_linguist_extractions WHERE id = ? AND (guest_token = ? OR user_id IS NULL)`)
         .get(id, guestToken) as Record<string, any> | undefined;
     }
     return this.sqlite.db
-      .prepare(`SELECT id, COALESCE(completion_json, '{}') AS completion_json FROM tech_linguist_extractions WHERE id = ? AND user_id IS NULL`)
+      .prepare(`SELECT ${cols} FROM tech_linguist_extractions WHERE id = ? AND user_id IS NULL`)
       .get(id) as Record<string, any> | undefined;
   }
 
   setExtractionCompleted(
     id: string,
-    isCompleted: boolean,
+    _isCompleted: boolean,
     userId?: string,
     guestToken?: string,
   ): { id: string; isCompleted: boolean } | null {
     const owned = this.findOwnedRow(id, userId, guestToken);
     if (!owned) return null;
 
+    let progress: TechLexiconCompletionProgress = {};
+    try {
+      const parsed = JSON.parse(String(owned.completion_json || '{}'));
+      if (parsed && typeof parsed === 'object') progress = parsed;
+    } catch {}
+    const extractionMode: ExtractionModeId =
+      owned.extraction_mode === 'advanced_native' ? 'advanced_native' : 'comprehensive';
+    const derived = this.computeDerivedCompletion({
+      extractionMode,
+      vocabCount: Number(owned.vocab_count) || 0,
+      idiomsCount: Number(owned.idioms_count) || 0,
+      patternsCount: Number(owned.patterns_count) || 0,
+      completionProgress: progress,
+    });
+
     this.sqlite.db
       .prepare('UPDATE tech_linguist_extractions SET is_completed = ? WHERE id = ?')
-      .run(isCompleted ? 1 : 0, id);
+      .run(derived.isCompleted ? 1 : 0, id);
 
-    return { id, isCompleted: Boolean(isCompleted) };
+    return { id, isCompleted: derived.isCompleted };
   }
 
   setExtractionItemCompletion(
@@ -180,7 +254,14 @@ export class TechLinguistRepository {
     completed: boolean,
     userId?: string,
     guestToken?: string,
-  ): { id: string; subject: TechLexiconCompletionSubject; completionProgress: TechLexiconCompletionProgress } | null {
+  ): {
+    id: string;
+    subject: TechLexiconCompletionSubject;
+    completionProgress: TechLexiconCompletionProgress;
+    isCompleted: boolean;
+    completedItems: number;
+    totalItems: number;
+  } | null {
     const owned = this.findOwnedRow(id, userId, guestToken);
     if (!owned) return null;
 
@@ -210,11 +291,28 @@ export class TechLinguistRepository {
 
     progress[subject] = Array.from(existing).sort((a, b) => a - b);
 
-    this.sqlite.db
-      .prepare('UPDATE tech_linguist_extractions SET completion_json = ? WHERE id = ?')
-      .run(JSON.stringify(progress), id);
+    const extractionMode: ExtractionModeId =
+      owned.extraction_mode === 'advanced_native' ? 'advanced_native' : 'comprehensive';
+    const derived = this.computeDerivedCompletion({
+      extractionMode,
+      vocabCount: Number(owned.vocab_count) || 0,
+      idiomsCount: Number(owned.idioms_count) || 0,
+      patternsCount: Number(owned.patterns_count) || 0,
+      completionProgress: progress,
+    });
 
-    return { id, subject, completionProgress: progress };
+    this.sqlite.db
+      .prepare('UPDATE tech_linguist_extractions SET completion_json = ?, is_completed = ? WHERE id = ?')
+      .run(JSON.stringify(progress), derived.isCompleted ? 1 : 0, id);
+
+    return {
+      id,
+      subject,
+      completionProgress: progress,
+      isCompleted: derived.isCompleted,
+      completedItems: derived.completedItems,
+      totalItems: derived.totalItems,
+    };
   }
 
   deleteExtraction(id: string, userId?: string): boolean {

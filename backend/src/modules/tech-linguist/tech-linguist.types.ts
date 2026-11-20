@@ -103,5 +103,7 @@ export interface ExtractionHistoryItem {
   execution_time_ms: number;
   is_completed?: number | boolean;
   isCompleted?: boolean;
+  completed_count?: number;
+  total_items?: number;
   created_at: string;
 }

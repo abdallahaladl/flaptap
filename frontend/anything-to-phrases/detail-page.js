@@ -114,7 +114,6 @@
         store.cacheNote(res.data);
         hydrateNote(res.data);
         setViewMode('ready');
-        healCompletionState(res.data);
       } catch (err) {
         if (err?.status === 401) {
           requireNoteAuth();
@@ -148,18 +147,6 @@
       if (el('aex-note-search')) el('aex-note-search').value = '';
       if (note.targetLanguage) store.setPreferredLanguage(note.targetLanguage);
       renderNote(note);
-    }
-
-    async function healCompletionState(note) {
-      if (!note || note.isCompleted) return;
-      const stats = store.noteStudyState(note);
-      if (stats.total === 0 || stats.done < stats.total) return;
-      try {
-        const res = await api.setNoteCompleted(note.id, true);
-        note.isCompleted = Boolean(res.isCompleted);
-        store.updateCachedNoteMeta(note.id, { isCompleted: note.isCompleted });
-        renderNoteProgress(note);
-      } catch {}
     }
 
     /* --------------------------------------------------------------------
@@ -684,12 +671,7 @@
                    .map((item) => {
                      const idx = Number(item.index);
                      const itemDone = completedSet.has(idx);
-                     const pipClass = itemDone
-                       ? 'is-done'
-                       : stats.tone === 'done'
-                         ? 'is-guide-done'
-                         : '';
-                     return `<button type="button" class="aex-pip${pipClass ? ` ${pipClass}` : ''}" data-aex-jump-index="${escapeHtml(
+                     return `<button type="button" class="aex-pip${itemDone ? ' is-done' : ''}" data-aex-jump-index="${escapeHtml(
                        idx,
                      )}" title="#${idx + 1} · ${escapeHtml(item.term)} (${
                        itemDone ? 'Studied' : 'Remaining'
@@ -728,14 +710,6 @@
         `;
       }
 
-      const btn = el('aex-complete-note-btn');
-      if (btn) {
-        btn.classList.toggle('is-checked', Boolean(note.isCompleted));
-        btn.setAttribute('aria-pressed', note.isCompleted ? 'true' : 'false');
-        const label = btn.querySelector('span');
-        if (label) label.textContent = note.isCompleted ? 'Completed' : 'Mark Complete';
-      }
-
       const scopeBtn = el('aex-note-scope');
       if (scopeBtn) {
         scopeBtn.hidden = stats.total === 0;
@@ -751,9 +725,11 @@
         recallBtn.setAttribute('aria-pressed', local.recallMode ? 'true' : 'false');
       }
 
+      const derivedCompleted = stats.tone === 'done';
+      note.isCompleted = derivedCompleted;
       store.updateCachedNoteMeta(note.id, {
         completedCount: stats.done,
-        isCompleted: Boolean(note.isCompleted),
+        isCompleted: derivedCompleted,
       });
     }
 
@@ -989,15 +965,14 @@
       try {
         const res = await api.setItemCompletion(note.id, idx, next);
         note.completionProgress = res.completionProgress || note.completionProgress;
-        const nowAllDone = total > 0 && store.completedIndexSet(note).size >= total;
+        const nowAllDone =
+          typeof res.isCompleted === 'boolean'
+            ? res.isCompleted
+            : total > 0 && store.completedIndexSet(note).size >= total;
+        note.isCompleted = nowAllDone;
 
-        if (!note.isCompleted && nowAllDone) {
-          const comp = await api.setNoteCompleted(note.id, true);
-          note.isCompleted = Boolean(comp.isCompleted);
+        if (!wasAllDone && nowAllDone) {
           showToast('Every phrase studied — study guide completed!');
-        } else if (note.isCompleted && wasAllDone && !nowAllDone) {
-          const comp = await api.setNoteCompleted(note.id, false);
-          note.isCompleted = Boolean(comp.isCompleted);
         }
 
         if (local.scopeRemaining) {
@@ -1025,19 +1000,6 @@
         renderNoteProgress(note);
       } catch (err) {
         showToast(err?.message || 'Could not update progress.');
-      }
-    }
-
-    async function toggleNoteCompletion() {
-      const note = local.currentNote;
-      if (!note) return;
-      try {
-        const res = await api.setNoteCompleted(note.id, !note.isCompleted);
-        note.isCompleted = Boolean(res.isCompleted);
-        renderNoteProgress(note);
-        showToast(note.isCompleted ? 'Study guide marked complete' : 'Study guide reopened');
-      } catch (err) {
-        showToast(err?.message || 'Could not update study guide.');
       }
     }
 
@@ -1158,7 +1120,6 @@
       el('aex-copy-btn')?.addEventListener('click', copyStudyNotes);
       el('aex-export-btn')?.addEventListener('click', exportMarkdown);
       el('aex-save-all-btn')?.addEventListener('click', saveAllItems);
-      el('aex-complete-note-btn')?.addEventListener('click', toggleNoteCompletion);
 
       el('aex-reextract-btn')?.addEventListener('click', () => {
         if (local.currentNote) nav.reextractNote(local.currentNote);

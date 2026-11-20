@@ -151,13 +151,6 @@
     });
   }
 
-  async function setNoteCompleted(id, completed) {
-    return apiFetch(`${BASE}/notes/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ completed: Boolean(completed) }),
-    });
-  }
-
   async function setItemCompletion(id, index, completed) {
     return apiFetch(`${BASE}/notes/${encodeURIComponent(id)}/items/${Number(index)}`, {
       method: 'PATCH',
@@ -212,7 +205,6 @@
     getTranscriptSources,
     getNote,
     renameNote,
-    setNoteCompleted,
     setItemCompletion,
     deleteNote,
     saveVocabularyItem,

@@ -798,10 +798,22 @@
     else if (subject === 'transcript') renderInteractiveTranscript(cur.fullTranscript || cur.full_transcript || '');
 
     try {
-      await apiFetch(`/api/tech-linguist/extractions/${encodeURIComponent(cur.id)}/item-completion`, {
+      const res = await apiFetch(`/api/tech-linguist/extractions/${encodeURIComponent(cur.id)}/item-completion`, {
         method: 'PATCH',
         body: JSON.stringify({ subject, index, completed: nextCompleted }),
       });
+      if (res && typeof res.isCompleted === 'boolean') {
+        cur.isCompleted = res.isCompleted;
+        const histItem = techState.historyItems.find((it) => it.id === cur.id);
+        if (histItem) {
+          histItem.isCompleted = res.isCompleted;
+          histItem.is_completed = res.isCompleted ? 1 : 0;
+          if (typeof res.completedItems === 'number') histItem.completed_count = res.completedItems;
+          if (typeof res.totalItems === 'number') histItem.total_items = res.totalItems;
+        }
+        renderRecentShelf(techState.historyItems.slice(0, 3));
+        renderLibraryGrid();
+      }
     } catch (err) {
       progress[subject] = existing;
       cur.completionProgress = progress;
@@ -813,40 +825,17 @@
     }
   }
 
-  async function toggleLexiconNoteCompletion(id) {
-    const histItem = techState.historyItems.find((it) => it.id === id);
-    const prev = histItem
-      ? Boolean(histItem.isCompleted ?? histItem.is_completed)
-      : Boolean(techState.currentResult?.id === id && techState.currentResult.isCompleted);
-    const next = !prev;
-
-    if (histItem) {
-      histItem.isCompleted = next;
-      histItem.is_completed = next ? 1 : 0;
+  function renderDerivedLexStatusBadge(item) {
+    const isDone = Boolean(item.isCompleted ?? item.is_completed);
+    const done = Number(item.completed_count || 0);
+    const total = Number(item.total_items || 0);
+    if (isDone) {
+      return '<span class="card-badge" style="background: rgba(22, 163, 106, 0.14); color: #16A36A; font-weight: 700;">Completed</span>';
     }
-    if (techState.currentResult?.id === id) {
-      techState.currentResult.isCompleted = next;
+    if (done > 0 && total > 0) {
+      return `<span class="card-badge ltr-num">${done}/${total}</span>`;
     }
-    renderRecentShelf(techState.historyItems.slice(0, 3));
-    renderLibraryGrid();
-
-    try {
-      await apiFetch(`/api/tech-linguist/extractions/${encodeURIComponent(id)}/complete`, {
-        method: 'PATCH',
-        body: JSON.stringify({ completed: next }),
-      });
-    } catch (err) {
-      if (histItem) {
-        histItem.isCompleted = prev;
-        histItem.is_completed = prev ? 1 : 0;
-      }
-      if (techState.currentResult?.id === id) {
-        techState.currentResult.isCompleted = prev;
-      }
-      renderRecentShelf(techState.historyItems.slice(0, 3));
-      renderLibraryGrid();
-      showToast(err?.message || 'Could not update note completion.');
-    }
+    return '';
   }
 
   function renderVocabTable(items) {
@@ -1201,7 +1190,7 @@
           <div class="recent-note-mini${isDone ? ' is-item-completed' : ''}" data-id="${escapeHtml(item.id)}">
             <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
               <div class="recent-note-title">${escapeHtml(item.title)}</div>
-              ${renderLexCheckBtn(isDone, `data-lex-note-complete="${escapeHtml(item.id)}"`)}
+              ${renderDerivedLexStatusBadge(item)}
             </div>
             <div class="recent-note-meta">
               <span>${item.vocab_count || 0} ${modeId === 'advanced_native' ? 'words' : 'terms'} · ${item.idioms_count || 0} idioms${modeCfg ? ` · ${escapeHtml(modeCfg.badgeLabel)}` : ''}</span>
@@ -1213,13 +1202,7 @@
       .join('');
 
     row.querySelectorAll('.recent-note-mini').forEach((card) => {
-      card.addEventListener('click', (e) => {
-        const checkBtn = e.target.closest('[data-lex-note-complete]');
-        if (checkBtn) {
-          e.stopPropagation();
-          toggleLexiconNoteCompletion(checkBtn.getAttribute('data-lex-note-complete'));
-          return;
-        }
+      card.addEventListener('click', () => {
         openExtractionNote(card.dataset.id);
       });
     });
@@ -1299,7 +1282,7 @@
             <div class="card-actions-row">
               <span style="font-size: 0.74rem; color: var(--ink-muted);">${dateStr}</span>
               <div class="card-actions-right">
-                ${renderLexCheckBtn(isDone, `data-lex-note-complete="${escapeHtml(item.id)}"`)}
+                ${renderDerivedLexStatusBadge(item)}
                 <button type="button" class="btn-vox btn-sm" data-action="open">Study Note</button>
                 <button type="button" class="btn-card-del" data-action="delete" title="Delete from history">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -1314,14 +1297,6 @@
     grid.querySelectorAll('.library-note-card').forEach((card) => {
       const id = card.dataset.id;
       const title = card.querySelector('.lib-card-title')?.textContent || '';
-
-      const checkBtn = card.querySelector('[data-lex-note-complete]');
-      if (checkBtn) {
-        checkBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          toggleLexiconNoteCompletion(id);
-        });
-      }
 
       card.querySelectorAll('[data-action="open"]').forEach((el) => {
         el.addEventListener('click', () => openExtractionNote(id));

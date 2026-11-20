@@ -337,7 +337,7 @@ async function run() {
       method: 'PATCH',
       body: { completed: true },
     });
-    assert(noteComplete.ok && noteComplete.data.isCompleted === true, 'Whole study map completion persists');
+    assert(noteComplete.status === 400, 'Fake manual whole-guide completion override is rejected (400)');
 
     const lookup = await api(baseUrl, '/api/american-extractor/define-word', {
       token,

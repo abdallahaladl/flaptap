@@ -137,27 +137,14 @@ export class TechLinguistController {
   }
 
   /**
-   * Marks or unmarks an extraction note as completed.
+   * Extraction completion is strictly derived from studied child items and cannot be toggled manually.
    */
   @Patch('extractions/:id/complete')
-  setExtractionCompleted(
-    @Param('id') id: string,
-    @Body() body: { completed?: boolean },
-    @Req() req: Request,
-  ) {
-    if (typeof body?.completed !== 'boolean') {
-      throw new HttpException('Field "completed" must be a boolean.', HttpStatus.BAD_REQUEST);
-    }
-    const userId = (req as any).user?.id || undefined;
-    const guestToken = (req as any).guestToken || (req.headers['x-guest-token'] as string) || undefined;
-    const updated = this.techLinguist.setExtractionCompleted(id, body.completed, userId, guestToken);
-    if (!updated) {
-      throw new HttpException('Extraction not found.', HttpStatus.NOT_FOUND);
-    }
-    return {
-      success: true,
-      ...updated,
-    };
+  setExtractionCompleted() {
+    throw new HttpException(
+      'Extraction completion is derived automatically from its studied items and cannot be toggled manually.',
+      HttpStatus.BAD_REQUEST,
+    );
   }
 
   /**

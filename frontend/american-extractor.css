@@ -2234,25 +2234,8 @@
   background: var(--aex-done-track);
 }
 
-#section-american-extractor .aex-pip.is-guide-done {
-  background: var(--aex-done-border);
-}
-
 #section-american-extractor .aex-pip.is-done:hover {
   background: var(--aex-done);
-}
-
-#section-american-extractor .aex-complete-note-btn.is-checked {
-  background: var(--aex-done-solid);
-  border-color: var(--aex-done-solid);
-  color: var(--aex-done-on-solid);
-  font-weight: 600;
-}
-
-#section-american-extractor .aex-complete-note-btn.is-checked:hover {
-  background: var(--aex-done-solid-hover);
-  border-color: var(--aex-done-solid-hover);
-  color: var(--aex-done-on-solid);
 }
 
 #section-american-extractor .subject-progress-bar {

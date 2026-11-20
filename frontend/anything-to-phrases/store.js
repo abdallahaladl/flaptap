@@ -533,11 +533,11 @@
     );
   }
 
-  function studyState({ total, done, isCompleted }) {
+  function studyState({ total, done }) {
     const safeTotal = Math.max(0, Number(total) || 0);
     const safeDone = Math.max(0, Math.min(safeTotal, Number(done) || 0));
     const tone =
-      isCompleted || (safeTotal > 0 && safeDone >= safeTotal)
+      safeTotal > 0 && safeDone >= safeTotal
         ? 'done'
         : safeDone > 0
           ? 'progress'
@@ -556,7 +556,6 @@
     return studyState({
       total: Array.isArray(note?.items) ? note.items.length : 0,
       done: completedIndexSet(note).size,
-      isCompleted: Boolean(note?.isCompleted),
     });
   }
 
@@ -564,7 +563,6 @@
     return studyState({
       total: Number(item?.item_count) || 0,
       done: Number(item?.completed_count) || 0,
-      isCompleted: Number(item?.is_completed) === 1,
     });
   }
 

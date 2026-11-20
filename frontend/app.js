@@ -1195,38 +1195,6 @@
     `;
   }
 
-  async function toggleLessonCompletion(id) {
-    const lesson = state.lessons.find((l) => l.id === id);
-    if (!lesson) return;
-    const prev = Boolean(lesson.isCompleted);
-    const prevProgress = lesson.itemProgress ? { ...lesson.itemProgress } : undefined;
-    const next = !prev;
-    lesson.isCompleted = next;
-    renderLibrary();
-    renderHistoryLedger();
-
-    try {
-      const res = await apiFetch(`/api/history/${encodeURIComponent(id)}/complete`, {
-        method: 'PATCH',
-        body: JSON.stringify({ completed: next }),
-      });
-      if (res?.item) {
-        lesson.isCompleted = Boolean(res.item.isCompleted);
-        lesson.itemProgress = res.item.itemProgress || lesson.itemProgress;
-        lesson.completedDrills = Number(res.item.completedDrills || 0);
-        renderLibrary();
-        renderHistoryLedger();
-        apiFetch('/api/history/stats').then(updateStatsDisplay).catch(() => {});
-      }
-    } catch (err) {
-      lesson.isCompleted = prev;
-      if (prevProgress) lesson.itemProgress = prevProgress;
-      renderLibrary();
-      renderHistoryLedger();
-      showToast(err?.message || 'Could not update completion.');
-    }
-  }
-
   async function toggleVocabCompletion(id) {
     const item = state.vocabItems.find((v) => v.id === id);
     if (!item) return;
@@ -1273,10 +1241,9 @@
     const cefrHtml = item.cefrLevel
       ? `<span class="card-cefr ltr-num">${escapeHtml(item.cefrLevel)}</span>`
       : '';
-    const checkBtnHtml = renderCheckButtonHtml({
-      checked: isDone,
-      attrs: `data-lesson-complete="${escapeHtml(item.id)}"`,
-    });
+    const statusBadgeHtml = isDone
+      ? `<span class="cache-pill active" aria-label="${escapeHtml(t('completedLabel'))}">${escapeHtml(t('completedLabel'))}</span>`
+      : '';
     const cachePillsHtml = buildCachePillsHtml(item);
 
     const progressMetaHtml = isDone
@@ -1301,7 +1268,7 @@
             <span class="card-creator">${escapeHtml(item.creator || 'Speaker')}</span>
             <div style="display: inline-flex; align-items: center; gap: 6px;">
               ${cefrHtml}
-              ${checkBtnHtml}
+              ${statusBadgeHtml}
             </div>
           </div>
           <h3 class="card-title">${escapeHtml(item.title)}</h3>
@@ -1593,10 +1560,13 @@
               <div class="ledger-row-main">
                 <div class="ledger-title-check-row">
                   <a href="/studio?id=${encodeURIComponent(item.id)}" class="ledger-row-title">${escapeHtml(item.title)}</a>
-                  ${renderCheckButtonHtml({
-                    checked: isDone,
-                    attrs: `data-ledger-complete="${escapeHtml(item.id)}"`,
-                  })}
+                  ${
+                    isDone
+                      ? `<span class="cache-pill active">${escapeHtml(t('completedLabel'))}</span>`
+                      : Number(item.itemProgress?.doneItems || 0) > 0 && Number(item.itemProgress?.totalItems || 0) > 0
+                      ? `<span class="cache-pill ltr-num">${Number(item.itemProgress.doneItems)}/${Number(item.itemProgress.totalItems)}</span>`
+                      : ''
+                  }
                 </div>
                 <div class="ledger-row-meta">
                   <span>${escapeHtml(trackLabel(item.track))}</span>
@@ -2072,14 +2042,6 @@
       if (!grid) return;
 
       grid.addEventListener('click', async (e) => {
-        const checkBtn = e.target.closest('[data-lesson-complete]');
-        if (checkBtn) {
-          e.stopPropagation();
-          const id = checkBtn.getAttribute('data-lesson-complete');
-          await toggleLessonCompletion(id);
-          return;
-        }
-
         const delBtn = e.target.closest('[data-delete-id]');
         if (delBtn) {
           e.stopPropagation();
@@ -2365,15 +2327,6 @@
     });
 
     document.getElementById('history-ledger-list')?.addEventListener('click', async (e) => {
-      const checkBtn = e.target.closest('[data-ledger-complete]');
-      if (checkBtn) {
-        e.preventDefault();
-        e.stopPropagation();
-        const id = checkBtn.getAttribute('data-ledger-complete');
-        await toggleLessonCompletion(id);
-        return;
-      }
-
       const reextractBtn = e.target.closest('[data-reextract-url]');
       if (reextractBtn) {
         const videoUrl = reextractBtn.getAttribute('data-reextract-url');

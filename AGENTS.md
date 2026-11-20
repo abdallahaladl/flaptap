@@ -87,6 +87,12 @@
    - Future AI agents are strictly forbidden from adding horizontal navigation tabs back into the top bar (`.workspace-topbar`). The top bar is reserved exclusively for mobile menu trigger, contextual page breadcrumb, and global utilities (streak, UI language, light/dark toggle, install, account).
    - Remove redundant jump links and legacy hidden DOM duplicates—each navigation action has one authoritative location.
 
+### Real Derived Completion Law (Website-Wide Invariant)
+
+- **Zero Fake Completion Controls:** Never add manual "Mark Complete" buttons or container-level completion toggle switches on any multi-item learning entity (Anything to Phrases Study Guides, Tech Lexicon notes, Shadowing/Dialogue/Pronunciation Lessons, History Ledger rows, or future multi-item features).
+- **Strict Derivation from Child Items:** A container entity is in the `Completed` (`done`) state **if and only if** every checkable item it contains is checked off (`totalItems > 0 && completedItems === totalItems`). If even one child item is unchecked, the container MUST NOT be marked completed (`progress` when `completedItems > 0`, `new` when `0`).
+- **Single Source of Truth:** Users check or uncheck individual atomic items (phrases, sentences, paragraphs, vocab terms, idioms, patterns, flashcards). Both backend repositories and frontend views MUST derive and persist parent completion strictly from those child item states—never trust or expose a manual container-level override.
+
 ### Independent Dual-Pane Studio Scrolling Law (Strict Invariant)
 
 - **Desktop Viewport Lock (> 768px):** Viewport is fixed (`html:has(.studio-body), .studio-body { height: 100dvh; overflow: hidden; }`). The topbar is fixed (`flex-shrink: 0`).
