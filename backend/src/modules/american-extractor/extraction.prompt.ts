@@ -9,14 +9,14 @@ export const EXTRACTION_TYPES: ExtractionFocusOption[] = [
     label: 'All types · balanced mix (Default)',
     shortLabel: 'All types',
     prompt:
-      'Extract a natural mix across idioms, phrasal verbs, collocations, slang, discourse markers, sentence patterns, connected speech, and high-value vocabulary.',
+      'Extract a high-ROI mix across idioms, phrasal verbs, collocations, slang, discourse markers, sentence patterns, connected speech, and standout vocabulary.',
   },
   {
     id: 'vocabulary',
     label: 'Vocabulary & hard words only',
     shortLabel: 'Vocabulary',
     prompt:
-      'STRICT TYPE FILTER: Extract ONLY single words and tight lexical vocabulary items (hard/advanced words, precise verbs, expressive adjectives, domain terms). Every item MUST have "category": "vocabulary". Do NOT include multi-word idioms, slang phrases, or phrasal verbs.',
+      'STRICT TYPE FILTER: Extract ONLY single words and tight lexical vocabulary items (precise verbs, expressive adjectives, nuanced nouns). Every item MUST have "category": "vocabulary".',
   },
   {
     id: 'idiom',
@@ -30,7 +30,7 @@ export const EXTRACTION_TYPES: ExtractionFocusOption[] = [
     label: 'Slang & street talk only',
     shortLabel: 'Slang',
     prompt:
-      'STRICT TYPE FILTER: Extract ONLY informal slang, street talk, pop-culture, and casual internet-native expressions. Every item MUST have "category": "slang".',
+      'STRICT TYPE FILTER: Extract ONLY informal American slang, street talk, pop-culture, and casual internet-native expressions. Every item MUST have "category": "slang".',
   },
   {
     id: 'phrasal_verb',
@@ -44,14 +44,14 @@ export const EXTRACTION_TYPES: ExtractionFocusOption[] = [
     label: 'Collocations only',
     shortLabel: 'Collocations',
     prompt:
-      'STRICT TYPE FILTER: Extract ONLY natural native word partnerships and collocations (verb+noun, adjective+noun, adverb+adjective pairs). Every item MUST have "category": "collocation".',
+      'STRICT TYPE FILTER: Extract ONLY natural native American word partnerships and collocations (verb+noun, adjective+noun, adverb+adjective pairs). Every item MUST have "category": "collocation".',
   },
   {
     id: 'connected_speech',
     label: 'Connected speech & reductions only',
     shortLabel: 'Connected speech',
     prompt:
-      'STRICT TYPE FILTER: Extract ONLY spoken connected-speech items, contractions, reductions, linking, flap-T, and fast-speech forms evidenced in the text (with clear General American IPA and mouth mechanics in "spokenNote"). Every item MUST have "category": "connected_speech".',
+      'STRICT TYPE FILTER: Extract ONLY spoken connected-speech items, contractions, reductions, linking, flap-T, and fast-speech forms evidenced in the source (with General American IPA and physical mouth mechanics in "spokenNote"). Every item MUST have "category": "connected_speech".',
   },
   {
     id: 'discourse_marker',
@@ -89,14 +89,14 @@ export const EXTRACTION_STYLES: ExtractionFocusOption[] = [
     label: 'American slang & street English',
     shortLabel: 'American slang',
     prompt:
-      'Prioritize authentic American slang, street talk, vernacular, and informal colloquial expressions (casual/slang register). Skip stiff textbook or formal phrasing.',
+      'Prioritize authentic American slang, street talk, vernacular, and informal colloquial expressions (casual/slang register). Skip stiff textbook phrasing.',
   },
   {
     id: 'standard_american',
     label: 'Standard American English (General US)',
     shortLabel: 'Standard English',
     prompt:
-      'Prioritize clean, widely understood Standard American English suitable for everyday educated conversation and clear communication. Avoid niche/ephemeral internet slang unless essential.',
+      'Prioritize clean, widely understood General American English suitable for everyday educated conversation and clear communication.',
   },
   {
     id: 'casual_spoken',
@@ -134,7 +134,7 @@ export const EXTRACTION_LEVELS: ExtractionFocusOption[] = [
     label: 'All levels · adaptive to source (Default)',
     shortLabel: 'All levels',
     prompt:
-      'Calibrate adaptively across CEFR A1–C2 to surface the highest-value, most teachable items naturally present in this source.',
+      'Calibrate adaptively across CEFR A1–C2 to surface the highest-value, most teachable American English items naturally present in this source.',
   },
   {
     id: 'a1',
@@ -252,28 +252,28 @@ export const EXTRACTION_DEPTHS: ExtractionFocusOption[] = [
     label: 'Balanced · adaptive to source (Default)',
     shortLabel: 'Adaptive count',
     prompt:
-      'Adaptive count: Let source density decide (short clip 5–10; 15m talk 12–20; dense 1h interview 25–35). Never pad.',
+      'Adaptive count: Let source richness decide (short excerpt 6–12; medium clip 12–20; dense section 18–26). Never pad with weak filler.',
   },
   {
     id: 'essentials',
     label: 'Essentials · top 5–8 gems only',
     shortLabel: 'Top 5–8',
     prompt:
-      'Strict curation: Return ONLY the top 5–8 highest-ROI, most memorable items from the source (fewer if the source is tiny).',
+      'Strict curation: Return ONLY the top 5–8 highest-ROI, most memorable items from this excerpt (fewer if the source is tiny).',
   },
   {
     id: 'focused',
     label: 'Focused · 10–15 key items',
     shortLabel: '10–15 items',
     prompt:
-      'Curated count: Target 10–15 high-utility items (or fewer if the source is short). Prioritize quality over exhaustiveness.',
+      'Curated count: Target 10–15 high-utility items (or fewer if the source is short). Prioritize practical fluency over exhaustiveness.',
   },
   {
     id: 'comprehensive',
     label: 'Comprehensive · deep sweep (every gem)',
     shortLabel: 'Deep sweep',
     prompt:
-      'Exhaustive sweep: Extract every distinct, grounded, study-worthy item matching the filters across the entire source (up to 45–60 on long sources) without duplicating.',
+      'Exhaustive sweep: Extract every distinct, source-grounded, study-worthy item matching the filters across the entire excerpt (up to 35 per chunk) without duplicating.',
   },
 ];
 
@@ -283,35 +283,35 @@ export const EXTRACTION_GOALS: ExtractionFocusOption[] = [
     label: 'Full study · meaning, usage & speaking (Default)',
     shortLabel: 'Full study',
     prompt:
-      'Give crisp contextual meanings, practical tone/usage guidance, natural American examples, and spoken pronunciation tips where helpful.',
+      'Give crisp contextual meanings, practical American tone/usage guidance, natural spoken examples, and General American pronunciation tips.',
   },
   {
     id: 'speaking',
     label: 'Speaking & shadowing · pronunciation & flow',
     shortLabel: 'Speaking & flow',
     prompt:
-      'Prioritize spoken delivery: make "spokenNote" rich and actionable (linking, flap T, schwa reduction, word stress, rhythm) whenever relevant, and craft "example" as rhythmic out-loud American speech.',
+      'Prioritize spoken delivery: make "spokenNote" concrete and actionable (flap-T /ɾ/, schwa /ə/, consonant-vowel linking, primary stress, rhythm) on every item, and craft "example" as rhythmic out-loud American speech.',
   },
   {
     id: 'active_recall',
     label: 'Deep mastery · pitfalls & memory hooks',
     shortLabel: 'Pitfalls & recall',
     prompt:
-      'Prioritize retention: use "usageNote" to contrast native usage vs textbook habits, flag common non-native mistakes, and provide memorable examples.',
+      'Prioritize retention: use "usageNote" to contrast natural American usage against textbook phrasing, flag common learner pitfalls, and provide memorable spoken examples.',
   },
   {
     id: 'workplace',
     label: 'Workplace · tone, diplomacy & swaps',
     shortLabel: 'Workplace tone',
     prompt:
-      'Prioritize professional calibration: use "usageNote" to clarify exact appropriateness (standup vs executive email vs casual chat) and safe neutral alternatives.',
+      'Prioritize professional calibration: use "usageNote" to clarify exact appropriateness (standup vs executive email vs casual chat) and safe neutral swaps.',
   },
   {
     id: 'flashcards',
     label: 'Quick flashcards · ultra-crisp & concise',
     shortLabel: 'Flashcards',
     prompt:
-      'Keep "meaning", "usageNote", and "example" ultra-crisp, punchy, and compact for fast spaced-repetition flashcard review.',
+      'Keep "meaning", "usageNote", and "example" ultra-crisp, punchy, and compact for fast active-recall flashcard review.',
   },
 ];
 
@@ -328,14 +328,14 @@ export const EXTRACTION_ORDERS: ExtractionFocusOption[] = [
     label: 'Most useful first · high-ROI at top',
     shortLabel: 'Most useful first',
     prompt:
-      'Order "items" from highest practical usefulness and real-world frequency at the top to niche at the bottom.',
+      'Order "items" from highest practical usefulness and everyday American frequency at the top to niche at the bottom.',
   },
   {
     id: 'difficulty',
     label: 'Hardest first · most challenging at top',
     shortLabel: 'Hardest first',
     prompt:
-      'Order "items" from most challenging, nuanced, or advanced at the top to simplest at the bottom.',
+      'Order "items" from most challenging, nuanced, or advanced (C2/C1) at the top to simpler (B1/A2) at the bottom.',
   },
 ];
 
@@ -374,6 +374,10 @@ export function normalizeOrder(id?: string): ExtractionFocusOption {
 
 export function buildExtractionPrompts(params: {
   source: ResolvedSource;
+  chunkText?: string;
+  chunkIndex?: number;
+  totalChunks?: number;
+  excludeTerms?: string[];
   targetLanguage?: string;
   extractionType?: string;
   style?: string;
@@ -403,36 +407,48 @@ export function buildExtractionPrompts(params: {
   const studyGoal = normalizeStudyGoal(params.studyGoal);
   const order = normalizeOrder(params.order);
   const isEnglishTarget = language.code === 'en';
+  const totalChunks = Math.max(1, Number(params.totalChunks) || 1);
+  const chunkIndex = Math.max(0, Number(params.chunkIndex) || 0);
+  const textBody = params.chunkText ?? params.source.text;
+  const excludeTerms = Array.isArray(params.excludeTerms)
+    ? params.excludeTerms.filter(Boolean).slice(0, 80)
+    : [];
 
   const singleCategory =
     extractionType.id !== 'all' && extractionType.id !== 'phrases' ? extractionType.id : null;
 
   const itemShape: Record<string, unknown> = {
-    term: 'canonical form',
-    surface: 'exact substring in source',
+    term: 'canonical citation form (base verb, singular noun, "one\'s" for possessives)',
+    surface: 'exact verbatim substring copied directly from SOURCE TEXT',
     category:
       singleCategory ||
       'idiom|slang|phrasal_verb|vocabulary|collocation|connected_speech|discourse_marker|pattern',
     register: 'neutral|casual|professional|slang',
-    ipa: '/General American IPA/',
-    meaning: 'crisp English sense in this context',
-    ...(isEnglishTarget ? {} : { localizedMeaning: `natural ${language.name} sense` }),
-    usageNote: 'when/where Americans use it + tone or workplace nuance (1 short sentence)',
-    spokenNote: 'notable reduction/linking/stress tip, or ""',
-    example: '1 natural spoken American English sentence',
+    cefr: 'A1|A2|B1|B2|C1|C2',
+    frequency: 'very common|common|niche',
+    ipa: '/General American IPA with primary stress ˈ/',
+    meaning: 'crisp, learner-friendly English meaning in this exact context',
+    ...(isEnglishTarget ? {} : { localizedMeaning: `natural ${language.name} contextual meaning` }),
+    usageNote: 'when/where Americans use it + tone, collocation partner, or pitfall (1 crisp sentence)',
+    spokenNote: 'concrete General American pronunciation/linking/flap-T/reduction cue, or "" if plain',
+    example: '1 natural, fresh spoken American English sentence using the term',
   };
 
   const levelPersona =
     level.id === 'all'
-      ? 'valuable study items calibrated adaptively to this source'
-      : `study items tailored for a ${level.shortLabel || level.label} learner`;
+      ? 'high-ROI American English phrases calibrated adaptively to this source'
+      : `American English phrases tailored specifically for a ${level.shortLabel || level.label} learner`;
 
   const systemPrompt = [
-    `You are an American English linguist and accent coach extracting ${levelPersona}.`,
+    `You are an elite American English linguist and General American accent coach ("Anything to Phrases") extracting ${levelPersona}.`,
     '',
-    'RULES:',
-    '- Grounding: Every item must appear in the source. "surface" = exact substring as written; "term" = canonical citation form (base verb, singular noun, "one\'s" for possessives). Never invent phrases absent from the source.',
-    '- Quality filter: Avoid duplicates, bare proper nouns, and generic function words. Every extracted item must match the user controls below.',
+    'NON-NEGOTIABLE GROUNDING & ANTI-FABRICATION CONTRACT:',
+    '- Every extracted item MUST actually occur in the provided SOURCE TEXT. Never invent, extrapolate, or supply phrases that are not present in the source.',
+    '- "surface" MUST be an exact verbatim substring copied character-for-character from SOURCE TEXT (do not paraphrase or alter spelling).',
+    '- "term" is the clean canonical form learners should memorize (e.g., surface "doubled down on" -> term "double down on"; surface "chasing our tail" -> term "chase one\'s tail").',
+    '- Skip proper nouns, brand/product names alone, bare numbers, and generic function words. Never return duplicate terms.',
+    '',
+    'PEDAGOGICAL & AMERICAN ENGLISH STANDARDS:',
     `- Extraction type: ${extractionType.prompt}`,
     `- Style & variety: ${style.prompt}`,
     `- Proficiency level: ${level.prompt}`,
@@ -440,19 +456,26 @@ export function buildExtractionPrompts(params: {
     `- ${depth.prompt}`,
     `- ${studyGoal.prompt}`,
     `- ${order.prompt}`,
+    '- Pronunciation: Always provide accurate General American IPA wrapped in slashes (e.g. /ˈdʌbəl daʊn ɑn/) with primary stress ˈ, rhotic /r/, and flap /ɾ/ where natural. In "spokenNote", describe real spoken mechanics (linking, schwa reduction, dropped /t/ or /d/, stress shift) — leave "" only if pronunciation is completely transparent.',
+    '- Level & frequency: Tag each item honestly with its CEFR level (A1–C2) and everyday US frequency ("very common", "common", or "niche").',
+    '- Collocations & usage: In "usageNote", tell the learner *how* Americans actually deploy it (register, tone, typical preposition/collocation, or mistake to avoid).',
     isEnglishTarget
-      ? '- Target language: English (no translation field needed).'
-      : `- Translation: "localizedMeaning" = natural ${language.name} (${language.native}) sense in this context; keep names and tech terms in Latin script.`,
-    '- Pronunciation: Give General American IPA with stress marks. Use "spokenNote" for real connected-speech or stress mechanics (flap T, schwa, linking); leave "" only when straightforward (unless Speaking mode or Connected Speech type is active).',
+      ? '- Target language: English only (omit "localizedMeaning").'
+      : `- Translation: "localizedMeaning" MUST be natural, idiomatic ${language.name} (${language.native}) matching the exact context in the source. Keep proper names and English technical terms in Latin script.`,
+    totalChunks > 1
+      ? `- Multi-part source: You are analyzing part ${chunkIndex + 1} of ${totalChunks}. Extract ONLY items grounded in THIS part, and do NOT repeat any already-extracted terms listed below.`
+      : '',
     '',
-    'OUTPUT: Return ONLY one valid compact JSON object (no markdown fences):',
+    'STRICT OUTPUT FORMAT: Return ONLY one valid compact JSON object (no markdown fences, no commentary, no trailing commas):',
     JSON.stringify({
-      title: 'short source title',
-      summary: '1-2 concise sentences on the source and key language takeaways',
-      speakerStyle: '3-6 word register/delivery note',
+      title: 'concise descriptive title (3-8 words)',
+      summary: '1-2 crisp sentences summarizing the source topic and its standout American English style',
+      speakerStyle: '3-6 word register/delivery tag (e.g. "Candid Silicon Valley engineering standup")',
       items: [itemShape],
     }),
-  ].join('\n');
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   const metaLines = [
     `Title: ${params.source.title || 'Untitled source'}`,
@@ -460,11 +483,13 @@ export function buildExtractionPrompts(params: {
     `Source type: ${params.source.sourceType}`,
     params.source.sourceUrl ? `Source URL: ${params.source.sourceUrl}` : '',
     `Target language: ${language.name} (${language.native})`,
-    `Extraction profile: type=${extractionType.id}, style=${style.id}, level=${level.id}, focus=${focus.id}, depth=${depth.id}, goal=${studyGoal.id}, order=${order.id}`,
+    `Profile: type=${extractionType.id}, style=${style.id}, level=${level.id}, focus=${focus.id}, depth=${depth.id}, goal=${studyGoal.id}, order=${order.id}`,
+    totalChunks > 1 ? `Chunk: ${chunkIndex + 1} of ${totalChunks}` : '',
+    excludeTerms.length > 0 ? `Already extracted (skip these): ${excludeTerms.join(', ')}` : '',
     '',
-    'SOURCE TEXT (extract only from this text):',
+    'SOURCE TEXT (extract strictly from this text; copy "surface" verbatim):',
     '"""',
-    params.source.text,
+    textBody,
     '"""',
   ].filter(Boolean);
 

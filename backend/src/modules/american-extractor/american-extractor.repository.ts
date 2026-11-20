@@ -6,6 +6,10 @@ import {
   ExtractorCompletionProgress,
   ExtractorItem,
   ExtractorSourceType,
+  HistorySortBy,
+  HistoryStatusFilter,
+  ListHistoryQuery,
+  PaginatedHistoryResult,
 } from './american-extractor.types';
 import { getLanguage } from '../../core/ai/languages';
 
@@ -28,6 +32,7 @@ export interface SaveExtractorNoteInput {
   fallbackFrom?: string;
   items: ExtractorItem[];
   sourceText: string;
+  contentHash?: string;
   createdAt: string;
 }
 
@@ -45,6 +50,22 @@ function countCompletedItems(raw: unknown, itemCount: number): number {
   }
 }
 
+function deriveStatus(item: ExtractionHistoryItem): 'new' | 'progress' | 'done' {
+  const total = Number(item.item_count) || 0;
+  const done = Number(item.completed_count) || 0;
+  if (Number(item.is_completed) === 1 || (total > 0 && done >= total)) return 'done';
+  if (done > 0) return 'progress';
+  return 'new';
+}
+
+function matchesSourceTypeFilter(sourceType: ExtractorSourceType, filter: string): boolean {
+  const f = filter.trim().toLowerCase();
+  if (!f || f === 'all') return true;
+  if (f === 'video') return ['youtube', 'social_video', 'video'].includes(sourceType);
+  if (f === 'file') return ['markdown', 'image', 'audio'].includes(sourceType);
+  return sourceType === f;
+}
+
 @Injectable()
 export class AmericanExtractorRepository {
   private readonly logger = new Logger(AmericanExtractorRepository.name);
@@ -52,14 +73,15 @@ export class AmericanExtractorRepository {
   constructor(private readonly sqlite: SqliteService) {}
 
   save(input: SaveExtractorNoteInput): void {
+    const now = input.createdAt || new Date().toISOString();
     this.sqlite.db
       .prepare(
         `INSERT INTO american_extractor_notes (
           id, user_id, title, creator, summary, speaker_style, source_type, source_url,
           source_label, source_meta_json, target_language, agent_name, model_name,
           reasoning_level, execution_time_ms, fallback_from, item_count, items_json,
-          source_text, is_completed, completion_json, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, '{}', ?)`,
+          source_text, is_completed, completion_json, content_hash, updated_at, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, '{}', ?, ?, ?)`,
       )
       .run(
         input.id,
@@ -81,8 +103,25 @@ export class AmericanExtractorRepository {
         input.items.length,
         JSON.stringify(input.items),
         input.sourceText,
-        input.createdAt,
+        input.contentHash || '',
+        now,
+        now,
       );
+  }
+
+  findByContentHash(userId: string, contentHash: string): ExtractionResult | null {
+    const hash = String(contentHash || '').trim();
+    if (!hash) return null;
+    const row = this.sqlite.db
+      .prepare(
+        `SELECT * FROM american_extractor_notes
+         WHERE user_id = ? AND content_hash = ?
+         ORDER BY created_at DESC
+         LIMIT 1`,
+      )
+      .get(userId, hash) as Record<string, any> | undefined;
+    if (!row) return null;
+    return this.hydrateRow(row);
   }
 
   list(userId: string, limit = 60): ExtractionHistoryItem[] {
@@ -92,7 +131,8 @@ export class AmericanExtractorRepository {
         `SELECT id, title, creator, summary, source_type, source_url, source_label,
                 target_language, agent_name, model_name, reasoning_level, item_count,
                 execution_time_ms, COALESCE(is_completed, 0) AS is_completed,
-                COALESCE(completion_json, '{}') AS completion_json, created_at
+                COALESCE(completion_json, '{}') AS completion_json,
+                COALESCE(updated_at, created_at) AS updated_at, created_at
          FROM american_extractor_notes
          WHERE user_id = ?
          ORDER BY created_at DESC
@@ -100,17 +140,111 @@ export class AmericanExtractorRepository {
       )
       .all(userId, safeLimit) as Array<ExtractionHistoryItem & { completion_json?: string }>;
 
-    return (rows || []).map((row) => {
-      const { completion_json, ...rest } = row;
-      const itemCount = Number(row.item_count) || 0;
-      return {
-        ...rest,
-        is_completed: Number(row.is_completed) || 0,
-        item_count: itemCount,
-        execution_time_ms: Number(row.execution_time_ms) || 0,
-        completed_count: countCompletedItems(completion_json, itemCount),
-      };
+    return (rows || []).map((row) => this.mapHistoryRow(row));
+  }
+
+  listPaginated(userId: string, query: ListHistoryQuery = {}): PaginatedHistoryResult {
+    const rows = this.sqlite.db
+      .prepare(
+        `SELECT id, title, creator, summary, source_type, source_url, source_label,
+                target_language, agent_name, model_name, reasoning_level, item_count,
+                execution_time_ms, COALESCE(is_completed, 0) AS is_completed,
+                COALESCE(completion_json, '{}') AS completion_json,
+                COALESCE(updated_at, created_at) AS updated_at, created_at
+         FROM american_extractor_notes
+         WHERE user_id = ?
+         ORDER BY created_at DESC
+         LIMIT 500`,
+      )
+      .all(userId) as Array<ExtractionHistoryItem & { completion_json?: string }>;
+
+    const allItems = (rows || []).map((row) => this.mapHistoryRow(row));
+    const total = allItems.length;
+
+    let totalItems = 0;
+    let completedGuides = 0;
+    let inProgressGuides = 0;
+    for (const item of allItems) {
+      totalItems += item.item_count;
+      const st = deriveStatus(item);
+      if (st === 'done') completedGuides++;
+      else if (st === 'progress') inProgressGuides++;
+    }
+
+    const q = String(query.q || '').trim().toLowerCase();
+    const sourceType = String(query.sourceType || 'all').trim().toLowerCase();
+    const status: HistoryStatusFilter =
+      query.status === 'new' || query.status === 'progress' || query.status === 'done'
+        ? query.status
+        : 'all';
+    const sort: HistorySortBy =
+      query.sort === 'oldest' ||
+      query.sort === 'title' ||
+      query.sort === 'items' ||
+      query.sort === 'progress'
+        ? query.sort
+        : 'newest';
+
+    let filtered = allItems.filter((item) => {
+      if (sourceType && sourceType !== 'all' && !matchesSourceTypeFilter(item.source_type, sourceType)) {
+        return false;
+      }
+      if (status !== 'all' && deriveStatus(item) !== status) {
+        return false;
+      }
+      if (q) {
+        const hay = [item.title, item.creator, item.summary, item.source_label, item.source_url, item.source_type]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
     });
+
+    filtered = [...filtered].sort((a, b) => {
+      if (sort === 'oldest') {
+        return String(a.created_at).localeCompare(String(b.created_at));
+      }
+      if (sort === 'title') {
+        return String(a.title || '').localeCompare(String(b.title || ''), undefined, {
+          sensitivity: 'base',
+        });
+      }
+      if (sort === 'items') {
+        return (b.item_count || 0) - (a.item_count || 0) || String(b.created_at).localeCompare(String(a.created_at));
+      }
+      if (sort === 'progress') {
+        const pctA = a.item_count > 0 ? a.completed_count / a.item_count : 0;
+        const pctB = b.item_count > 0 ? b.completed_count / b.item_count : 0;
+        return pctB - pctA || String(b.created_at).localeCompare(String(a.created_at));
+      }
+      return String(b.created_at).localeCompare(String(a.created_at));
+    });
+
+    const filteredTotal = filtered.length;
+    const hasPagination = query.page !== undefined || query.limit !== undefined;
+    const pageSize = hasPagination
+      ? Math.max(1, Math.min(100, Number(query.limit) || 12))
+      : Math.max(60, filteredTotal || 60);
+    const page = hasPagination ? Math.max(1, Number(query.page) || 1) : 1;
+    const start = (page - 1) * pageSize;
+    const items = filtered.slice(start, start + pageSize);
+
+    return {
+      items,
+      total,
+      filteredTotal,
+      page,
+      pageSize,
+      hasMore: start + items.length < filteredTotal,
+      stats: {
+        totalGuides: total,
+        totalItems,
+        completedGuides,
+        inProgressGuides,
+      },
+    };
   }
 
   findById(userId: string, id: string): ExtractionResult | null {
@@ -118,7 +252,116 @@ export class AmericanExtractorRepository {
       .prepare('SELECT * FROM american_extractor_notes WHERE id = ? AND user_id = ?')
       .get(id, userId) as Record<string, any> | undefined;
     if (!row) return null;
+    return this.hydrateRow(row);
+  }
 
+  rename(
+    userId: string,
+    id: string,
+    title: string,
+  ): { id: string; title: string; updatedAt: string } | null {
+    const existing = this.sqlite.db
+      .prepare('SELECT id FROM american_extractor_notes WHERE id = ? AND user_id = ?')
+      .get(id, userId);
+    if (!existing) return null;
+
+    const updatedAt = new Date().toISOString();
+    this.sqlite.db
+      .prepare('UPDATE american_extractor_notes SET title = ?, updated_at = ? WHERE id = ? AND user_id = ?')
+      .run(title, updatedAt, id, userId);
+    return { id, title, updatedAt };
+  }
+
+  setItemCompletion(
+    userId: string,
+    id: string,
+    index: number,
+    completed: boolean,
+  ): { id: string; completionProgress: ExtractorCompletionProgress } | null {
+    const row = this.sqlite.db
+      .prepare(
+        `SELECT id, COALESCE(completion_json, '{}') AS completion_json, item_count
+         FROM american_extractor_notes WHERE id = ? AND user_id = ?`,
+      )
+      .get(id, userId) as Record<string, any> | undefined;
+    if (!row) return null;
+
+    const total = Number(row.item_count) || 0;
+    if (!Number.isInteger(index) || index < 0 || (total > 0 && index >= total)) {
+      throw new Error('Invalid study item index.');
+    }
+
+    let progress: ExtractorCompletionProgress = {};
+    try {
+      const parsed = JSON.parse(String(row.completion_json || '{}'));
+      if (parsed && typeof parsed === 'object') progress = parsed;
+    } catch {}
+
+    const existing = new Set<number>(
+      Array.isArray(progress.items)
+        ? progress.items.map(Number).filter((n) => Number.isInteger(n) && n >= 0)
+        : [],
+    );
+    if (completed) existing.add(index);
+    else existing.delete(index);
+    progress.items = Array.from(existing).sort((a, b) => a - b);
+
+    const updatedAt = new Date().toISOString();
+    this.sqlite.db
+      .prepare(
+        'UPDATE american_extractor_notes SET completion_json = ?, updated_at = ? WHERE id = ? AND user_id = ?',
+      )
+      .run(JSON.stringify(progress), updatedAt, id, userId);
+
+    return { id, completionProgress: progress };
+  }
+
+  setCompleted(
+    userId: string,
+    id: string,
+    completed: boolean,
+  ): { id: string; isCompleted: boolean } | null {
+    const existing = this.sqlite.db
+      .prepare('SELECT id FROM american_extractor_notes WHERE id = ? AND user_id = ?')
+      .get(id, userId);
+    if (!existing) return null;
+
+    const updatedAt = new Date().toISOString();
+    this.sqlite.db
+      .prepare(
+        'UPDATE american_extractor_notes SET is_completed = ?, updated_at = ? WHERE id = ? AND user_id = ?',
+      )
+      .run(completed ? 1 : 0, updatedAt, id, userId);
+    return { id, isCompleted: Boolean(completed) };
+  }
+
+  delete(userId: string, id: string): boolean {
+    const result = this.sqlite.db
+      .prepare('DELETE FROM american_extractor_notes WHERE id = ? AND user_id = ?')
+      .run(id, userId);
+    return Number(result.changes) > 0;
+  }
+
+  countForUser(userId: string): number {
+    const row = this.sqlite.db
+      .prepare('SELECT COUNT(*) AS total FROM american_extractor_notes WHERE user_id = ?')
+      .get(userId) as { total?: number } | undefined;
+    return Number(row?.total) || 0;
+  }
+
+  private mapHistoryRow(row: ExtractionHistoryItem & { completion_json?: string }): ExtractionHistoryItem {
+    const { completion_json, ...rest } = row;
+    const itemCount = Number(row.item_count) || 0;
+    return {
+      ...rest,
+      is_completed: Number(row.is_completed) || 0,
+      item_count: itemCount,
+      execution_time_ms: Number(row.execution_time_ms) || 0,
+      completed_count: countCompletedItems(completion_json, itemCount),
+    };
+  }
+
+  private hydrateRow(row: Record<string, any>): ExtractionResult {
     let items: ExtractorItem[] = [];
     let sourceMeta: Record<string, any> = {};
     let completionProgress: ExtractorCompletionProgress = {};
@@ -164,77 +407,7 @@ export class AmericanExtractorRepository {
       isCompleted: Boolean(row.is_completed),
       completionProgress,
       createdAt: String(row.created_at || ''),
+      updatedAt: String(row.updated_at || row.created_at || ''),
     };
-  }
-
-  setItemCompletion(
-    userId: string,
-    id: string,
-    index: number,
-    completed: boolean,
-  ): { id: string; completionProgress: ExtractorCompletionProgress } | null {
-    const row = this.sqlite.db
-      .prepare(
-        `SELECT id, COALESCE(completion_json, '{}') AS completion_json, item_count
-         FROM american_extractor_notes WHERE id = ? AND user_id = ?`,
-      )
-      .get(id, userId) as Record<string, any> | undefined;
-    if (!row) return null;
-
-    const total = Number(row.item_count) || 0;
-    if (!Number.isInteger(index) || index < 0 || (total > 0 && index >= total)) {
-      throw new Error('Invalid study item index.');
-    }
-
-    let progress: ExtractorCompletionProgress = {};
-    try {
-      const parsed = JSON.parse(String(row.completion_json || '{}'));
-      if (parsed && typeof parsed === 'object') progress = parsed;
-    } catch {}
-
-    const existing = new Set<number>(
-      Array.isArray(progress.items)
-        ? progress.items.map(Number).filter((n) => Number.isInteger(n) && n >= 0)
-        : [],
-    );
-    if (completed) existing.add(index);
-    else existing.delete(index);
-    progress.items = Array.from(existing).sort((a, b) => a - b);
-
-    this.sqlite.db
-      .prepare('UPDATE american_extractor_notes SET completion_json = ? WHERE id = ? AND user_id = ?')
-      .run(JSON.stringify(progress), id, userId);
-
-    return { id, completionProgress: progress };
-  }
-
-  setCompleted(
-    userId: string,
-    id: string,
-    completed: boolean,
-  ): { id: string; isCompleted: boolean } | null {
-    const existing = this.sqlite.db
-      .prepare('SELECT id FROM american_extractor_notes WHERE id = ? AND user_id = ?')
-      .get(id, userId);
-    if (!existing) return null;
-
-    this.sqlite.db
-      .prepare('UPDATE american_extractor_notes SET is_completed = ? WHERE id = ? AND user_id = ?')
-      .run(completed ? 1 : 0, id, userId);
-    return { id, isCompleted: Boolean(completed) };
-  }
-
-  delete(userId: string, id: string): boolean {
-    const result = this.sqlite.db
-      .prepare('DELETE FROM american_extractor_notes WHERE id = ? AND user_id = ?')
-      .run(id, userId);
-    return Number(result.changes) > 0;
-  }
-
-  countForUser(userId: string): number {
-    const row = this.sqlite.db
-      .prepare('SELECT COUNT(*) AS total FROM american_extractor_notes WHERE user_id = ?')
-      .get(userId) as { total?: number } | undefined;
-    return Number(row?.total) || 0;
   }
 }

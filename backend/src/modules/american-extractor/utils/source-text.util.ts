@@ -1,8 +1,12 @@
+import { createHash } from 'crypto';
 import { ExtractorItemCategory } from '../american-extractor.types';
 
-/** Hard ceiling for model input. Keeps one extraction inside a single call. */
-export const MAX_SOURCE_CHARS = 48000;
-export const MAX_SOURCE_WORDS = 9000;
+/** Hard ceiling for stored/processed source text (~13k words / ~85 min of speech). */
+export const MAX_SOURCE_CHARS = 72000;
+export const MAX_SOURCE_WORDS = 13500;
+/** Threshold above which long sources are split into coherent chunks for multi-pass extraction. */
+export const DEFAULT_CHUNK_CHARS = 14000;
+export const MAX_CHUNKS = 6;
 
 const CONTROL_CHARS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 const SRT_INDEX_LINE = /^\s*\d{1,4}\s*$/;
@@ -26,7 +30,8 @@ export function cleanSourceText(raw: string): string {
     .replace(/[\u200B-\u200D\uFEFF]/g, '');
 
   const looksLikeSubtitle =
-    VTT_HEADER.test(text) || SRT_TIMESTAMP_LINE.test(text.split('\n')[0] || '') ||
+    VTT_HEADER.test(text) ||
+    SRT_TIMESTAMP_LINE.test(text.split('\n')[0] || '') ||
     /\d{1,2}:\d{2}:\d{2}[.,]\d{3}\s*-->/.test(text);
 
   const lines: string[] = [];
@@ -91,6 +96,98 @@ export function truncateSource(text: string): { text: string; truncated: boolean
   return { text: `${clean.trim()}\n\n[Source truncated for extraction.]`, truncated: true };
 }
 
+/**
+ * Splits long cleaned text into coherent chunks along paragraph or sentence
+ * boundaries so multi-pass extraction never loses the second half of a long
+ * podcast, talk, or essay.
+ */
+export function splitSourceIntoChunks(
+  text: string,
+  options: { maxChunkChars?: number; maxChunks?: number } = {},
+): string[] {
+  const clean = String(text || '').trim();
+  if (!clean) return [];
+  const maxChars = Math.max(2000, Number(options.maxChunkChars) || DEFAULT_CHUNK_CHARS);
+  const maxChunks = Math.max(1, Math.min(12, Number(options.maxChunks) || MAX_CHUNKS));
+
+  if (clean.length <= maxChars) {
+    return [clean];
+  }
+
+  const chunks: string[] = [];
+  let cursor = 0;
+
+  while (cursor < clean.length && chunks.length < maxChunks) {
+    const remaining = clean.length - cursor;
+    if (remaining <= maxChars) {
+      const tail = clean.slice(cursor).trim();
+      if (tail) chunks.push(tail);
+      break;
+    }
+
+    const windowEnd = cursor + maxChars;
+    const slice = clean.slice(cursor, windowEnd);
+    const minCut = Math.floor(maxChars * 0.6);
+
+    const paraBreak = slice.lastIndexOf('\n\n');
+    const lineBreak = slice.lastIndexOf('\n');
+    const sentenceBreak = Math.max(
+      slice.lastIndexOf('. '),
+      slice.lastIndexOf('? '),
+      slice.lastIndexOf('! '),
+    );
+    const spaceBreak = slice.lastIndexOf(' ');
+
+    let cutOffset = maxChars;
+    if (paraBreak >= minCut) {
+      cutOffset = paraBreak + 2;
+    } else if (sentenceBreak >= minCut) {
+      cutOffset = sentenceBreak + 2;
+    } else if (lineBreak >= minCut) {
+      cutOffset = lineBreak + 1;
+    } else if (spaceBreak >= minCut) {
+      cutOffset = spaceBreak + 1;
+    }
+
+    const piece = clean.slice(cursor, cursor + cutOffset).trim();
+    if (piece) chunks.push(piece);
+    cursor += cutOffset;
+  }
+
+  return chunks;
+}
+
+/**
+ * Deterministic fingerprint for caching & deduplicating identical extractions
+ * for the same user and option profile.
+ */
+export function computeExtractionHash(params: {
+  sourceText: string;
+  targetLanguage: string;
+  extractionType: string;
+  style: string;
+  level: string;
+  focus: string;
+  depth: string;
+  studyGoal: string;
+  order: string;
+}): string {
+  const normalizedText = normalizeWhitespace(params.sourceText).toLowerCase();
+  const payload = [
+    'v2',
+    normalizedText,
+    params.targetLanguage || 'ar',
+    params.extractionType || 'all',
+    params.style || 'auto',
+    params.level || 'all',
+    params.focus || 'balanced',
+    params.depth || 'adaptive',
+    params.studyGoal || 'full',
+    params.order || 'appearance',
+  ].join('\u001f');
+  return createHash('sha256').update(payload).digest('hex');
+}
+
 /** Case/diacritic-insensitive key used for deduplication and grounding. */
 export function normalizeTermKey(term: string): string {
   return String(term || '')
@@ -104,7 +201,7 @@ export function normalizeTermKey(term: string): string {
     .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
 }
 
-/** Loose containment check that tolerates inflected forms. */
+/** Loose containment check that tolerates inflected forms while blocking fabrications. */
 export function isGroundedInText(text: string, term: string, surface: string): boolean {
   const haystack = normalizeTermKey(text);
   if (!haystack) return false;
@@ -117,18 +214,36 @@ export function isGroundedInText(text: string, term: string, surface: string): b
     if (haystack.includes(candidate)) return true;
   }
 
-  const words = normalizeTermKey(term).split(/[^a-z0-9']+/).filter((w) => w.length >= 3);
+  const words = normalizeTermKey(term)
+    .split(/[^a-z0-9']+/)
+    .filter((w) => w.length >= 3);
   if (words.length === 0) return false;
-  if (haystack.includes(words[0]) && words.length === 1) return true;
+  if (words.length === 1 && haystack.includes(words[0])) return true;
 
-  // Multi-word terms may appear with inflection ("doubled down on").
-  const stem = words[0].replace(/(ing|ed|es|s)$/, '');
-  const second = words.length > 1 ? words[1] : '';
-  if (stem.length >= 3 && haystack.includes(stem) && (!second || haystack.includes(second))) {
+  // Multi-word terms may appear with inflection ("doubled down on", "chasing our tail").
+  const significant = words.filter((w) => !GROUNDING_PLACEHOLDERS.has(w));
+  if (significant.length === 0) return false;
+  const stem = significant[0].replace(/(ing|ed|es|s)$/, '');
+  const second = significant.length > 1 ? significant[1].replace(/(ing|ed|es|s)$/, '') : '';
+  if (
+    stem.length >= 3 &&
+    haystack.includes(stem) &&
+    (!second || (second.length >= 2 && haystack.includes(second)))
+  ) {
     return true;
   }
   return false;
 }
+
+const GROUNDING_PLACEHOLDERS = new Set([
+  'one',
+  "one's",
+  'someone',
+  "someone's",
+  'somebody',
+  "somebody's",
+  'something',
+]);
 
 /**
  * Locate the verbatim sentence that contains a term so every context quote is

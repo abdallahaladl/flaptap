@@ -196,6 +196,8 @@ export class SqliteService implements OnModuleDestroy {
         source_text TEXT NOT NULL DEFAULT '',
         is_completed INTEGER NOT NULL DEFAULT 0,
         completion_json TEXT NOT NULL DEFAULT '{}',
+        content_hash TEXT NOT NULL DEFAULT '',
+        updated_at TEXT NOT NULL DEFAULT '',
         created_at TEXT NOT NULL
       );
 
@@ -324,8 +326,17 @@ export class SqliteService implements OnModuleDestroy {
     );
     this.ensureColumn('tech_linguist_extractions', 'is_completed', 'INTEGER NOT NULL DEFAULT 0');
     this.ensureColumn('tech_linguist_extractions', 'completion_json', "TEXT NOT NULL DEFAULT '{}'");
+    this.ensureColumn('american_extractor_notes', 'content_hash', "TEXT NOT NULL DEFAULT ''");
+    this.ensureColumn('american_extractor_notes', 'updated_at', "TEXT NOT NULL DEFAULT ''");
 
     this.db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_aex_notes_user_hash
+      ON american_extractor_notes(user_id, content_hash);
+
+      UPDATE american_extractor_notes
+      SET updated_at = created_at
+      WHERE updated_at = '' OR updated_at IS NULL;
+
       CREATE UNIQUE INDEX IF NOT EXISTS idx_users_google_sub
       ON users(google_sub)
       WHERE google_sub IS NOT NULL AND google_sub != '';

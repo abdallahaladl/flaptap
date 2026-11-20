@@ -11,11 +11,14 @@ import { HistoryRepository } from '../../core/database/history.repository';
 import { AiProvidersService } from '../ai-providers/ai-providers.service';
 import { AmericanExtractorRepository } from './american-extractor.repository';
 import {
-  ExtractionHistoryItem,
+  ExtractionProgressHooks,
   ExtractionResult,
-  ExtractorConfig,
   ExtractorCompletionProgress,
+  ExtractorConfig,
   ExtractorInputKind,
+  ListHistoryQuery,
+  PaginatedHistoryResult,
+  ResolvedSource,
 } from './american-extractor.types';
 import {
   buildExtractionPrompts,
@@ -26,10 +29,29 @@ import {
   EXTRACTION_ORDERS,
   EXTRACTION_STYLES,
   EXTRACTION_TYPES,
+  normalizeDepth,
+  normalizeExtractionType,
+  normalizeFocus,
+  normalizeLevel,
+  normalizeOrder,
+  normalizeStyle,
+  normalizeStudyGoal,
 } from './extraction.prompt';
 import { SourceResolverService } from './sources/source-resolver.service';
-import { normalizeExtraction, parseModelJson } from './utils/extraction-normalize.util';
-import { findContextSentence } from './utils/source-text.util';
+import {
+  extractCompletedItemsFromStream,
+  mergeChunkExtractions,
+  NormalizedExtraction,
+  normalizeExtraction,
+  parseModelJson,
+} from './utils/extraction-normalize.util';
+import {
+  computeExtractionHash,
+  countWords,
+  findContextSentence,
+  normalizeWhitespace,
+  splitSourceIntoChunks,
+} from './utils/source-text.util';
 
 const EXTRACTION_CATEGORIES = [
   { id: 'all', label: 'All items', hint: 'Every extracted American English item.' },
@@ -65,6 +87,15 @@ export interface ExtractRequest {
   keyId?: string;
   model?: string;
   variant?: string;
+  force?: boolean;
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) {
+    const err = new Error('Extraction cancelled.');
+    err.name = 'AbortError';
+    throw err;
+  }
 }
 
 @Injectable()
@@ -103,15 +134,48 @@ export class AmericanExtractorService {
     };
   }
 
-  async extract(request: ExtractRequest): Promise<ExtractionResult> {
+  async extract(
+    request: ExtractRequest,
+    hooks: ExtractionProgressHooks = {},
+  ): Promise<ExtractionResult> {
     const userId = request.userId;
     if (!userId) throw new BadRequestException('Sign in to run an extraction.');
+    throwIfAborted(hooks.signal);
 
     const inputKind: ExtractorInputKind =
       request.inputKind ||
       (request.url ? 'url' : request.lessonId ? 'lesson' : 'text');
 
-    let source;
+    hooks.onStage?.({
+      stage: 'detecting',
+      label: 'Detecting source',
+      detail:
+        inputKind === 'url'
+          ? 'Checking URL platform and readability'
+          : inputKind === 'lesson'
+            ? 'Locating your saved Flaptap lesson'
+            : 'Inspecting pasted text',
+      progress: 8,
+    });
+
+    hooks.onStage?.({
+      stage: 'resolving',
+      label:
+        inputKind === 'url'
+          ? 'Reading link source'
+          : inputKind === 'lesson'
+            ? 'Loading saved transcript'
+            : 'Preparing text',
+      detail:
+        inputKind === 'url'
+          ? 'Fetching captions, readable article, or audio transcription'
+          : inputKind === 'lesson'
+            ? 'Importing transcript from your Flaptap Library'
+            : 'Normalizing formatting and punctuation',
+      progress: 18,
+    });
+
+    let source: ResolvedSource;
     if (inputKind === 'url') {
       source = await this.resolver.resolveUrl(String(request.url || ''), {
         userId,
@@ -125,26 +189,31 @@ export class AmericanExtractorService {
       source = await this.resolver.resolveText(String(request.text || ''), request.title);
     }
 
-    return this.runExtraction(userId, source, request);
+    throwIfAborted(hooks.signal);
+    return this.runExtraction(userId, source, request, hooks);
   }
 
-  async extractUpload(params: {
-    userId: string;
-    buffer: Buffer;
-    originalName: string;
-    mimeType?: string;
-    language?: string;
-    extractionType?: string;
-    style?: string;
-    level?: string;
-    focus?: string;
-    depth?: string;
-    studyGoal?: string;
-    order?: string;
-    keyId?: string;
-    model?: string;
-    variant?: string;
-  }): Promise<ExtractionResult> {
+  async extractUpload(
+    params: {
+      userId: string;
+      buffer: Buffer;
+      originalName: string;
+      mimeType?: string;
+      language?: string;
+      extractionType?: string;
+      style?: string;
+      level?: string;
+      focus?: string;
+      depth?: string;
+      studyGoal?: string;
+      order?: string;
+      keyId?: string;
+      model?: string;
+      variant?: string;
+      force?: boolean;
+    },
+    hooks: ExtractionProgressHooks = {},
+  ): Promise<ExtractionResult> {
     if (!params.userId) throw new BadRequestException('Sign in to run an extraction.');
     if (!params.buffer || params.buffer.length === 0) {
       throw new BadRequestException('Choose a file to upload.');
@@ -152,6 +221,21 @@ export class AmericanExtractorService {
     if (params.buffer.length > MAX_UPLOAD_MB * 1024 * 1024) {
       throw new BadRequestException(`Files must be ${MAX_UPLOAD_MB} MB or smaller.`);
     }
+    throwIfAborted(hooks.signal);
+
+    hooks.onStage?.({
+      stage: 'detecting',
+      label: 'Inspecting file',
+      detail: `${params.originalName} (${(params.buffer.length / (1024 * 1024)).toFixed(1)} MB)`,
+      progress: 8,
+    });
+
+    hooks.onStage?.({
+      stage: 'resolving',
+      label: 'Reading uploaded file',
+      detail: 'Running OCR, speech-to-text, or document parsing',
+      progress: 20,
+    });
 
     const source = await this.resolver.resolveUpload({
       userId: params.userId,
@@ -163,78 +247,241 @@ export class AmericanExtractorService {
       variant: params.variant,
     });
 
-    return this.runExtraction(params.userId, source, {
-      userId: params.userId,
-      language: params.language,
-      extractionType: params.extractionType,
-      style: params.style,
-      level: params.level,
-      focus: params.focus,
-      depth: params.depth,
-      studyGoal: params.studyGoal,
-      order: params.order,
-      keyId: params.keyId,
-      model: params.model,
-      variant: params.variant,
-    });
+    throwIfAborted(hooks.signal);
+    return this.runExtraction(
+      params.userId,
+      source,
+      {
+        userId: params.userId,
+        language: params.language,
+        extractionType: params.extractionType,
+        style: params.style,
+        level: params.level,
+        focus: params.focus,
+        depth: params.depth,
+        studyGoal: params.studyGoal,
+        order: params.order,
+        keyId: params.keyId,
+        model: params.model,
+        variant: params.variant,
+        force: params.force,
+      },
+      hooks,
+    );
   }
 
   private async runExtraction(
     userId: string,
-    source: Awaited<ReturnType<SourceResolverService['resolveText']>>,
+    source: ResolvedSource,
     request: ExtractRequest,
+    hooks: ExtractionProgressHooks = {},
   ): Promise<ExtractionResult> {
     const startedAt = Date.now();
     const language = getLanguage(request.language);
+    const extractionType = normalizeExtractionType(request.extractionType);
+    const style = normalizeStyle(request.style);
+    const level = normalizeLevel(request.level);
+    const focus = normalizeFocus(request.focus);
+    const depth = normalizeDepth(request.depth);
+    const studyGoal = normalizeStudyGoal(request.studyGoal);
+    const order = normalizeOrder(request.order);
 
-    const prompt = buildExtractionPrompts({
-      source,
+    const contentHash = computeExtractionHash({
+      sourceText: source.text,
       targetLanguage: language.code,
-      extractionType: request.extractionType,
-      style: request.style,
-      level: request.level,
-      focus: request.focus,
-      depth: request.depth,
-      studyGoal: request.studyGoal,
-      order: request.order,
+      extractionType: extractionType.id,
+      style: style.id,
+      level: level.id,
+      focus: focus.id,
+      depth: depth.id,
+      studyGoal: studyGoal.id,
+      order: order.id,
     });
 
-    const aiTarget = await this.resolveAiDefaults(userId, request);
+    const chunks = splitSourceIntoChunks(source.text);
+    const wordCount = countWords(source.text);
 
-    const call = async (expanded: boolean) =>
-      this.aiProviders.executeChat(userId, {
-        keyId: aiTarget.keyId,
-        model: aiTarget.model,
-        variant: aiTarget.variant,
-        systemPrompt: prompt.systemPrompt,
-        userPrompt: prompt.userPrompt,
-        temperature: 0.2,
-        maxTokens: expanded ? 24576 : 16384,
-        timeoutMs: 180000,
-        json: true,
-        allowIntraKeyFailover: true,
-      });
+    hooks.onStage?.({
+      stage: 'cleaning',
+      label: 'Checking library cache',
+      detail: `${wordCount.toLocaleString()} words ready from ${source.sourceLabel}`,
+      progress: 28,
+    });
 
-    let aiResponse = await call(false);
-    let parsed: any;
-    try {
-      parsed = parseModelJson(aiResponse.content);
-    } catch (error: any) {
-      this.logger.warn(`Extraction JSON parse failed; retrying once with a larger budget.`);
-      aiResponse = await call(true);
-      parsed = parseModelJson(aiResponse.content);
+    if (!request.force) {
+      const cached = this.repository.findByContentHash(userId, contentHash);
+      if (cached) {
+        hooks.onSourceReady?.({
+          title: cached.title,
+          creator: cached.creator,
+          sourceType: cached.sourceType,
+          sourceLabel: cached.sourceLabel,
+          wordCount,
+          truncated: source.truncated,
+          chunkCount: chunks.length,
+          cached: true,
+        });
+        hooks.onStage?.({
+          stage: 'saving',
+          label: 'Loaded instantly from your Library',
+          detail: `${cached.itemCount} phrases already extracted for this source`,
+          progress: 100,
+        });
+        this.logger.log(`Extractor cache hit ${cached.id} for user ${userId}`);
+        return { ...cached, cached: true };
+      }
     }
 
-    const normalized = normalizeExtraction({
-      parsed,
-      sourceText: source.text,
-      fallbackTitle: source.title,
-      targetLanguage: language.code,
-      extractionType: prompt.extractionType.id,
+    hooks.onSourceReady?.({
+      title: source.title,
+      creator: source.creator,
+      sourceType: source.sourceType,
+      sourceLabel: source.sourceLabel,
+      wordCount,
+      truncated: source.truncated,
+      chunkCount: chunks.length,
+      cached: false,
     });
 
+    if (chunks.length > 1) {
+      hooks.onStage?.({
+        stage: 'chunking',
+        label: `Splitting long source into ${chunks.length} sections`,
+        detail: `${wordCount.toLocaleString()} words will be analyzed across ${chunks.length} passes`,
+        progress: 34,
+        chunkIndex: 0,
+        totalChunks: chunks.length,
+      });
+    }
+
+    const aiTarget = await this.resolveAiDefaults(userId, request);
+    throwIfAborted(hooks.signal);
+
+    const emittedPreviewKeys = new Set<string>();
+    const chunkResults: NormalizedExtraction[] = [];
+    const seenTerms: string[] = [];
+    let lastProviderName = '';
+    let lastModelUsed = '';
+    let lastVariantUsed = 'standard';
+    let lastFallbackFrom: string | undefined;
+
+    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+      throwIfAborted(hooks.signal);
+      const chunkText = chunks[chunkIndex];
+      const basePct = 36 + Math.round((chunkIndex / chunks.length) * 46);
+
+      hooks.onStage?.({
+        stage: 'extracting',
+        label:
+          chunks.length > 1
+            ? `Extracting phrases · Section ${chunkIndex + 1} of ${chunks.length}`
+            : 'Extracting American English phrases',
+        detail: `Streaming from ${aiTarget.model || 'configured AI model'}`,
+        progress: basePct,
+        chunkIndex: chunkIndex + 1,
+        totalChunks: chunks.length,
+      });
+
+      const prompt = buildExtractionPrompts({
+        source,
+        chunkText,
+        chunkIndex,
+        totalChunks: chunks.length,
+        excludeTerms: seenTerms,
+        targetLanguage: language.code,
+        extractionType: extractionType.id,
+        style: style.id,
+        level: level.id,
+        focus: focus.id,
+        depth: depth.id,
+        studyGoal: studyGoal.id,
+        order: order.id,
+      });
+
+      const executePass = async (expanded: boolean) =>
+        this.aiProviders.executeChat(userId, {
+          keyId: aiTarget.keyId,
+          model: aiTarget.model,
+          variant: aiTarget.variant,
+          systemPrompt: prompt.systemPrompt,
+          userPrompt: prompt.userPrompt,
+          temperature: 0.2,
+          maxTokens: expanded ? 24576 : 16384,
+          timeoutMs: 180000,
+          json: true,
+          signal: hooks.signal,
+          allowIntraKeyFailover: true,
+          allowPartialOnTimeout: true,
+          onContentDelta: hooks.onItemPreview
+            ? (_delta, accumulated) => {
+                const previews = extractCompletedItemsFromStream(
+                  accumulated,
+                  emittedPreviewKeys,
+                  chunkText,
+                );
+                for (const preview of previews) {
+                  hooks.onItemPreview?.(preview);
+                }
+              }
+            : undefined,
+        });
+
+      let aiResponse = await executePass(false);
+      let parsed: any;
+      try {
+        parsed = parseModelJson(aiResponse.content);
+      } catch {
+        throwIfAborted(hooks.signal);
+        this.logger.warn(
+          `Extraction JSON parse failed on chunk ${chunkIndex + 1}/${chunks.length}; retrying once with larger budget.`,
+        );
+        aiResponse = await executePass(true);
+        parsed = parseModelJson(aiResponse.content);
+      }
+
+      lastProviderName = aiResponse.providerName;
+      lastModelUsed = aiResponse.modelUsed;
+      lastVariantUsed = aiResponse.variantUsed || 'standard';
+      if (aiResponse.fallbackFrom) lastFallbackFrom = aiResponse.fallbackFrom;
+
+      const chunkNormalized = normalizeExtraction({
+        parsed,
+        sourceText: chunkText,
+        fallbackTitle: source.title,
+        targetLanguage: language.code,
+        extractionType: extractionType.id,
+        allowEmpty: chunks.length > 1,
+      });
+
+      chunkResults.push(chunkNormalized);
+      for (const item of chunkNormalized.items) {
+        seenTerms.push(item.term);
+      }
+    }
+
+    throwIfAborted(hooks.signal);
+
+    hooks.onStage?.({
+      stage: 'grounding',
+      label: 'Verifying source grounding & context',
+      detail: 'Anchoring every phrase to its exact source sentence',
+      progress: 88,
+    });
+
+    const normalized =
+      chunkResults.length === 1
+        ? chunkResults[0]
+        : mergeChunkExtractions({
+            chunks: chunkResults,
+            sourceText: source.text,
+            fallbackTitle: source.title,
+            order: order.id,
+          });
+
     const title =
-      source.title && source.title !== 'Pasted English Text' && source.title !== 'Uploaded source'
+      source.title &&
+      source.title !== 'Pasted English Text' &&
+      source.title !== 'Uploaded source'
         ? source.title
         : normalized.title || source.title;
     const createdAt = new Date().toISOString();
@@ -245,23 +492,31 @@ export class AmericanExtractorService {
       ...source.sourceMeta,
       warnings: source.warnings,
       truncated: source.truncated,
+      chunkCount: chunks.length,
       extractionOptions: {
-        extractionType: prompt.extractionType.id,
-        extractionTypeLabel: prompt.extractionType.shortLabel || prompt.extractionType.label,
-        style: prompt.style.id,
-        styleLabel: prompt.style.shortLabel || prompt.style.label,
-        level: prompt.level.id,
-        levelLabel: prompt.level.shortLabel || prompt.level.label,
-        focus: prompt.focus.id,
-        focusLabel: prompt.focus.shortLabel || prompt.focus.label,
-        depth: prompt.depth.id,
-        depthLabel: prompt.depth.shortLabel || prompt.depth.label,
-        studyGoal: prompt.studyGoal.id,
-        studyGoalLabel: prompt.studyGoal.shortLabel || prompt.studyGoal.label,
-        order: prompt.order.id,
-        orderLabel: prompt.order.shortLabel || prompt.order.label,
+        extractionType: extractionType.id,
+        extractionTypeLabel: extractionType.shortLabel || extractionType.label,
+        style: style.id,
+        styleLabel: style.shortLabel || style.label,
+        level: level.id,
+        levelLabel: level.shortLabel || level.label,
+        focus: focus.id,
+        focusLabel: focus.shortLabel || focus.label,
+        depth: depth.id,
+        depthLabel: depth.shortLabel || depth.label,
+        studyGoal: studyGoal.id,
+        studyGoalLabel: studyGoal.shortLabel || studyGoal.label,
+        order: order.id,
+        orderLabel: order.shortLabel || order.label,
       },
     };
+
+    hooks.onStage?.({
+      stage: 'saving',
+      label: 'Saving to your Library',
+      detail: `${normalized.items.length} verified American English phrases`,
+      progress: 96,
+    });
 
     this.repository.save({
       id,
@@ -275,20 +530,21 @@ export class AmericanExtractorService {
       sourceLabel: source.sourceLabel,
       sourceMeta: enrichedMeta,
       targetLanguage: language.code,
-      agentName: aiResponse.providerName,
-      modelName: aiResponse.modelUsed,
-      reasoningLevel: aiResponse.variantUsed || 'standard',
+      agentName: lastProviderName,
+      modelName: lastModelUsed,
+      reasoningLevel: lastVariantUsed,
       executionTimeMs,
-      fallbackFrom: aiResponse.fallbackFrom,
+      fallbackFrom: lastFallbackFrom,
       items: normalized.items,
       sourceText: source.text,
+      contentHash,
       createdAt,
     });
 
     this.logger.log(
       `Extractor note ${id}: ${normalized.items.length} items from ${source.sourceType} ` +
-        `(${prompt.extractionType.id}/${prompt.style.id}/${prompt.level.id}) ` +
-        `via ${aiResponse.providerName}/${aiResponse.modelUsed} in ${executionTimeMs}ms`,
+        `(${chunks.length} chunk${chunks.length === 1 ? '' : 's'}, ${extractionType.id}/${style.id}/${level.id}) ` +
+        `via ${lastProviderName}/${lastModelUsed} in ${executionTimeMs}ms`,
     );
 
     return {
@@ -304,31 +560,40 @@ export class AmericanExtractorService {
       targetLanguage: language.code,
       targetLanguageName: language.name,
       rtl: Boolean(language.rtl),
-      agentUsed: aiResponse.providerName,
-      modelUsed: aiResponse.modelUsed,
-      reasoningLevel: aiResponse.variantUsed || 'standard',
+      agentUsed: lastProviderName,
+      modelUsed: lastModelUsed,
+      reasoningLevel: lastVariantUsed,
       executionTimeMs,
-      fallbackFrom: aiResponse.fallbackFrom,
+      fallbackFrom: lastFallbackFrom,
+      cached: false,
       itemCount: normalized.items.length,
       items: normalized.items,
       sourceText: source.text,
       isCompleted: false,
       completionProgress: {},
       createdAt,
+      updatedAt: createdAt,
     };
   }
 
-  listHistory(userId: string): { items: ExtractionHistoryItem[]; total: number } {
-    return {
-      items: this.repository.list(userId),
-      total: this.repository.countForUser(userId),
-    };
+  listHistory(userId: string, query: ListHistoryQuery = {}): PaginatedHistoryResult {
+    return this.repository.listPaginated(userId, query);
   }
 
   getNote(userId: string, id: string): ExtractionResult {
     const note = this.repository.findById(userId, id);
     if (!note) throw new NotFoundException('Extraction not found.');
     return note;
+  }
+
+  renameNote(userId: string, id: string, rawTitle: string) {
+    const title = normalizeWhitespace(String(rawTitle || '')).slice(0, 140);
+    if (!title) {
+      throw new BadRequestException('Title cannot be empty.');
+    }
+    const updated = this.repository.rename(userId, id, title);
+    if (!updated) throw new NotFoundException('Extraction not found.');
+    return updated;
   }
 
   setItemCompletion(
@@ -403,7 +668,7 @@ export class AmericanExtractorService {
     return this.wordLookup.defineWordInContext({
       word: params.word,
       contextSentence: context || params.word,
-      title: title || 'American English Extractor',
+      title: title || 'Anything to Phrases',
       targetLanguageCode: params.language,
     });
   }

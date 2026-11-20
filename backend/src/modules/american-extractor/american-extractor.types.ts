@@ -1,9 +1,9 @@
 /**
- * American English Extractor — shared contracts.
+ * Anything to Phrases (American English Extractor) — shared backend contracts.
  *
- * One extraction note is a source (video, social post, audio, article, file,
- * image, or saved lesson transcript) plus the high-value American English
- * items a model grounded in that source.
+ * One extraction guide is a resolved source (video, social clip, audio, article,
+ * text/Markdown, image OCR, or saved Flaptap lesson transcript) plus the
+ * source-grounded American English phrases extracted and validated for it.
  */
 
 export type ExtractorSourceType =
@@ -30,6 +30,51 @@ export type ExtractorItemCategory =
   | 'pattern';
 
 export type ExtractionTypeId = 'all' | 'phrases' | ExtractorItemCategory;
+
+export type ExtractionStageId =
+  | 'detecting'
+  | 'resolving'
+  | 'cleaning'
+  | 'chunking'
+  | 'extracting'
+  | 'grounding'
+  | 'saving';
+
+export interface ExtractionStageEvent {
+  stage: ExtractionStageId;
+  label: string;
+  detail?: string;
+  progress: number;
+  chunkIndex?: number;
+  totalChunks?: number;
+}
+
+export interface ExtractionSourceReadyEvent {
+  title: string;
+  creator: string;
+  sourceType: ExtractorSourceType;
+  sourceLabel: string;
+  wordCount: number;
+  truncated: boolean;
+  chunkCount: number;
+  cached?: boolean;
+}
+
+export interface ExtractionItemPreviewEvent {
+  term: string;
+  category: ExtractorItemCategory;
+  ipa?: string;
+  cefr?: string;
+  meaning?: string;
+  count: number;
+}
+
+export interface ExtractionProgressHooks {
+  signal?: AbortSignal;
+  onStage?: (event: ExtractionStageEvent) => void;
+  onSourceReady?: (event: ExtractionSourceReadyEvent) => void;
+  onItemPreview?: (event: ExtractionItemPreviewEvent) => void;
+}
 
 export interface ExtractorItem {
   index: number;
@@ -74,12 +119,14 @@ export interface ExtractionResult {
   reasoningLevel: string;
   executionTimeMs: number;
   fallbackFrom?: string;
+  cached?: boolean;
   itemCount: number;
   items: ExtractorItem[];
   sourceText: string;
   isCompleted: boolean;
   completionProgress: ExtractorCompletionProgress;
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface ExtractionHistoryItem {
@@ -100,6 +147,34 @@ export interface ExtractionHistoryItem {
   /** How many extracted items the user has marked studied. */
   completed_count: number;
   created_at: string;
+  updated_at?: string;
+}
+
+export type HistoryStatusFilter = 'all' | 'new' | 'progress' | 'done';
+export type HistorySortBy = 'newest' | 'oldest' | 'title' | 'items' | 'progress';
+
+export interface ListHistoryQuery {
+  q?: string;
+  sourceType?: string;
+  status?: HistoryStatusFilter;
+  sort?: HistorySortBy;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedHistoryResult {
+  items: ExtractionHistoryItem[];
+  total: number;
+  filteredTotal: number;
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+  stats: {
+    totalGuides: number;
+    totalItems: number;
+    completedGuides: number;
+    inProgressGuides: number;
+  };
 }
 
 export interface ResolvedSource {
