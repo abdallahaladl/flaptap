@@ -32,6 +32,8 @@
       revealedIndices: new Set(),
       search: '',
       renaming: false,
+      mediaPlayer: null,
+      linksReqSeq: 0,
       teardowns: [],
       itemsTeardown: null,
       listAnimTimer: null,
@@ -244,6 +246,8 @@
       }
 
       const studioBtn = el('aex-studio-btn');
+      const studioLabel = el('aex-studio-btn-label');
+      const lexiconBtn = el('aex-lexicon-sync-btn');
       if (studioBtn) {
         const lessonId = String(note.sourceMeta?.lessonId || '').trim();
         const isYouTube = /youtube\.com|youtu\.be/i.test(note.sourceUrl || '');
@@ -251,6 +255,20 @@
         studioBtn.dataset.aexStudio = lessonId
           ? `/studio?id=${encodeURIComponent(lessonId)}`
           : `/studio?url=${encodeURIComponent(note.sourceUrl)}`;
+        if (studioLabel) studioLabel.textContent = lessonId ? 'Open Lesson' : 'Open in Studio';
+      }
+      if (lexiconBtn) {
+        lexiconBtn.hidden = true;
+        lexiconBtn.dataset.aexLexiconNote = '';
+      }
+
+      if (global.FlaptapA2PMediaPlayer) {
+        if (!local.mediaPlayer) {
+          local.mediaPlayer = global.FlaptapA2PMediaPlayer.create({
+            onStateChange: syncClipButtonsState,
+          });
+        }
+        local.mediaPlayer.mount(el('aex-media-dock'), note.media || null);
       }
 
       populateLanguageSelect();
@@ -260,6 +278,52 @@
       renderSourceReader(note);
       renderSourceMeta(note);
       renderNoteProgress(note);
+      loadCrossFeatureLinks(note);
+    }
+
+    async function loadCrossFeatureLinks(note) {
+      if (!note?.id || !store.currentUser() || !api.resolveSourceLinks) return;
+      const seq = ++local.linksReqSeq;
+      try {
+        const res = await api.resolveSourceLinks({
+          noteId: note.id,
+          sourceId: note.sourceId || note.sourceMeta?.sourceId || '',
+          url: note.sourceUrl || '',
+        });
+        if (seq !== local.linksReqSeq || local.currentNote?.id !== note.id) return;
+
+        const studioBtn = el('aex-studio-btn');
+        const studioLabel = el('aex-studio-btn-label');
+        if (studioBtn && res?.lesson?.id) {
+          studioBtn.hidden = false;
+          studioBtn.dataset.aexStudio = `/studio?id=${encodeURIComponent(res.lesson.id)}`;
+          studioBtn.title = `Open synced Studio lesson (${res.lesson.sentencesCount} sentences · zero re-fetch)`;
+          if (studioLabel) studioLabel.textContent = 'Open Lesson';
+        }
+
+        const lexiconBtn = el('aex-lexicon-sync-btn');
+        const firstTech = Array.isArray(res?.techLexiconNotes) ? res.techLexiconNotes[0] : null;
+        if (lexiconBtn && firstTech?.id) {
+          lexiconBtn.hidden = false;
+          lexiconBtn.dataset.aexLexiconNote = firstTech.id;
+          lexiconBtn.title = `Open synced Tech Lexicon note (${firstTech.vocabCount} terms)`;
+        }
+      } catch {
+        // Non-blocking sync enhancement
+      }
+    }
+
+    function syncClipButtonsState() {
+      document.querySelectorAll('#aex-items-list [data-aex-play-clip]').forEach((btn) => {
+        const idx = Number(btn.dataset.aexPlayClip);
+        const playing = Boolean(local.mediaPlayer?.isPlayingItem?.(idx));
+        btn.classList.toggle('is-playing', playing);
+        btn.setAttribute('aria-pressed', playing ? 'true' : 'false');
+        const playSvg = btn.querySelector('.aex-clip-ico-play');
+        const pauseSvg = btn.querySelector('.aex-clip-ico-pause');
+        if (playSvg) playSvg.hidden = playing;
+        if (pauseSvg) pauseSvg.hidden = !playing;
+      });
     }
 
     function renderLevelFilter(note) {
@@ -400,6 +464,28 @@
           })
         : '';
 
+      const canPlayClip =
+        Boolean(note.media?.hasAudio) &&
+        Boolean(local.mediaPlayer?.hasPlayableMedia?.()) &&
+        typeof item.startSec === 'number' &&
+        typeof item.endSec === 'number' &&
+        item.endSec > item.startSec;
+      const clipTimeLabel = canPlayClip
+        ? global.FlaptapA2PMediaPlayer?.formatTs?.(item.startSec) || '0:00'
+        : '';
+      const clipPlaying = canPlayClip && Boolean(local.mediaPlayer?.isPlayingItem?.(idx));
+      const clipPlayBtn = canPlayClip
+        ? `<button type="button" class="aex-clip-btn${clipPlaying ? ' is-playing' : ''}" data-aex-play-clip="${escapeHtml(
+            idx,
+          )}" aria-pressed="${clipPlaying ? 'true' : 'false'}" aria-label="Play original clip (${clipTimeLabel})" title="Play original audio segment (${clipTimeLabel}–${
+            global.FlaptapA2PMediaPlayer?.formatTs?.(item.endSec) || clipTimeLabel
+          })">
+            <svg class="aex-clip-ico-play" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"${clipPlaying ? ' hidden' : ''}><path d="M7.5 4.8v14.4a.9.9 0 0 0 1.38.76l11.2-7.2a.9.9 0 0 0 0-1.52l-11.2-7.2a.9.9 0 0 0-1.38.76Z"></path></svg>
+            <svg class="aex-clip-ico-pause" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"${clipPlaying ? '' : ' hidden'}><rect x="6" y="4.5" width="4" height="15" rx="1.2"></rect><rect x="14" y="4.5" width="4" height="15" rx="1.2"></rect></svg>
+            <span class="ltr-num">${escapeHtml(clipTimeLabel)}</span>
+          </button>`
+        : '';
+
       const checkButton = `<button type="button" class="item-check-btn aex-check-btn${
         completed ? ' is-checked' : ''
       }" data-aex-check="${escapeHtml(idx)}" aria-pressed="${
@@ -518,9 +604,10 @@
 
             <div class="aex-item-actions">
               <div class="aex-action-utils">
+                ${clipPlayBtn}
                 <button type="button" class="icon-action icon-action--sm aex-util-btn" data-aex-speak="${escapeHtml(
                   item.term,
-                )}" aria-label="Pronounce ${escapeHtml(item.term)}" title="Pronounce">
+                )}" aria-label="Pronounce ${escapeHtml(item.term)} (TTS)" title="Pronounce (TTS)">
                   ${icon('volume-2')}
                 </button>
                 ${copyBtn}
@@ -1137,6 +1224,15 @@
         if (target) global.location.href = target;
       });
 
+      el('aex-lexicon-sync-btn')?.addEventListener('click', (e) => {
+        const techNoteId = e.currentTarget?.dataset?.aexLexiconNote;
+        if (techNoteId && global.FlaptapRouter) {
+          global.FlaptapRouter.navigate('tech-linguist', { subview: 'note', noteId: techNoteId });
+        } else if (techNoteId) {
+          global.location.href = `/lexicon/note/${encodeURIComponent(techNoteId)}`;
+        }
+      });
+
       el('aex-note-lang-select')?.addEventListener('change', (e) => {
         store.setPreferredLanguage(e.target.value);
       });
@@ -1282,9 +1378,26 @@
           return;
         }
 
+        const clipBtn = e.target.closest('[data-aex-play-clip]');
+        if (clipBtn && local.currentNote && local.mediaPlayer) {
+          e.preventDefault();
+          const idx = Number(clipBtn.dataset.aexPlayClip);
+          const item = (local.currentNote.items || []).find((it) => Number(it.index) === idx);
+          if (item && typeof item.startSec === 'number' && typeof item.endSec === 'number') {
+            local.mediaPlayer.playClip({
+              index: idx,
+              term: item.term,
+              startSec: item.startSec,
+              endSec: item.endSec,
+            });
+          }
+          return;
+        }
+
         const speakBtn = e.target.closest('[data-aex-speak]');
         if (speakBtn) {
           e.preventDefault();
+          local.mediaPlayer?.pause?.();
           global.FlaptapWordLookup?.speakText?.(speakBtn.dataset.aexSpeak);
         }
       });
@@ -1322,10 +1435,12 @@
 
     function onDeactivate() {
       setSourceInfoOpen(false);
+      local.mediaPlayer?.pause?.();
     }
 
     function clearCurrent() {
       local.currentNote = null;
+      local.mediaPlayer?.destroy?.();
       teardownBindings();
     }
 

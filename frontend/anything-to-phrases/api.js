@@ -140,6 +140,19 @@
     return apiFetch(`${BASE}/transcript-sources`, { method: 'GET' });
   }
 
+  async function listSharedSources(limit = 40) {
+    return apiFetch(`/api/sources?limit=${encodeURIComponent(String(limit))}`, { method: 'GET' });
+  }
+
+  async function resolveSourceLinks(params = {}) {
+    const qs = new URLSearchParams();
+    if (params.sourceId) qs.set('sourceId', String(params.sourceId));
+    if (params.noteId) qs.set('noteId', String(params.noteId));
+    if (params.lessonId) qs.set('lessonId', String(params.lessonId));
+    if (params.url) qs.set('url', String(params.url));
+    return apiFetch(`/api/sources/resolve-links?${qs.toString()}`, { method: 'GET' });
+  }
+
   async function getNote(id) {
     return apiFetch(`${BASE}/notes/${encodeURIComponent(id)}`, { method: 'GET' });
   }
@@ -203,6 +216,8 @@
     getConfig,
     listHistory,
     getTranscriptSources,
+    listSharedSources,
+    resolveSourceLinks,
     getNote,
     renameNote,
     setItemCompletion,

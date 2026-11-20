@@ -127,16 +127,48 @@
     },
   ];
 
-  const CATEGORY_LABELS = {
-    idiom: 'Idiom',
-    slang: 'Slang',
-    phrasal_verb: 'Phrasal verb',
-    vocabulary: 'Vocabulary',
-    collocation: 'Collocation',
-    connected_speech: 'Connected speech',
-    discourse_marker: 'Discourse marker',
-    pattern: 'Pattern',
-  };
+  const CATEGORIES_CATALOG = [
+    { id: 'all', label: 'All categories', group: 'all', audioDependent: false },
+    { id: 'pattern', label: 'Sentence Patterns', group: 'core', audioDependent: false },
+    { id: 'vocabulary', label: 'Vocabulary', group: 'core', audioDependent: false },
+    { id: 'idiom', label: 'Idioms', group: 'core', audioDependent: false },
+    { id: 'phrasal_verb', label: 'Phrasal Verbs', group: 'core', audioDependent: false },
+    { id: 'collocation', label: 'Collocations', group: 'core', audioDependent: false },
+    { id: 'slang', label: 'Slang & Informal Expressions', group: 'core', audioDependent: false },
+    { id: 'conversational_expression', label: 'Conversational Expressions', group: 'core', audioDependent: false },
+    { id: 'grammar_structure', label: 'Grammar Structures', group: 'core', audioDependent: false },
+    { id: 'discourse_marker', label: 'Discourse Markers', group: 'core', audioDependent: false },
+    { id: 'filler', label: 'Fillers', group: 'core', audioDependent: false },
+    { id: 'interjection', label: 'Interjections', group: 'core', audioDependent: false },
+    { id: 'contraction_reduction', label: 'Contractions & Reductions', group: 'core', audioDependent: false },
+    { id: 'metaphor_figurative', label: 'Metaphors & Figurative Language', group: 'core', audioDependent: false },
+    { id: 'cultural_reference', label: 'American Cultural References', group: 'core', audioDependent: false },
+    { id: 'pragmatics_context', label: 'Pragmatics & Social Context', group: 'core', audioDependent: false },
+    { id: 'native_response', label: 'Native-like Responses & Reactions', group: 'core', audioDependent: false },
+    { id: 'connected_speech', label: 'Connected Speech', group: 'audio', audioDependent: true },
+    { id: 'pronunciation_phonetics', label: 'Pronunciation & Phonetics', group: 'audio', audioDependent: true },
+    { id: 'word_sentence_stress', label: 'Word Stress & Sentence Stress', group: 'audio', audioDependent: true },
+    { id: 'linking_sound_changes', label: 'Linking & Sound Changes', group: 'audio', audioDependent: true },
+  ];
+
+  const AUDIO_CATEGORY_SET = new Set(
+    CATEGORIES_CATALOG.filter((c) => c.audioDependent).map((c) => c.id),
+  );
+
+  function isAudioDependentCategory(id) {
+    return AUDIO_CATEGORY_SET.has(String(id || '').trim().toLowerCase());
+  }
+
+  function categoriesCatalog() {
+    if (Array.isArray(state.config?.categories) && state.config.categories.length >= 20) {
+      return state.config.categories;
+    }
+    return CATEGORIES_CATALOG;
+  }
+
+  const CATEGORY_LABELS = Object.fromEntries(
+    CATEGORIES_CATALOG.filter((c) => c.id !== 'all').map((c) => [c.id, c.label]),
+  );
 
   const SOURCE_TYPE_LABELS = {
     youtube: 'YouTube',
@@ -144,6 +176,7 @@
     audio: 'Audio',
     video: 'Video',
     article: 'Article',
+    pdf: 'PDF',
     text: 'Text',
     markdown: 'Markdown',
     image: 'Image OCR',
@@ -428,30 +461,32 @@
         valid: true,
         kind: 'youtube',
         label: 'YouTube',
-        pipeline: 'Captions fast path',
+        pipeline: 'Captions + original video',
         tone: 'video',
+        hasAudio: true,
+        hasVideo: true,
         normalizedUrl: value,
         error: '',
       };
     }
     if (host.includes('tiktok.com')) {
-      return { empty: false, valid: true, kind: 'social_video', label: 'TikTok', pipeline: 'Speech-to-text', tone: 'social', normalizedUrl: value, error: '' };
+      return { empty: false, valid: true, kind: 'social_video', label: 'TikTok', pipeline: 'Speech-to-text', tone: 'social', hasAudio: true, hasVideo: true, normalizedUrl: value, error: '' };
     }
     if (host.includes('instagram.com')) {
-      return { empty: false, valid: true, kind: 'social_video', label: 'Instagram', pipeline: 'Speech-to-text', tone: 'social', normalizedUrl: value, error: '' };
+      return { empty: false, valid: true, kind: 'social_video', label: 'Instagram', pipeline: 'Speech-to-text', tone: 'social', hasAudio: true, hasVideo: true, normalizedUrl: value, error: '' };
     }
     if (['x.com', 'www.x.com', 'twitter.com', 'www.twitter.com', 'mobile.twitter.com'].includes(host)) {
-      return { empty: false, valid: true, kind: 'social_video', label: 'X / Twitter', pipeline: 'Article or speech', tone: 'social', normalizedUrl: value, error: '' };
+      return { empty: false, valid: true, kind: 'social_video', label: 'X / Twitter', pipeline: 'Article or speech', tone: 'social', hasAudio: true, hasVideo: true, normalizedUrl: value, error: '' };
     }
     if (host.includes('vimeo.com') || host.includes('loom.com') || host.includes('twitch.tv') || host.includes('ted.com')) {
       const name = host.includes('vimeo') ? 'Vimeo' : host.includes('loom') ? 'Loom' : host.includes('twitch') ? 'Twitch' : 'TED';
-      return { empty: false, valid: true, kind: 'video', label: name, pipeline: 'Captions or speech-to-text', tone: 'video', normalizedUrl: value, error: '' };
+      return { empty: false, valid: true, kind: 'video', label: name, pipeline: 'Captions or speech-to-text', tone: 'video', hasAudio: true, hasVideo: true, normalizedUrl: value, error: '' };
     }
     if (/\.(mp3|m4a|wav|aac|flac|ogg|opus)(?:$|\?)/i.test(pathLower)) {
-      return { empty: false, valid: true, kind: 'audio', label: 'Audio file', pipeline: 'Speech-to-text', tone: 'audio', normalizedUrl: value, error: '' };
+      return { empty: false, valid: true, kind: 'audio', label: 'Audio file', pipeline: 'Speech-to-text', tone: 'audio', hasAudio: true, hasVideo: false, normalizedUrl: value, error: '' };
     }
     if (/\.(mp4|mov|webm|mkv)(?:$|\?)/i.test(pathLower)) {
-      return { empty: false, valid: true, kind: 'video', label: 'Direct video', pipeline: 'Speech-to-text', tone: 'video', normalizedUrl: value, error: '' };
+      return { empty: false, valid: true, kind: 'video', label: 'Direct video', pipeline: 'Speech-to-text', tone: 'video', hasAudio: true, hasVideo: true, normalizedUrl: value, error: '' };
     }
     return {
       empty: false,
@@ -460,6 +495,8 @@
       label: host.replace(/^www\./, ''),
       pipeline: 'Web article reader',
       tone: 'article',
+      hasAudio: false,
+      hasVideo: false,
       normalizedUrl: value,
       error: '',
     };
@@ -474,25 +511,28 @@
     const sizeLabel = sizeMb >= 1 ? `${sizeMb.toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB`;
 
     if (file.size > maxMb * 1024 * 1024) {
-      return { valid: false, label: 'File too large', pipeline: '', sizeLabel, tone: 'error', error: `Choose a file smaller than ${maxMb} MB.` };
+      return { valid: false, label: 'File too large', pipeline: '', sizeLabel, tone: 'error', hasAudio: false, hasVideo: false, error: `Choose a file smaller than ${maxMb} MB.` };
+    }
+    if (mime === 'application/pdf' || ext === '.pdf') {
+      return { valid: true, label: 'PDF Document', pipeline: 'PDF text extraction', sizeLabel, tone: 'text', hasAudio: false, hasVideo: false, error: '' };
     }
     if (mime.startsWith('image/') || /\.(png|jpe?g|webp|gif)$/.test(ext)) {
-      return { valid: true, label: 'Image · Vision OCR', pipeline: 'Multimodal OCR + extraction', sizeLabel, tone: 'image', error: '' };
+      return { valid: true, label: 'Image · Vision OCR', pipeline: 'Multimodal OCR + extraction', sizeLabel, tone: 'image', hasAudio: false, hasVideo: false, error: '' };
     }
     if (mime.startsWith('audio/') || /\.(mp3|m4a|wav|aac|flac|ogg|opus)$/.test(ext)) {
-      return { valid: true, label: 'Audio · Speech-to-Text', pipeline: 'Whisper transcription + extraction', sizeLabel, tone: 'audio', error: '' };
+      return { valid: true, label: 'Audio · Speech-to-Text', pipeline: 'Whisper transcription + audio clips', sizeLabel, tone: 'audio', hasAudio: true, hasVideo: false, error: '' };
     }
     if (mime.startsWith('video/') || /\.(mp4|mov|webm|mkv)$/.test(ext)) {
-      return { valid: true, label: 'Video · Speech-to-Text', pipeline: 'Audio transcription + extraction', sizeLabel, tone: 'video', error: '' };
+      return { valid: true, label: 'Video · Speech-to-Text', pipeline: 'Audio transcription + video clips', sizeLabel, tone: 'video', hasAudio: true, hasVideo: true, error: '' };
     }
     if (/\.(srt|vtt)$/.test(ext)) {
-      return { valid: true, label: 'Subtitles', pipeline: 'Timestamp cleanup + extraction', sizeLabel, tone: 'text', error: '' };
+      return { valid: true, label: 'Subtitles', pipeline: 'Timestamp cleanup + extraction', sizeLabel, tone: 'text', hasAudio: false, hasVideo: false, error: '' };
     }
     if (/\.(md|markdown)$/.test(ext)) {
-      return { valid: true, label: 'Markdown', pipeline: 'Markdown cleanup + extraction', sizeLabel, tone: 'text', error: '' };
+      return { valid: true, label: 'Markdown', pipeline: 'Markdown cleanup + extraction', sizeLabel, tone: 'text', hasAudio: false, hasVideo: false, error: '' };
     }
     if (mime.startsWith('text/') || /\.(txt|json|csv|log)$/.test(ext) || mime === 'application/json') {
-      return { valid: true, label: 'Document', pipeline: 'Direct text extraction', sizeLabel, tone: 'text', error: '' };
+      return { valid: true, label: 'Document', pipeline: 'Direct text extraction', sizeLabel, tone: 'text', hasAudio: false, hasVideo: false, error: '' };
     }
     return {
       valid: false,
@@ -500,7 +540,9 @@
       pipeline: '',
       sizeLabel,
       tone: 'error',
-      error: 'Upload text, Markdown, subtitles (.srt/.vtt), JSON, screenshots, audio, or video.',
+      hasAudio: false,
+      hasVideo: false,
+      error: 'Upload PDF, text, Markdown, subtitles (.srt/.vtt), JSON, screenshots, audio, or video.',
     };
   }
 
@@ -731,9 +773,12 @@
   global.FlaptapA2PStore = {
     DEFAULT_OPTIONS,
     OPTION_SPECS,
+    CATEGORIES_CATALOG,
     CATEGORY_LABELS,
     SOURCE_TYPE_LABELS,
     STUDY_STATE_LABELS,
+    categoriesCatalog,
+    isAudioDependentCategory,
     state,
     subscribe,
     emit,

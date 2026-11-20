@@ -3992,3 +3992,415 @@
     -webkit-backdrop-filter: none !important;
   }
 }
+
+/* ==========================================================================
+   20-CATEGORY PICKER (Core 16 + Audio-Dependent 4)
+   ========================================================================== */
+
+#section-american-extractor .aex-cat-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--aex-surface-inset);
+  border: 1px solid var(--aex-border);
+}
+
+#section-american-extractor .aex-cat-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#section-american-extractor .aex-cat-picker-summary {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#section-american-extractor .aex-cat-active-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 980px;
+  background: var(--aex-fill);
+  color: var(--aex-text-primary);
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+#section-american-extractor .aex-cat-active-badge.is-custom {
+  background: var(--aex-blue-wash);
+  color: var(--aex-blue);
+}
+
+#section-american-extractor .aex-cat-audio-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 980px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: var(--aex-fill-subtle);
+  color: var(--aex-text-tertiary);
+}
+
+#section-american-extractor .aex-cat-audio-status[data-audio="1"] {
+  background: var(--aex-done-wash);
+  color: var(--aex-done);
+}
+
+#section-american-extractor .aex-cat-toggle-btn[aria-expanded="true"] .aex-chevron {
+  transform: rotate(180deg);
+}
+
+#section-american-extractor .aex-cat-drawer-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+  border-top: 1px solid var(--aex-border);
+}
+
+#section-american-extractor .aex-cat-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#section-american-extractor .aex-cat-group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#section-american-extractor .aex-cat-group-label {
+  font-size: 0.73rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--aex-text-secondary);
+}
+
+#section-american-extractor .aex-cat-audio-hint {
+  font-size: 0.73rem;
+  color: var(--aex-text-tertiary);
+}
+
+#section-american-extractor .aex-cat-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#section-american-extractor .aex-cat-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 980px;
+  border: 1px solid var(--aex-border);
+  background: var(--aex-surface);
+  color: var(--aex-text-secondary);
+  font-family: var(--aex-font-text);
+  font-size: 0.77rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+}
+
+#section-american-extractor .aex-cat-chip:hover:not(.is-disabled) {
+  border-color: var(--aex-border-strong);
+  color: var(--aex-text-primary);
+}
+
+#section-american-extractor .aex-cat-chip.is-active {
+  background: var(--aex-blue);
+  border-color: var(--aex-blue);
+  color: #FFFFFF;
+}
+
+#section-american-extractor .aex-cat-chip.is-audio.is-active {
+  background: var(--aex-done-solid);
+  border-color: var(--aex-done-solid);
+  color: #FFFFFF;
+}
+
+#section-american-extractor .aex-cat-chip.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+/* ==========================================================================
+   ORIGINAL SOURCE AUDIO / VIDEO DOCK & PER-ITEM CLIP PLAYBACK
+   ========================================================================== */
+
+#section-american-extractor .aex-media-dock {
+  width: 100%;
+}
+
+#section-american-extractor .aex-media-stage {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  background: var(--aex-surface-inset);
+  border: 1px solid var(--aex-border);
+  transition: border-color 0.2s ease;
+}
+
+#section-american-extractor .aex-media-stage.is-playing {
+  border-color: rgba(0, 113, 227, 0.35);
+}
+
+#section-american-extractor .aex-media-video-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 640px;
+  margin-inline: auto;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000000;
+  aspect-ratio: 16 / 9;
+}
+
+#section-american-extractor .aex-media-video-wrap.is-audio-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+#section-american-extractor .aex-media-player-slot,
+#section-american-extractor .aex-media-player-slot iframe,
+#section-american-extractor .aex-html5-video {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+#section-american-extractor .aex-media-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#section-american-extractor .aex-media-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+#section-american-extractor .aex-media-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: var(--aex-blue);
+  color: #FFFFFF;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.14s var(--aex-bounce), background-color 0.16s ease;
+}
+
+#section-american-extractor .aex-media-play-btn:hover {
+  background: var(--aex-blue-hover);
+}
+
+#section-american-extractor .aex-media-play-btn:active {
+  transform: scale(0.93);
+}
+
+#section-american-extractor .aex-media-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#section-american-extractor .aex-media-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#section-american-extractor .aex-media-title {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--aex-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#section-american-extractor .aex-media-time {
+  font-family: var(--aex-font-mono);
+  font-size: 0.74rem;
+  color: var(--aex-text-secondary);
+  flex-shrink: 0;
+}
+
+#section-american-extractor .aex-media-progress-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 980px;
+  background: var(--aex-fill);
+  overflow: hidden;
+}
+
+#section-american-extractor .aex-media-progress-fill {
+  height: 100%;
+  border-radius: 980px;
+  background: var(--aex-blue);
+  transition: width 0.08s linear;
+}
+
+#section-american-extractor .aex-media-bar-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+#section-american-extractor .aex-media-speed-group,
+#section-american-extractor .aex-media-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 980px;
+  background: var(--aex-fill);
+  gap: 2px;
+}
+
+#section-american-extractor .aex-media-chip,
+#section-american-extractor .aex-media-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 980px;
+  background: transparent;
+  color: var(--aex-text-secondary);
+  font-family: var(--aex-font-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+#section-american-extractor .aex-media-chip.is-active,
+#section-american-extractor .aex-media-mode-btn.is-active {
+  background: var(--aex-surface);
+  color: var(--aex-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="dark"] #section-american-extractor .aex-media-chip.is-active,
+[data-theme="dark"] #section-american-extractor .aex-media-mode-btn.is-active {
+  background: #3A3A3C;
+  color: #FFFFFF;
+}
+
+#section-american-extractor .aex-media-error {
+  font-size: 0.78rem;
+  color: var(--aex-orange);
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: var(--aex-orange-wash);
+}
+
+/* Per-Item Original Source Clip Play Button (distinct from TTS volume button) */
+#section-american-extractor .aex-clip-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 980px;
+  border: 1px solid rgba(0, 113, 227, 0.28);
+  background: var(--aex-blue-wash);
+  color: var(--aex-blue);
+  font-family: var(--aex-font-mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.14s var(--aex-bounce);
+}
+
+#section-american-extractor .aex-clip-btn:hover {
+  background: var(--aex-blue);
+  border-color: var(--aex-blue);
+  color: #FFFFFF;
+}
+
+#section-american-extractor .aex-clip-btn.is-playing {
+  background: var(--aex-done-solid);
+  border-color: var(--aex-done-solid);
+  color: #FFFFFF;
+  box-shadow: 0 0 0 3px var(--aex-done-wash);
+}
+
+#section-american-extractor .aex-clip-btn:active {
+  transform: scale(0.94);
+}
+
+/* Extended Category Accent Palette (20 categories) */
+#section-american-extractor .aex-item[data-category="pronunciation_phonetics"] .aex-item-cat,
+#section-american-extractor .aex-item[data-category="word_sentence_stress"] .aex-item-cat,
+#section-american-extractor .aex-item[data-category="linking_sound_changes"] .aex-item-cat {
+  background: var(--aex-done-wash);
+  color: var(--aex-done);
+}
+
+#section-american-extractor .aex-item[data-category="filler"] .aex-item-cat,
+#section-american-extractor .aex-item[data-category="interjection"] .aex-item-cat,
+#section-american-extractor .aex-item[data-category="native_response"] .aex-item-cat {
+  background: var(--aex-orange-wash);
+  color: var(--aex-orange);
+}
+
+#section-american-extractor .aex-item[data-category="grammar_structure"] .aex-item-cat,
+#section-american-extractor .aex-item[data-category="metaphor_figurative"] .aex-item-cat,
+#section-american-extractor .aex-item[data-category="cultural_reference"] .aex-item-cat,
+#section-american-extractor .aex-item[data-category="pragmatics_context"] .aex-item-cat {
+  background: var(--aex-indigo-wash);
+  color: var(--aex-indigo);
+}
+
+#section-american-extractor .aex-item[data-category="conversational_expression"] .aex-item-cat,
+#section-american-extractor .aex-item[data-category="contraction_reduction"] .aex-item-cat {
+  background: var(--aex-teal-wash);
+  color: var(--aex-teal);
+}
+
+@media (max-width: 640px) {
+  #section-american-extractor .aex-cat-chip,
+  #section-american-extractor .aex-clip-btn,
+  #section-american-extractor .aex-media-mode-btn,
+  #section-american-extractor .aex-media-chip {
+    min-height: 38px;
+  }
+}

@@ -5208,6 +5208,31 @@
       }
     });
 
+    // Cross-Feature Sync: Jump to existing Anything to Phrases guide or pre-load this lesson on demand
+    document.getElementById('studio-extract-phrases-btn')?.addEventListener('click', async () => {
+      if (!studioState.item?.id) return;
+      const btn = document.getElementById('studio-extract-phrases-btn');
+      if (btn) btn.disabled = true;
+      try {
+        const res = await apiFetch(
+          `/api/sources/resolve-links?lessonId=${encodeURIComponent(studioState.item.id)}${
+            studioState.item.sourceUrl ? `&url=${encodeURIComponent(studioState.item.sourceUrl)}` : ''
+          }`,
+          { method: 'GET' },
+        );
+        const existingGuide = Array.isArray(res?.extractorNotes) ? res.extractorNotes[0] : null;
+        if (existingGuide?.id) {
+          window.location.href = `/extractor/library/${encodeURIComponent(existingGuide.id)}`;
+          return;
+        }
+      } catch {
+        // Fall through to on-demand Extract pre-selection
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+      window.location.href = `/extractor?lessonId=${encodeURIComponent(studioState.item.id)}`;
+    });
+
     // Export Markdown Study Sheet
     document.getElementById('download-markdown-btn')?.addEventListener('click', () => {
       if (!studioState.item) return;

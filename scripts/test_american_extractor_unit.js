@@ -13,10 +13,14 @@ const path = require('path');
 
 const dist = path.resolve(__dirname, '../backend/dist/modules/american-extractor');
 const {
+  ALL_CATEGORIES,
+  AUDIO_DEPENDENT_CATEGORIES,
+  CORE_CATEGORIES,
   cleanSourceText,
   computeExtractionHash,
   countWords,
   findContextSentence,
+  isAudioDependentCategory,
   isGroundedInText,
   normalizeCategory,
   normalizeTermKey,
@@ -26,6 +30,10 @@ const {
   MAX_SOURCE_CHARS,
 } = require(path.join(dist, 'utils/source-text.util.js'));
 const {
+  anchorItemsToSegments,
+  parseSubtitleSegments,
+} = require(path.join(dist, 'utils/timestamp-anchor.util.js'));
+const {
   extractCompletedItemsFromStream,
   mergeChunkExtractions,
   normalizeExtraction,
@@ -33,6 +41,7 @@ const {
 } = require(path.join(dist, 'utils/extraction-normalize.util.js'));
 const {
   buildExtractionPrompts,
+  EXTRACTION_CATEGORIES_CATALOG,
   EXTRACTION_TYPES,
   EXTRACTION_STYLES,
   EXTRACTION_LEVELS,
@@ -40,7 +49,21 @@ const {
   EXTRACTION_DEPTHS,
   EXTRACTION_GOALS,
   EXTRACTION_ORDERS,
+  resolveEffectiveCategories,
 } = require(path.join(dist, 'extraction.prompt.js'));
+const { extractTextFromPdfBuffer } = require(
+  path.resolve(__dirname, '../backend/dist/modules/shared-sources/pdf-text.util.js'),
+);
+const { SharedSourcesRepository } = require(
+  path.resolve(__dirname, '../backend/dist/modules/shared-sources/shared-sources.repository.js'),
+);
+const {
+  buildCanonicalSourceKey,
+  SharedSourcesService,
+} = require(
+  path.resolve(__dirname, '../backend/dist/modules/shared-sources/shared-sources.service.js'),
+);
+const zlib = require('zlib');
 const fs = require('fs');
 const os = require('os');
 const { SqliteService } = require(path.resolve(__dirname, '../backend/dist/core/database/sqlite.service.js'));
@@ -359,7 +382,7 @@ const customPrompt = buildExtractionPrompts({
 });
 check(
   customPrompt.extractionType.id === 'vocabulary' &&
-    customPrompt.systemPrompt.includes('STRICT TYPE FILTER') &&
+    /STRICT (?:TYPE FILTER|CATEGORY)/i.test(customPrompt.systemPrompt) &&
     customPrompt.systemPrompt.includes('"category":"vocabulary"'),
   'Single-category extractionType injects strict category constraint and itemShape',
 );
@@ -793,6 +816,226 @@ try {
       sortedTitle.hasMore === true &&
       sortedTitle.stats.totalGuides === 2,
     'Library supports title sorting, pagination, and accurate stats',
+  );
+
+  // 20-Category Catalog & Strict Audio-Dependent Gate
+  check(
+    CORE_CATEGORIES.length === 16 &&
+      AUDIO_DEPENDENT_CATEGORIES.length === 4 &&
+      ALL_CATEGORIES.length === 20 &&
+      EXTRACTION_CATEGORIES_CATALOG.length === 21,
+    'Category catalog exposes 16 core + 4 audio-dependent categories + All default',
+  );
+  check(
+    normalizeCategory('sentence patterns') === 'pattern' &&
+      normalizeCategory('slang & informal expressions') === 'slang' &&
+      normalizeCategory('conversational expressions') === 'conversational_expression' &&
+      normalizeCategory('grammar structures') === 'grammar_structure' &&
+      normalizeCategory('fillers') === 'filler' &&
+      normalizeCategory('interjections') === 'interjection' &&
+      normalizeCategory('contractions & reductions') === 'contraction_reduction' &&
+      normalizeCategory('metaphors & figurative language') === 'metaphor_figurative' &&
+      normalizeCategory('american cultural references') === 'cultural_reference' &&
+      normalizeCategory('pragmatics & social context') === 'pragmatics_context' &&
+      normalizeCategory('native-like responses & reactions') === 'native_response' &&
+      normalizeCategory('pronunciation & phonetics') === 'pronunciation_phonetics' &&
+      normalizeCategory('word stress & sentence stress') === 'word_sentence_stress' &&
+      normalizeCategory('linking & sound changes') === 'linking_sound_changes',
+    'All 20 category names and aliases normalize accurately',
+  );
+
+  const textAllCats = resolveEffectiveCategories({ extractionType: 'all', hasAudio: false });
+  const audioAllCats = resolveEffectiveCategories({ extractionType: 'all', hasAudio: true });
+  const rejectedAudio = resolveEffectiveCategories({
+    categories: ['connected_speech', 'word_sentence_stress'],
+    hasAudio: false,
+  });
+  check(
+    textAllCats.selectedCategories.length === 16 &&
+      textAllCats.selectedCategories.every((c) => !isAudioDependentCategory(c)),
+    'All-mode on text sources strictly excludes all 4 audio-dependent categories',
+  );
+  check(
+    audioAllCats.selectedCategories.length === 20,
+    'All-mode on audio/video sources unlocks all 20 categories',
+  );
+  check(
+    rejectedAudio.rejectedAudioOnly === true && rejectedAudio.selectedCategories.length === 0,
+    'Explicit audio-only category selection on text source is cleanly rejected',
+  );
+
+  const audioLeakGuarded = normalizeExtraction({
+    parsed: {
+      title: 'Guard test',
+      items: [
+        {
+          term: 'kick something off',
+          surface: 'kick this off',
+          category: 'connected_speech',
+          meaning: 'start',
+        },
+        {
+          term: 'double down on',
+          surface: 'double down on',
+          category: 'phrasal_verb',
+          meaning: 'commit strongly',
+        },
+      ],
+    },
+    sourceText: source,
+    fallbackTitle: 'Guard',
+    targetLanguage: 'ar',
+    hasAudio: false,
+  });
+  check(
+    audioLeakGuarded.items.length === 1 && audioLeakGuarded.items[0].category === 'phrasal_verb',
+    'Normalization hard-drops any audio-dependent category item when hasAudio=false',
+  );
+
+  const arPrompt = buildExtractionPrompts({
+    source: {
+      title: 'Standup',
+      creator: 'Host',
+      sourceType: 'text',
+      sourceUrl: '',
+      sourceLabel: 'Text',
+      text: source,
+      hasAudio: false,
+      sourceMeta: {},
+      warnings: [],
+      truncated: false,
+    },
+    targetLanguage: 'ar',
+    hasAudio: false,
+  });
+  check(
+    arPrompt.systemPrompt.includes('Egyptian Arabic') &&
+      arPrompt.systemPrompt.includes('NO AUDIO IS AVAILABLE'),
+    'Arabic prompt requests natural Egyptian Arabic and enforces strict no-audio anti-fabrication contract',
+  );
+
+  // Subtitle & Millisecond Timestamp Anchoring
+  const parsedSrtSegs = parseSubtitleSegments(
+    '1\n00:00:01,200 --> 00:00:04,500\nAlright, let\'s kick this off.\n\n2\n00:00:04,600 --> 00:00:08,100\nI want to double down on latency.',
+  );
+  check(
+    parsedSrtSegs.length === 2 &&
+      parsedSrtSegs[0].startSec === 1.2 &&
+      parsedSrtSegs[1].endSec === 8.1,
+    'Subtitle cue parser extracts exact millisecond timestamps',
+  );
+
+  const anchored = anchorItemsToSegments(
+    [
+      {
+        index: 0,
+        term: 'double down on',
+        surface: 'double down on',
+        category: 'phrasal_verb',
+        register: 'neutral',
+        ipa: '',
+        meaning: 'commit strongly',
+        localizedMeaning: 'يركز أكتر',
+        contextSentence: 'I want to double down on latency.',
+        usageNote: '',
+        spokenNote: '',
+        example: '',
+        grounded: true,
+      },
+    ],
+    parsedSrtSegs,
+    "Alright, let's kick this off. I want to double down on latency.",
+  );
+  check(
+    typeof anchored[0].startSec === 'number' &&
+      anchored[0].startSec >= 4.4 &&
+      anchored[0].startSec <= 4.7 &&
+      anchored[0].endSec >= 8.0,
+    'Timestamp anchor maps extracted phrase to exact source segment boundaries',
+  );
+
+  // PDF text extraction (FlateDecode compressed stream)
+  const pdfContent = 'BT /F1 12 Tf 72 720 Td (Alright, lets kick this off and double down on latency.) Tj ET';
+  const deflated = zlib.deflateSync(Buffer.from(pdfContent, 'latin1'));
+  const fakePdf = Buffer.concat([
+    Buffer.from('%PDF-1.4\n1 0 obj << /Type /Page >> endobj\n2 0 obj << /Filter /FlateDecode /Length ' + deflated.length + ' >>\nstream\n', 'latin1'),
+    deflated,
+    Buffer.from('\nendstream\nendobj\n%%EOF', 'latin1'),
+  ]);
+  const pdfExtracted = extractTextFromPdfBuffer(fakePdf);
+  check(
+    pdfExtracted.pageCount === 1 && pdfExtracted.text.includes('double down on latency'),
+    'Pure-Node PDF extractor reads FlateDecode streams cleanly',
+  );
+
+  // Shared Sources Deduplication & Cross-Feature Link Resolution
+  const sharedRepo = new SharedSourcesRepository(sqlite);
+  const sharedSvc = new SharedSourcesService(sharedRepo, sqlite);
+  const ytKey = buildCanonicalSourceKey({
+    sourceType: 'youtube',
+    sourceUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+  });
+  const s1 = sharedSvc.upsert(userId, {
+    sourceKey: ytKey,
+    sourceType: 'youtube',
+    title: 'Shared Video Talk',
+    creator: 'Tech Speaker',
+    sourceUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    hasAudio: true,
+    hasVideo: true,
+    mediaKind: 'youtube',
+    mediaId: 'dQw4w9WgXcQ',
+    transcriptText: source,
+    segments: parsedSrtSegs,
+  });
+  const s2 = sharedSvc.upsert(userId, {
+    sourceKey: ytKey,
+    sourceType: 'youtube',
+    title: 'Shared Video Talk Updated',
+    sourceUrl: 'https://youtu.be/dQw4w9WgXcQ',
+    hasAudio: true,
+    hasVideo: true,
+    mediaKind: 'youtube',
+    mediaId: 'dQw4w9WgXcQ',
+  });
+  check(s1.id === s2.id && s2.segments.length === 2, 'Shared source upsert deduplicates same YouTube source and preserves segments');
+
+  sqlite.db
+    .prepare(
+      `INSERT INTO lessons (id, user_id, source_id, track, video_id, source_url, title, creator, thumbnail_url, accent_dialect, sentences_count, payload_json, created_at, updated_at)
+       VALUES (?, ?, ?, 'shadowing', 'dQw4w9WgXcQ', 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', 'Shared Lesson', 'Tech Speaker', '', 'General American', 12, '{}', ?, ?)`,
+    )
+    .run('lesson_sync_1', userId, s1.id, '2026-11-20T00:00:00.000Z', '2026-11-20T00:00:00.000Z');
+  repo.save({
+    id: 'aex_sync_1',
+    userId,
+    sourceId: s1.id,
+    title: 'Synced Guide',
+    creator: 'Tech Speaker',
+    summary: 'Summary',
+    speakerStyle: 'Casual',
+    sourceType: 'youtube',
+    sourceUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    sourceLabel: 'YouTube · captions',
+    sourceMeta: { sourceId: s1.id, videoId: 'dQw4w9WgXcQ', hasAudio: true, hasVideo: true, mediaKind: 'youtube', mediaId: 'dQw4w9WgXcQ' },
+    targetLanguage: 'ar',
+    agentName: 'OpenCode',
+    modelName: 'gpt-6-luna',
+    reasoningLevel: 'medium',
+    executionTimeMs: 900,
+    items: anchored,
+    sourceText: source,
+    contentHash: 'sync_hash_1',
+    createdAt: '2026-11-20T00:00:00.000Z',
+  });
+
+  const linksFromNote = sharedSvc.resolveLinks(userId, { noteId: 'aex_sync_1' });
+  const linksFromLesson = sharedSvc.resolveLinks(userId, { lessonId: 'lesson_sync_1' });
+  check(
+    linksFromNote.lesson?.id === 'lesson_sync_1' &&
+      linksFromLesson.extractorNotes.some((n) => n.id === 'aex_sync_1') &&
+      linksFromNote.source?.id === s1.id,
+    'Cross-feature link resolution connects Extractor guides and Studio lessons via shared source',
   );
 } finally {
   sqlite.onModuleDestroy();

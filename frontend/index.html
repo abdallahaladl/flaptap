@@ -1543,14 +1543,14 @@
                   type="file"
                   id="aex-file-input"
                   class="visually-hidden"
-                  accept=".txt,.md,.markdown,.srt,.vtt,.json,.png,.jpg,.jpeg,.webp,.gif,.mp3,.m4a,.wav,.aac,.flac,.ogg,.opus,.mp4,.mov,.webm,.mkv"
+                  accept=".pdf,.txt,.md,.markdown,.srt,.vtt,.json,.png,.jpg,.jpeg,.webp,.gif,.mp3,.m4a,.wav,.aac,.flac,.ogg,.opus,.mp4,.mov,.webm,.mkv"
                 />
                 <label class="aex-dropzone" id="aex-file-drop" for="aex-file-input" tabindex="0">
                   <span class="aex-drop-icon" aria-hidden="true">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                   </span>
                   <span class="aex-drop-title">Drop a file here or click to browse</span>
-                  <span class="aex-drop-hint">Screenshots (OCR), audio/video (speech-to-text), subtitles (.srt/.vtt), Markdown, or text · max 50 MB</span>
+                  <span class="aex-drop-hint">PDFs, screenshots (OCR), audio/video (speech-to-text + clip playback), subtitles (.srt/.vtt), Markdown, or text · max 50 MB</span>
                 </label>
                 <div class="aex-file-chip" id="aex-file-chip" hidden>
                   <span class="aex-file-chip-icon" aria-hidden="true">
@@ -1601,6 +1601,24 @@
                 <div class="aex-option">
                   <label class="aex-field-label" for="aex-level-select">Learner level (CEFR)</label>
                   <select id="aex-level-select" class="aex-select"></select>
+                </div>
+              </div>
+
+              <!-- 20-Category Selector (All default + individual Core & Audio-Dependent pills) -->
+              <div class="aex-cat-picker" id="aex-cat-picker">
+                <div class="aex-cat-picker-head">
+                  <div class="aex-cat-picker-summary">
+                    <span class="aex-field-label">Categories</span>
+                    <span class="aex-cat-active-badge" id="aex-cat-active-badge">All eligible (Default)</span>
+                    <span class="aex-cat-audio-status" id="aex-cat-audio-status" data-audio="0">Text mode · 16 core</span>
+                  </div>
+                  <button type="button" class="aex-customize-toggle aex-cat-toggle-btn" id="aex-cat-toggle-btn" aria-expanded="false" aria-controls="aex-cat-drawer">
+                    <span>Choose categories</span>
+                    <svg class="aex-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </button>
+                </div>
+                <div class="aex-cat-drawer" id="aex-cat-drawer" hidden>
+                  <div class="aex-cat-drawer-inner" id="aex-cat-chips"></div>
                 </div>
               </div>
 
@@ -1858,7 +1876,11 @@
                     </button>
                     <button type="button" class="btn-secondary btn-sm" id="aex-studio-btn" hidden title="Open in Flaptap Studio">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                      <span>Studio</span>
+                      <span id="aex-studio-btn-label">Studio</span>
+                    </button>
+                    <button type="button" class="btn-secondary btn-sm" id="aex-lexicon-sync-btn" hidden title="Open synced Tech Lexicon note">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
+                      <span>Tech Lexicon</span>
                     </button>
                     <button type="button" class="btn-secondary btn-sm" id="aex-reextract-btn" hidden title="Re-extract fresh with AI">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
@@ -1903,6 +1925,9 @@
                   </button>
                 </div>
               </div>
+
+              <!-- Synced Original Audio / Video Playback Dock (shown only when original media is available) -->
+              <div id="aex-media-dock" class="aex-media-dock" hidden></div>
 
               <div class="aex-summary-banner" id="aex-note-summary-wrap" hidden>
                 <div class="aex-summary-head">
@@ -2389,6 +2414,7 @@
   <script defer src="/tech-lexicon.js"></script>
   <script defer src="/anything-to-phrases/api.js"></script>
   <script defer src="/anything-to-phrases/store.js"></script>
+  <script defer src="/anything-to-phrases/media-player.js"></script>
   <script defer src="/anything-to-phrases/extract-page.js"></script>
   <script defer src="/anything-to-phrases/library-page.js"></script>
   <script defer src="/anything-to-phrases/detail-page.js"></script>

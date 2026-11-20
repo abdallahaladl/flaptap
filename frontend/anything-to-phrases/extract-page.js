@@ -26,7 +26,7 @@
   const TAB_HINTS = {
     link: 'YouTube · Articles · Podcasts · Social clips',
     text: 'Transcripts · Notes · Markdown · Saved lessons',
-    upload: 'Images (OCR) · Audio/Video · Subtitles · Docs',
+    upload: 'PDFs · Images (OCR) · Audio/Video · Subtitles · Docs',
   };
 
   function create(deps) {
@@ -40,6 +40,8 @@
       mounted: false,
       sourceTab: 'link',
       selectedFile: null,
+      selectedCategories: new Set(), // empty = 'all' (default)
+      pendingLessonId: '',
       aiSelector: null,
       running: false,
       abortController: null,
@@ -93,7 +95,134 @@
 
       // Clear stale validation errors when switching source tabs
       hideInlineError();
+      renderCategoryPicker();
       syncAiSummary();
+    }
+
+    function currentSourceHasAudio() {
+      if (local.sourceTab === 'link') {
+        const raw = String(el('aex-url-input')?.value || '').trim();
+        if (!raw) return false;
+        const info = store.detectUrlSource(raw);
+        return Boolean(info?.valid && info?.hasAudio);
+      }
+      if (local.sourceTab === 'upload') {
+        if (!local.selectedFile) return false;
+        const info = store.detectFileSource(local.selectedFile, Number(store.state.config?.maxUploadMb) || 50);
+        return Boolean(info?.valid && info?.hasAudio);
+      }
+      if (local.sourceTab === 'text') {
+        const lessonId = String(el('aex-lesson-select')?.value || '').trim();
+        if (!lessonId) return false;
+        const lesson = store.state.lessonSources.find((l) => l.id === lessonId);
+        return Boolean(lesson?.hasAudio || lesson?.videoId);
+      }
+      return false;
+    }
+
+    function renderCategoryPicker() {
+      const wrap = el('aex-cat-chips');
+      const badge = el('aex-cat-active-badge');
+      const audioStatus = el('aex-cat-audio-status');
+      const hasAudio = currentSourceHasAudio();
+
+      // Auto-prune audio-dependent selections if source switched to non-audio
+      if (!hasAudio && local.selectedCategories.size > 0) {
+        let pruned = false;
+        for (const id of Array.from(local.selectedCategories)) {
+          if (store.isAudioDependentCategory(id)) {
+            local.selectedCategories.delete(id);
+            pruned = true;
+          }
+        }
+        if (pruned) syncOptionIndicators();
+      }
+
+      if (audioStatus) {
+        audioStatus.dataset.audio = hasAudio ? '1' : '0';
+        audioStatus.textContent = hasAudio
+          ? 'Audio detected · all 20 categories unlocked'
+          : 'Text mode · 16 core (4 audio categories unlock with audio/video)';
+      }
+
+      if (badge) {
+        if (local.selectedCategories.size === 0) {
+          badge.textContent = hasAudio ? 'All 20 categories (Default)' : 'All 16 core categories (Default)';
+          badge.classList.remove('is-custom');
+        } else if (local.selectedCategories.size === 1) {
+          const single = Array.from(local.selectedCategories)[0];
+          badge.textContent = store.CATEGORY_LABELS[single] || single;
+          badge.classList.add('is-custom');
+        } else {
+          badge.textContent = `${local.selectedCategories.size} categories selected`;
+          badge.classList.add('is-custom');
+        }
+      }
+
+      if (!wrap) return;
+      const catalog = store.categoriesCatalog();
+      const coreItems = catalog.filter((c) => c.group === 'core');
+      const audioItems = catalog.filter((c) => c.group === 'audio');
+      const isAll = local.selectedCategories.size === 0;
+
+      const renderPill = (cat, disabled = false) => {
+        const active = cat.id === 'all' ? isAll : local.selectedCategories.has(cat.id);
+        return `<button type="button" class="aex-cat-chip${active ? ' is-active' : ''}${
+          cat.audioDependent ? ' is-audio' : ''
+        }${disabled ? ' is-disabled' : ''}" data-aex-cat="${escapeHtml(cat.id)}" aria-pressed="${
+          active ? 'true' : 'false'
+        }" ${disabled ? 'aria-disabled="true" title="Available only for audio or video sources"' : `title="${escapeHtml(cat.hint || cat.label)}"`}>${escapeHtml(cat.label)}</button>`;
+      };
+
+      wrap.innerHTML = `
+        <div class="aex-cat-group">
+          <div class="aex-cat-group-head">
+            <span class="aex-cat-group-label">Core Categories (16)</span>
+            ${renderPill({ id: 'all', label: 'All (Default)', hint: 'Extract across every eligible category' }, false)}
+          </div>
+          <div class="aex-cat-pills">${coreItems.map((c) => renderPill(c, false)).join('')}</div>
+        </div>
+        <div class="aex-cat-group aex-cat-group--audio">
+          <div class="aex-cat-group-head">
+            <span class="aex-cat-group-label">Audio-Dependent (4)</span>
+            <span class="aex-cat-audio-hint">${
+              hasAudio ? 'Unlocked for this audio/video source' : 'Unlocked automatically when you add YouTube, audio, or video'
+            }</span>
+          </div>
+          <div class="aex-cat-pills">${audioItems.map((c) => renderPill(c, !hasAudio)).join('')}</div>
+        </div>
+      `;
+    }
+
+    function toggleCategorySelection(catId) {
+      if (catId === 'all') {
+        local.selectedCategories.clear();
+        const typeSelect = el('aex-type-select');
+        if (typeSelect) typeSelect.value = 'all';
+        renderCategoryPicker();
+        syncOptionIndicators();
+        return;
+      }
+
+      if (store.isAudioDependentCategory(catId) && !currentSourceHasAudio()) {
+        showToast('Audio-dependent categories unlock when you select a YouTube video, audio/video file, or video lesson.');
+        return;
+      }
+
+      if (local.selectedCategories.has(catId)) {
+        local.selectedCategories.delete(catId);
+      } else {
+        local.selectedCategories.add(catId);
+      }
+
+      const typeSelect = el('aex-type-select');
+      if (typeSelect) {
+        typeSelect.value =
+          local.selectedCategories.size === 1 ? Array.from(local.selectedCategories)[0] : 'all';
+      }
+
+      renderCategoryPicker();
+      syncOptionIndicators();
     }
 
     function updateUrlDetection() {
@@ -106,12 +235,16 @@
       const info = store.detectUrlSource(raw);
       if (clearBtn) clearBtn.hidden = !raw.trim();
 
-      if (!pill) return;
+      if (!pill) {
+        renderCategoryPicker();
+        return;
+      }
       if (info.empty) {
         pill.hidden = true;
         pill.removeAttribute('data-tone');
         pill.innerHTML = '';
         input.removeAttribute('aria-invalid');
+        renderCategoryPicker();
         return;
       }
 
@@ -132,6 +265,7 @@
           info.error,
         )}</span>`;
       }
+      renderCategoryPicker();
     }
 
     function updateTextStats() {
@@ -186,6 +320,7 @@
           ? 'Extracting from the selected saved lesson below. Clear it to paste custom text.'
           : 'Paste a transcript, dialogue, excerpt, or Markdown notes...';
       }
+      renderCategoryPicker();
       syncAiSummary();
     }
 
@@ -200,6 +335,7 @@
         local.selectedFile = null;
         if (chip) chip.hidden = true;
         if (input) input.value = '';
+        renderCategoryPicker();
         return;
       }
 
@@ -218,6 +354,7 @@
         chip.dataset.tone = info.tone;
       }
       hideInlineError();
+      renderCategoryPicker();
     }
 
     /* --------------------------------------------------------------------
@@ -297,6 +434,9 @@
         anyCustom = true;
         fineTuneCustom++;
       }
+      if (local.selectedCategories.size > 0) {
+        anyCustom = true;
+      }
 
       const resetBtn = el('aex-reset-options-btn');
       if (resetBtn) resetBtn.hidden = !anyCustom;
@@ -321,9 +461,11 @@
         const select = el(spec.selectId);
         if (select) select.value = store.DEFAULT_OPTIONS[spec.key];
       }
+      local.selectedCategories.clear();
       const forceCheck = el('aex-force-fresh');
       if (forceCheck) forceCheck.checked = false;
       saveCurrentOptions();
+      renderCategoryPicker();
       syncOptionIndicators();
       syncAiSummary();
       showToast('Options reset to defaults.');
@@ -369,6 +511,11 @@
         ),
       ].join('');
       if (list.some((i) => i.id === prev)) select.value = prev;
+      if (local.pendingLessonId && list.some((i) => i.id === local.pendingLessonId)) {
+        select.value = local.pendingLessonId;
+        local.pendingLessonId = '';
+        setSourceTab('text');
+      }
       syncSelectedLessonUi();
     }
 
@@ -377,6 +524,7 @@
        -------------------------------------------------------------------- */
 
     function collectRunPayload() {
+      const selectedCats = Array.from(local.selectedCategories);
       const payload = {
         tab: local.sourceTab,
         url: String(el('aex-url-input')?.value || '').trim(),
@@ -384,6 +532,7 @@
         title: String(el('aex-text-title')?.value || '').trim(),
         lessonId: String(el('aex-lesson-select')?.value || '').trim(),
         language: el('aex-language-select')?.value || store.getPreferredLanguage(),
+        categories: selectedCats.length > 0 ? selectedCats : undefined,
         force: Boolean(el('aex-force-fresh')?.checked),
       };
       for (const spec of store.OPTION_SPECS) {
@@ -508,6 +657,9 @@
           for (const spec of store.OPTION_SPECS) {
             form.append(spec.key, payload[spec.key]);
           }
+          if (Array.isArray(payload.categories) && payload.categories.length > 0) {
+            form.append('categories', JSON.stringify(payload.categories));
+          }
           if (payload.force) form.append('force', 'true');
           if (selection.keyId) form.append('keyId', selection.keyId);
           if (selection.model) form.append('model', selection.model);
@@ -525,6 +677,7 @@
               lessonId: payload.lessonId || undefined,
               language: payload.language,
               extractionType: payload.extractionType,
+              categories: payload.categories,
               style: payload.style,
               level: payload.level,
               focus: payload.focus,
@@ -917,6 +1070,23 @@
 
       el('aex-jump-library')?.addEventListener('click', () => nav.goToLibrary());
 
+      el('aex-cat-toggle-btn')?.addEventListener('click', () => {
+        const drawer = el('aex-cat-drawer');
+        const btn = el('aex-cat-toggle-btn');
+        if (!drawer || !btn) return;
+        const willOpen = drawer.hidden;
+        drawer.hidden = !willOpen;
+        btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      });
+
+      el('aex-cat-chips')?.addEventListener('click', (e) => {
+        const chip = e.target.closest('[data-aex-cat]');
+        if (chip) {
+          e.preventDefault();
+          toggleCategorySelection(chip.dataset.aexCat);
+        }
+      });
+
       root.addEventListener('click', (e) => {
         const openBtn = e.target.closest('[data-aex-open]');
         if (openBtn) {
@@ -933,11 +1103,13 @@
       mountAiSelector();
       populateLanguageSelect();
       populateExtractionOptions(store.loadSavedOptions());
+      renderCategoryPicker();
       renderRecent();
 
       local.unsubs.push(
         store.subscribe('config:changed', (cfg) => {
           populateExtractionOptions();
+          renderCategoryPicker();
           const fi = el('aex-file-input');
           if (fi && Array.isArray(cfg?.acceptedUploadTypes)) {
             fi.setAttribute('accept', cfg.acceptedUploadTypes.join(','));
@@ -958,6 +1130,30 @@
 
     function onActivate(options = {}) {
       renderRecent();
+      if (options.lessonId) {
+        const select = el('aex-lesson-select');
+        const exists = store.state.lessonSources.some((l) => l.id === options.lessonId);
+        if (select && exists) {
+          select.value = options.lessonId;
+          setSourceTab('text');
+          syncSelectedLessonUi();
+          showToast('Saved lesson ready — choose categories and extract!');
+        } else {
+          local.pendingLessonId = options.lessonId;
+          setSourceTab('text');
+          if (typeof deps.refreshLessonSources === 'function') {
+            deps.refreshLessonSources();
+          }
+        }
+      } else if (options.url) {
+        const urlInput = el('aex-url-input');
+        if (urlInput) {
+          urlInput.value = options.url;
+          setSourceTab('link');
+          updateUrlDetection();
+        }
+      }
+      renderCategoryPicker();
       if (options.focusInput) {
         if (local.sourceTab === 'text') el('aex-text-input')?.focus();
         else if (local.sourceTab === 'upload') el('aex-file-drop')?.focus();

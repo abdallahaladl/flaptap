@@ -227,7 +227,11 @@
     }
 
     activateView('extract', { skipRoute: true });
-    shellState.extractPage?.onActivate?.();
+    const params = routeState.searchParams || new URLSearchParams(global.location.search || '');
+    shellState.extractPage?.onActivate?.({
+      lessonId: params.get('lessonId') || '',
+      url: params.get('url') || '',
+    });
   }
 
   async function init(routeState) {
