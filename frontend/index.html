@@ -161,7 +161,7 @@
             </svg>
             <span class="sidebar-link-text" data-i18n="navTechLinguist">Tech Lexicon</span>
           </a>
-          <a href="/extractor" class="sidebar-nav-link" data-route-section="american-extractor" title="Phrase Lens">
+          <a href="/extractor" class="sidebar-nav-link" data-route-section="american-extractor" title="Anything to Phrases">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
               <path d="M4 8V6a2 2 0 0 1 2-2h2"></path>
               <path d="M4 16v2a2 2 0 0 0 2 2h2"></path>
@@ -170,7 +170,7 @@
               <circle cx="11.5" cy="11.5" r="3.2"></circle>
               <path d="m14 14 2.5 2.5"></path>
             </svg>
-            <span class="sidebar-link-text" data-i18n="navExtractor">Phrase Lens</span>
+            <span class="sidebar-link-text" data-i18n="navExtractor">Anything to Phrases</span>
           </a>
           <a href="/vocabulary" class="sidebar-nav-link" data-route-section="vocabulary" title="Vocabulary Vault">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -725,10 +725,10 @@
           </svg>
         </div>
         <h3 data-i18n="emptyVocabTitle">No saved words yet</h3>
-        <p data-i18n="emptyVocabDesc">Click any word in Video Lessons, Phrase Lens, Tech Lexicon, or Learning Library to save contextual definitions and unlock spaced flashcards.</p>
+        <p data-i18n="emptyVocabDesc">Click any word in Video Lessons, Anything to Phrases, Tech Lexicon, or Learning Library to save contextual definitions and unlock spaced flashcards.</p>
         <div class="empty-ledger-actions">
           <button type="button" class="btn-vox" data-route-section="lessons">Open Video Lessons</button>
-          <button type="button" class="btn-secondary" data-route-section="american-extractor">Open Phrase Lens</button>
+          <button type="button" class="btn-secondary" data-route-section="american-extractor">Open Anything to Phrases</button>
         </div>
       </div>
       <div id="vocab-auth-gate-card" class="signed-out-gate-card" hidden>
@@ -1408,39 +1408,43 @@
       </div>
     </section>
 
-    <!-- SECTION 7: PHRASE LENS -->
+    <!-- SECTION 7: ANYTHING TO PHRASES (3 ISOLATED PAGES UNDER ONE FEATURE LAYOUT) -->
     <section id="section-american-extractor" hidden>
       <div class="editorial-desk aex-desk">
-        <header class="aex-header">
-          <div class="aex-header-copy">
-            <div class="aex-kicker">
-              <span class="aex-kicker-dot" aria-hidden="true"></span>
-              <span>Smart Capture</span>
-            </div>
-            <h1 class="aex-headline">Phrase Lens</h1>
-            <p class="aex-subcopy">
-              Turn any video, link, image, or text into a crisp American English guide.
-            </p>
-          </div>
+        <!-- Compact Feature Shell Bar (always visible across Extract, Library & Detail) -->
+        <header class="aex-shell-bar">
+          <button type="button" class="aex-shell-brand" id="aex-shell-brand-btn" title="Go to Extract">
+            <span class="aex-shell-brand-dot" aria-hidden="true"></span>
+            <span class="aex-shell-brand-title">Anything to Phrases</span>
+          </button>
 
-          <nav class="lexicon-view-nav aex-view-nav" role="tablist" aria-label="Phrase Lens views">
+          <nav class="lexicon-view-nav aex-view-nav" role="tablist" aria-label="Anything to Phrases pages">
             <button type="button" class="lexicon-view-tab active" id="aex-tab-extract" data-aex-view="extract" role="tab" aria-selected="true">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2"></path><path d="M4 16v2a2 2 0 0 0 2 2h2"></path><path d="M16 4h2a2 2 0 0 1 2 2v2"></path><path d="M16 20h2a2 2 0 0 0 2-2v-2"></path><circle cx="12" cy="12" r="3"></circle></svg>
-              <span>Capture</span>
+              <span>Extract</span>
             </button>
             <button type="button" class="lexicon-view-tab" id="aex-tab-library" data-aex-view="library" role="tab" aria-selected="false">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
               <span>Library</span>
-              <span class="lexicon-badge-pill" id="aex-library-count">0</span>
+              <span class="lexicon-badge-pill ltr-num" id="aex-library-count">0</span>
             </button>
           </nav>
         </header>
 
-        <!-- VIEW 1: SOURCE EXTRACTION -->
+        <!-- ============================================================== -->
+        <!-- PAGE 1: EXTRACT (/extractor)                                   -->
+        <!-- ============================================================== -->
         <div id="aex-view-extract" class="aex-view-panel">
+          <div class="aex-extract-hero">
+            <h1 class="aex-headline">Anything to Phrases</h1>
+            <p class="aex-subcopy">
+              Drop any video, article, podcast, screenshot, or text — get source-grounded American English phrases with IPA, natural usage, and spaced study.
+            </p>
+          </div>
+
           <div class="aex-source-card">
             <div class="aex-source-topbar">
-              <div class="aex-source-tabs" role="tablist" aria-label="Source type">
+              <div class="aex-source-tabs" role="tablist" aria-label="Source input type">
                 <button type="button" class="linguist-tab-btn active" data-aex-source="link" role="tab" aria-selected="true">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                   <span>Link</span>
@@ -1454,47 +1458,54 @@
                   <span>File</span>
                 </button>
               </div>
-              <span class="aex-source-cap-hint">Video · Articles · Audio · Images</span>
+              <span class="aex-source-cap-hint" id="aex-source-cap-hint">YouTube · Articles · Podcasts · Social clips</span>
             </div>
 
             <div class="aex-source-body">
               <!-- LINK PANEL -->
               <div class="aex-source-panel" data-aex-panel="link">
-                <label class="aex-field-label" for="aex-url-input">URL</label>
+                <label class="aex-field-label" for="aex-url-input">Source URL</label>
                 <div class="command-input-wrap aex-url-wrap">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="7"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
                   </svg>
                   <input
                     type="url"
                     id="aex-url-input"
                     class="command-input"
-                    placeholder="Paste a link or URL..."
+                    placeholder="https://youtube.com/watch?v=... or any article, podcast, or clip URL"
                     autocomplete="off"
                     spellcheck="false"
                   />
+                  <button type="button" class="aex-url-clear-btn" id="aex-url-clear" aria-label="Clear URL" title="Clear" hidden>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                  </button>
                   <button type="button" class="command-quick-btn" id="aex-paste-btn" title="Paste from clipboard">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
                     <span>Paste</span>
                   </button>
                 </div>
+                <div class="aex-detect-pill" id="aex-url-detect" role="status" aria-live="polite" hidden></div>
                 <p class="aex-field-hint">
-                  Supports captions, web articles, and spoken audio links.
+                  Auto-detects YouTube captions, readable web articles, and audio/video speech-to-text.
                 </p>
               </div>
 
               <!-- TEXT PANEL -->
               <div class="aex-source-panel" data-aex-panel="text" hidden>
                 <div class="aex-label-row">
-                  <label class="aex-field-label" for="aex-text-input">Text or transcript</label>
-                  <span class="aex-mini-note ltr-num"><span id="aex-text-word-count">0</span> words</span>
+                  <label class="aex-field-label" for="aex-text-input">Text, transcript, or Markdown</label>
+                  <div class="aex-text-stats">
+                    <span class="aex-text-meta-pill" id="aex-text-meta-pill" hidden></span>
+                    <span class="aex-mini-note ltr-num"><span id="aex-text-word-count">0</span> words</span>
+                  </div>
                 </div>
                 <textarea
                   id="aex-text-input"
                   class="linguist-textarea aex-textarea"
                   rows="6"
-                  placeholder="Paste a transcript, dialogue, excerpt, or notes..."
+                  placeholder="Paste a transcript, dialogue, excerpt, or Markdown notes..."
                   aria-label="Text or Markdown source"
                 ></textarea>
                 <div class="aex-inline-row">
@@ -1502,23 +1513,27 @@
                     type="text"
                     id="aex-text-title"
                     class="aex-text-input"
-                    placeholder="Optional title"
+                    placeholder="Optional title (auto-generated if left blank)"
                     aria-label="Optional source title"
                     autocomplete="off"
                   />
                 </div>
                 <div class="aex-lesson-row">
                   <div class="aex-lesson-copy">
-                    <span class="aex-lesson-label">Saved lesson</span>
-                    <span class="aex-field-hint">Import transcript from your library.</span>
+                    <span class="aex-lesson-label">Or import a saved Flaptap lesson</span>
+                    <span class="aex-field-hint">Reuse an existing video lesson transcript without re-fetching.</span>
                   </div>
                   <select id="aex-lesson-select" class="aex-select aex-lesson-select" aria-label="Saved lesson transcript">
-                    <option value="">Choose a lesson…</option>
+                    <option value="">Choose a saved lesson…</option>
                   </select>
                   <button type="button" class="btn-secondary btn-sm" id="aex-refresh-lessons-btn" title="Refresh lessons">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
                     <span>Refresh</span>
                   </button>
+                </div>
+                <div class="aex-lesson-selected-banner" id="aex-lesson-selected-banner" hidden>
+                  <span>Selected lesson: <strong id="aex-lesson-selected-title"></strong></span>
+                  <button type="button" class="btn-micro-ghost" id="aex-lesson-clear-btn">Clear</button>
                 </div>
               </div>
 
@@ -1534,14 +1549,17 @@
                   <span class="aex-drop-icon" aria-hidden="true">
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
                   </span>
-                  <span class="aex-drop-title">Drop a file or browse</span>
-                  <span class="aex-drop-hint">Text, subtitles, screenshots, audio, or video · max 50 MB</span>
+                  <span class="aex-drop-title">Drop a file here or click to browse</span>
+                  <span class="aex-drop-hint">Screenshots (OCR), audio/video (speech-to-text), subtitles (.srt/.vtt), Markdown, or text · max 50 MB</span>
                 </label>
                 <div class="aex-file-chip" id="aex-file-chip" hidden>
                   <span class="aex-file-chip-icon" aria-hidden="true">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg>
                   </span>
-                  <span class="aex-file-name" id="aex-file-name"></span>
+                  <div class="aex-file-chip-text">
+                    <span class="aex-file-name" id="aex-file-name"></span>
+                    <span class="aex-file-meta" id="aex-file-meta"></span>
+                  </div>
                   <button type="button" class="icon-btn aex-file-clear" id="aex-file-clear" aria-label="Remove selected file">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                   </button>
@@ -1549,9 +1567,10 @@
               </div>
             </div>
 
+            <!-- Smart Defaults + Progressive Disclosure -->
             <div class="aex-options-section">
               <div class="aex-options-head">
-                <span class="aex-options-title">Options</span>
+                <span class="aex-options-title">Study Preferences</span>
                 <div class="aex-options-head-actions">
                   <button type="button" class="aex-reset-options-btn" id="aex-reset-options-btn" hidden>
                     Reset
@@ -1564,39 +1583,41 @@
                     aria-controls="aex-advanced-options"
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
-                    <span>Customize</span>
+                    <span>Fine-tune</span>
                     <span class="aex-custom-count ltr-num" id="aex-custom-count" hidden>0</span>
                     <svg class="aex-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                   </button>
                 </div>
               </div>
 
-              <div class="aex-options-grid aex-options-primary">
+              <!-- Only 2 high-impact primary controls visible by default -->
+              <div class="aex-options-grid aex-options-primary aex-options-primary--2">
                 <div class="aex-option">
-                  <label class="aex-field-label" for="aex-type-select">Type</label>
-                  <select id="aex-type-select" class="aex-select"></select>
-                </div>
-                <div class="aex-option">
-                  <label class="aex-field-label" for="aex-level-select">Level</label>
-                  <select id="aex-level-select" class="aex-select"></select>
-                </div>
-                <div class="aex-option">
-                  <label class="aex-field-label" for="aex-language-select">Translate</label>
+                  <label class="aex-field-label" for="aex-language-select">Translate meanings to</label>
                   <select id="aex-language-select" class="aex-select">
                     <option value="ar">Arabic (العربية)</option>
                   </select>
                 </div>
+                <div class="aex-option">
+                  <label class="aex-field-label" for="aex-level-select">Learner level (CEFR)</label>
+                  <select id="aex-level-select" class="aex-select"></select>
+                </div>
               </div>
 
+              <!-- Progressive Disclosure Drawer -->
               <div class="aex-advanced-options" id="aex-advanced-options">
                 <div class="aex-advanced-options-inner">
                   <div class="aex-options-grid aex-options-secondary">
+                    <div class="aex-option">
+                      <label class="aex-field-label" for="aex-type-select">Phrase type</label>
+                      <select id="aex-type-select" class="aex-select"></select>
+                    </div>
                     <div class="aex-option">
                       <label class="aex-field-label" for="aex-style-select">Style</label>
                       <select id="aex-style-select" class="aex-select"></select>
                     </div>
                     <div class="aex-option">
-                      <label class="aex-field-label" for="aex-focus-select">Focus</label>
+                      <label class="aex-field-label" for="aex-focus-select">Topic focus</label>
                       <select id="aex-focus-select" class="aex-select"></select>
                     </div>
                     <div class="aex-option">
@@ -1604,24 +1625,28 @@
                       <select id="aex-depth-select" class="aex-select"></select>
                     </div>
                     <div class="aex-option">
-                      <label class="aex-field-label" for="aex-goal-select">Goal</label>
+                      <label class="aex-field-label" for="aex-goal-select">Study goal</label>
                       <select id="aex-goal-select" class="aex-select"></select>
                     </div>
                     <div class="aex-option">
-                      <label class="aex-field-label" for="aex-order-select">Order</label>
+                      <label class="aex-field-label" for="aex-order-select">Sort order</label>
                       <select id="aex-order-select" class="aex-select"></select>
                     </div>
                   </div>
+                  <label class="aex-force-toggle">
+                    <input type="checkbox" id="aex-force-fresh" />
+                    <span>Bypass Library cache and re-extract fresh</span>
+                  </label>
                 </div>
               </div>
             </div>
 
-            <div id="aex-inline-error" class="lexicon-inline-error aex-inline-error" hidden>
-              <div class="inline-err-icon">
+            <div id="aex-inline-error" class="lexicon-inline-error aex-inline-error" role="alert" hidden>
+              <div class="inline-err-icon" aria-hidden="true">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
               </div>
               <div class="inline-err-content">
-                <div class="inline-err-title" id="aex-err-title">Capture failed</div>
+                <div class="inline-err-title" id="aex-err-title">Extraction failed</div>
                 <div class="inline-err-msg" id="aex-err-msg">Something went wrong.</div>
               </div>
               <div class="inline-err-actions">
@@ -1633,46 +1658,164 @@
             <div id="aex-ai-selector-mount"></div>
           </div>
 
+          <!-- Real-Stage SSE Loading Progress Card -->
           <div class="aex-progress-card" id="aex-progress" hidden aria-live="polite">
             <div class="aex-progress-head">
               <div class="aex-progress-title-row">
                 <div class="editor-spinner" aria-hidden="true"></div>
-                <span class="aex-progress-title" id="aex-progress-status">Preparing source...</span>
+                <div class="aex-progress-copy">
+                  <span class="aex-progress-title" id="aex-progress-status">Preparing source…</span>
+                  <span class="aex-progress-detail" id="aex-progress-detail">Pipeline started</span>
+                </div>
               </div>
-              <span class="aex-progress-elapsed ltr-num" id="aex-progress-elapsed">0.0s</span>
+              <div class="aex-progress-right">
+                <span class="aex-progress-source-chip" id="aex-progress-source-chip" hidden></span>
+                <span class="aex-progress-elapsed ltr-num" id="aex-progress-elapsed">0.0s</span>
+                <button type="button" class="btn-secondary btn-xs aex-cancel-btn" id="aex-progress-cancel">Cancel</button>
+              </div>
+            </div>
+            <div class="aex-progress-bar" id="aex-progress-bar-role" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="6">
+              <div class="aex-progress-bar-fill" id="aex-progress-bar-fill" style="width: 6%"></div>
             </div>
             <div class="aex-progress-steps">
               <div class="aex-pstep" id="aex-step-1"><span class="aex-pstep-num">1</span><span>Read source</span></div>
-              <div class="aex-pstep" id="aex-step-2"><span class="aex-pstep-num">2</span><span>Clean text</span></div>
-              <div class="aex-pstep" id="aex-step-3"><span class="aex-pstep-num">3</span><span>Analyze</span></div>
-              <div class="aex-pstep" id="aex-step-4"><span class="aex-pstep-num">4</span><span>Save guide</span></div>
+              <div class="aex-pstep" id="aex-step-2"><span class="aex-pstep-num">2</span><span>Prepare &amp; chunk</span></div>
+              <div class="aex-pstep" id="aex-step-3"><span class="aex-pstep-num">3</span><span>Extract phrases</span></div>
+              <div class="aex-pstep" id="aex-step-4"><span class="aex-pstep-num">4</span><span>Ground &amp; save</span></div>
             </div>
+            <div class="aex-stream-preview" id="aex-stream-preview"></div>
           </div>
 
+          <!-- Recent Guides Strip -->
           <div class="aex-recent-shelf">
             <div class="recent-shelf-head">
               <div class="aex-section-label">Recent Guides</div>
               <button type="button" class="btn-link" id="aex-jump-library">
-                <span>View All (<span id="aex-recent-total">0</span>)</span>
+                <span>Open Library (<span id="aex-recent-total">0</span>)</span>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </button>
             </div>
             <div class="aex-recent-row" id="aex-recent-row"></div>
             <div class="aex-empty-recent" id="aex-empty-recent" hidden>
-              <p>Your captured guides will appear here for instant review.</p>
+              <p>Your extracted phrase guides will appear here for one-click study.</p>
             </div>
           </div>
         </div>
 
-        <!-- VIEW 2: STUDY GUIDE -->
+        <!-- ============================================================== -->
+        <!-- PAGE 2: LIBRARY (/extractor/library)                           -->
+        <!-- ============================================================== -->
+        <div id="aex-view-library" class="aex-view-panel" hidden>
+          <div class="aex-library-card">
+            <div class="aex-library-head">
+              <div>
+                <h1 class="aex-library-title">Phrase Library</h1>
+                <p class="aex-library-sub" id="aex-library-total">0 guides</p>
+              </div>
+              <button type="button" class="btn-vox btn-sm" id="aex-lib-header-new-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>New Extraction</span>
+              </button>
+            </div>
+
+            <div class="aex-lib-toolbar">
+              <div class="aex-item-search aex-library-search">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="search" id="aex-library-search" placeholder="Search title, creator, or summary..." aria-label="Search saved guides" autocomplete="off" />
+              </div>
+
+              <div class="aex-lib-selects">
+                <select id="aex-lib-status-select" class="aex-select aex-lib-select" aria-label="Filter by study status">
+                  <option value="all">All status</option>
+                  <option value="new">Not started</option>
+                  <option value="progress">In progress</option>
+                  <option value="done">Completed</option>
+                </select>
+                <select id="aex-lib-sort-select" class="aex-select aex-lib-select" aria-label="Sort library">
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                  <option value="title">Title A–Z</option>
+                  <option value="items">Most phrases</option>
+                  <option value="progress">Most progress</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="filter-pills aex-lib-source-filters" id="aex-lib-source-filters" role="group" aria-label="Filter by source type"></div>
+
+            <div class="aex-inline-error" id="aex-library-error" role="alert" hidden>
+              <div class="inline-err-content">
+                <div class="inline-err-title">Could not load Library</div>
+                <div class="inline-err-msg" id="aex-library-error-msg"></div>
+              </div>
+              <button type="button" class="btn-micro" id="aex-library-retry-btn">Retry</button>
+            </div>
+
+            <div class="aex-library-grid" id="aex-library-grid"></div>
+
+            <div class="aex-lib-pagination" id="aex-library-pagination" hidden>
+              <span class="aex-lib-page-info ltr-num" id="aex-lib-page-info"></span>
+              <div class="aex-lib-page-btns">
+                <button type="button" class="btn-secondary btn-sm" id="aex-lib-prev-btn">Previous</button>
+                <button type="button" class="btn-secondary btn-sm" id="aex-lib-next-btn">Next</button>
+              </div>
+            </div>
+
+            <div class="aex-library-empty" id="aex-library-empty" hidden>
+              <h3 id="aex-library-empty-title">Your Library is empty</h3>
+              <p id="aex-library-empty-desc">Extract phrases from any video, article, audio, screenshot, or text and reopen them anytime.</p>
+              <div class="aex-empty-actions">
+                <button type="button" class="btn-vox btn-sm" id="aex-library-new-btn">New Extraction</button>
+                <button type="button" class="btn-secondary btn-sm" id="aex-library-clear-filters-btn" hidden>Clear Filters</button>
+              </div>
+            </div>
+
+            <div class="signed-out-gate-card" id="aex-library-auth-gate" hidden>
+              <div class="gate-card-kicker">Account Required</div>
+              <h3>Sign in to access your Anything to Phrases Library</h3>
+              <p>Every extracted study guide, study progress, and custom title syncs privately to your account.</p>
+              <div class="gate-card-actions">
+                <button type="button" class="btn-vox" data-open-auth="login">Sign in</button>
+                <button type="button" class="btn-secondary" data-open-auth="register">Create account</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- PAGE 3: ITEM DETAIL (/extractor/library/:id)                   -->
+        <!-- ============================================================== -->
         <div id="aex-view-note" class="aex-view-panel" hidden>
+          <!-- Loading Skeleton for Direct Deep Links -->
+          <div class="aex-note-card aex-detail-skeleton" id="aex-detail-skeleton" hidden aria-busy="true">
+            <div class="aex-skel-bar aex-skel-bar--sm"></div>
+            <div class="aex-skel-bar aex-skel-bar--hero"></div>
+            <div class="aex-skel-bar aex-skel-bar--body"></div>
+            <div class="aex-detail-skel-cards">
+              <div class="aex-skel-card"></div>
+              <div class="aex-skel-card"></div>
+              <div class="aex-skel-card"></div>
+            </div>
+          </div>
+
+          <!-- Not Found / Error State -->
+          <div class="aex-note-card aex-detail-error" id="aex-detail-error" hidden role="alert">
+            <h2 id="aex-detail-error-title">Study guide not found</h2>
+            <p id="aex-detail-error-msg">This study guide could not be loaded.</p>
+            <div class="aex-empty-actions">
+              <button type="button" class="btn-vox btn-sm" id="aex-detail-back-err">Back to Library</button>
+              <button type="button" class="btn-secondary btn-sm" id="aex-detail-retry-err">Retry</button>
+            </div>
+          </div>
+
+          <!-- Ready Study Guide -->
           <div class="aex-note-card" id="aex-note-card">
             <div class="aex-note-head">
               <div class="aex-note-head-top">
                 <div class="aex-note-breadcrumbs">
-                  <button type="button" class="btn-back-crumb" id="aex-back-to-extract">
+                  <button type="button" class="btn-back-crumb" id="aex-back-to-library">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                    <span>Capture</span>
+                    <span>Library</span>
                   </button>
                   <span class="crumb-sep">/</span>
                   <span class="crumb-current" id="aex-note-creator">Source</span>
@@ -1680,11 +1823,11 @@
 
                 <div class="aex-note-actions">
                   <div class="aex-note-inspectors">
-                    <button type="button" class="aex-icon-btn" id="aex-source-toggle" aria-expanded="false" aria-controls="aex-source-panel" title="Source text" aria-label="Source text">
+                    <button type="button" class="aex-icon-btn" id="aex-source-toggle" aria-expanded="false" aria-controls="aex-source-panel" title="Show original source text" aria-label="Show original source text">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>
                     </button>
                     <span class="aex-info-anchor">
-                      <button type="button" class="aex-icon-btn" id="aex-info-toggle" aria-expanded="false" aria-controls="aex-source-meta" title="Details" aria-label="Source details">
+                      <button type="button" class="aex-icon-btn" id="aex-info-toggle" aria-expanded="false" aria-controls="aex-source-meta" title="Extraction details" aria-label="Extraction details">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5"></path><path d="M12 8h.01"></path></svg>
                       </button>
                       <div class="aex-source-meta-card" id="aex-source-meta" role="dialog" aria-label="Source details" hidden></div>
@@ -1698,6 +1841,10 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                     <span>Copy</span>
                   </button>
+                  <button type="button" class="btn-secondary btn-sm" id="aex-export-btn" title="Download Markdown file">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <span>Export</span>
+                  </button>
                   <button type="button" class="btn-secondary btn-sm" id="aex-open-source-btn" hidden>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
                     <span>Source</span>
@@ -1706,11 +1853,15 @@
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                     <span>Studio</span>
                   </button>
-                  <button type="button" class="btn-secondary btn-sm" id="aex-new-btn" title="New capture">
+                  <button type="button" class="btn-secondary btn-sm" id="aex-reextract-btn" hidden title="Re-extract fresh with AI">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                    <span>Re-extract</span>
+                  </button>
+                  <button type="button" class="btn-secondary btn-sm" id="aex-new-btn" title="New extraction">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     <span>New</span>
                   </button>
-                  <button type="button" class="btn-vox btn-sm" id="aex-save-all-btn" title="Save all items to Vocabulary">
+                  <button type="button" class="btn-vox btn-sm" id="aex-save-all-btn" title="Save all phrases to Vocabulary Vault">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
                     <span>Save All</span>
                   </button>
@@ -1718,27 +1869,36 @@
               </div>
 
               <div class="aex-note-head-main">
-                <h2 class="aex-note-title" id="aex-note-title">Study guide</h2>
+                <div id="aex-note-title-wrap">
+                  <h2 class="aex-note-title" id="aex-note-title">Study guide</h2>
+                </div>
                 <div class="aex-note-meta" id="aex-note-meta">
                   <span class="meta-tag" id="aex-note-source-label">Source</span>
                   <span class="meta-tag" id="aex-note-model">Model</span>
                   <span class="meta-tag" id="aex-note-time">Time</span>
-                  <span class="meta-tag aex-count-tag" id="aex-note-count">0 items</span>
+                  <span class="meta-tag aex-count-tag" id="aex-note-count">0 phrases</span>
+                  <span class="meta-tag aex-cached-tag" id="aex-note-cached-badge" hidden>Cached</span>
                 </div>
               </div>
             </div>
 
             <div class="aex-note-progress-row">
               <div id="aex-note-progress" class="subject-progress-bar" hidden></div>
-              <button type="button" class="aex-scope-toggle" id="aex-note-scope" data-aex-scope="1" aria-pressed="false" title="Show unstudied items only">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M6.61 6.61A18.15 18.15 0 0 0 2 12s3 8 10 8a9.12 9.12 0 0 0 5.39-1.61"></path><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"></path><path d="m2 2 20 20"></path></svg>
-                <span>Hide studied</span>
-                <span class="aex-scope-count ltr-num" id="aex-study-count">0</span>
-              </button>
-              <button type="button" class="btn-secondary btn-sm aex-complete-note-btn" id="aex-complete-note-btn" aria-pressed="false">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                <span>Mark Complete</span>
-              </button>
+              <div class="aex-study-toggles">
+                <button type="button" class="aex-scope-toggle" id="aex-note-scope" aria-pressed="false" title="Show only phrases you haven't studied yet">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+                  <span>Remaining only</span>
+                  <span class="aex-scope-count ltr-num" id="aex-study-count">0</span>
+                </button>
+                <button type="button" class="aex-scope-toggle" id="aex-recall-toggle" aria-pressed="false" title="Hide meanings to test active recall">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                  <span>Recall mode</span>
+                </button>
+                <button type="button" class="btn-secondary btn-sm aex-complete-note-btn" id="aex-complete-note-btn" aria-pressed="false">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                  <span>Mark Complete</span>
+                </button>
+              </div>
             </div>
 
             <div class="aex-summary-banner" id="aex-note-summary-wrap" hidden>
@@ -1752,8 +1912,8 @@
             <section class="aex-source-panel" id="aex-source-panel" aria-label="Selectable source text" hidden>
               <div class="aex-source-panel-head">
                 <div>
-                  <div class="aex-section-label">Source text</div>
-                  <p class="aex-source-reader-hint">Select any word for instant definition.</p>
+                  <div class="aex-section-label">Original source text</div>
+                  <p class="aex-source-reader-hint">Highlight any word or phrase for instant contextual definition &amp; IPA.</p>
                 </div>
                 <button type="button" class="aex-icon-btn" id="aex-source-close" aria-label="Close source text" title="Close">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
@@ -1765,41 +1925,21 @@
             <div class="aex-note-body-grid">
               <div class="aex-items-column">
                 <div class="aex-items-toolbar">
-                  <div class="filter-pills" id="aex-category-filters" role="group" aria-label="Filter items"></div>
-                  <div class="aex-item-search">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="search" id="aex-note-search" placeholder="Filter..." aria-label="Filter items" autocomplete="off" />
+                  <div class="filter-pills" id="aex-category-filters" role="group" aria-label="Filter by category"></div>
+                  <div class="aex-toolbar-right">
+                    <select id="aex-note-level-filter" class="aex-select aex-note-level-select" aria-label="Filter by CEFR level" hidden></select>
+                    <div class="aex-item-search">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      <input type="search" id="aex-note-search" placeholder="Filter phrases..." aria-label="Filter phrases" autocomplete="off" />
+                    </div>
                   </div>
                 </div>
                 <div class="aex-items-list" id="aex-items-list"></div>
                 <div class="aex-empty-filter" id="aex-empty-filter" hidden>
                   <h4 id="aex-empty-title">No matches</h4>
-                  <p id="aex-empty-copy">Try another category, clear the search, or turn off “Hide studied”.</p>
+                  <p id="aex-empty-copy">Try another category, CEFR level, or clear your search.</p>
                 </div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- VIEW 3: LIBRARY -->
-        <div id="aex-view-library" class="aex-view-panel" hidden>
-          <div class="aex-library-card">
-            <div class="aex-library-head">
-              <div>
-                <div class="aex-section-label">Library</div>
-                <h2 class="aex-library-title">Saved Guides</h2>
-                <p class="aex-library-sub" id="aex-library-total">0 saved</p>
-              </div>
-              <div class="aex-item-search aex-library-search">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="search" id="aex-library-search" placeholder="Search guides..." aria-label="Search saved guides" autocomplete="off" />
-              </div>
-            </div>
-            <div class="aex-library-grid" id="aex-library-grid"></div>
-            <div class="aex-library-empty" id="aex-library-empty" hidden>
-              <h3>No saved guides yet</h3>
-              <p>Capture phrases from any video, link, screenshot, or text and reopen them anytime.</p>
-              <button type="button" class="btn-vox btn-sm" id="aex-library-new-btn">New Capture</button>
             </div>
           </div>
         </div>
@@ -2244,7 +2384,12 @@
   <script defer src="/ai-provider-selector.js"></script>
   <script defer src="/tech-lexicon-modes.js"></script>
   <script defer src="/tech-lexicon.js"></script>
-  <script defer src="/american-extractor.js"></script>
+  <script defer src="/anything-to-phrases/api.js"></script>
+  <script defer src="/anything-to-phrases/store.js"></script>
+  <script defer src="/anything-to-phrases/extract-page.js"></script>
+  <script defer src="/anything-to-phrases/library-page.js"></script>
+  <script defer src="/anything-to-phrases/detail-page.js"></script>
+  <script defer src="/anything-to-phrases/index.js"></script>
   <script defer src="/learning-library.js"></script>
   <script defer src="/app.js"></script>
 </body>

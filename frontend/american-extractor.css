@@ -1186,61 +1186,21 @@
   min-width: 0;
 }
 
-#section-american-extractor .ft-ai-col:has(> .ft-ai-select)::after {
-  content: '';
-  position: absolute;
-  bottom: 1px;
-  inset-inline-end: 1px;
-  width: 44px;
-  height: 36px;
-  border-radius: 0 10px 10px 0;
-  pointer-events: none;
-  z-index: 2;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"),
-    linear-gradient(90deg, transparent 0%, var(--aex-surface-inset) 42%);
-  background-repeat: no-repeat, no-repeat;
-  background-position: right 12px center, 0 0;
-  background-size: 12px 12px, 100% 100%;
-}
-
-[dir="rtl"] #section-american-extractor .ft-ai-col:has(> .ft-ai-select)::after {
-  border-radius: 10px 0 0 10px;
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"),
-    linear-gradient(270deg, transparent 0%, var(--aex-surface-inset) 42%);
-  background-position: left 12px center, 0 0;
-}
-
-#section-american-extractor .ft-ai-col:has(> .ft-ai-select:focus)::after {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230071e3' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"),
-    linear-gradient(90deg, transparent 0%, var(--aex-surface) 42%);
-}
-
-[data-theme="dark"] #section-american-extractor .ft-ai-col:has(> .ft-ai-select:focus)::after {
-  background-image:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230a84ff' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"),
-    linear-gradient(90deg, transparent 0%, var(--aex-surface) 42%);
-}
-
-#section-american-extractor .ft-ai-label {
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: var(--aex-text-tertiary);
-}
-
+/* Fix: clean single chevron with proper right padding and zero text collision */
 #section-american-extractor .ft-ai-select {
   appearance: none !important;
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
   width: 100%;
   height: 38px;
-  padding: 0 38px 0 12px;
+  padding: 0 36px 0 12px;
   border-radius: 11px;
   border: 1px solid var(--aex-border);
   background-color: var(--aex-surface-inset);
-  background-image: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 12px 12px;
   color: var(--aex-text-primary);
   font-family: var(--aex-font-text);
   font-size: 0.83rem;
@@ -1254,7 +1214,14 @@
 }
 
 [dir="rtl"] #section-american-extractor .ft-ai-select {
-  padding: 0 12px 0 38px;
+  padding: 0 12px 0 36px;
+  background-position: left 12px center;
+}
+
+#section-american-extractor .ft-ai-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--aex-text-tertiary);
 }
 
 #section-american-extractor .ft-ai-select:focus {
@@ -2846,9 +2813,14 @@
 
 @media (prefers-reduced-motion: reduce) {
   #section-american-extractor .aex-header,
+  #section-american-extractor .aex-shell-bar,
   #section-american-extractor .aex-view-panel,
   #section-american-extractor .aex-kicker-dot,
-  #section-american-extractor .aex-pstep.is-active::after,
+  #section-american-extractor .aex-shell-brand-dot,
+  #section-american-extractor .aex-pstep.active::after,
+  #section-american-extractor .aex-skel-bar,
+  #section-american-extractor .aex-skel-card,
+  #section-american-extractor .aex-stream-pill,
   #section-american-extractor .aex-item {
     animation: none !important;
   }
@@ -2857,6 +2829,655 @@
   #section-american-extractor *::before,
   #section-american-extractor *::after {
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ==========================================================================
+   13. ANYTHING TO PHRASES — 3-PAGE REDESIGN ENHANCEMENTS
+   ========================================================================== */
+
+/* Compact Unified Feature Shell Bar */
+#section-american-extractor .aex-shell-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-radius: 20px;
+  background: var(--aex-surface);
+  border: 1px solid var(--aex-border);
+  box-shadow: var(--aex-shadow-card), var(--aex-specular);
+}
+
+#section-american-extractor .aex-shell-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: none;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--aex-text-primary);
+  font-family: var(--aex-font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  transition: opacity 0.16s ease;
+}
+
+#section-american-extractor .aex-shell-brand:hover {
+  opacity: 0.78;
+}
+
+#section-american-extractor .aex-shell-brand-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--aex-blue);
+  box-shadow: 0 0 0 3px var(--aex-blue-wash);
+}
+
+/* Focused Extract Page Hero */
+#section-american-extractor .aex-extract-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 6px 4px 0;
+}
+
+#section-american-extractor .aex-extract-hero .aex-headline {
+  font-size: clamp(1.75rem, 3vw, 2.35rem);
+}
+
+#section-american-extractor .aex-extract-hero .aex-subcopy {
+  max-width: 60ch;
+  font-size: 0.96rem;
+}
+
+/* Live Source-Type Detection Pill & Clear Button */
+#section-american-extractor .aex-url-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: var(--aex-fill);
+  color: var(--aex-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+#section-american-extractor .aex-url-clear-btn:hover {
+  background: var(--aex-fill-hover);
+  color: var(--aex-text-primary);
+}
+
+#section-american-extractor .aex-detect-pill {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px 12px;
+  border-radius: 980px;
+  font-size: 0.79rem;
+  font-weight: 500;
+  background: var(--aex-blue-wash);
+  color: var(--aex-blue);
+  border: 1px solid rgba(0, 113, 227, 0.22);
+}
+
+#section-american-extractor .aex-detect-pill[data-tone="error"] {
+  background: var(--aex-red-wash);
+  color: var(--aex-red);
+  border-color: rgba(255, 59, 48, 0.28);
+}
+
+#section-american-extractor .aex-detect-pill[data-tone="video"],
+#section-american-extractor .aex-detect-pill[data-tone="audio"] {
+  background: var(--aex-teal-wash);
+  color: var(--aex-teal);
+  border-color: rgba(0, 130, 153, 0.25);
+}
+
+#section-american-extractor .aex-detect-pill[data-tone="social"] {
+  background: var(--aex-orange-wash);
+  color: var(--aex-orange);
+  border-color: rgba(255, 149, 0, 0.26);
+}
+
+#section-american-extractor .aex-detect-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+#section-american-extractor .aex-detect-sep {
+  opacity: 0.55;
+}
+
+/* Text Stats & Saved Lesson Banner */
+#section-american-extractor .aex-text-stats {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#section-american-extractor .aex-text-meta-pill {
+  padding: 2px 9px;
+  border-radius: 980px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: var(--aex-fill);
+  color: var(--aex-text-secondary);
+}
+
+#section-american-extractor .aex-text-meta-pill[data-tone="ok"] {
+  background: var(--aex-green-wash);
+  color: var(--aex-green);
+}
+
+#section-american-extractor .aex-text-meta-pill[data-tone="warn"] {
+  background: var(--aex-orange-wash);
+  color: var(--aex-orange);
+}
+
+#section-american-extractor .aex-text-meta-pill[data-tone="info"] {
+  background: var(--aex-blue-wash);
+  color: var(--aex-blue);
+}
+
+#section-american-extractor .aex-lesson-selected-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--aex-blue-wash);
+  border: 1px solid rgba(0, 113, 227, 0.24);
+  font-size: 0.83rem;
+  color: var(--aex-text-primary);
+}
+
+#section-american-extractor .aex-file-chip-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+#section-american-extractor .aex-file-meta {
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--aex-text-secondary);
+}
+
+/* Primary 2-Col Options + Force Toggle */
+#section-american-extractor .aex-options-primary--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+#section-american-extractor .aex-options-secondary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+#section-american-extractor .aex-force-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--aex-text-secondary);
+  cursor: pointer;
+}
+
+#section-american-extractor .aex-force-toggle input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--aex-blue);
+}
+
+/* Real-Stage SSE Progress Bar & Streaming Phrase Previews */
+#section-american-extractor .aex-progress-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+#section-american-extractor .aex-progress-detail {
+  font-size: 0.79rem;
+  color: var(--aex-text-secondary);
+}
+
+#section-american-extractor .aex-progress-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+#section-american-extractor .aex-progress-source-chip {
+  padding: 3px 10px;
+  border-radius: 980px;
+  background: var(--aex-fill-subtle);
+  border: 1px solid var(--aex-border);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--aex-text-secondary);
+}
+
+#section-american-extractor .aex-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 980px;
+  background: var(--aex-fill);
+  overflow: hidden;
+}
+
+#section-american-extractor .aex-progress-bar-fill {
+  height: 100%;
+  border-radius: 980px;
+  background: var(--aex-blue);
+  transition: width 0.35s var(--aex-ease);
+}
+
+#section-american-extractor .aex-stream-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+#section-american-extractor .aex-stream-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  background: var(--aex-surface-inset);
+  border: 1px solid var(--aex-border);
+  font-size: 0.82rem;
+  animation: aexPopIn 0.25s var(--aex-spring) both;
+}
+
+#section-american-extractor .aex-stream-term {
+  font-weight: 700;
+  color: var(--aex-text-primary);
+}
+
+#section-american-extractor .aex-stream-ipa {
+  font-family: var(--aex-font-mono);
+  font-size: 0.76rem;
+  color: var(--aex-text-secondary);
+}
+
+#section-american-extractor .aex-stream-cefr {
+  padding: 1px 6px;
+  border-radius: 980px;
+  background: var(--aex-blue-wash);
+  color: var(--aex-blue);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* Shimmering Skeletons */
+@keyframes aexSkelPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.9; }
+}
+
+#section-american-extractor .aex-stream-skel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 180px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--aex-surface-inset);
+  border: 1px solid var(--aex-border);
+}
+
+#section-american-extractor .aex-skel-bar {
+  display: block;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--aex-fill);
+  animation: aexSkelPulse 1.4s ease-in-out infinite;
+}
+
+#section-american-extractor .aex-skel-bar--sm { width: 90px; height: 10px; }
+#section-american-extractor .aex-skel-bar--title { width: 75%; height: 15px; }
+#section-american-extractor .aex-skel-bar--hero { width: 55%; height: 24px; }
+#section-american-extractor .aex-skel-bar--body { width: 92%; height: 12px; }
+#section-american-extractor .aex-skel-bar--meta { width: 50%; height: 10px; }
+
+#section-american-extractor .aex-lib-skel {
+  gap: 12px;
+  min-height: 180px;
+}
+
+#section-american-extractor .aex-detail-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px;
+}
+
+#section-american-extractor .aex-detail-skel-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 8px;
+}
+
+#section-american-extractor .aex-skel-card {
+  height: 132px;
+  border-radius: 18px;
+  background: var(--aex-fill-subtle);
+  border: 1px solid var(--aex-border);
+  animation: aexSkelPulse 1.4s ease-in-out infinite;
+}
+
+#section-american-extractor .aex-detail-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 48px 24px;
+}
+
+#section-american-extractor .aex-detail-error h2 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+#section-american-extractor .aex-detail-error p {
+  margin: 0;
+  color: var(--aex-text-secondary);
+}
+
+/* Library Toolbar, Filters, Rename & Pagination */
+#section-american-extractor .aex-lib-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#section-american-extractor .aex-lib-toolbar .aex-library-search {
+  flex: 1 1 260px;
+}
+
+#section-american-extractor .aex-lib-selects {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#section-american-extractor .aex-lib-select {
+  width: auto;
+  min-width: 148px;
+}
+
+#section-american-extractor .aex-lib-source-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#section-american-extractor .aex-title-open-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  text-align: start;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+#section-american-extractor .aex-title-open-btn:hover {
+  color: var(--aex-blue);
+}
+
+#section-american-extractor .aex-rename-form,
+#section-american-extractor .aex-detail-rename-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#section-american-extractor .aex-rename-input {
+  flex: 1 1 200px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 11px;
+  border-radius: 10px;
+  border: 1.5px solid var(--aex-blue);
+  background: var(--aex-surface);
+  color: var(--aex-text-primary);
+  font-family: var(--aex-font-text);
+  font-size: 0.92rem;
+  font-weight: 600;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--aex-blue-wash);
+}
+
+#section-american-extractor .aex-rename-actions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+#section-american-extractor .aex-lib-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--aex-border);
+  background: var(--aex-fill-subtle);
+  color: var(--aex-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+#section-american-extractor .aex-lib-icon-btn:hover {
+  background: var(--aex-blue-wash);
+  border-color: rgba(0, 113, 227, 0.25);
+  color: var(--aex-blue);
+}
+
+#section-american-extractor .aex-lib-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--aex-border);
+}
+
+#section-american-extractor .aex-lib-page-info {
+  font-size: 0.82rem;
+  color: var(--aex-text-secondary);
+}
+
+#section-american-extractor .aex-lib-page-btns,
+#section-american-extractor .aex-empty-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Detail Page Title Rename, Study Toggles & Recall Mode */
+#section-american-extractor .aex-note-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+#section-american-extractor .aex-title-edit-btn {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+#section-american-extractor .aex-title-edit-btn:hover {
+  opacity: 1;
+}
+
+#section-american-extractor .aex-cached-tag {
+  background: var(--aex-green-wash);
+  color: var(--aex-green);
+}
+
+#section-american-extractor .aex-study-toggles {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#section-american-extractor .aex-toolbar-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#section-american-extractor .aex-note-level-select {
+  width: auto;
+  min-width: 130px;
+  height: 36px;
+}
+
+#section-american-extractor .aex-item-surface {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--aex-text-tertiary);
+}
+
+#section-american-extractor .aex-item-freq {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 980px;
+  font-size: 0.71rem;
+  font-weight: 600;
+  background: var(--aex-fill-subtle);
+  color: var(--aex-text-tertiary);
+}
+
+#section-american-extractor .aex-sense-grid.is-masked {
+  position: relative;
+  cursor: pointer;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+#section-american-extractor .aex-sense-grid.is-masked .aex-sense,
+#section-american-extractor .aex-sense-grid.is-masked .aex-translation {
+  filter: blur(8px);
+  user-select: none;
+  pointer-events: none;
+}
+
+#section-american-extractor .aex-recall-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(128, 128, 134, 0.14);
+  backdrop-filter: blur(4px);
+  border-radius: 14px;
+  border: 1px dashed var(--aex-border-strong);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--aex-text-primary);
+}
+
+#section-american-extractor .aex-recall-veil:hover {
+  background: var(--aex-blue-wash);
+  border-color: var(--aex-blue);
+  color: var(--aex-blue);
+}
+
+/* Mobile Touch Target Compliance (>= 44px) & Clean Stacking */
+@media (max-width: 640px) {
+  body.is-extractor-view .workspace-topbar {
+    background: var(--ap-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  #section-american-extractor .aex-shell-bar {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  #section-american-extractor .aex-options-primary--2,
+  #section-american-extractor .aex-options-secondary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #section-american-extractor .preset-pill,
+  #section-american-extractor .ft-ai-keys-btn,
+  #section-american-extractor .btn-refresh-agents,
+  #section-american-extractor .aex-util-btn,
+  #section-american-extractor .aex-check-btn,
+  #section-american-extractor .aex-lib-open-btn,
+  #section-american-extractor .aex-lib-icon-btn,
+  #section-american-extractor .aex-recent-delete,
+  #section-american-extractor .aex-note-actions .btn-sm,
+  #section-american-extractor .aex-icon-btn,
+  #section-american-extractor .aex-scope-toggle,
+  #section-american-extractor .aex-cancel-btn {
+    min-height: 44px;
+  }
+
+  #section-american-extractor .btn-refresh-agents,
+  #section-american-extractor .aex-util-btn,
+  #section-american-extractor .aex-check-btn,
+  #section-american-extractor .aex-lib-icon-btn,
+  #section-american-extractor .aex-recent-delete,
+  #section-american-extractor .aex-icon-btn {
+    min-width: 44px;
+  }
+
+  #section-american-extractor .aex-lib-selects {
+    width: 100%;
+  }
+
+  #section-american-extractor .aex-lib-select {
+    flex: 1 1 0%;
+    min-width: 0;
+    height: 44px;
+  }
+
+  #section-american-extractor .aex-toolbar-right {
+    width: 100%;
+  }
+
+  #section-american-extractor .aex-note-level-select {
+    width: 100%;
+    height: 44px;
   }
 }
 
