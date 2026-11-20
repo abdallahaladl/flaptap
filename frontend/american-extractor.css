@@ -1186,25 +1186,32 @@
   min-width: 0;
 }
 
-/* Fix: clean single chevron with proper right padding and zero text collision */
-#section-american-extractor .ft-ai-select {
+/* Fix: disable apple-components pseudo-mask & draw clean single chevron with proper right padding */
+#section-american-extractor .ft-ai-col:has(> .ft-ai-select)::after {
+  display: none !important;
+  content: none !important;
+}
+
+#section-american-extractor .ft-ai-select,
+#section-american-extractor .ft-ai-selector--compact .ft-ai-select {
   appearance: none !important;
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
   width: 100%;
   height: 38px;
-  padding: 0 36px 0 12px;
+  padding: 0 38px 0 12px !important;
   border-radius: 11px;
   border: 1px solid var(--aex-border);
   background-color: var(--aex-surface-inset);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 12px center;
-  background-size: 12px 12px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2386868b' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 12px center !important;
+  background-size: 12px 12px !important;
   color: var(--aex-text-primary);
   font-family: var(--aex-font-text);
   font-size: 0.83rem;
   font-weight: 500;
+  line-height: normal;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1213,9 +1220,10 @@
   transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 
-[dir="rtl"] #section-american-extractor .ft-ai-select {
-  padding: 0 12px 0 36px;
-  background-position: left 12px center;
+[dir="rtl"] #section-american-extractor .ft-ai-select,
+[dir="rtl"] #section-american-extractor .ft-ai-selector--compact .ft-ai-select {
+  padding: 0 12px 0 38px !important;
+  background-position: left 12px center !important;
 }
 
 #section-american-extractor .ft-ai-label {
@@ -3437,6 +3445,21 @@
     grid-template-columns: minmax(0, 1fr);
   }
 
+  #section-american-extractor .aex-shell-brand,
+  #section-american-extractor .aex-view-nav .lexicon-view-tab,
+  #section-american-extractor .aex-source-tabs .linguist-tab-btn,
+  #section-american-extractor .command-quick-btn,
+  #section-american-extractor .aex-customize-toggle,
+  #section-american-extractor .aex-select,
+  #section-american-extractor .ft-ai-select,
+  #section-american-extractor .ft-ai-selector--compact .ft-ai-select,
+  #section-american-extractor .filter-pill,
+  #section-american-extractor .btn-back-crumb,
+  #section-american-extractor .lexicon-lang-pill,
+  #section-american-extractor .aex-item-search,
+  #section-american-extractor .btn-link,
+  #section-american-extractor .btn-vox,
+  #section-american-extractor .btn-secondary,
   #section-american-extractor .preset-pill,
   #section-american-extractor .ft-ai-keys-btn,
   #section-american-extractor .btn-refresh-agents,
@@ -3450,6 +3473,22 @@
   #section-american-extractor .aex-scope-toggle,
   #section-american-extractor .aex-cancel-btn {
     min-height: 44px;
+  }
+
+  #section-american-extractor .aex-select,
+  #section-american-extractor .ft-ai-select,
+  #section-american-extractor .ft-ai-selector--compact .ft-ai-select {
+    height: 44px;
+    line-height: normal;
+  }
+
+  #section-american-extractor .lexicon-lang-pill select {
+    min-height: 42px;
+    line-height: normal;
+  }
+
+  #section-american-extractor .aex-item-search input {
+    min-height: 42px;
   }
 
   #section-american-extractor .btn-refresh-agents,
@@ -3469,6 +3508,7 @@
     flex: 1 1 0%;
     min-width: 0;
     height: 44px;
+    line-height: normal;
   }
 
   #section-american-extractor .aex-toolbar-right {

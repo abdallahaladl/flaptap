@@ -352,6 +352,8 @@
       liveError: '',
       probeSeq: 0,
       pendingRefreshPromise: null,
+      lastAuthUserId: undefined,
+      lastRefreshedAt: 0,
     };
 
     const extraSummaryHtml = extraSummary
@@ -722,6 +724,8 @@
             setStatus('yellow', 'No API keys found');
             renderModelsDropdown();
           }
+          state.lastRefreshedAt = Date.now();
+          state.lastAuthUserId = global.FlaptapWorkspace?.getUser?.()?.id || null;
         } catch (err) {
           setStatus('red', err?.message || 'Key scan failed');
         } finally {
@@ -833,6 +837,17 @@
         await refreshKeys(false);
       },
       refreshKeys,
+      onAuthChanged: (user) => {
+        const nextUserId = user?.id || null;
+        if (
+          state.models.length > 0 &&
+          state.lastAuthUserId === nextUserId &&
+          Date.now() - state.lastRefreshedAt < 10000
+        ) {
+          return;
+        }
+        refreshKeys(false);
+      },
       getSelection,
       setSelection: async ({ keyId, model, variant }) => {
         if (keyId && keyId !== state.selectedKeyId && state.keys.some((k) => k.id === keyId)) {
@@ -878,9 +893,14 @@
     return api;
   }
 
-  global.addEventListener('flaptap:auth-changed', () => {
+  global.addEventListener('flaptap:auth-changed', (event) => {
+    const user = event?.detail?.user || null;
     for (const widget of activeWidgets) {
-      widget.refreshKeys(false);
+      if (typeof widget.onAuthChanged === 'function') {
+        widget.onAuthChanged(user);
+      } else {
+        widget.refreshKeys(false);
+      }
     }
   });
 
