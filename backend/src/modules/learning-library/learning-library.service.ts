@@ -7,6 +7,10 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { DEFAULT_LANGUAGE, getLanguage } from '../../core/ai/languages';
+import {
+  SHARED_CEFR_LEVELS,
+  SHARED_STUDY_GOALS,
+} from '../../core/ai/translation-rules.util';
 import { WordDefinitionResponse, WordLookupService } from '../../core/ai/word-lookup.service';
 import { AiProvidersService } from '../ai-providers/ai-providers.service';
 import { LearningDomainRegistry } from './domains/learning-domain.registry';
@@ -49,7 +53,7 @@ const HEAVY_GENERATION_DEADLINE_MS = 165000;
  * per item used to truncate a 5-item chunk mid-array, which is exactly how a
  * 10-item request ended up saving only 4.
  */
-const OUTPUT_TOKENS_PER_ITEM = 620;
+const OUTPUT_TOKENS_PER_ITEM = 760;
 /** Reasoning models bill thinking tokens inside max_tokens before any JSON. */
 const REASONING_HEADROOM_TOKENS = 4800;
 const HEAVY_OUTPUT_TOKENS_FLOOR = 16384;
@@ -110,6 +114,7 @@ export interface GenerateLibraryItemsResult {
   stats: LearningLibraryStats;
   categoryCounts: Record<string, number>;
   registerCounts: Record<string, number>;
+  cefrCounts: Record<string, number>;
   requestedCount: number;
   fulfilledCount: number;
   skippedDuplicatesCount: number;
@@ -139,13 +144,25 @@ export class LearningLibraryService {
   listDomains(): {
     defaultDomainId: string;
     domains: LearningDomainMetadata[];
+    levels: typeof SHARED_CEFR_LEVELS;
+    studyGoals: typeof SHARED_STUDY_GOALS;
     aiEngine: LearningLibraryAiEngineInfo;
   } {
     return {
       defaultDomainId: this.domainRegistry.getDefaultDomainId(),
       domains: this.domainRegistry.listDomains(),
+      levels: SHARED_CEFR_LEVELS,
+      studyGoals: SHARED_STUDY_GOALS,
       aiEngine: this.getEngineInfo(),
     };
+  }
+
+  getItemById(userId: string, id: string): LearningLibraryItem {
+    const item = this.repository.getItemById(userId, id);
+    if (!item) {
+      throw new NotFoundException('Learning library item not found.');
+    }
+    return item;
   }
 
   listLibrary(userId: string, query: ListLibraryItemsQuery) {
@@ -156,6 +173,7 @@ export class LearningLibraryService {
     const stats = this.repository.getStats(userId, domainId);
     const categoryCounts = this.repository.getCategoryCounts(userId, domainId);
     const registerCounts = this.repository.getRegisterCounts(userId, domainId);
+    const cefrCounts = this.repository.getCefrCounts(userId, domainId);
     const batches = this.repository.listBatches(userId, domainId);
 
     return {
@@ -170,6 +188,7 @@ export class LearningLibraryService {
       hasMore: paged.hasMore,
       categoryCounts,
       registerCounts,
+      cefrCounts,
       stats,
       batches,
     };
@@ -303,6 +322,8 @@ export class LearningLibraryService {
 
     const focusTopic = String(dto.focusTopic || '').trim().slice(0, 200);
     const preferredRegister = String(dto.register || '').trim().slice(0, 80);
+    const preferredLevel = String(dto.level || 'all').trim().slice(0, 32);
+    const preferredStudyGoal = String(dto.studyGoal || 'full').trim().slice(0, 40);
     const lang = getLanguage(dto.targetLanguage || userNativeLanguage || DEFAULT_LANGUAGE);
 
     const existingRows = this.repository.getExistingForDedup(userId, domainId);
@@ -472,6 +493,8 @@ export class LearningLibraryService {
         angleHint: plan.angleHint,
         focusTopic,
         preferredRegister,
+        level: preferredLevel,
+        studyGoal: preferredStudyGoal,
         targetLanguageCode: lang.code,
         targetLanguageName: lang.name,
         targetLanguageNative: lang.native,
@@ -688,6 +711,7 @@ export class LearningLibraryService {
           stats: this.repository.getStats(userId, domainId),
           categoryCounts: this.repository.getCategoryCounts(userId, domainId),
           registerCounts: this.repository.getRegisterCounts(userId, domainId),
+          cefrCounts: this.repository.getCefrCounts(userId, domainId),
           requestedCount,
           fulfilledCount: 0,
           skippedDuplicatesCount,
@@ -717,6 +741,7 @@ export class LearningLibraryService {
     const stats = this.repository.getStats(userId, domainId);
     const categoryCounts = this.repository.getCategoryCounts(userId, domainId);
     const registerCounts = this.repository.getRegisterCounts(userId, domainId);
+    const cefrCounts = this.repository.getCefrCounts(userId, domainId);
 
     this.logger.log(
       `Generated ${persistedItems.length}/${requestedCount} unique items in "${domainId}" (skipped ${skippedDuplicatesCount} duplicates, ${totalExecutionMs}ms, model=${batch.modelName})`,
@@ -728,6 +753,7 @@ export class LearningLibraryService {
       stats,
       categoryCounts,
       registerCounts,
+      cefrCounts,
       requestedCount,
       fulfilledCount: persistedItems.length,
       skippedDuplicatesCount,

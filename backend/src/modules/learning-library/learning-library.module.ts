@@ -10,6 +10,7 @@ import { ProgrammingTerminologyDomainStrategy } from './domains/programming-term
 import { TechnicalVocabularyDomainStrategy } from './domains/technical-vocabulary.strategy';
 import { LearningLibraryController } from './learning-library.controller';
 import { LearningLibraryRepository } from './learning-library.repository';
+import { LearningLibraryTranslationService } from './learning-library-translation.service';
 import { LearningLibraryService } from './learning-library.service';
 
 @Module({
@@ -25,8 +26,9 @@ import { LearningLibraryService } from './learning-library.service';
     ProgrammingTerminologyDomainStrategy,
     LearningDomainRegistry,
     LearningLibraryRepository,
+    LearningLibraryTranslationService,
     LearningLibraryService,
   ],
-  exports: [LearningLibraryService, LearningDomainRegistry],
+  exports: [LearningLibraryService, LearningLibraryTranslationService, LearningDomainRegistry],
 })
 export class LearningLibraryModule {}

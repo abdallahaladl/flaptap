@@ -1,10 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { normalizeCefrTag } from '../../core/ai/translation-rules.util';
 import { SqliteService } from '../../core/database/sqlite.service';
 import {
   GeneratedLearningCandidate,
+  LearningExampleItem,
   LearningLibraryBatch,
   LearningLibraryItem,
   LearningLibraryStats,
+  LearningUsagePattern,
   ListLibraryItemsQuery,
   MasteryStatus,
   UpdateLibraryItemDto,
@@ -50,6 +53,7 @@ export class LearningLibraryRepository {
       item.register,
       item.tone,
       item.level,
+      item.cefr,
       item.spokenForm,
       item.coreMeaning,
       item.localizedMeaning,
@@ -59,9 +63,19 @@ export class LearningLibraryRepository {
       ...(item.variations || []),
       ...(item.combinations || []),
       ...(item.relatedExpressions || []),
-      ...(item.usagePatterns || []).flatMap((p) => [p.pattern, p.meaning, p.example]),
+      ...(item.usagePatterns || []).flatMap((p) => [
+        p.pattern,
+        p.meaning,
+        p.example,
+        p.exampleTranslation || '',
+      ]),
       ...(item.patternSlots || []).flatMap((s) => [s.slot, s.role, s.example]),
-      ...(item.examples || []).flatMap((e) => [e.speakerContext, e.sentence, e.explanation]),
+      ...(item.examples || []).flatMap((e) => [
+        e.speakerContext,
+        e.sentence,
+        e.translation || '',
+        e.explanation,
+      ]),
     ];
     return parts
       .map((s) => String(s || '').trim())
@@ -103,6 +117,7 @@ export class LearningLibraryRepository {
       register: String(row.register || ''),
       tone: String(row.tone || ''),
       level: String(row.level || ''),
+      cefr: normalizeCefrTag(row.cefr) || normalizeCefrTag(row.level),
       ipa: String(row.ipa || ''),
       spokenForm: String(row.spoken_form || ''),
       phoneticBreakdown: String(row.phonetic_breakdown || ''),
@@ -214,14 +229,14 @@ export class LearningLibraryRepository {
       `INSERT OR IGNORE INTO learning_library_items (
         id, user_id, batch_id, domain_id, category_id, category_label,
         expression, canonical_key, slug_key, token_signature,
-        register, tone, level, ipa, spoken_form, phonetic_breakdown,
+        register, tone, level, cefr, ipa, spoken_form, phonetic_breakdown,
         core_meaning, localized_meaning, target_language,
         textbook_equivalent, native_context, mistakes_to_avoid,
         variations_json, combinations_json, usage_patterns_json,
         pattern_slots_json, examples_json, related_json, search_blob,
         is_favorite, mastery_status, review_count, user_notes,
         agent_name, model_name, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'new', 0, '', ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'new', 0, '', ?, ?, ?, ?)`,
     );
 
     for (const c of candidates) {
@@ -246,6 +261,7 @@ export class LearningLibraryRepository {
         c.register,
         c.tone,
         c.level,
+        normalizeCefrTag(c.cefr) || normalizeCefrTag(c.level),
         c.ipa,
         c.spokenForm,
         c.phoneticBreakdown,
@@ -473,6 +489,24 @@ export class LearningLibraryRepository {
     return out;
   }
 
+  getCefrCounts(userId: string, domainId: string): Record<string, number> {
+    const rows = this.sqlite.db
+      .prepare(
+        `SELECT cefr, level
+         FROM learning_library_items
+         WHERE user_id = ? AND domain_id = ?`,
+      )
+      .all(userId, domainId) as Array<{ cefr: string; level: string }>;
+
+    const out: Record<string, number> = {};
+    for (const r of rows) {
+      const tag = normalizeCefrTag(r.cefr) || normalizeCefrTag(r.level);
+      if (!tag) continue;
+      out[tag] = (out[tag] || 0) + 1;
+    }
+    return out;
+  }
+
   listBatches(userId: string, domainId: string): LearningLibraryBatch[] {
     const rows = this.sqlite.db
       .prepare(
@@ -520,6 +554,14 @@ export class LearningLibraryRepository {
     if (query.register && query.register !== 'all') {
       conditions.push('LOWER(register) = ?');
       params.push(query.register.trim().toLowerCase());
+    }
+
+    if (query.level && query.level !== 'all') {
+      const cefrTag = normalizeCefrTag(query.level);
+      if (cefrTag) {
+        conditions.push('(UPPER(cefr) = ? OR UPPER(level) LIKE ?)');
+        params.push(cefrTag, `%${cefrTag}%`);
+      }
     }
 
     if (query.q && query.q.trim()) {
@@ -628,6 +670,84 @@ export class LearningLibraryRepository {
       item.sequenceNumber = this.buildSequenceMap(userId, item.domainId).get(item.id) || 0;
     }
     return item;
+  }
+
+  getItemsByIds(userId: string, ids: string[]): LearningLibraryItem[] {
+    const cleanIds = Array.from(new Set(ids.map((id) => String(id || '').trim()).filter(Boolean)));
+    if (cleanIds.length === 0) return [];
+    const placeholders = cleanIds.map(() => '?').join(', ');
+    const rows = this.sqlite.db
+      .prepare(`SELECT * FROM learning_library_items WHERE user_id = ? AND id IN (${placeholders})`)
+      .all(userId, ...cleanIds) as Array<Record<string, any>>;
+
+    const byId = new Map(rows.map((r) => [String(r.id), this.rowToItem(r)]));
+    const seqByDomain = new Map<string, Map<string, number>>();
+    return cleanIds
+      .map((id) => {
+        const item = byId.get(id);
+        if (!item) return undefined;
+        let seq = seqByDomain.get(item.domainId);
+        if (!seq) {
+          seq = this.buildSequenceMap(userId, item.domainId);
+          seqByDomain.set(item.domainId, seq);
+        }
+        if (!item.sequenceNumber) item.sequenceNumber = seq.get(item.id) || 0;
+        return item;
+      })
+      .filter((item): item is LearningLibraryItem => Boolean(item));
+  }
+
+  updateItemTranslations(
+    userId: string,
+    id: string,
+    patch: {
+      targetLanguage: string;
+      localizedMeaning?: string;
+      examples?: LearningExampleItem[];
+      usagePatterns?: LearningUsagePattern[];
+    },
+  ): LearningLibraryItem | null {
+    const existing = this.getItemById(userId, id);
+    if (!existing) return null;
+
+    const nextTargetLang = patch.targetLanguage || existing.targetLanguage;
+    const nextLocalized =
+      typeof patch.localizedMeaning === 'string' && patch.localizedMeaning.trim()
+        ? patch.localizedMeaning.trim()
+        : existing.localizedMeaning;
+    const nextExamples = Array.isArray(patch.examples) ? patch.examples : existing.examples;
+    const nextPatterns = Array.isArray(patch.usagePatterns)
+      ? patch.usagePatterns
+      : existing.usagePatterns;
+
+    const updatedCandidate: GeneratedLearningCandidate = {
+      ...existing,
+      targetLanguage: nextTargetLang,
+      localizedMeaning: nextLocalized,
+      examples: nextExamples,
+      usagePatterns: nextPatterns,
+    };
+    const nextSearchBlob = this.buildSearchBlob(updatedCandidate);
+    const now = new Date().toISOString();
+
+    this.sqlite.db
+      .prepare(
+        `UPDATE learning_library_items
+         SET target_language = ?, localized_meaning = ?, examples_json = ?, usage_patterns_json = ?, search_blob = ?, updated_at = ?
+         WHERE id = ? AND user_id = ?`,
+      )
+      .run(
+        nextTargetLang,
+        nextLocalized,
+        JSON.stringify(nextExamples),
+        JSON.stringify(nextPatterns),
+        nextSearchBlob,
+        now,
+        id,
+        userId,
+      );
+
+    return this.getItemById(userId, id);
   }
 
   updateItem(userId: string, id: string, dto: UpdateLibraryItemDto): LearningLibraryItem | null {

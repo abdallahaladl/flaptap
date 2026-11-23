@@ -324,6 +324,7 @@ export class SqliteService implements OnModuleDestroy {
       'pattern_slots_json',
       "TEXT NOT NULL DEFAULT '[]'",
     );
+    this.ensureColumn('learning_library_items', 'cefr', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('american_extractor_notes', 'content_hash', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('american_extractor_notes', 'updated_at', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('american_extractor_notes', 'source_id', "TEXT NOT NULL DEFAULT ''");

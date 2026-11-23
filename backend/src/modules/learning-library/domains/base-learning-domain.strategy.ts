@@ -1,3 +1,12 @@
+import { getLanguage } from '../../../core/ai/languages';
+import {
+  buildSentenceTranslationGuidance,
+  buildTermTranslationGuidance,
+  findLinguisticOption,
+  normalizeCefrTag,
+  SHARED_CEFR_LEVELS,
+  SHARED_STUDY_GOALS,
+} from '../../../core/ai/translation-rules.util';
 import {
   GeneratedLearningCandidate,
   LearningDomainCategorySpec,
@@ -61,12 +70,14 @@ export abstract class BaseLearningDomainStrategy implements ILearningDomainStrat
       '',
       'LANGUAGE & SHAPE:',
       '- "localizedMeaning" is the expression\'s own equivalent in the target language named by the user, same register, same slots; never the explanation, never an example, never a literal word-for-word rendering.',
+      '- Whenever the target language is NOT English ("en"), EVERY example in "examples" MUST include a natural, idiomatic "translation" of its "sentence", and EVERY item in "usagePatterns" with an "example" MUST include its idiomatic "exampleTranslation".',
       '- Everything else is crisp native English; zero ESL textbook basics ("good morning", "how are you", "in my opinion", "a lot of").',
       '- ACCENT SOURCE OF TRUTH: General American only (rhotic /ɹ/, Flap-T /ɾ/, schwa /ə/, linking, stress). Never British IPA, British vocabulary, or spelling.',
       '- ipa is required on every item: transcribe the pronounced expression or spokenForm exactly, marking primary stress (ˈ) on the stressed syllable.',
+      '- cefr is required on every item: honest CEFR tag ("A1" | "A2" | "B1" | "B2" | "C1" | "C2").',
       '- phoneticBreakdown <=12 words (Flap-T /ɾ/, schwa /ə/, linking, stress).',
       '- coreMeaning <=16 words. textbookEquivalent = stiff ESL contrast (3-7 words). nativeContext <=12 words (who/when). mistakesToAvoid <=12 words.',
-      '- Exactly 2 examples with distinct 3-6 word where/when contexts; exactly 2 variations (never restate the expression itself); exactly 2 combinations; 1-2 usagePatterns; exactly 2 relatedExpressions.',
+      '- Exactly 2 examples with distinct 3-6 word where/when contexts (each with idiomatic "translation" when target language != en); exactly 2 variations (never restate the expression itself); exactly 2 combinations; 1-2 usagePatterns (with "exampleTranslation" when target language != en); exactly 2 relatedExpressions.',
       '',
       'OUTPUT (minified JSON only — no markdown, no commentary, no emojis):',
       '{"items":[{',
@@ -74,29 +85,28 @@ export abstract class BaseLearningDomainStrategy implements ILearningDomainStrat
       '"patternSlots":[{"slot":"X","role":"what X stands for","example":"real filler"}],',
       '"localizedMeaning":"expression\'s own Target Language equivalent, slots kept",',
       '"categoryId":"exact id from the user\'s list","register":"exact register",',
-      '"tone":"1 word","level":"2-3 words","ipa":"/General American IPA/",',
+      '"tone":"1 word","level":"2-3 words","cefr":"A1|A2|B1|B2|C1|C2","ipa":"/General American IPA/",',
       '"spokenForm":"one filled spoken line, no brackets","phoneticBreakdown":"<=12 words",',
       '"coreMeaning":"<=16 words","textbookEquivalent":"3-7 words",',
       '"nativeContext":"<=12 words","mistakesToAvoid":"<=12 words",',
       '"variations":["..."],"combinations":["..."],',
-      '"usagePatterns":[{"pattern":"...","meaning":"<=8 words","example":"<=12 words"}],',
-      '"examples":[{"speakerContext":"where, when","sentence":"<=16 words, fills slots","explanation":"<=8 words"},{...}],',
+      '"usagePatterns":[{"pattern":"...","meaning":"<=8 words","example":"<=12 words","exampleTranslation":"idiomatic target-language translation of example"}],',
+      '"examples":[{"speakerContext":"where, when","sentence":"<=16 words, fills slots","translation":"idiomatic target-language translation of sentence","explanation":"<=8 words"},{...}],',
       '"relatedExpressions":["...","..."]',
       '}]}',
     ].join('\n');
 
-    const localizedMeaningRule =
-      ctx.targetLanguageCode === 'ar'
-        ? [
-            'Write "localizedMeaning" as the expression\'s own equivalent in living Egyptian Arabic (عامية مصرية), same spoken register and the same slots.',
-            'Translate ONLY the expression itself: never "coreMeaning", never an example, never "spokenForm", never a past-tense event.',
-            'Use Egyptian words and grammar (بقى، كده، عشان، اللي، مش، خلّي، في الصورة، على طول) and everyday tech talk (شغّال، عطّل، بلوكر); no MSA (سوف، ليس، الذي، يجب أن), no word-for-word phrasing.',
-            'Calibration: "off the top of my head, [X]" -> "من دماغي كده، [X]" (never "على راسي"); "pull the receipts on [X]" -> "هات الأدلة على [X]"; "fat-finger [X]" -> "تدوس على [X] بالغلط".',
-          ].join(' ')
-        : [
-            `Write "localizedMeaning" as the expression's own equivalent in living ${ctx.targetLanguageName}, same spoken register and the same slots.`,
-            'Translate ONLY the expression itself: never "coreMeaning", never an example, never "spokenForm", never a past-tense event; no literal word-for-word phrasing.',
-          ].join(' ');
+    const language = getLanguage(ctx.targetLanguageCode);
+    const localizedMeaningRule = buildTermTranslationGuidance(language, {
+      preserveSlots: true,
+      multiSense: false,
+    });
+    const sentenceTranslationRule = buildSentenceTranslationGuidance(language, [
+      'examples[].translation',
+      'usagePatterns[].exampleTranslation',
+    ]);
+    const levelOpt = findLinguisticOption(SHARED_CEFR_LEVELS, ctx.level);
+    const goalOpt = findLinguisticOption(SHARED_STUDY_GOALS, ctx.studyGoal);
 
     const exclusionSection =
       ctx.excludedExpressions.length > 0
@@ -106,11 +116,14 @@ export abstract class BaseLearningDomainStrategy implements ILearningDomainStrat
     const userPrompt = [
       `Generate exactly ${ctx.askCount} unique ${this.metadata.itemNounPlural} for "${this.metadata.title}".`,
       `Return exactly ${ctx.askCount} complete objects in "items" (array length ${ctx.askCount}) — no fewer, no placeholders.`,
-      `Target language for "localizedMeaning": ${ctx.targetLanguageName} (${ctx.targetLanguageNative}). ${localizedMeaningRule}`,
+      `Target language: ${ctx.targetLanguageName} (${ctx.targetLanguageNative}). ${localizedMeaningRule}`,
+      language.code !== 'en' ? `Sentence translations: ${sentenceTranslationRule}` : '',
       focusedCategory
         ? `Category: ${focusedCategory.id} | ${focusedCategory.label} | ${focusedCategory.promptGuidance}`
         : `Categories (use only these ids, distribute evenly):\n${categoryLines}`,
       `Registers: ${this.metadata.registers.join(' | ')}`,
+      levelOpt.id !== 'all' ? `Learner level (CEFR): ${levelOpt.prompt}` : '',
+      goalOpt.id !== 'full' ? `Study goal: ${goalOpt.prompt}` : '',
       ctx.angleHint ? `Angle: ${ctx.angleHint}` : '',
       ctx.focusTopic ? `Topic / vibe: "${ctx.focusTopic}"` : '',
       ctx.preferredRegister ? `Preferred register: ${ctx.preferredRegister}` : '',
@@ -169,8 +182,18 @@ export abstract class BaseLearningDomainStrategy implements ILearningDomainStrat
       const pattern = String((entry as any).pattern || '').replace(/\s+/g, ' ').trim();
       const meaning = String((entry as any).meaning || '').replace(/\s+/g, ' ').trim();
       const example = String((entry as any).example || '').replace(/\s+/g, ' ').trim();
+      const exampleTranslation = String(
+        (entry as any).exampleTranslation || (entry as any).example_translation || (entry as any).translation || '',
+      )
+        .replace(/\s+/g, ' ')
+        .trim();
       if (!pattern) continue;
-      out.push({ pattern, meaning, example });
+      out.push({
+        pattern,
+        meaning,
+        example,
+        ...(exampleTranslation && exampleTranslation !== example ? { exampleTranslation } : {}),
+      });
       if (out.length >= 4) break;
     }
     return out;
@@ -265,12 +288,21 @@ export abstract class BaseLearningDomainStrategy implements ILearningDomainStrat
         .replace(/\s+/g, ' ')
         .trim();
       if (!sentence) continue;
+      const translation = String(
+        (entry as any).translation ||
+          (entry as any).sentenceTranslation ||
+          (entry as any).localizedSentence ||
+          '',
+      )
+        .replace(/\s+/g, ' ')
+        .trim();
       out.push({
         speakerContext:
           String((entry as any).speakerContext || (entry as any).context || 'Everyday Spoken')
             .replace(/\s+/g, ' ')
             .trim(),
         sentence,
+        ...(translation && translation !== sentence ? { translation } : {}),
         explanation: String((entry as any).explanation || (entry as any).note || '')
           .replace(/\s+/g, ' ')
           .trim(),
@@ -356,13 +388,20 @@ export abstract class BaseLearningDomainStrategy implements ILearningDomainStrat
       spokenForm = '';
     }
 
+    const rawLevel = String(raw.level || 'Native Fluency').replace(/\s+/g, ' ').trim();
+    const cefr =
+      normalizeCefrTag(raw.cefr) ||
+      normalizeCefrTag(rawLevel) ||
+      normalizeCefrTag(ctx.level);
+
     return {
       expression: cleanedExpression,
       categoryId: category.id,
       categoryLabel: category.label,
       register,
       tone: String(raw.tone || 'conversational').replace(/\s+/g, ' ').trim(),
-      level: String(raw.level || 'Native Fluency').replace(/\s+/g, ' ').trim(),
+      level: rawLevel,
+      cefr,
       ipa: String(raw.ipa || '').replace(/\s+/g, ' ').trim(),
       spokenForm,
       phoneticBreakdown: String(raw.phoneticBreakdown || raw.phonetics || '')
