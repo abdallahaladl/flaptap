@@ -118,7 +118,7 @@ export class AmericanExtractorRepository {
       .prepare(
         `SELECT * FROM american_extractor_notes
          WHERE user_id = ? AND content_hash = ?
-         ORDER BY created_at DESC
+         ORDER BY created_at DESC, rowid DESC
          LIMIT 1`,
       )
       .get(userId, hash) as Record<string, any> | undefined;
@@ -137,7 +137,7 @@ export class AmericanExtractorRepository {
                 COALESCE(updated_at, created_at) AS updated_at, created_at
          FROM american_extractor_notes
          WHERE user_id = ?
-         ORDER BY created_at DESC
+         ORDER BY created_at DESC, rowid DESC
          LIMIT ?`,
       )
       .all(userId, safeLimit) as Array<ExtractionHistoryItem & { completion_json?: string }>;
@@ -148,19 +148,21 @@ export class AmericanExtractorRepository {
   listPaginated(userId: string, query: ListHistoryQuery = {}): PaginatedHistoryResult {
     const rows = this.sqlite.db
       .prepare(
-        `SELECT id, title, creator, summary, source_type, source_url, source_label,
+        `SELECT rowid AS _rowid, id, title, creator, summary, source_type, source_url, source_label,
                 target_language, agent_name, model_name, reasoning_level, item_count,
                 execution_time_ms, COALESCE(is_completed, 0) AS is_completed,
                 COALESCE(completion_json, '{}') AS completion_json,
                 COALESCE(updated_at, created_at) AS updated_at, created_at
          FROM american_extractor_notes
          WHERE user_id = ?
-         ORDER BY created_at DESC
-         LIMIT 500`,
+         ORDER BY created_at DESC, rowid DESC`,
       )
-      .all(userId) as Array<ExtractionHistoryItem & { completion_json?: string }>;
+      .all(userId) as Array<ExtractionHistoryItem & { completion_json?: string; _rowid?: number }>;
 
-    const allItems = (rows || []).map((row) => this.mapHistoryRow(row));
+    const allItems = (rows || []).map((row) => ({
+      ...this.mapHistoryRow(row),
+      _rowid: Number(row._rowid) || 0,
+    }));
     const total = allItems.length;
 
     let totalItems = 0;
@@ -204,34 +206,51 @@ export class AmericanExtractorRepository {
       return true;
     });
 
+    const compareNewest = (
+      a: ExtractionHistoryItem & { _rowid: number },
+      b: ExtractionHistoryItem & { _rowid: number },
+    ) =>
+      String(b.created_at).localeCompare(String(a.created_at)) ||
+      b._rowid - a._rowid ||
+      String(b.id).localeCompare(String(a.id));
+
     filtered = [...filtered].sort((a, b) => {
       if (sort === 'oldest') {
-        return String(a.created_at).localeCompare(String(b.created_at));
+        return (
+          String(a.created_at).localeCompare(String(b.created_at)) ||
+          a._rowid - b._rowid ||
+          String(a.id).localeCompare(String(b.id))
+        );
       }
       if (sort === 'title') {
-        return String(a.title || '').localeCompare(String(b.title || ''), undefined, {
-          sensitivity: 'base',
-        });
+        return (
+          String(a.title || '').localeCompare(String(b.title || ''), undefined, {
+            sensitivity: 'base',
+          }) || compareNewest(a, b)
+        );
       }
       if (sort === 'items') {
-        return (b.item_count || 0) - (a.item_count || 0) || String(b.created_at).localeCompare(String(a.created_at));
+        return (b.item_count || 0) - (a.item_count || 0) || compareNewest(a, b);
       }
       if (sort === 'progress') {
         const pctA = a.item_count > 0 ? a.completed_count / a.item_count : 0;
         const pctB = b.item_count > 0 ? b.completed_count / b.item_count : 0;
-        return pctB - pctA || String(b.created_at).localeCompare(String(a.created_at));
+        return pctB - pctA || compareNewest(a, b);
       }
-      return String(b.created_at).localeCompare(String(a.created_at));
+      return compareNewest(a, b);
     });
 
     const filteredTotal = filtered.length;
     const hasPagination = query.page !== undefined || query.limit !== undefined;
     const pageSize = hasPagination
-      ? Math.max(1, Math.min(100, Number(query.limit) || 12))
+      ? Math.max(1, Math.min(100, Math.floor(Number(query.limit) || 10)))
       : Math.max(60, filteredTotal || 60);
-    const page = hasPagination ? Math.max(1, Number(query.page) || 1) : 1;
+    const totalPages = Math.max(1, hasPagination ? Math.ceil(filteredTotal / pageSize) : 1);
+    const page = hasPagination
+      ? Math.min(totalPages, Math.max(1, Math.floor(Number(query.page) || 1)))
+      : 1;
     const start = (page - 1) * pageSize;
-    const items = filtered.slice(start, start + pageSize);
+    const items = filtered.slice(start, start + pageSize).map(({ _rowid, ...rest }) => rest);
 
     return {
       items,
@@ -239,7 +258,8 @@ export class AmericanExtractorRepository {
       filteredTotal,
       page,
       pageSize,
-      hasMore: start + items.length < filteredTotal,
+      totalPages,
+      hasMore: page < totalPages,
       stats: {
         totalGuides: total,
         totalItems,
@@ -335,8 +355,8 @@ export class AmericanExtractorRepository {
     return Number(row?.total) || 0;
   }
 
-  private mapHistoryRow(row: ExtractionHistoryItem & { completion_json?: string }): ExtractionHistoryItem {
-    const { completion_json, ...rest } = row;
+  private mapHistoryRow(row: ExtractionHistoryItem & { completion_json?: string; _rowid?: number }): ExtractionHistoryItem {
+    const { completion_json, _rowid, ...rest } = row;
     const itemCount = Number(row.item_count) || 0;
     const completedCount = countCompletedItems(completion_json, itemCount);
     const derivedCompleted = itemCount > 0 && completedCount >= itemCount ? 1 : 0;

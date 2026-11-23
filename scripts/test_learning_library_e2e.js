@@ -270,6 +270,27 @@ async function runE2E() {
       `All 28 persisted items across 3 batches (20+5+3) are 100% unique (canonical=${canonicalSet.size}, slug=${slugSet.size})`,
     );
 
+    // Verify server-side SQL pagination across the 28 persisted items
+    const [page1Json, page2Json, page3Json] = await Promise.all([
+      fetch(`${BASE_URL}/api/learning-library/items?domainId=natural_american_english&page=1&limit=10`, { headers: authA }).then((r) => r.json()),
+      fetch(`${BASE_URL}/api/learning-library/items?domainId=natural_american_english&page=2&limit=10`, { headers: authA }).then((r) => r.json()),
+      fetch(`${BASE_URL}/api/learning-library/items?domainId=natural_american_english&page=3&limit=10`, { headers: authA }).then((r) => r.json()),
+    ]);
+    const pagedIds = new Set([
+      ...page1Json.items.map((i) => i.id),
+      ...page2Json.items.map((i) => i.id),
+      ...page3Json.items.map((i) => i.id),
+    ]);
+    assert(
+      page1Json.items.length === 10 &&
+        page2Json.items.length === 10 &&
+        page3Json.items.length === 8 &&
+        page1Json.totalPages === 3 &&
+        page1Json.filteredCount === 28 &&
+        pagedIds.size === 28,
+      `Server SQL pagination splits 28 items cleanly (10 + 10 + 8 across 3 pages, 28 unique IDs)`,
+    );
+
     // -------------------------------------------------------------------------
     // PART 4: Domain Reusability & User Isolation & CRUD
     // -------------------------------------------------------------------------
@@ -369,13 +390,14 @@ async function runE2E() {
       const sectionVisible = await page.$eval('#section-learning-library', (el) => !el.hidden);
       const navActive = await page.$eval('.sidebar-nav-link.active', (el) => el.dataset.routeSection);
       const noTopbarTabs = (await page.$$('.workspace-topbar .nav-tab')).length === 0;
+      const noSidebarCountPill = (await page.$('.sidebar-nav-link[data-route-section="learning-library"] .nav-count-pill')) === null;
       const sidebarVisible = await page.evaluate(() => {
         const sb = document.querySelector('.app-sidebar');
         return sb ? sb.getBoundingClientRect().width >= 60 : false;
       });
       assert(
-        sectionVisible && navActive === 'learning-library' && noTopbarTabs && sidebarVisible,
-        'Learning Library dedicated /library route & left sidebar nav active without topbar tabs at 1280px',
+        sectionVisible && navActive === 'learning-library' && noTopbarTabs && noSidebarCountPill && sidebarVisible,
+        'Learning Library dedicated /library route & clean left sidebar nav active without count pill or topbar tabs at 1280px',
       );
 
       // Verify compact reusable real-time 3-dropdown selector (API Keys -> Live Models -> Dynamic Variants)
@@ -441,8 +463,21 @@ async function runE2E() {
 
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'll_generated_light.png'), fullPage: true });
 
-      // Test click-any-word contextual lookup inside generated card example
+      // Test click-any-word inside generated card example: shows popup action bar first (zero API cost), then Translate opens popover
       await page.click('#ll-browse-items-container .clickable-word');
+      await page.waitForFunction(
+        () => {
+          const menu = document.getElementById('selection-action-menu');
+          return Boolean(menu && !menu.hidden && menu.querySelectorAll('.selection-menu-btn').length >= 2);
+        },
+        { timeout: 8000 },
+      );
+      const deferredBeforeClick = await page.evaluate(() => {
+        const pop = document.getElementById('word-lookup-popover');
+        return !pop || pop.hidden === true;
+      });
+      assert(deferredBeforeClick, 'Clicking word reveals popup actions (Translate/Pronounce/Copy) before calling AI API');
+      await page.click('#selection-action-menu [data-selection-action="translate"]');
       await page.waitForFunction(
         () => {
           const pop = document.getElementById('word-lookup-popover');
@@ -451,7 +486,7 @@ async function runE2E() {
         },
         { timeout: 25000 },
       );
-      assert(true, 'Click-any-word inside Learning Library example opened contextual definition popover');
+      assert(true, 'Clicking Translate in popup action bar opened contextual definition popover');
       await page.click('#wp-close-btn');
 
       // Save first expression to Vocabulary Flashcards
@@ -534,6 +569,28 @@ async function runE2E() {
         `Compact Table default view rendered ${tableCheckState.tableRows} rows with synced completion check`,
       );
 
+      // Test themed Confirmation Dialog + Animated Timed Undo restore (restores back to 3 items)
+      await page.click('#ll-browse-items-container [data-ll-delete-item]');
+      await page.waitForFunction(
+        () => document.getElementById('ft-confirm-backdrop')?.hidden === false,
+        { timeout: 5000 },
+      );
+      await page.click('#ft-confirm-accept-btn');
+      await page.waitForFunction(
+        () =>
+          document.getElementById('ft-undo-toast')?.hidden === false &&
+          document.querySelectorAll('#ll-browse-items-container .ll-table tbody tr').length === 2,
+        { timeout: 5000 },
+      );
+      await page.click('#ft-undo-btn');
+      await page.waitForFunction(
+        () =>
+          document.getElementById('ft-undo-toast')?.hidden === true &&
+          document.querySelectorAll('#ll-browse-items-container .ll-table tbody tr').length === 3,
+        { timeout: 5000 },
+      );
+      assert(true, 'Themed confirmation dialog + animated timed Undo restored deleted Learning Library expression');
+
       await page.screenshot({ path: path.join(SCREENSHOT_DIR, 'll_browse_light.png'), fullPage: true });
 
       // Navigate directly to `/library/browse` and confirm hard reload preserves centralized library with all 3 items
@@ -554,6 +611,36 @@ async function runE2E() {
         { timeout: 10000 },
       );
       assert(true, 'Hard page.reload() on /library/browse keeps user in Learning Library with all 3 items');
+
+      // Test Pro Pagination in Browser with User A's 28-item account
+      await page.evaluate((tok) => {
+        localStorage.setItem('flaptap_auth_token', tok);
+      }, tokenA);
+      await page.goto(`${BASE_URL}/library`, { waitUntil: 'networkidle2', timeout: 20000 });
+      await page.waitForFunction(
+        () => {
+          const rows = document.querySelectorAll('#ll-browse-items-container .ll-table tbody tr, #ll-browse-items-container .ll-card').length;
+          const pager = document.getElementById('ll-browse-pagination');
+          return rows === 10 && pager && !pager.hidden;
+        },
+        { timeout: 10000 },
+      );
+      const page1Text = await page.$eval('#ll-page-info', (el) => el.textContent.trim());
+      await page.click('#ll-page-numbers [data-ll-page="2"]');
+      await page.waitForFunction(
+        () => document.getElementById('ll-page-info')?.textContent?.includes('Showing 11–20 of 28'),
+        { timeout: 10000 },
+      );
+      const page2Text = await page.$eval('#ll-page-info', (el) => el.textContent.trim());
+      await page.click('#ll-page-size-pills [data-ll-page-size="20"]');
+      await page.waitForFunction(
+        () => document.querySelectorAll('#ll-browse-items-container .ll-table tbody tr, #ll-browse-items-container .ll-card').length === 20,
+        { timeout: 10000 },
+      );
+      assert(
+        page1Text.includes('Showing 1–10 of 28') && page2Text.includes('Showing 11–20 of 28'),
+        `Browser pagination works end-to-end (${page1Text} -> ${page2Text} -> 20/page)`,
+      );
 
       // Multi-viewport + Dark Mode + RTL zero-overflow audit
       const viewports = [

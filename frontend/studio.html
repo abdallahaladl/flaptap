@@ -44,6 +44,9 @@
   <link rel="stylesheet" href="/styles.css" />
   <link rel="stylesheet" href="/studio.css" />
   <link rel="stylesheet" href="/studio-apple.css" />
+  <link rel="stylesheet" href="/check-button.css" />
+  <link rel="stylesheet" href="/celebration.css" />
+  <link rel="stylesheet" href="/confirm-undo.css" />
 </head>
 <body class="studio-body">
   <!-- Compositor-Only Loading & Error Overlay -->
@@ -120,6 +123,24 @@
             <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#download"></use></svg>
           </button>
 
+          <span class="topbar-cap-sep topbar-shortcuts-sep" aria-hidden="true"></span>
+
+          <button
+            type="button"
+            class="icon-action topbar-cap-btn topbar-shortcuts-btn"
+            id="studio-shortcuts-btn"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="shortcuts-popover"
+            title="Keyboard Shortcuts (?)"
+            aria-label="Keyboard Shortcuts"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="4" width="20" height="16" rx="2.5"></rect>
+              <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10"></path>
+            </svg>
+          </button>
+
           <span class="topbar-cap-sep" aria-hidden="true"></span>
 
           <div class="topbar-lang-wrap">
@@ -194,7 +215,7 @@
           <!-- Group 1: Playback Transport & Sentence Flow -->
           <div class="scb-pod scb-pod--primary">
             <div class="scb-cluster scb-cluster--playback" role="group" aria-label="Playback and sentence flow">
-              <button type="button" class="scb-btn" id="deck-prev-sent-btn" title="Previous Sentence (Shift+Left)" aria-label="Previous Sentence">
+              <button type="button" class="scb-btn" id="deck-prev-sent-btn" title="Previous Sentence (W / ↑)" aria-label="Previous Sentence">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <polygon points="19 20 9 12 19 4 19 20"></polygon>
                   <line x1="5" y1="19" x2="5" y2="5"></line>
@@ -211,14 +232,14 @@
                 </svg>
               </button>
 
-              <button type="button" class="scb-btn" id="deck-replay-sent-btn" title="Replay current sentence from start (R)" aria-label="Replay current sentence">
+              <button type="button" class="scb-btn" id="deck-replay-sent-btn" title="Replay current sentence from start (R / Backspace)" aria-label="Replay current sentence">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <polyline points="1 4 1 10 7 10"></polyline>
                   <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
                 </svg>
               </button>
 
-              <button type="button" class="scb-btn" id="deck-next-sent-btn" title="Next Sentence (Shift+Right)" aria-label="Next Sentence">
+              <button type="button" class="scb-btn" id="deck-next-sent-btn" title="Next Sentence (S / ↓)" aria-label="Next Sentence">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <polygon points="5 4 15 12 5 20 5 4"></polygon>
                   <line x1="19" y1="5" x2="19" y2="19"></line>
@@ -227,7 +248,7 @@
 
               <span class="scb-sep" aria-hidden="true"></span>
 
-              <button type="button" class="scb-btn scb-btn--flow" id="studio-flow-btn" data-end-action="loop" data-flow-state="loop" aria-label="Sentence Flow: Loop Once" title="Sentence Flow: Loop Once (click to cycle)" aria-pressed="true"></button>
+              <button type="button" class="scb-btn scb-btn--flow" id="studio-flow-btn" data-end-action="loop" data-flow-state="loop" aria-label="Sentence Flow: Loop Once" title="Sentence Flow: Loop Once (L: Loop · Shift+L: Cycle)" aria-pressed="true"></button>
             </div>
           </div>
 
@@ -257,7 +278,7 @@
 
               <span class="scb-sep" aria-hidden="true"></span>
 
-              <button type="button" class="scb-btn scb-btn--mouth" id="video-zoom-mouth-quick-btn" title="Quick Focus Mouth (2.2x) [Z]" aria-label="Focus on speaker mouth">
+              <button type="button" class="scb-btn scb-btn--mouth" id="video-zoom-mouth-quick-btn" title="Focus Mouth 2.2x (Z)" aria-label="Focus on speaker mouth">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M4 12c2.5-3 6-3 8-1 2-2 5.5-2 8 1-2.5 4-6 5-8 5s-5.5-1-8-5z"></path>
                 </svg>
@@ -276,15 +297,15 @@
           <!-- Group 3: Playback Speed (Positioned near Sentences pane) -->
           <div class="scb-pod scb-pod--speed" id="scb-speed-group" role="group" aria-label="Playback speed controls">
             <div class="scb-cluster scb-cluster--speed">
-              <button type="button" class="scb-btn scb-btn--speed-step scb-btn--speed-down" id="scb-speed-down-btn" aria-label="Decrease speed by 0.05x" title="Decrease speed (-0.05x) [">
+              <button type="button" class="scb-btn scb-btn--speed-step scb-btn--speed-down" id="scb-speed-down-btn" aria-label="Decrease speed by 0.05x" title="Decrease speed -0.05x (Q / [)">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
               </button>
-              <button type="button" class="scb-btn scb-btn--speed ltr-num" id="speed-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="speed-popover" aria-label="Playback Speed: 1.00x" title="Playback Speed — click for slider &amp; presets">
+              <button type="button" class="scb-btn scb-btn--speed ltr-num" id="speed-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="speed-popover" aria-label="Playback Speed: 1.00x" title="Playback Speed (` cycles quick presets · \ resets 1.00x)">
                 <span id="scb-speed-value">1.00x</span>
               </button>
-              <button type="button" class="scb-btn scb-btn--speed-step scb-btn--speed-up" id="scb-speed-up-btn" aria-label="Increase speed by 0.05x" title="Increase speed (+0.05x) ]">
+              <button type="button" class="scb-btn scb-btn--speed-step scb-btn--speed-up" id="scb-speed-up-btn" aria-label="Increase speed by 0.05x" title="Increase speed +0.05x (E / ])">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -294,13 +315,13 @@
               <span class="scb-sep" aria-hidden="true"></span>
 
               <div class="scb-inline-sub" id="quick-speed-bar" role="group" aria-label="Quick playback speed shortcuts">
-                <button type="button" class="qsb-btn qsb-btn--half ltr-num" id="qsb-speed-05-btn" data-quick-speed="0.5" aria-pressed="false" aria-label="Set playback speed to 0.5x" title="Half speed (0.5x)">
+                <button type="button" class="qsb-btn qsb-btn--half ltr-num" id="qsb-speed-05-btn" data-quick-speed="0.5" aria-pressed="false" aria-label="Set playback speed to 0.5x" title="Half speed 0.5x (` cycles quick speed)">
                   <span>0.5x</span>
                 </button>
-                <button type="button" class="qsb-btn qsb-btn--three-quarter ltr-num" id="qsb-speed-075-btn" data-quick-speed="0.75" aria-pressed="false" aria-label="Set playback speed to 0.75x" title="Slow practice speed (0.75x)">
+                <button type="button" class="qsb-btn qsb-btn--three-quarter ltr-num" id="qsb-speed-075-btn" data-quick-speed="0.75" aria-pressed="false" aria-label="Set playback speed to 0.75x" title="Slow practice speed 0.75x (` cycles quick speed)">
                   <span>0.75x</span>
                 </button>
-                <button type="button" class="qsb-btn qsb-btn--reset" id="qsb-speed-reset-btn" aria-label="Reset speed to 1.00x" title="Reset speed to 1.00x" disabled>
+                <button type="button" class="qsb-btn qsb-btn--reset" id="qsb-speed-reset-btn" aria-label="Reset speed to 1.00x" title="Reset speed to 1.00x (\)" disabled>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
                     <path d="M3 3v5h5"></path>
@@ -351,30 +372,30 @@
       <header class="canvas-header-dock" id="canvas-header-dock">
         <!-- Primary Learning Modes Rail (0ms switching, zero reload) -->
         <nav class="primary-modes-bar" role="tablist" aria-label="Learning modes">
-          <button type="button" class="mode-tab-btn active" data-mode="shadow" role="tab" aria-selected="true">
+          <button type="button" class="mode-tab-btn active" data-mode="shadow" role="tab" aria-selected="true" title="Shadow Mode (1)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
             <span data-i18n="modeShadow">Shadow</span>
             <span class="mode-badge ltr-num" id="badge-sentences-count">0</span>
           </button>
 
-          <button type="button" class="mode-tab-btn" data-mode="read" role="tab" aria-selected="false">
+          <button type="button" class="mode-tab-btn" data-mode="read" role="tab" aria-selected="false" title="Read Mode (2)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path></svg>
             <span data-i18n="modeRead">Read</span>
             <span class="mode-badge ltr-num" id="badge-paragraphs-count">0</span>
           </button>
 
-          <button type="button" class="mode-tab-btn" data-mode="listen" role="tab" aria-selected="false">
+          <button type="button" class="mode-tab-btn" data-mode="listen" role="tab" aria-selected="false" title="Listen / Dictation Mode (3)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
             <span data-i18n="modeListen">Listen</span>
           </button>
 
-          <button type="button" class="mode-tab-btn" data-mode="coach" role="tab" aria-selected="false">
+          <button type="button" class="mode-tab-btn" data-mode="coach" role="tab" aria-selected="false" title="AI Coach Mode (4)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
             <span data-i18n="modeCoach">Coach</span>
             <span class="mode-badge ltr-num" id="badge-coach-count" hidden>0</span>
           </button>
 
-          <button type="button" class="mode-tab-btn" data-mode="notes" role="tab" aria-selected="false">
+          <button type="button" class="mode-tab-btn" data-mode="notes" role="tab" aria-selected="false" title="Study Notes Mode (5)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
             <span data-i18n="modeNotes">Notes</span>
           </button>
@@ -419,7 +440,7 @@
                 <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#circle-check"></use></svg>
               </button>
             </div>
-            <button type="button" id="canvas-active-jump-btn" class="canvas-jump-btn" title="Jump to active line" aria-label="Jump to active line">
+            <button type="button" id="canvas-active-jump-btn" class="canvas-jump-btn" title="Jump to active line (G)" aria-label="Jump to active line">
               <span class="canvas-jump-dot" aria-hidden="true"></span>
               <span id="canvas-active-jump-num" class="ltr-num">#01</span>
             </button>
@@ -470,9 +491,8 @@
             <span id="dict-time-badge" class="sent-time-badge">00:00.000</span>
             <div style="display: inline-flex; align-items: center; gap: 8px;">
               <button type="button" class="item-check-btn" id="dict-check-complete-btn" aria-pressed="false" aria-label="Mark done" title="Mark done">
-                <svg class="chk-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <line class="chk-dash" x1="6.5" y1="12" x2="17.5" y2="12"></line>
-                  <polyline class="chk-tick" points="19.5 7 9.5 17 4.5 12"></polyline>
+                <svg class="ft-check-svg chk-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+                  <path class="ft-check-tick chk-tick" d="M5.2 12.75 L9.55 17.1 Q10.1 17.65 10.65 17.05 L18.9 7.35" pathLength="1" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path>
                 </svg>
                 <span id="dict-complete-label" class="visually-hidden">Mark done</span>
               </button>
@@ -671,13 +691,13 @@
     </div>
 
     <div class="zoom-focal-row">
-      <button type="button" class="zoom-focal-btn" id="zoom-focal-mouth-btn" title="Focus directly on speaker's mouth for pronunciation &amp; shadowing">
+      <button type="button" class="zoom-focal-btn" id="zoom-focal-mouth-btn" title="Focus directly on speaker's mouth for pronunciation &amp; shadowing (Z)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 12c2.5-3 6-3 8-1 2-2 5.5-2 8 1-2.5 4-6 5-8 5s-5.5-1-8-5z"></path>
         </svg>
         <span>Focus Mouth (2.2x)</span>
       </button>
-      <button type="button" class="zoom-focal-btn" id="zoom-focal-face-btn" title="Focus on face &amp; expressions">
+      <button type="button" class="zoom-focal-btn" id="zoom-focal-face-btn" title="Focus on face &amp; expressions (Shift+Z)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="8" r="4"></circle>
           <path d="M6 20v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"></path>
@@ -709,11 +729,11 @@
           </span>
           <div class="more-menu-copy">
             <span class="more-menu-title" data-i18n="seekStepLabel">Seek Step</span>
-            <span class="more-menu-sub">← / →</span>
+            <span class="more-menu-sub">A / D · ← / →</span>
           </div>
         </div>
         <div class="more-seek-controls" dir="ltr">
-          <button type="button" class="more-seek-btn" id="deck-seek-back-btn" title="Rewind 2s (Left Arrow)" aria-label="Rewind 2 seconds">
+          <button type="button" class="more-seek-btn" id="deck-seek-back-btn" title="Rewind 2s (A / ←)" aria-label="Rewind 2 seconds">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polygon points="11 18 3 12 11 6 11 18"></polygon>
               <polygon points="21 18 13 12 21 6 21 18"></polygon>
@@ -747,7 +767,7 @@
               </button>
             </div>
           </div>
-          <button type="button" class="more-seek-btn" id="deck-seek-fwd-btn" title="Forward 2s (Right Arrow)" aria-label="Forward 2 seconds">
+          <button type="button" class="more-seek-btn" id="deck-seek-fwd-btn" title="Forward 2s (D / →)" aria-label="Forward 2 seconds">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <polygon points="13 18 21 12 13 6 13 18"></polygon>
               <polygon points="3 18 11 12 3 6 3 18"></polygon>
@@ -768,13 +788,13 @@
         </span>
         <span class="more-menu-copy">
           <span class="more-menu-title" data-i18n="autoFollowLabel">Auto-Follow</span>
-          <span class="more-menu-sub">F</span>
+          <span class="more-menu-sub">F · G: Jump</span>
         </span>
         <span class="more-menu-pill" id="deck-auto-follow-text"><strong>ON</strong></span>
       </button>
 
       <!-- Record Voice Row -->
-      <button type="button" class="more-menu-item" id="record-toggle-btn" aria-pressed="false" title="Record your voice">
+      <button type="button" class="more-menu-item" id="record-toggle-btn" aria-pressed="false" title="Record / stop your voice (V)">
         <span class="more-menu-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
@@ -784,13 +804,13 @@
         </span>
         <span class="more-menu-copy">
           <span class="more-menu-title" id="record-btn-text" data-i18n="recordVoice">Record Voice</span>
-          <span class="more-menu-sub" data-i18n="voiceRecorderSub">Shadow &amp; compare</span>
+          <span class="more-menu-sub">V · Shadow &amp; compare</span>
         </span>
         <span class="more-menu-chevron" aria-hidden="true">●</span>
       </button>
 
       <!-- Voice Playback & A/B Compare Row -->
-      <button type="button" class="more-menu-item" id="voice-menu-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="voice-popover" title="Voice playback &amp; A/B comparison">
+      <button type="button" class="more-menu-item" id="voice-menu-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="voice-popover" title="Voice playback (Shift+V) &amp; A/B comparison (B)">
         <span class="more-menu-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
@@ -799,6 +819,7 @@
         </span>
         <span class="more-menu-copy">
           <span class="more-menu-title" data-i18n="voiceRecorderLabel">Voice Comparison</span>
+          <span class="more-menu-sub">B · Shift+V</span>
         </span>
         <span class="more-menu-right">
           <span class="scb-dot-indicator more-menu-take-dot" id="scb-voice-dot" hidden></span>
@@ -807,7 +828,7 @@
       </button>
 
       <!-- Translation Settings Row -->
-      <button type="button" class="more-menu-item" id="trans-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="translation-control-deck" title="Translation settings (T)">
+      <button type="button" class="more-menu-item" id="trans-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="translation-control-deck" title="Translation settings (T: sentence · Shift+T: show/hide all)">
         <span class="more-menu-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
             <path d="m5 8 6 6"></path>
@@ -820,7 +841,7 @@
         </span>
         <span class="more-menu-copy">
           <span class="more-menu-title" data-i18n="translationMenuLabel">Translation</span>
-          <span class="more-menu-sub">T</span>
+          <span class="more-menu-sub">T · Shift+T</span>
         </span>
         <span class="more-menu-right">
           <span class="more-menu-pill ltr-num" id="scb-trans-lang-badge">AR</span>
@@ -829,7 +850,7 @@
       </button>
 
       <!-- Keyboard Shortcuts Row -->
-      <button type="button" class="more-menu-item" id="shortcuts-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="shortcuts-popover" title="Keyboard shortcuts">
+      <button type="button" class="more-menu-item" id="shortcuts-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="shortcuts-popover" title="Keyboard shortcuts (?)">
         <span class="more-menu-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
@@ -839,6 +860,7 @@
         </span>
         <span class="more-menu-copy">
           <span class="more-menu-title" data-i18n="shortcutsMenuLabel">Keyboard Shortcuts</span>
+          <span class="more-menu-sub">?</span>
         </span>
         <span class="more-menu-right">
           <svg class="more-menu-chevron-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
@@ -900,11 +922,11 @@
       </div>
     </div>
     <div class="recorder-actions-row">
-      <button type="button" class="btn-secondary compare-btn" id="replay-recording-btn" disabled title="Replay your recorded take">
+      <button type="button" class="btn-secondary compare-btn" id="replay-recording-btn" disabled title="Replay your recorded take (Shift+V)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
         <span>Your Voice</span>
       </button>
-      <button type="button" class="btn-vox compare-btn" id="ab-compare-btn" disabled title="Play Speaker then Your Voice sequentially">
+      <button type="button" class="btn-vox compare-btn" id="ab-compare-btn" disabled title="Play Speaker then Your Voice sequentially (B)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"></path></svg>
         <span>A/B Compare</span>
       </button>
@@ -945,20 +967,126 @@
 
   <!-- Floating Popover 4: Keyboard Shortcuts -->
   <div id="shortcuts-popover" class="scb-popover deck-panel shortcuts-popover" role="dialog" aria-label="Keyboard shortcuts" hidden>
-    <div class="deck-panel-head">
-      <span class="deck-panel-label">Keyboard Shortcuts</span>
+    <div class="deck-panel-head shortcuts-popover-head">
+      <span class="deck-panel-label" data-i18n="shortcutsMenuLabel">Keyboard Shortcuts</span>
+      <span class="shortcuts-layout-pill" data-i18n="shortcutsAnyLayout">Any layout</span>
     </div>
-    <div class="shortcuts-strip">
-      <span><kbd class="kbd-chip">Space</kbd> <span data-i18n="keyPlay">Play/Pause</span></span>
-      <span><kbd class="kbd-chip">R</kbd> <span data-i18n="keyReplay">Replay</span></span>
-      <span><kbd class="kbd-chip">←</kbd><kbd class="kbd-chip">→</kbd> <span id="shortcuts-seek-label" data-i18n="keySeek">Seek ±2s</span></span>
-      <span><kbd class="kbd-chip">↑</kbd><kbd class="kbd-chip">↓</kbd> <span data-i18n="keyPrevNext">Prev/Next</span></span>
-      <span><kbd class="kbd-chip">L</kbd> <span data-i18n="keyLoop">Loop</span></span>
-      <span><kbd class="kbd-chip">[</kbd><kbd class="kbd-chip">]</kbd> <span>Speed ±0.05x</span></span>
-      <span><kbd class="kbd-chip">Z</kbd> <span>Mouth</span></span>
-      <span><kbd class="kbd-chip">+/-</kbd> <span>Zoom</span></span>
-      <span><kbd class="kbd-chip">T</kbd> <span>Translate</span></span>
-      <span><kbd class="kbd-chip">F</kbd> <span>Follow</span></span>
+    <div class="shortcuts-strip shortcuts-grid" dir="ltr">
+      <div class="shortcuts-group">
+        <span class="shortcuts-group-title" data-i18n="shortcutsCatPlayback">Playback &amp; Sentences</span>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyPlay">Play / Pause</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">Space</kbd></span>
+        </div>
+        <div class="shortcut-row shortcut-row--highlight">
+          <span class="shortcut-desc" data-i18n="keyReplay">Replay from start</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">R</kbd><span class="kbd-sep">/</span><kbd class="kbd-chip">⌫</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyPrevNext">Prev / Next line</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">W</kbd><kbd class="kbd-chip">S</kbd><span class="kbd-sep">·</span><kbd class="kbd-chip">↑</kbd><kbd class="kbd-chip">↓</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" id="shortcuts-seek-label" data-i18n="keySeek">Seek ±2s</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">A</kbd><kbd class="kbd-chip">D</kbd><span class="kbd-sep">·</span><kbd class="kbd-chip">←</kbd><kbd class="kbd-chip">→</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyLoop">Toggle loop</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">L</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyFlowCycle">Cycle flow mode</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">⇧</kbd><kbd class="kbd-chip">L</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyMute">Mute / Unmute</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">M</kbd></span>
+        </div>
+      </div>
+
+      <div class="shortcuts-group">
+        <span class="shortcuts-group-title" data-i18n="shortcutsCatSpeedVoice">Speed &amp; Shadowing</span>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keySpeedStep">Speed ±0.05x</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">Q</kbd><kbd class="kbd-chip">E</kbd><span class="kbd-sep">·</span><kbd class="kbd-chip">[</kbd><kbd class="kbd-chip">]</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyQuickSpeed">Quick 0.75x / 0.5x / 1x</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">`</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keySpeedReset">Reset speed 1.00x</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">\</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyRecordVoice">Record / Stop voice</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">V</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyReplayVoice">Play your voice</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">⇧</kbd><kbd class="kbd-chip">V</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyABCompare">A/B Compare</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">B</kbd></span>
+        </div>
+      </div>
+
+      <div class="shortcuts-group">
+        <span class="shortcuts-group-title" data-i18n="shortcutsCatStudy">Study &amp; Translation</span>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyCheckDone">Mark line done</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">C</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyCheckNext">Done &amp; next line</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">⇧</kbd><kbd class="kbd-chip">C</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyTrans">Translate line</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">T</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyTransToggleAll">Show / hide all trans.</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">⇧</kbd><kbd class="kbd-chip">T</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyFollow">Auto-Follow</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">F</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyJumpActive">Jump to active line</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">G</kbd></span>
+        </div>
+      </div>
+
+      <div class="shortcuts-group">
+        <span class="shortcuts-group-title" data-i18n="shortcutsCatVideoModes">Video &amp; Modes</span>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyMouth">Mouth / Face focus</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">Z</kbd><span class="kbd-sep">/</span><kbd class="kbd-chip">⇧</kbd><kbd class="kbd-chip">Z</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyZoom">Zoom in / out / reset</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">+</kbd><kbd class="kbd-chip">-</kbd><kbd class="kbd-chip">0</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyPan">Pan when zoomed</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">⇧</kbd><kbd class="kbd-chip">←↑↓→</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyModes">Switch modes</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">1</kbd><span class="kbd-sep">–</span><kbd class="kbd-chip">5</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyDictReplay">Dictation replay</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">⇧</kbd><kbd class="kbd-chip">↵</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc" data-i18n="keyHelpEsc">Shortcuts / Close</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">?</kbd><span class="kbd-sep">/</span><kbd class="kbd-chip">Esc</kbd></span>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1030,7 +1158,10 @@
 
   <script defer src="/shared-utils.js"></script>
   <script defer src="/icon.js"></script>
+  <script defer src="/confirm-undo.js"></script>
   <script defer src="/copy.js"></script>
+  <script defer src="/check-button.js"></script>
+  <script defer src="/celebration.js"></script>
   <script defer src="/word-lookup.js"></script>
   <script defer src="/studio.js"></script>
 </body>

@@ -490,12 +490,11 @@ async function runProductionE2ETest() {
             'dialogue',
             'pronunciation',
             'learning-library',
-            'tech-linguist',
             'american-extractor',
             'vocabulary',
             'history',
           ]),
-      `Expected all 8 primary links inside Left Sidebar (0 topbar tabs), got ${JSON.stringify(signedOutHome.navTabs)}`,
+      `Expected all 7 primary links inside Left Sidebar (0 topbar tabs), got ${JSON.stringify(signedOutHome.navTabs)}`,
     );
     assert(signedOutHome.cardsLeaked === 0 && signedOutHome.gateVisible, 'Signed-out visitor leaked library cards!');
     assert(signedOutHome.startBtnEnabled, 'Start Lesson button must remain clickable for signed-out visitor.');
@@ -886,9 +885,9 @@ async function runProductionE2ETest() {
       `Step C (Toggle Auto-Pause -> #3 plays Once) failed: ${JSON.stringify(loopStepC)}`,
     );
 
-    // Step D: Cycle flow to Loop, then click Sentence #1 card -> #1 inherits Loop!
+    // Step D: Cycle flow to Loop, then click Sentence #1 header -> #1 inherits Loop!
     await setStudioFlow('loop');
-    await page.click('#sent-card-1');
+    await page.click('#sent-card-1 .sent-meta-left');
     const loopStepD = await page.evaluate(() => ({
       loopIdx: window.studioState.loopSentenceIndex,
       endAction: window.studioState.endAction,
@@ -962,7 +961,7 @@ async function runProductionE2ETest() {
       `Repress after natural stop must play once (NEVER jump to loop): ${JSON.stringify(repressCheck)}`,
     );
 
-    // Step G: Full Item Clickable — Clicking top meta (#02 or timestamp) triggers playback!
+    // Step G: Header/Card Play-Pause, Word Click Lookup, Midway Pause/Resume & Play-from-Start button
     await page.click('#sent-card-2 .sent-meta-left');
     const topClickCheck = await page.evaluate(() => ({
       activeSent: window.studioState.activeSentence?.index,
@@ -970,9 +969,8 @@ async function runProductionE2ETest() {
     }));
     assert(
       topClickCheck.activeSent === 2 && topClickCheck.isPlaying === true,
-      `Full item clickable failed on top meta click: ${JSON.stringify(topClickCheck)}`,
+      `Card top meta click failed to play: ${JSON.stringify(topClickCheck)}`,
     );
-    // Clicking top area again while playing toggles pause
     await page.click('#sent-card-2 .sent-card-top');
     const topPauseCheck = await page.evaluate(() => ({
       activeSent: window.studioState.activeSentence?.index,
@@ -980,9 +978,129 @@ async function runProductionE2ETest() {
     }));
     assert(
       topPauseCheck.activeSent === 2 && topPauseCheck.isPlaying === false,
-      `Full item pause failed on top click: ${JSON.stringify(topPauseCheck)}`,
+      `Card top click failed to pause: ${JSON.stringify(topPauseCheck)}`,
     );
-    console.log('PASS: Single unified playback button, separate loop toggle & full item clickability verified!');
+
+    // Clicking Play/Pause midway resumes from current time without resetting to startSec,
+    // while clicking [data-replay-sent] always restarts from startSec!
+    await page.evaluate(() => {
+      const s2 = window.studioState.item.sentences[1];
+      window.playSentence(2);
+      const midTime = Number(((s2.startSec + s2.endSec) / 2).toFixed(3));
+      window.studioState.ytPlayer.current = midTime;
+      window.__e2eMidTime = midTime;
+    });
+    await page.click('[data-play-sent="2"]'); // Pause midway
+    await page.click('[data-play-sent="2"]'); // Resume midway
+    const resumeCheck = await page.evaluate(() => ({
+      isPlaying: window.studioState.isPlaying,
+      current: window.studioState.ytPlayer.current,
+      expectedMid: window.__e2eMidTime,
+    }));
+    assert(
+      resumeCheck.isPlaying === true &&
+      Math.abs(resumeCheck.current - resumeCheck.expectedMid) < 0.002,
+      `Play button after midway pause must resume from paused time: ${JSON.stringify(resumeCheck)}`,
+    );
+
+    // Clicking [data-replay-sent="2"] (Play from Start) restarts from startSec even while playing midway
+    await page.click('[data-replay-sent="2"]');
+    const replayStartCheck = await page.evaluate(() => ({
+      activeSent: window.studioState.activeSentence?.index,
+      isPlaying: window.studioState.isPlaying,
+      current: window.studioState.ytPlayer.current,
+      expectedStart: window.studioState.item.sentences[1].startSec,
+    }));
+    assert(
+      replayStartCheck.activeSent === 2 &&
+      replayStartCheck.isPlaying === true &&
+      Math.abs(replayStartCheck.current - replayStartCheck.expectedStart) < 0.002,
+      `Play-from-start button [data-replay-sent] did not restart from startSec: ${JSON.stringify(replayStartCheck)}`,
+    );
+    await page.click('[data-play-sent="2"]'); // Pause before word lookup check
+
+    // Normal word-click behavior: clicking a word inside .sent-english-line opens lookup action menu
+    await page.click('#sent-card-2 .sent-english-line .clickable-word');
+    const wordClickMenuHidden = await page.evaluate(
+      () => document.getElementById('selection-action-menu')?.hidden ?? true,
+    );
+    assert(
+      wordClickMenuHidden === false,
+      'Clicking .clickable-word should open #selection-action-menu in normal mode.',
+    );
+    await page.keyboard.press('Escape');
+
+    // Step H: Async Seek Latency Regression Test — Switching #1 -> #2 in Loop mode must NEVER snap back to #1
+    await setStudioFlow('loop');
+    await page.evaluate(() => {
+      const s1 = window.studioState.item.sentences[0];
+      const s2 = window.studioState.item.sentences[1];
+      window.__e2eSeekLog = [];
+      window.studioState.ytPlayer = {
+        current: s1.startSec + 0.5,
+        state: 1,
+        seekTo(v) {
+          window.__e2eSeekLog.push(v);
+          // Simulate realistic 240ms YouTube IFrame async seek delay (getCurrentTime keeps returning old s1 time!)
+          setTimeout(() => {
+            this.current = v;
+          }, 240);
+        },
+        playVideo() { this.state = 1; },
+        pauseVideo() { this.state = 2; },
+        mute() {},
+        unMute() {},
+        getCurrentTime() { return this.current; },
+        setPlaybackRate() {},
+        getPlayerState() { return this.state; },
+      };
+      window.playSentence(s1.index);
+      window.studioState.ytPlayer.current = s1.startSec + 0.6;
+      // Switch to Sentence #2 while Sentence #1 is active/looping
+      window.playSentence(s2.index);
+    });
+    // Wait 140ms (past old 90ms guard, while YouTube seek is still resolving and returning s1 time!)
+    await new Promise((r) => setTimeout(r, 140));
+    const midSeekCheck = await page.evaluate(() => ({
+      activeSent: window.studioState.activeSentence?.index,
+      loopIdx: window.studioState.loopSentenceIndex,
+      seekLog: window.__e2eSeekLog,
+    }));
+    assert(
+      midSeekCheck.activeSent === 2 && midSeekCheck.loopIdx === 2,
+      `Async seek mid-flight snapped back to previous item: ${JSON.stringify(midSeekCheck)}`,
+    );
+    await new Promise((r) => setTimeout(r, 220));
+    const postSeekCheck = await page.evaluate(() => ({
+      activeSent: window.studioState.activeSentence?.index,
+      loopIdx: window.studioState.loopSentenceIndex,
+      current: window.studioState.ytPlayer.current,
+      expectedS2Start: window.studioState.item.sentences[1].startSec,
+      seekLog: window.__e2eSeekLog,
+    }));
+    assert(
+      postSeekCheck.activeSent === 2 &&
+      postSeekCheck.loopIdx === 2 &&
+      Math.abs(postSeekCheck.current - postSeekCheck.expectedS2Start) < 0.002 &&
+      postSeekCheck.seekLog.length === 2,
+      `Async seek failed to stay on Sentence #2 without re-looping #1: ${JSON.stringify(postSeekCheck)}`,
+    );
+    await page.evaluate(() => {
+      window.studioState.ytPlayer = {
+        current: 0,
+        state: 2,
+        seekTo(v) { this.current = v; },
+        playVideo() { this.state = 1; },
+        pauseVideo() { this.state = 2; },
+        mute() {},
+        unMute() {},
+        getCurrentTime() { return this.current; },
+        setPlaybackRate() {},
+        getPlayerState() { return this.state; },
+      };
+      window.pauseCurrentPlayback();
+    });
+    console.log('PASS: Single unified playback button, full item clickability, clean dblclick replay & async seek isolation verified!');
 
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '06-studio-shadow-light.png') });
 

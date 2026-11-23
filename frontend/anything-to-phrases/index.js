@@ -59,6 +59,9 @@
       if (panel) panel.hidden = name !== next;
     });
 
+    const desk = document.querySelector('#section-american-extractor .aex-desk');
+    if (desk) desk.dataset.aexActive = next;
+
     // Update top feature tabs (Detail highlights Library as its parent!)
     const extractTab = el('aex-tab-extract');
     const libraryTab = el('aex-tab-library');
@@ -98,7 +101,7 @@
     },
     goToLibrary(options = {}) {
       activateView('library', options);
-      shellState.libraryPage?.onActivate?.();
+      shellState.libraryPage?.onActivate?.(options);
     },
     goToDetail(noteId, options = {}) {
       if (!noteId) {
@@ -109,6 +112,7 @@
       shellState.detailPage?.openNote?.(noteId, options);
     },
     async onExtractionComplete(note) {
+      shellState.libraryPage?.resetToFirstPage?.();
       await loadHistorySnapshot();
       navigation.goToDetail(note.id);
     },
@@ -138,7 +142,10 @@
       return;
     }
     try {
-      const res = await api.listHistory({ page: 1, limit: 12 });
+      const res = await api.listHistory({
+        page: 1,
+        limit: global.FlaptapPagination?.DEFAULT_PAGE_SIZE || 10,
+      });
       store.setHistorySnapshot(res);
       syncLibraryBadge();
     } catch (err) {
@@ -216,13 +223,15 @@
 
     if ((subview === 'detail' || subview === 'note') && routeState.noteId) {
       activateView('detail', { skipRoute: true, noteId: routeState.noteId });
-      await shellState.detailPage?.openNote?.(routeState.noteId);
+      await shellState.detailPage?.openNote?.(routeState.noteId, {
+        searchParams: routeState.searchParams,
+      });
       return;
     }
 
     if (subview === 'library') {
       activateView('library', { skipRoute: true });
-      await shellState.libraryPage?.onActivate?.();
+      await shellState.libraryPage?.onActivate?.(routeState);
       return;
     }
 
@@ -250,6 +259,7 @@
         store,
         api,
         nav: navigation,
+        reloadHistory: loadHistorySnapshot,
       });
       shellState.detailPage = global.FlaptapA2PDetailPage.create({
         store,

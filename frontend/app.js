@@ -18,12 +18,8 @@
       navPronunciation: 'Pronunciation',
       navVocabulary: 'Vocabulary',
       navHistory: 'History & Usage',
-      navTechLinguist: 'Tech Lexicon',
-      navLearningLibrary: 'Learning Library',
+      navLearningLibrary: 'Generate Phrases',
       navExtractor: 'Anything to Phrases',
-      techLinguistKicker: 'Software & AI Engineering Lexicon',
-      techLinguistHeadline: 'Master authentic <span class="vox-underline">American Tech English</span> from videos & talks.',
-      techLinguistSubcopy: 'Autonomous speech-to-text audit, interactive engineering vocabulary & idiom tables with click-any-word contextual translation, and native communication mental models—all inside one study studio.',
       streakUnit: 'day streak',
       signIn: 'Sign in',
       createAccount: 'Create account',
@@ -178,12 +174,8 @@
       navPronunciation: 'النطق',
       navVocabulary: 'المفردات',
       navHistory: 'السجل والاستخدام',
-      navTechLinguist: 'معجم التقنية',
-      navLearningLibrary: 'مكتبة التعلم',
+      navLearningLibrary: 'Generate Phrases',
       navExtractor: 'Anything to Phrases',
-      techLinguistKicker: 'معجم هندسة البرمجيات والذكاء الاصطناعي',
-      techLinguistHeadline: 'أتقن <span class="vox-underline">الإنجليزية التقنية الأمريكية</span> من الفيديوهات والمحادثات.',
-      techLinguistSubcopy: 'تدقيق آلي للنصوص، جداول تفاعلية ثلاثية الأعمدة للمصطلحات والتعابير مع ترجمة فورية سياقية عند الضغط على أي كلمة، وأنماط التفكير الهندسي الأمريكي.',
       streakUnit: 'أيام متتالية',
       signIn: 'تسجيل الدخول',
       createAccount: 'إنشاء حساب',
@@ -282,12 +274,8 @@
       navPronunciation: 'Pronunciación',
       navVocabulary: 'Vocabulario',
       navHistory: 'Historial y Uso',
-      navTechLinguist: 'Léxico Técnico',
-      navLearningLibrary: 'Biblioteca',
+      navLearningLibrary: 'Generate Phrases',
       navExtractor: 'Anything to Phrases',
-      techLinguistKicker: 'Léxico de Ingeniería de Software e IA',
-      techLinguistHeadline: 'Domina el <span class="vox-underline">inglés técnico estadounidense</span> auténtico.',
-      techLinguistSubcopy: 'Auditoría automática de transcripción, tablas interactivas con traducción contextual palabra por palabra y modelos mentales nativos.',
       streakUnit: 'días seguidos',
       signIn: 'Iniciar sesión',
       createAccount: 'Crear cuenta',
@@ -309,12 +297,8 @@
       navPronunciation: 'Prononciation',
       navVocabulary: 'Vocabulaire',
       navHistory: 'Historique',
-      navTechLinguist: 'Lexique Tech',
-      navLearningLibrary: 'Bibliothèque',
+      navLearningLibrary: 'Generate Phrases',
       navExtractor: 'Anything to Phrases',
-      techLinguistKicker: 'Lexique Génie Logiciel & IA',
-      techLinguistHeadline: 'Maîtrisez l’<span class="vox-underline">anglais technique américain</span> authentique.',
-      techLinguistSubcopy: 'Audit ASR automatique, tableaux interactifs avec traduction contextuelle mot à mot et modèles de pensée natifs.',
       streakUnit: 'jours de suite',
       signIn: 'Connexion',
       createAccount: 'Créer un compte',
@@ -336,12 +320,8 @@
       navPronunciation: 'Aussprache',
       navVocabulary: 'Vokabeln',
       navHistory: 'Verlauf & Cache',
-      navTechLinguist: 'Tech-Lexikon',
-      navLearningLibrary: 'Lernbibliothek',
+      navLearningLibrary: 'Generate Phrases',
       navExtractor: 'Anything to Phrases',
-      techLinguistKicker: 'Software- & KI-Ingenieur-Lexikon',
-      techLinguistHeadline: 'Meistern Sie authentisches <span class="vox-underline">amerikanisches Tech-Englisch</span>.',
-      techLinguistSubcopy: 'Automatische ASR-Prüfung, interaktive Tabellen mit kontextbezogener Wortübersetzung und muttersprachlichen Denkmustern.',
       streakUnit: 'Tage Serie',
       signIn: 'Anmelden',
       createAccount: 'Konto erstellen',
@@ -363,12 +343,8 @@
       navPronunciation: 'Telaffuz',
       navVocabulary: 'Kelimeler',
       navHistory: 'Geçmiş ve Önbellek',
-      navTechLinguist: 'Teknoloji Sözlüğü',
-      navLearningLibrary: 'Öğrenme Kitaplığı',
+      navLearningLibrary: 'Generate Phrases',
       navExtractor: 'Anything to Phrases',
-      techLinguistKicker: 'Yazılım ve Yapay Zeka Sözlüğü',
-      techLinguistHeadline: 'Videolardan özgün <span class="vox-underline">Amerikan Teknik İngilizcesi</span> öğrenin.',
-      techLinguistSubcopy: 'Otomatik ASR denetimi, bağlamsal kelime çevirisi sunan etkileşimli tablolar ve yerel mühendislik düşünce kalıpları.',
       streakUnit: 'gün seri',
       signIn: 'Giriş yap',
       createAccount: 'Hesap oluştur',
@@ -638,10 +614,9 @@
      SECTION NAVIGATION & MODULAR ROUTE SYNCHRONIZATION
      ======================================================================== */
 
-  function activateSectionPanel(section) {
-    if (section === 'tech-lexicon') section = 'tech-linguist';
+  function activateSectionPanel(section, opts = {}) {
     if (section === 'library') section = 'learning-library';
-    if (!['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'tech-linguist', 'american-extractor', 'learning-library'].includes(section)) {
+    if (!['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'american-extractor', 'learning-library'].includes(section)) {
       section = 'lessons';
     }
     const changed = state.section !== section;
@@ -649,11 +624,11 @@
     document.body.dataset.activeSection = section;
     document.body.classList.toggle('is-lessons-view', section === 'lessons');
     document.body.classList.toggle('is-extractor-view', section === 'american-extractor');
-    ['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'tech-linguist', 'american-extractor', 'learning-library'].forEach((name) => {
+    ['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'american-extractor', 'learning-library'].forEach((name) => {
       const panel = document.getElementById(`section-${name}`);
       if (panel) panel.hidden = name !== section;
     });
-    if (changed) {
+    if (changed && !opts.preserveScroll) {
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
     return section;
@@ -708,8 +683,6 @@
       } else {
         renderHistorySectionAuthState();
       }
-    } else if (resolved === 'tech-linguist') {
-      await window.FlaptapTechLexicon?.init?.(routeState);
     } else if (resolved === 'american-extractor') {
       await window.FlaptapAmericanExtractor?.init?.(routeState);
     } else if (resolved === 'learning-library') {
@@ -859,15 +832,9 @@
 
     const regSelect = document.getElementById('reg-native-lang');
     const prefSelect = document.getElementById('pref-native-lang');
-    const lexiconLangSelect = document.getElementById('lexicon-lookup-lang');
     if (regSelect && optionsHtml) {
       regSelect.innerHTML = optionsHtml;
       regSelect.value = localStorage.getItem('flaptap_trans_lang') || 'ar';
-    }
-    if (lexiconLangSelect && optionsHtml) {
-      lexiconLangSelect.innerHTML = optionsHtml;
-      lexiconLangSelect.value =
-        state.user?.nativeLanguage || localStorage.getItem('flaptap_trans_lang') || 'ar';
     }
     if (prefSelect && optionsHtml) {
       prefSelect.innerHTML = optionsHtml;
@@ -1117,21 +1084,51 @@
   }
 
   const CHECK_ICON_SVG =
-    '<svg class="chk-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line class="chk-dash" x1="6.5" y1="12" x2="17.5" y2="12"></line><polyline class="chk-tick" points="19.5 7 9.5 17 4.5 12"></polyline></svg>';
+    window.FlaptapCheck?.ICON_SVG ||
+    '<svg class="ft-check-svg chk-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path class="ft-check-tick chk-tick" d="M5.2 12.75 L9.55 17.1 Q10.1 17.65 10.65 17.05 L18.9 7.35" pathLength="1" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
 
-  function renderCheckButtonHtml({ checked = false, attrs = '', label = '', pill = false, text = '' } = {}) {
-    const titleText = label || (checked ? t('completedLabel') : t('markComplete'));
-    const pillClass = pill ? ' item-check-btn--pill' : '';
-    const innerText = pill && text ? `<span>${escapeHtml(text)}</span>` : '';
+  function renderCheckButtonHtml({
+    checked = false,
+    attrs = '',
+    label = '',
+    pill = false,
+    text = '',
+    pillLabel = '',
+    className = '',
+    size = '',
+    id = '',
+  } = {}) {
+    const titleText = label || text || pillLabel || (checked ? t('completedLabel') : t('markComplete'));
+    if (window.FlaptapCheck?.buttonHtml) {
+      return window.FlaptapCheck.buttonHtml({
+        checked,
+        attrs,
+        label: titleText,
+        pill,
+        text,
+        pillLabel,
+        className,
+        size,
+        id,
+      });
+    }
+    const effectiveText = text || pillLabel || '';
+    const isPill = Boolean(pill || pillLabel);
+    const pillClass = isPill ? ' item-check-btn--pill' : '';
+    const innerText = isPill && effectiveText ? `<span>${escapeHtml(effectiveText)}</span>` : '';
     return `<button type="button" class="item-check-btn${pillClass}${checked ? ' is-checked' : ''}" ${attrs} aria-pressed="${checked ? 'true' : 'false'}" aria-label="${escapeHtml(titleText)}" title="${escapeHtml(titleText)}">${CHECK_ICON_SVG}${innerText}</button>`;
   }
 
-  /** Patch an existing check button in place so no re-render is needed. */
-  function setCheckButtonState(btn, checked) {
+  /** Patch an existing check button in place with Apple tick animation. */
+  function setCheckButtonState(btn, checked, options = {}) {
     if (!btn) return;
+    const label = options.label || (checked ? t('completedLabel') : t('markComplete'));
+    if (window.FlaptapCheck?.setState) {
+      window.FlaptapCheck.setState(btn, checked, { ...options, label });
+      return;
+    }
     btn.classList.toggle('is-checked', checked);
     btn.setAttribute('aria-pressed', checked ? 'true' : 'false');
-    const label = checked ? t('completedLabel') : t('markComplete');
     btn.setAttribute('aria-label', label);
     btn.title = label;
     const pillLabel = btn.querySelector('span');
@@ -1200,15 +1197,43 @@
     if (!item) return;
     const prev = Boolean(item.isCompleted);
     const next = !prev;
+    const totalVocab = state.vocabItems.length;
+    const wasAllDone = totalVocab > 0 && state.vocabItems.every((v) => Boolean(v.isCompleted));
     item.isCompleted = next;
-    renderVocabulary();
-    renderFlashcard();
+
+    const cardBtn = document.querySelector(`[data-vocab-complete="${CSS.escape(String(id))}"]`);
+    const cardEl = cardBtn?.closest('.vocab-card');
+    if (cardBtn) {
+      setCheckButtonState(cardBtn, next, { animate: true });
+      cardEl?.classList.toggle('is-item-completed', next);
+    } else {
+      renderVocabulary();
+    }
+
+    const fcToggleBtn = document.getElementById('fc-complete-toggle-btn');
+    if (fcToggleBtn && fcToggleBtn.dataset.vocabId === String(id)) {
+      setCheckButtonState(fcToggleBtn, next, { animate: true });
+    } else {
+      renderFlashcard();
+    }
 
     try {
       await apiFetch(`/api/vocabulary/${encodeURIComponent(id)}/complete`, {
         method: 'PATCH',
         body: JSON.stringify({ completed: next }),
       });
+
+      if (next && !wasAllDone && totalVocab > 0 && state.vocabItems.every((v) => Boolean(v.isCompleted))) {
+        const originEl =
+          fcToggleBtn && fcToggleBtn.dataset.vocabId === String(id) && fcToggleBtn.offsetParent
+            ? fcToggleBtn
+            : cardBtn;
+        window.FlaptapCelebrate?.trigger?.({
+          title: 'Vocabulary Mastered!',
+          subtitle: `All ${totalVocab} word${totalVocab === 1 ? '' : 's'} completed`,
+          originEl,
+        });
+      }
     } catch (err) {
       item.isCompleted = prev;
       renderVocabulary();
@@ -1816,14 +1841,10 @@
     const fcCompleteLabel = document.getElementById('fc-complete-label');
     if (fcToggleBtn) {
       const done = Boolean(item.isCompleted);
-      fcToggleBtn.classList.toggle('is-checked', done);
-      fcToggleBtn.setAttribute('aria-pressed', done ? 'true' : 'false');
       fcToggleBtn.dataset.vocabId = item.id;
-      const doneLabel = done ? t('completedLabel') : t('markComplete');
-      fcToggleBtn.setAttribute('aria-label', doneLabel);
-      fcToggleBtn.title = doneLabel;
+      setCheckButtonState(fcToggleBtn, done, { animate: false });
       if (fcCompleteLabel) {
-        fcCompleteLabel.textContent = doneLabel;
+        fcCompleteLabel.textContent = done ? t('completedLabel') : t('markComplete');
       }
     }
     document.getElementById('fc-term').textContent = item.term;
@@ -2037,6 +2058,114 @@
     });
 
     // Library Card Open / Delete (Shared across Lessons, Dialogue, and Pronunciation grids)
+    function refreshLessonsAndLedgerViews() {
+      renderLibrary();
+      renderHistoryLedger();
+      loadSessionAndStats();
+    }
+
+    async function confirmDeleteLesson(id) {
+      if (!window.FlaptapConfirm?.confirmAndUndo) return;
+      const target =
+        state.lessons.find((l) => l.id === id) ||
+        (state.usageOverview?.lessons || []).find((l) => l.id === id);
+      const lessonTitle = String(target?.title || 'Lesson').trim();
+      const snapshot = {
+        lessons: [...state.lessons],
+        selectedIds: new Set(state.selectedLedgerIds),
+        overviewLessons: Array.isArray(state.usageOverview?.lessons)
+          ? [...state.usageOverview.lessons]
+          : null,
+      };
+
+      await window.FlaptapConfirm.confirmAndUndo({
+        title: 'Delete lesson?',
+        message: 'This lesson and its saved study history will be removed.',
+        detail: lessonTitle,
+        confirmLabel: 'Delete',
+        undoMessage: `Deleted "${lessonTitle}"`,
+        restoredMessage: `Restored "${lessonTitle}"`,
+        onApply: () => {
+          state.lessons = state.lessons.filter((l) => l.id !== id);
+          state.selectedLedgerIds.delete(id);
+          if (state.usageOverview?.lessons) {
+            state.usageOverview.lessons = state.usageOverview.lessons.filter((l) => l.id !== id);
+          }
+          refreshLessonsAndLedgerViews();
+        },
+        onUndo: () => {
+          state.lessons = snapshot.lessons;
+          state.selectedLedgerIds = snapshot.selectedIds;
+          if (state.usageOverview && snapshot.overviewLessons) {
+            state.usageOverview.lessons = snapshot.overviewLessons;
+          }
+          refreshLessonsAndLedgerViews();
+        },
+        onCommit: async ({ keepalive = false } = {}) => {
+          await apiFetch(`/api/history/${encodeURIComponent(id)}`, {
+            method: 'DELETE',
+            keepalive,
+          });
+          if (!keepalive) {
+            await loadUsageAndHistory();
+            loadSessionAndStats();
+          }
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not delete lesson.');
+        },
+      });
+    }
+
+    async function confirmClearAllLessons(authTarget) {
+      if (!requireAuthBeforeAction(authTarget)) return;
+      if (!window.FlaptapConfirm?.confirmAndUndo) return;
+
+      const snapshot = {
+        lessons: [...state.lessons],
+        selectedIds: new Set(state.selectedLedgerIds),
+        overviewLessons: Array.isArray(state.usageOverview?.lessons)
+          ? [...state.usageOverview.lessons]
+          : null,
+      };
+      const count = snapshot.lessons.length || snapshot.overviewLessons?.length || 0;
+
+      await window.FlaptapConfirm.confirmAndUndo({
+        title: 'Clear all lessons?',
+        message: t('confirmClear'),
+        detail: count > 0 ? `${count} saved lesson(s)` : '',
+        confirmLabel: 'Clear All',
+        undoMessage: 'Cleared all saved lessons',
+        restoredMessage: 'Restored saved lessons',
+        onApply: () => {
+          state.lessons = [];
+          state.selectedLedgerIds.clear();
+          if (state.usageOverview?.lessons) {
+            state.usageOverview.lessons = [];
+          }
+          refreshLessonsAndLedgerViews();
+        },
+        onUndo: () => {
+          state.lessons = snapshot.lessons;
+          state.selectedLedgerIds = snapshot.selectedIds;
+          if (state.usageOverview && snapshot.overviewLessons) {
+            state.usageOverview.lessons = snapshot.overviewLessons;
+          }
+          refreshLessonsAndLedgerViews();
+        },
+        onCommit: async ({ keepalive = false } = {}) => {
+          await apiFetch('/api/history/clear', { method: 'POST', keepalive });
+          if (!keepalive) {
+            await loadUsageAndHistory();
+            loadSessionAndStats();
+          }
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not clear lessons.');
+        },
+      });
+    }
+
     function bindLessonGridInteractions(gridId) {
       const grid = document.getElementById(gridId);
       if (!grid) return;
@@ -2046,15 +2175,7 @@
         if (delBtn) {
           e.stopPropagation();
           const id = delBtn.getAttribute('data-delete-id');
-          try {
-            await apiFetch(`/api/history/${encodeURIComponent(id)}`, { method: 'DELETE' });
-            state.lessons = state.lessons.filter((l) => l.id !== id);
-            state.selectedLedgerIds.delete(id);
-            renderLibrary();
-            loadSessionAndStats();
-          } catch (err) {
-            showToast(err.message);
-          }
+          if (id) await confirmDeleteLesson(id);
           return;
         }
 
@@ -2080,17 +2201,7 @@
     );
 
     document.getElementById('clear-library-btn')?.addEventListener('click', async () => {
-      if (!requireAuthBeforeAction({ type: 'section', section: 'lessons' })) return;
-      if (!window.confirm(t('confirmClear'))) return;
-      try {
-        await apiFetch('/api/history/clear', { method: 'POST' });
-        state.lessons = [];
-        state.selectedLedgerIds.clear();
-        renderLibrary();
-        loadSessionAndStats();
-      } catch (err) {
-        showToast(err.message);
-      }
+      await confirmClearAllLessons({ type: 'section', section: 'lessons' });
     });
 
     // Vocabulary Vault Filters, Search, Delete, Flashcards
@@ -2127,13 +2238,50 @@
       const delBtn = e.target.closest('[data-delete-vocab]');
       if (delBtn) {
         const id = delBtn.getAttribute('data-delete-vocab');
-        try {
-          await apiFetch(`/api/vocabulary/${encodeURIComponent(id)}`, { method: 'DELETE' });
-          await loadVocabulary();
-          loadSessionAndStats();
-        } catch (err) {
-          showToast(err.message);
-        }
+        const target = state.vocabItems.find((v) => v.id === id);
+        const termLabel = String(target?.term || 'Vocabulary word').trim();
+        if (!window.FlaptapConfirm?.confirmAndUndo) return;
+
+        const snapshot = {
+          vocabItems: [...state.vocabItems],
+          flashcardIndex: state.flashcardIndex,
+        };
+        await window.FlaptapConfirm.confirmAndUndo({
+          title: 'Remove word from vault?',
+          message: 'This card will be removed from your Vocabulary Vault & Flashcards.',
+          detail: termLabel,
+          confirmLabel: 'Remove',
+          undoMessage: `Removed "${termLabel}"`,
+          restoredMessage: `Restored "${termLabel}"`,
+          onApply: () => {
+            state.vocabItems = state.vocabItems.filter((v) => v.id !== id);
+            state.flashcardIndex = Math.max(
+              0,
+              Math.min(state.flashcardIndex, Math.max(0, state.vocabItems.length - 1)),
+            );
+            renderVocabulary();
+            renderFlashcard();
+          },
+          onUndo: () => {
+            state.vocabItems = snapshot.vocabItems;
+            state.flashcardIndex = snapshot.flashcardIndex;
+            renderVocabulary();
+            renderFlashcard();
+          },
+          onCommit: async ({ keepalive = false } = {}) => {
+            await apiFetch(`/api/vocabulary/${encodeURIComponent(id)}`, {
+              method: 'DELETE',
+              keepalive,
+            });
+            if (!keepalive) {
+              await loadVocabulary();
+              loadSessionAndStats();
+            }
+          },
+          onError: (err) => {
+            showToast(err?.message || 'Could not remove word.');
+          },
+        });
       }
     });
 
@@ -2154,9 +2302,83 @@
     });
 
     document.getElementById('flashcard-card')?.addEventListener('click', () => {
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && String(sel).trim().length >= 2) return;
       state.flashcardRevealed = !state.flashcardRevealed;
       renderFlashcard();
     });
+
+    function bindWorkspaceSelectionLookup(container) {
+      if (!container || !window.FlaptapWordLookup?.bindSelectionLookup) return;
+      window.FlaptapWordLookup.bindSelectionLookup(container, {
+        maxLength: 320,
+        onSelect: (text, meta) => {
+          if (!requireAuthBeforeAction({ type: 'section', section: state.activeSection || 'vocabulary' })) {
+            return;
+          }
+          const node = meta?.range?.startContainer;
+          const el = node?.nodeType === 1 ? node : node?.parentElement;
+          const card = el?.closest('.vocab-card, .flashcard-card, .lesson-card');
+          const contextSentence =
+            card?.querySelector('.vocab-context, .fc-context, .card-title')?.textContent?.trim() || text;
+          const lang =
+            state.user?.nativeLanguage || localStorage.getItem('flaptap_trans_lang') || 'ar';
+
+          window.FlaptapWordLookup.open({
+            word: text,
+            sourceEl: meta?.sourceEl || null,
+            contextSentence,
+            endpoint: '/api/learning-library/define-word',
+            payload: {
+              word: text,
+              contextSentence,
+              language: lang,
+            },
+            fetcher: apiFetch,
+            canPlay: false,
+            canSpeak: true,
+            canSave: true,
+            isSaved: (term) =>
+              state.vocabItems.some(
+                (v) =>
+                  String(v.term || '').trim().toLowerCase() ===
+                  String(term || '').trim().toLowerCase(),
+              ),
+            onSave: async (lookup) => {
+              if (!requireAuthBeforeAction({ type: 'section', section: 'vocabulary' })) return;
+              try {
+                const saved = await apiFetch('/api/vocabulary', {
+                  method: 'POST',
+                  body: JSON.stringify({
+                    term: lookup.term,
+                    ipa: lookup.ipa,
+                    partOfSpeech: lookup.partOfSpeech,
+                    definition: lookup.contextualDefinition,
+                    generalTranslation: lookup.generalTranslation || '',
+                    translation: lookup.nativeTranslation,
+                    contextSentence: lookup.contextSentence,
+                    lessonTitle: 'Vocabulary Vault',
+                  }),
+                });
+                if (saved?.id) {
+                  await loadVocabulary();
+                  window.FlaptapWordLookup.syncSavedButtonDom();
+                }
+                showToast(`Saved "${lookup.term}" to Vocabulary Flashcards`);
+              } catch (err) {
+                showToast(err?.message || 'Could not save word.');
+              }
+            },
+          });
+        },
+      });
+    }
+
+    bindWorkspaceSelectionLookup(document.getElementById('vocab-grid'));
+    bindWorkspaceSelectionLookup(document.getElementById('flashcard-card'));
+    bindWorkspaceSelectionLookup(document.getElementById('history-grid'));
+    bindWorkspaceSelectionLookup(document.getElementById('dialogue-history-grid'));
+    bindWorkspaceSelectionLookup(document.getElementById('pronunciation-history-grid'));
 
     document.querySelectorAll('[data-srs]').forEach((btn) => {
       btn.addEventListener('click', async () => {
@@ -2225,29 +2447,47 @@
 
     document.getElementById('clear-all-vocab-btn')?.addEventListener('click', async () => {
       if (!requireAuthBeforeAction({ type: 'section', section: 'history' })) return;
-      if (!window.confirm(t('confirmClearVocab'))) return;
-      try {
-        const res = await apiFetch('/api/vocabulary/clear', { method: 'POST' });
-        state.vocabItems = [];
-        await loadUsageAndHistory();
-        showToast(`Cleared ${res.removedCount || 0} vocabulary items`);
-      } catch (err) {
-        showToast(err.message);
-      }
+      if (!window.FlaptapConfirm?.confirmAndUndo) return;
+
+      const snapshot = {
+        vocabItems: [...state.vocabItems],
+        flashcardIndex: state.flashcardIndex,
+        flashcardsOpen: state.flashcardsOpen,
+      };
+      const total = snapshot.vocabItems.length;
+      await window.FlaptapConfirm.confirmAndUndo({
+        title: 'Clear all vocabulary?',
+        message: t('confirmClearVocab'),
+        detail: total > 0 ? `${total} saved word(s)` : '',
+        confirmLabel: 'Clear All',
+        undoMessage: 'Cleared Vocabulary Vault',
+        restoredMessage: 'Restored Vocabulary Vault',
+        onApply: () => {
+          state.vocabItems = [];
+          setFlashcardsOpen(false);
+          renderVocabulary();
+        },
+        onUndo: () => {
+          state.vocabItems = snapshot.vocabItems;
+          state.flashcardIndex = snapshot.flashcardIndex;
+          renderVocabulary();
+          if (snapshot.flashcardsOpen) setFlashcardsOpen(true);
+        },
+        onCommit: async ({ keepalive = false } = {}) => {
+          await apiFetch('/api/vocabulary/clear', { method: 'POST', keepalive });
+          if (!keepalive) {
+            await loadUsageAndHistory();
+            loadSessionAndStats();
+          }
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not clear vocabulary.');
+        },
+      });
     });
 
     document.getElementById('clear-entire-history-btn')?.addEventListener('click', async () => {
-      if (!requireAuthBeforeAction({ type: 'section', section: 'history' })) return;
-      if (!window.confirm(t('confirmClear'))) return;
-      try {
-        await apiFetch('/api/history/clear', { method: 'POST' });
-        state.lessons = [];
-        state.selectedLedgerIds.clear();
-        await loadUsageAndHistory();
-        showToast('All lessons deleted from history');
-      } catch (err) {
-        showToast(err.message);
-      }
+      await confirmClearAllLessons({ type: 'section', section: 'history' });
     });
 
     // History Ledger Filters, Sort, Search & Bulk Selection
@@ -2299,13 +2539,62 @@
     async function runBulkLedgerAction(action) {
       const ids = Array.from(state.selectedLedgerIds);
       if (ids.length === 0) return;
-      if (action === 'delete' && !window.confirm(`Delete ${ids.length} selected lesson(s)?`)) return;
+
+      if (action === 'delete' && window.FlaptapConfirm?.confirmAndUndo) {
+        const idSet = new Set(ids);
+        const snapshot = {
+          lessons: [...state.lessons],
+          selectedIds: new Set(state.selectedLedgerIds),
+          overviewLessons: Array.isArray(state.usageOverview?.lessons)
+            ? [...state.usageOverview.lessons]
+            : null,
+        };
+        await window.FlaptapConfirm.confirmAndUndo({
+          title: 'Delete selected lessons?',
+          message: `Remove ${ids.length} selected lesson(s) and their history?`,
+          detail: `${ids.length} lesson(s) selected`,
+          confirmLabel: 'Delete Selected',
+          undoMessage: `Deleted ${ids.length} lesson(s)`,
+          restoredMessage: `Restored ${ids.length} lesson(s)`,
+          onApply: () => {
+            state.lessons = state.lessons.filter((l) => !idSet.has(l.id));
+            state.selectedLedgerIds.clear();
+            if (state.usageOverview?.lessons) {
+              state.usageOverview.lessons = state.usageOverview.lessons.filter((l) => !idSet.has(l.id));
+            }
+            refreshLessonsAndLedgerViews();
+          },
+          onUndo: () => {
+            state.lessons = snapshot.lessons;
+            state.selectedLedgerIds = snapshot.selectedIds;
+            if (state.usageOverview && snapshot.overviewLessons) {
+              state.usageOverview.lessons = snapshot.overviewLessons;
+            }
+            refreshLessonsAndLedgerViews();
+          },
+          onCommit: async ({ keepalive = false } = {}) => {
+            await apiFetch('/api/history/bulk', {
+              method: 'POST',
+              keepalive,
+              body: JSON.stringify({ ids, action: 'delete' }),
+            });
+            if (!keepalive) {
+              await loadUsageAndHistory();
+              loadSessionAndStats();
+            }
+          },
+          onError: (err) => {
+            showToast(err?.message || 'Bulk delete failed.');
+          },
+        });
+        return;
+      }
+
       try {
         const res = await apiFetch('/api/history/bulk', {
           method: 'POST',
           body: JSON.stringify({ ids, action }),
         });
-        if (action === 'delete') state.selectedLedgerIds.clear();
         await loadUsageAndHistory();
         showToast(`Updated ${res.affectedCount || 0} lesson(s)`);
       } catch (err) {
@@ -2371,14 +2660,7 @@
       const delBtn = e.target.closest('[data-delete-item-ledger]');
       if (delBtn) {
         const id = delBtn.getAttribute('data-delete-item-ledger');
-        try {
-          await apiFetch(`/api/history/${encodeURIComponent(id)}`, { method: 'DELETE' });
-          state.selectedLedgerIds.delete(id);
-          await loadUsageAndHistory();
-          showToast('Lesson deleted');
-        } catch (err) {
-          showToast(err.message);
-        }
+        if (id) await confirmDeleteLesson(id);
       }
     });
 
@@ -2387,23 +2669,77 @@
       const delLog = e.target.closest('[data-delete-activity]');
       if (!delLog) return;
       const logId = delLog.getAttribute('data-delete-activity');
-      try {
-        await apiFetch(`/api/history/activity/${encodeURIComponent(logId)}`, { method: 'DELETE' });
-        await loadUsageAndHistory();
-      } catch (err) {
-        showToast(err.message);
-      }
+      if (!window.FlaptapConfirm?.confirmAndUndo) return;
+
+      const list = Array.isArray(state.usageOverview?.recentActivity)
+        ? state.usageOverview.recentActivity
+        : [];
+      const target = list.find((row) => row.id === logId);
+      const snapshot = [...list];
+
+      await window.FlaptapConfirm.confirmAndUndo({
+        title: 'Remove activity entry?',
+        message: 'This practice session record will be removed from your timeline.',
+        detail: target?.lessonTitle || '',
+        confirmLabel: 'Remove',
+        undoMessage: 'Removed activity entry',
+        restoredMessage: 'Restored activity entry',
+        onApply: () => {
+          if (state.usageOverview) {
+            state.usageOverview.recentActivity = snapshot.filter((row) => row.id !== logId);
+          }
+          renderActivityTimeline();
+        },
+        onUndo: () => {
+          if (state.usageOverview) {
+            state.usageOverview.recentActivity = snapshot;
+          }
+          renderActivityTimeline();
+        },
+        onCommit: async ({ keepalive = false } = {}) => {
+          await apiFetch(`/api/history/activity/${encodeURIComponent(logId)}`, {
+            method: 'DELETE',
+            keepalive,
+          });
+          if (!keepalive) await loadUsageAndHistory();
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not delete activity entry.');
+        },
+      });
     });
 
     document.getElementById('clear-activity-log-btn')?.addEventListener('click', async () => {
       if (!requireAuthBeforeAction({ type: 'section', section: 'history' })) return;
-      try {
-        await apiFetch('/api/history/activity/clear', { method: 'POST' });
-        await loadUsageAndHistory();
-        showToast('Activity timeline cleared');
-      } catch (err) {
-        showToast(err.message);
-      }
+      if (!window.FlaptapConfirm?.confirmAndUndo) return;
+
+      const snapshot = Array.isArray(state.usageOverview?.recentActivity)
+        ? [...state.usageOverview.recentActivity]
+        : [];
+
+      await window.FlaptapConfirm.confirmAndUndo({
+        title: 'Clear activity timeline?',
+        message: 'All recent practice timeline entries will be cleared.',
+        detail: snapshot.length > 0 ? `${snapshot.length} log entry(s)` : '',
+        confirmLabel: 'Clear All',
+        undoMessage: 'Cleared activity timeline',
+        restoredMessage: 'Restored activity timeline',
+        onApply: () => {
+          if (state.usageOverview) state.usageOverview.recentActivity = [];
+          renderActivityTimeline();
+        },
+        onUndo: () => {
+          if (state.usageOverview) state.usageOverview.recentActivity = snapshot;
+          renderActivityTimeline();
+        },
+        onCommit: async ({ keepalive = false } = {}) => {
+          await apiFetch('/api/history/activity/clear', { method: 'POST', keepalive });
+          if (!keepalive) await loadUsageAndHistory();
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not clear activity log.');
+        },
+      });
     });
 
     // Account Drawer Controls & Email Authentication
@@ -2545,6 +2881,16 @@
       const revokeBtn = e.target.closest('[data-revoke-session]');
       if (!revokeBtn) return;
       const sessionId = revokeBtn.getAttribute('data-revoke-session');
+      const sessionTitle =
+        revokeBtn.closest('.session-item')?.querySelector('.session-item-title')?.textContent?.trim() ||
+        'Device session';
+      const ok = await window.FlaptapConfirm?.ask({
+        title: 'Revoke device session?',
+        message: 'That device will be signed out immediately.',
+        detail: sessionTitle,
+        confirmLabel: 'Revoke',
+      });
+      if (!ok) return;
       try {
         await apiFetch(`/api/auth/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' });
         await loadActiveSessions();
@@ -2555,6 +2901,12 @@
     });
 
     document.getElementById('revoke-other-sessions-btn')?.addEventListener('click', async () => {
+      const ok = await window.FlaptapConfirm?.ask({
+        title: 'Sign out other devices?',
+        message: 'Every other active session will be revoked. Your current device stays signed in.',
+        confirmLabel: 'Sign Out Others',
+      });
+      if (!ok) return;
       try {
         const res = await apiFetch('/api/auth/sessions/others', { method: 'DELETE' });
         await loadActiveSessions();
@@ -2590,7 +2942,13 @@
     });
 
     document.getElementById('delete-account-btn')?.addEventListener('click', async () => {
-      if (!window.confirm(t('confirmDeleteAccount'))) return;
+      const ok = await window.FlaptapConfirm?.ask({
+        title: 'Delete account & all data?',
+        message: t('confirmDeleteAccount'),
+        detail: state.user?.email || '',
+        confirmLabel: 'Delete Permanently',
+      });
+      if (!ok) return;
       try {
         await apiFetch('/api/auth/account', { method: 'DELETE' });
         state.user = null;
@@ -2641,8 +2999,9 @@
       ? window.FlaptapRouter.initShell({ translator: t })
       : { section: 'lessons', searchParams: params };
 
-    // Immediately show the route's panel before async session fetch to avoid any Home flash on refresh
-    activateSectionPanel(initialRoute.section);
+    // Immediately show the route's panel before async session fetch while
+    // preserving the browser's restored scroll position on page refresh.
+    activateSectionPanel(initialRoute.section, { preserveScroll: true });
 
     if (window.FlaptapRouter) {
       window.FlaptapRouter.onRouteChange((route) => {

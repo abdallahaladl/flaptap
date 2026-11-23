@@ -34,11 +34,14 @@ const {
   parseSubtitleSegments,
 } = require(path.join(dist, 'utils/timestamp-anchor.util.js'));
 const {
+  deriveContextualFallbackTitle,
   extractCompletedItemsFromStream,
+  isGenericOrFilenameTitle,
   mergeChunkExtractions,
   normalizeExtraction,
   parseModelJson,
 } = require(path.join(dist, 'utils/extraction-normalize.util.js'));
+const { detectImageMime } = require(path.join(dist, 'sources/vision-ocr.service.js'));
 const {
   buildExtractionPrompts,
   EXTRACTION_CATEGORIES_CATALOG,
@@ -341,8 +344,79 @@ const arPrompt = buildExtractionPrompts({
 });
 check(
   arPrompt.systemPrompt.includes('"localizedMeaning"') &&
+    arPrompt.systemPrompt.includes('"contextTranslation"') &&
+    arPrompt.systemPrompt.includes('"exampleTranslation"') &&
+    /standalone general/i.test(arPrompt.systemPrompt) &&
+    /separated by commas/i.test(arPrompt.systemPrompt) &&
     !arPrompt.systemPrompt.includes('"contextSentence"'),
-  'Non-English prompt keeps localizedMeaning while omitting contextSentence',
+  'Non-English prompt enforces standalone comma-separated term meanings plus context/example translations while omitting contextSentence',
+);
+check(
+  !enPrompt.systemPrompt.includes('"contextTranslation"') &&
+    !enPrompt.systemPrompt.includes('"exampleTranslation"'),
+  'English target prompt omits contextTranslation and exampleTranslation',
+);
+
+const translatedNorm = normalizeExtraction({
+  sourceText: 'How can we be sure that the security of these apps is sound? We should double down on testing.',
+  fallbackTitle: 'Security',
+  targetLanguage: 'ar',
+  parsed: {
+    items: [
+      {
+        term: 'sound',
+        surface: 'sound',
+        category: 'vocabulary',
+        meaning: 'Solid, reliable, and not flawed.',
+        localizedMeaning: ['صوت', 'سليم', 'موثوق', 'متين', 'يبدو'],
+        contextTranslation: 'كيف نضمن أن أمان هذه التطبيقات موثوق؟',
+        example: 'The security plan looks sound to me.',
+        exampleTranslation: 'تبدو لي خطة الأمان متينة وموثوقة.',
+      },
+      {
+        term: 'double down on',
+        surface: 'double down on',
+        category: 'phrasal_verb',
+        meaning: 'Commit even more strongly to something.',
+        localizedMeaning: 'يضاعف الجهد في، يلتزم بقوة أكبر تجاه',
+        contextTranslation: 'علينا أن نضاعف جهودنا في الاختبار.',
+        example: 'We decided to double down on security.',
+        exampleTranslation: 'قررنا مضاعفة تركيزنا على الأمان.',
+      },
+    ],
+  },
+});
+check(
+  translatedNorm.items[0].localizedMeaning === 'صوت، سليم، موثوق، متين، يبدو' &&
+    translatedNorm.items[0].contextTranslation === 'كيف نضمن أن أمان هذه التطبيقات موثوق؟' &&
+    translatedNorm.items[0].exampleTranslation === 'تبدو لي خطة الأمان متينة وموثوقة.' &&
+    translatedNorm.items[1].localizedMeaning === 'يضاعف الجهد في، يلتزم بقوة أكبر تجاه' &&
+    translatedNorm.items[1].contextTranslation === 'علينا أن نضاعف جهودنا في الاختبار.' &&
+    translatedNorm.items[1].exampleTranslation === 'قررنا مضاعفة تركيزنا على الأمان.',
+  'Normalization preserves comma-separated standalone meanings and true context/example translations',
+);
+
+const enTranslatedNorm = normalizeExtraction({
+  sourceText: 'How can we be sure that the security of these apps is sound?',
+  fallbackTitle: 'Security',
+  targetLanguage: 'en',
+  parsed: {
+    items: [
+      {
+        term: 'sound',
+        surface: 'sound',
+        category: 'vocabulary',
+        meaning: 'Solid, reliable, and not flawed.',
+        contextTranslation: 'should be omitted for en',
+        example: 'The plan looks sound.',
+        exampleTranslation: 'should be omitted for en',
+      },
+    ],
+  },
+});
+check(
+  !enTranslatedNorm.items[0].contextTranslation && !enTranslatedNorm.items[0].exampleTranslation,
+  'English target normalization omits contextTranslation and exampleTranslation',
 );
 
 // ---------------------------------------------------------------------------
@@ -1036,6 +1110,174 @@ try {
       linksFromLesson.extractorNotes.some((n) => n.id === 'aex_sync_1') &&
       linksFromNote.source?.id === s1.id,
     'Cross-feature link resolution connects Extractor guides and Studio lessons via shared source',
+  );
+
+  // Image MIME detection (magic bytes + spoofing rejection)
+  check(
+    detectImageMime(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) === 'image/png' &&
+      detectImageMime(Buffer.from([0xff, 0xd8, 0xff, 0xe0])) === 'image/jpeg' &&
+      detectImageMime(Buffer.from('GIF89a0000')) === 'image/gif' &&
+      detectImageMime(Buffer.from('RIFF0000WEBP')) === 'image/webp' &&
+      detectImageMime(Buffer.from('%PDF-1.7 fake'), 'image/png') === null,
+    'detectImageMime validates real PNG/JPEG/GIF/WebP headers and rejects non-images',
+  );
+
+  // Contextual naming & filename rejection guards
+  check(
+    isGenericOrFilenameTitle('IMG_4829_raw.png', ['IMG_4829_raw.png']) === true &&
+      isGenericOrFilenameTitle('Img 4829 Raw', ['IMG_4829_raw.png']) === true &&
+      isGenericOrFilenameTitle('Screenshot 2026 11 21', ['Screenshot_2026_11_21.png']) === true &&
+      isGenericOrFilenameTitle('Screenshot', []) === true &&
+      isGenericOrFilenameTitle('Engineering Deployment Checklist Discussions', [
+        'IMG_4829_raw.png',
+        'Screenshot_2026_11_21.png',
+      ]) === false,
+    'isGenericOrFilenameTitle rejects raw image filenames/placeholders and accepts contextual titles',
+  );
+
+  const derivedTitle = deriveContextualFallbackTitle(
+    'This excerpt discusses staging rollouts and calm incident postmortems.',
+    'Backup source prose.',
+  );
+  check(
+    derivedTitle.length >= 10 && !isGenericOrFilenameTitle(derivedTitle),
+    `deriveContextualFallbackTitle builds a clean contextual title ("${derivedTitle}")`,
+  );
+
+  const imagePrompt = buildExtractionPrompts({
+    source: {
+      sourceType: 'image',
+      title: '',
+      creator: 'Image OCR',
+      sourceUrl: '',
+      sourceLabel: '2 images · OCR · gpt-6-luna',
+      text: 'We need to triage the deployment outage before cutover.',
+      hasAudio: false,
+      needsContextualTitle: true,
+      submittedFileNames: ['IMG_4829_raw.png', 'Screenshot_2026_11_21.png'],
+      sourceMeta: { imageCount: 2 },
+      warnings: [],
+      truncated: false,
+    },
+    targetLanguage: 'ar',
+    chunkIndex: 0,
+    totalChunks: 1,
+  });
+  check(
+    !imagePrompt.userPrompt.includes('IMG_4829') &&
+      !imagePrompt.userPrompt.includes('Screenshot_2026_11_21') &&
+      /unified contextual title/i.test(imagePrompt.userPrompt) &&
+      /Title rule:/i.test(imagePrompt.systemPrompt),
+    'Multi-image extraction prompt enforces contextual naming and never leaks filenames',
+  );
+
+  // 15-guide repository pagination: default 10 per page + deterministic newest-first order
+  const pageUserId = 'usr_paginated_15';
+  sqlite.db
+    .prepare(
+      `INSERT INTO users (id, email, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?)`,
+    )
+    .run(pageUserId, 'paginated@test.local', 'Pagination Tester', 'hash', new Date().toISOString());
+  const sameTs = '2026-11-21T10:00:00.000Z';
+  for (let idx = 1; idx <= 15; idx++) {
+    const padded = String(idx).padStart(2, '0');
+    const createdAt = idx >= 13 ? sameTs : `2026-11-${padded}T09:00:00.000Z`;
+    repo.save({
+      id: `aex_pg_${padded}`,
+      userId: pageUserId,
+      title: `Study Guide #${padded}`,
+      creator: 'Unit Fixture',
+      summary: `Summary ${padded}`,
+      speakerStyle: 'Casual',
+      sourceType: 'text',
+      sourceUrl: '',
+      sourceLabel: 'Text',
+      sourceMeta: {},
+      targetLanguage: 'ar',
+      agentName: 'Unit',
+      modelName: 'unit',
+      reasoningLevel: 'none',
+      executionTimeMs: 100,
+      items: [],
+      sourceText: `Guide ${padded} sample text for pagination verification.`,
+      contentHash: `pg_hash_${padded}`,
+      createdAt,
+    });
+  }
+  const pg1 = repo.listPaginated(pageUserId, { page: 1 });
+  const pg2 = repo.listPaginated(pageUserId, { page: 2 });
+  const pgClamped = repo.listPaginated(pageUserId, { page: 99 });
+  check(
+    pg1.pageSize === 10 &&
+      pg1.totalPages === 2 &&
+      pg1.filteredTotal === 15 &&
+      pg1.items.length === 10 &&
+      pg1.hasMore === true &&
+      pg1.items[0].id === 'aex_pg_15' &&
+      pg1.items[1].id === 'aex_pg_14' &&
+      pg1.items[2].id === 'aex_pg_13' &&
+      pg1.items[9].id === 'aex_pg_06',
+    'Repository default pagination returns 10 newest items on Page 1 with deterministic rowid tie-breaking',
+  );
+  check(
+    pg2.page === 2 &&
+      pg2.items.length === 5 &&
+      pg2.hasMore === false &&
+      pg2.items[0].id === 'aex_pg_05' &&
+      pg2.items[4].id === 'aex_pg_01' &&
+      pgClamped.page === 2 &&
+      pgClamped.items.length === 5,
+    'Repository Page 2 returns oldest 5 items and out-of-range pages clamp safely',
+  );
+
+  // Frontend store getNextUncompletedPage resume helper
+  const vm = require('node:vm');
+  const storeSource = fs.readFileSync(
+    path.join(process.cwd(), 'frontend/anything-to-phrases/store.js'),
+    'utf8',
+  );
+  const storeSandbox = {
+    window: {},
+    localStorage: { getItem: () => null, setItem: () => {} },
+    FlaptapUtils: { escapeHtml: (v) => String(v ?? '') },
+    FlaptapPagination: { DEFAULT_PAGE_SIZE: 10 },
+    URL,
+    Set,
+    Map,
+  };
+  storeSandbox.window = storeSandbox;
+  vm.runInNewContext(storeSource, storeSandbox);
+  const a2pStore = storeSandbox.window.FlaptapA2PStore;
+  const makeNote = (count, completed = []) => ({
+    items: Array.from({ length: count }, (_, idx) => ({ index: idx, term: `term ${idx}` })),
+    completionProgress: { items: completed },
+  });
+  check(
+    a2pStore && typeof a2pStore.getNextUncompletedPage === 'function',
+    'FlaptapA2PStore exposes getNextUncompletedPage helper',
+  );
+  check(
+    a2pStore.getNextUncompletedPage(makeNote(0, []), 10) === 1 &&
+      a2pStore.getNextUncompletedPage(makeNote(24, []), 10) === 1 &&
+      a2pStore.getNextUncompletedPage(makeNote(24, [0, 1, 2, 3, 4, 5]), 10) === 1 &&
+      a2pStore.getNextUncompletedPage(makeNote(24, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]), 10) === 2 &&
+      a2pStore.getNextUncompletedPage(makeNote(24, Array.from({ length: 14 }, (_, i) => i)), 10) === 2 &&
+      a2pStore.getNextUncompletedPage(makeNote(24, Array.from({ length: 20 }, (_, i) => i)), 10) === 3,
+    'getNextUncompletedPage resolves Page 1, 2, and 3 across sequential completions',
+  );
+  check(
+    a2pStore.getNextUncompletedPage(
+      makeNote(24, [0, 1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]),
+      10,
+    ) === 1 &&
+      a2pStore.getNextUncompletedPage(
+        makeNote(24, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23]),
+        10,
+      ) === 2 &&
+      a2pStore.getNextUncompletedPage(makeNote(24, Array.from({ length: 24 }, (_, i) => i)), 10) === 1 &&
+      a2pStore.getNextUncompletedPage(makeNote(24, Array.from({ length: 16 }, (_, i) => i)), 20) === 1 &&
+      a2pStore.getNextUncompletedPage(makeNote(24, Array.from({ length: 20 }, (_, i) => i)), 20) === 2,
+    'getNextUncompletedPage handles out-of-order gaps, 100% completed guides (Page 1), and custom pageSize=20',
   );
 } finally {
   sqlite.onModuleDestroy();

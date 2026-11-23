@@ -329,10 +329,14 @@ function validateAndNormalizeItem(
   );
   if (!meaning) return null;
 
-  const localizedRaw = safeText(
-    raw?.localizedMeaning ?? raw?.translation ?? raw?.nativeMeaning ?? raw?.meaning,
-    520,
-  );
+  const localizedSource = raw?.localizedMeaning ?? raw?.translation ?? raw?.nativeMeaning;
+  const localizedRaw = Array.isArray(localizedSource)
+    ? localizedSource
+        .map((entry) => safeText(entry, 140))
+        .filter(Boolean)
+        .join(ctx.targetLanguage === 'ar' ? '، ' : ', ')
+        .slice(0, 520)
+    : safeText(localizedSource ?? raw?.meaning, 520);
   const localizedMeaning = ctx.targetLanguage === 'en' ? meaning : localizedRaw || meaning;
 
   const contextFromSource = findContextSentence(ctx.sourceText, term, surface);
@@ -344,6 +348,20 @@ function validateAndNormalizeItem(
       ? modelContext
       : '');
 
+  const rawContextTranslation =
+    ctx.targetLanguage === 'en'
+      ? ''
+      : safeText(
+          raw?.contextTranslation ??
+            raw?.contextSentenceTranslation ??
+            raw?.inContextTranslation,
+          520,
+        );
+  const contextTranslation =
+    contextSentence && rawContextTranslation && rawContextTranslation !== contextSentence
+      ? rawContextTranslation
+      : '';
+
   const rawRegister = safeText(raw?.register, 40).toLowerCase();
   const register = VALID_REGISTERS.has(rawRegister) ? rawRegister : registerForCategory(category);
   const cefrUpper = String(raw?.cefr || '').trim().toUpperCase();
@@ -353,6 +371,15 @@ function validateAndNormalizeItem(
   const generalMeaning = safeText(raw?.generalMeaning ?? raw?.generalSense, 420);
   const techNote = safeText(raw?.techNote ?? raw?.workplaceNote, 360);
   const tags = safeList(raw?.tags, 5, 36);
+  const example = safeText(raw?.example ?? raw?.exampleSentence, 420);
+  const rawExampleTranslation =
+    ctx.targetLanguage === 'en'
+      ? ''
+      : safeText(raw?.exampleTranslation ?? raw?.exampleSentenceTranslation, 520);
+  const exampleTranslation =
+    example && rawExampleTranslation && rawExampleTranslation !== example
+      ? rawExampleTranslation
+      : '';
 
   return {
     index: ctx.nextIndex,
@@ -367,9 +394,11 @@ function validateAndNormalizeItem(
     localizedMeaning,
     ...(generalMeaning ? { generalMeaning } : {}),
     contextSentence,
+    ...(contextTranslation ? { contextTranslation } : {}),
     usageNote: safeText(raw?.usageNote ?? raw?.usage, 420),
     spokenNote: safeText(raw?.spokenNote ?? raw?.pronunciation ?? raw?.mechanics, 420),
-    example: safeText(raw?.example ?? raw?.exampleSentence, 420),
+    example,
+    ...(exampleTranslation ? { exampleTranslation } : {}),
     ...(techNote ? { techNote } : {}),
     ...(tags.length > 0 ? { tags } : {}),
     grounded: true,
@@ -486,4 +515,114 @@ function registerForCategory(category: ExtractorItemCategory): string {
 /** Normalizes a model title for logs / defensive display. */
 export function cleanModelTitle(value: unknown): string {
   return normalizeWhitespace(String(value ?? '')).slice(0, 140);
+}
+
+const GENERIC_TITLES = new Set([
+  'untitled',
+  'untitled source',
+  'untitled study guide',
+  'screenshot',
+  'screenshots',
+  'screen shot',
+  'screen shots',
+  'image',
+  'images',
+  'photo',
+  'photos',
+  'picture',
+  'pictures',
+  'image ocr',
+  'multi image ocr',
+  'multi-image ocr',
+  'uploaded source',
+  'image collection',
+  'image study source',
+  'pasted english text',
+  'scan',
+  'scanned document',
+  'document',
+  'notes',
+  'uploaded notes',
+]);
+
+const IMAGE_EXTENSION_RE = /\.(?:png|jpe?g|webp|gif|heic|bmp|tiff?)(?:\b|$)/i;
+const CAMERA_OR_RAW_FILENAME_RE =
+  /^(?:img|dsc|pxl|mvimg|vid|scr|screenshot|screen[\s_-]?shot|photo|pic|image|capture|snip|whatsapp[\s_-]?image|telegram|signal|scan)[_-]?\d[\w\s._-]*$/i;
+const UUID_OR_HEX_RE =
+  /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{10,}|[\d\s._-]+)$/i;
+
+function normalizeTitleCompare(value: string): string {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Returns true if `title` is blank, a generic placeholder, looks like a raw
+ * camera/OS filename or extension, or matches any submitted image filename.
+ */
+export function isGenericOrFilenameTitle(title: string, submittedFileNames: string[] = []): boolean {
+  const clean = cleanModelTitle(title);
+  if (!clean || clean.length < 3) return true;
+
+  const norm = normalizeTitleCompare(clean);
+  if (GENERIC_TITLES.has(norm)) return true;
+  if (IMAGE_EXTENSION_RE.test(clean)) return true;
+  if (CAMERA_OR_RAW_FILENAME_RE.test(clean)) return true;
+  if (UUID_OR_HEX_RE.test(clean)) return true;
+
+  for (const rawName of submittedFileNames || []) {
+    const base = String(rawName || '').split(/[\\/]/).pop()?.trim() || '';
+    if (!base) continue;
+    const rawLower = base.toLowerCase();
+    const stem = base.replace(/\.[a-z0-9]{1,8}$/i, '');
+    const normStem = normalizeTitleCompare(stem);
+    if (norm === rawLower || (normStem && norm === normStem)) {
+      return true;
+    }
+    if (rawLower.length >= 4 && clean.toLowerCase().includes(rawLower)) {
+      return true;
+    }
+    if (
+      normStem.length >= 6 &&
+      (norm.startsWith(`${normStem} `) || norm.endsWith(` ${normStem}`))
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+/**
+ * Derives a clean 3–8 word content-based fallback title strictly from extracted
+ * summary or source prose — never from filenames.
+ */
+export function deriveContextualFallbackTitle(summary: string, sourceText: string): string {
+  const candidates = [String(summary || ''), String(sourceText || '')];
+
+  for (const raw of candidates) {
+    const cleaned = normalizeWhitespace(raw)
+      .replace(/^["'“”`]+|["'“”`]+$/g, '')
+      .trim();
+    if (!cleaned) continue;
+
+    const segments = cleaned
+      .split(/(?<=[.!?])\s+|\n+/)
+      .map((s) => s.replace(/^[\s\-*•#>]+/, '').replace(/[.!?,;:]+$/g, '').trim())
+      .filter((s) => s.split(/\s+/).length >= 3);
+
+    for (const seg of segments) {
+      const words = seg.split(/\s+/).filter(Boolean);
+      const picked = words.slice(0, 7).join(' ').slice(0, 80).trim();
+      const titled = picked ? picked.charAt(0).toUpperCase() + picked.slice(1) : '';
+      if (titled && !isGenericOrFilenameTitle(titled)) {
+        return titled;
+      }
+    }
+  }
+
+  return 'Spoken English Study Notes';
 }

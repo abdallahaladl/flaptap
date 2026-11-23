@@ -9,6 +9,7 @@ import { getLanguage } from '../../core/ai/languages';
 import { WordDefinitionResponse, WordLookupService } from '../../core/ai/word-lookup.service';
 import { HistoryRepository } from '../../core/database/history.repository';
 import { AiProvidersService } from '../ai-providers/ai-providers.service';
+import { SharedSourcesService } from '../shared-sources/shared-sources.service';
 import { AmericanExtractorRepository } from './american-extractor.repository';
 import {
   ExtractionProgressHooks,
@@ -19,6 +20,7 @@ import {
   ListHistoryQuery,
   PaginatedHistoryResult,
   ResolvedSource,
+  UploadedFileInput,
 } from './american-extractor.types';
 import {
   buildExtractionPrompts,
@@ -39,9 +41,13 @@ import {
   normalizeStudyGoal,
   resolveEffectiveCategories,
 } from './extraction.prompt';
-import { SourceResolverService } from './sources/source-resolver.service';
+import { isImageUploadFile, SourceResolverService } from './sources/source-resolver.service';
+import { MAX_IMAGE_BYTES, MAX_IMAGES_PER_EXTRACTION } from './sources/vision-ocr.service';
 import {
+  cleanModelTitle,
+  deriveContextualFallbackTitle,
   extractCompletedItemsFromStream,
+  isGenericOrFilenameTitle,
   mergeChunkExtractions,
   NormalizedExtraction,
   normalizeExtraction,
@@ -101,6 +107,7 @@ export class AmericanExtractorService {
     private readonly wordLookup: WordLookupService,
     private readonly repository: AmericanExtractorRepository,
     private readonly historyRepo: HistoryRepository,
+    private readonly sharedSources: SharedSourcesService,
   ) {}
 
   getConfig(): ExtractorConfig {
@@ -117,6 +124,8 @@ export class AmericanExtractorService {
       defaultModel: EXTRACTOR_PREFERRED_MODELS[0],
       defaultVariant: EXTRACTOR_PREFERRED_VARIANTS[0],
       maxUploadMb: MAX_UPLOAD_MB,
+      maxImagesPerUpload: MAX_IMAGES_PER_EXTRACTION,
+      maxImageMb: Math.round(MAX_IMAGE_BYTES / (1024 * 1024)),
       acceptedUploadTypes: [
         '.pdf', '.txt', '.md', '.markdown', '.srt', '.vtt', '.json',
         '.png', '.jpg', '.jpeg', '.webp', '.gif',
@@ -223,39 +232,124 @@ export class AmericanExtractorService {
     },
     hooks: ExtractionProgressHooks = {},
   ): Promise<ExtractionResult> {
+    return this.extractUploads(
+      {
+        ...params,
+        files: [
+          {
+            buffer: params.buffer,
+            originalName: params.originalName,
+            mimeType: params.mimeType,
+          },
+        ],
+      },
+      hooks,
+    );
+  }
+
+  async extractUploads(
+    params: {
+      userId: string;
+      files: UploadedFileInput[];
+      language?: string;
+      extractionType?: string;
+      categories?: string[];
+      style?: string;
+      level?: string;
+      focus?: string;
+      depth?: string;
+      studyGoal?: string;
+      order?: string;
+      keyId?: string;
+      model?: string;
+      variant?: string;
+      force?: boolean;
+    },
+    hooks: ExtractionProgressHooks = {},
+  ): Promise<ExtractionResult> {
     if (!params.userId) throw new BadRequestException('Sign in to run an extraction.');
-    if (!params.buffer || params.buffer.length === 0) {
+    const files = Array.isArray(params.files) ? params.files : [];
+    if (files.length === 0) {
       throw new BadRequestException('Choose a file to upload.');
     }
-    if (params.buffer.length > MAX_UPLOAD_MB * 1024 * 1024) {
-      throw new BadRequestException(`Files must be ${MAX_UPLOAD_MB} MB or smaller.`);
+    if (files.length > MAX_IMAGES_PER_EXTRACTION) {
+      throw new BadRequestException(
+        `Upload up to ${MAX_IMAGES_PER_EXTRACTION} images per extraction.`,
+      );
     }
+
+    let totalBytes = 0;
+    for (const file of files) {
+      if (!file?.buffer || file.buffer.length === 0) {
+        throw new BadRequestException('Choose a non-empty file to upload.');
+      }
+      totalBytes += file.buffer.length;
+    }
+    if (totalBytes > MAX_UPLOAD_MB * 1024 * 1024) {
+      throw new BadRequestException(`Combined upload size must be ${MAX_UPLOAD_MB} MB or smaller.`);
+    }
+
+    const multiFile = files.length > 1;
+    if (multiFile && !files.every((f) => isImageUploadFile(f.originalName, f.mimeType))) {
+      throw new BadRequestException(
+        'Multi-file uploads currently support images only (PNG, JPEG, WebP, GIF). Upload PDFs, audio, video, or text files one at a time.',
+      );
+    }
+
+    const isImageBatch = multiFile || isImageUploadFile(files[0].originalName, files[0].mimeType);
     throwIfAborted(hooks.signal);
 
     hooks.onStage?.({
       stage: 'detecting',
-      label: 'Inspecting file',
-      detail: `${params.originalName} (${(params.buffer.length / (1024 * 1024)).toFixed(1)} MB)`,
+      label: isImageBatch
+        ? files.length === 1
+          ? 'Inspecting image'
+          : `Inspecting ${files.length} images`
+        : 'Inspecting file',
+      detail: isImageBatch
+        ? `${files.length} image${files.length === 1 ? '' : 's'} (${(totalBytes / (1024 * 1024)).toFixed(1)} MB)`
+        : `${files[0].originalName} (${(totalBytes / (1024 * 1024)).toFixed(1)} MB)`,
       progress: 8,
     });
 
     hooks.onStage?.({
       stage: 'resolving',
-      label: 'Reading uploaded file',
-      detail: 'Checking shared cache, or running PDF parse, OCR, or speech-to-text',
-      progress: 20,
+      label: isImageBatch ? 'Reading uploaded images' : 'Reading uploaded file',
+      detail: isImageBatch
+        ? 'Checking shared cache, or extracting text via Vision OCR'
+        : 'Checking shared cache, or running PDF parse, OCR, or speech-to-text',
+      progress: 12,
     });
 
-    const source = await this.resolver.resolveUpload({
-      userId: params.userId,
-      buffer: params.buffer,
-      originalName: params.originalName,
-      mimeType: params.mimeType,
-      keyId: params.keyId,
-      model: params.model,
-      variant: params.variant,
-      force: params.force,
-    });
+    const source = isImageBatch
+      ? await this.resolver.resolveImageUploads({
+          userId: params.userId,
+          files,
+          keyId: params.keyId,
+          model: params.model,
+          variant: params.variant,
+          force: params.force,
+          signal: hooks.signal,
+          onProgress: (p) => {
+            hooks.onStage?.({
+              stage: 'resolving',
+              label: 'Reading uploaded images',
+              detail: p.message,
+              progress: p.percent,
+            });
+          },
+        })
+      : await this.resolver.resolveUpload({
+          userId: params.userId,
+          buffer: files[0].buffer,
+          originalName: files[0].originalName,
+          mimeType: files[0].mimeType,
+          keyId: params.keyId,
+          model: params.model,
+          variant: params.variant,
+          force: params.force,
+          signal: hooks.signal,
+        });
 
     throwIfAborted(hooks.signal);
     return this.runExtraction(
@@ -360,8 +454,15 @@ export class AmericanExtractorService {
       }
     }
 
+    const needsContextualTitle = Boolean(source.needsContextualTitle || source.sourceType === 'image');
+    const previewTitle = needsContextualTitle
+      ? source.title && !isGenericOrFilenameTitle(source.title, source.submittedFileNames || [])
+        ? source.title
+        : 'Generating contextual title...'
+      : source.title;
+
     hooks.onSourceReady?.({
-      title: source.title,
+      title: previewTitle,
       creator: source.creator,
       sourceType: source.sourceType,
       sourceLabel: source.sourceLabel,
@@ -523,12 +624,60 @@ export class AmericanExtractorService {
       items: anchoredItems,
     };
 
-    const title =
-      source.title &&
-      source.title !== 'Pasted English Text' &&
-      source.title !== 'Uploaded source'
-        ? source.title
-        : normalized.title || source.title;
+    let synthesizedTitle = '';
+    if (needsContextualTitle && chunks.length > 1) {
+      try {
+        const excerptLines = chunks
+          .slice(0, 6)
+          .map((chunk, idx) => `Excerpt ${idx + 1}: ${chunk.slice(0, 400).replace(/\s+/g, ' ').trim()}`);
+        const chunkTitles = chunkResults
+          .map((c) => c.title)
+          .filter(Boolean)
+          .slice(0, 4)
+          .join(' | ');
+        const titleResp = await this.aiProviders.executeChat(userId, {
+          keyId: aiTarget.keyId,
+          model: aiTarget.model,
+          variant: 'none',
+          temperature: 0.2,
+          maxTokens: 64,
+          timeoutMs: 25000,
+          signal: hooks.signal,
+          systemPrompt:
+            'Generate ONE concise 3-8 word English title describing the shared topic across the combined excerpts. Never output filenames, file extensions, camera codes, quotes, or generic words like Screenshot or Image. Return ONLY the title.',
+          userPrompt: [
+            chunkTitles ? `Section candidates: ${chunkTitles}` : '',
+            normalized.summary ? `Summary: ${normalized.summary}` : '',
+            ...excerptLines,
+          ]
+            .filter(Boolean)
+            .join('\n\n'),
+        });
+        synthesizedTitle = cleanModelTitle(titleResp?.content || '');
+      } catch (err: any) {
+        this.logger.warn(`Multi-chunk contextual title synthesis failed cleanly: ${err?.message || err}`);
+      }
+    }
+
+    let resolvedTitle = '';
+    if (needsContextualTitle) {
+      const candidate = cleanModelTitle(synthesizedTitle || normalized.title || '');
+      resolvedTitle = isGenericOrFilenameTitle(candidate, source.submittedFileNames || [])
+        ? deriveContextualFallbackTitle(normalized.summary, source.text)
+        : candidate;
+    } else {
+      resolvedTitle =
+        source.title &&
+        source.title !== 'Pasted English Text' &&
+        source.title !== 'Uploaded source'
+          ? source.title
+          : normalized.title || source.title;
+    }
+    const title = resolvedTitle || deriveContextualFallbackTitle(normalized.summary, source.text);
+
+    if (source.sourceId && needsContextualTitle && title) {
+      this.sharedSources.updateTitle(userId, source.sourceId, title);
+    }
     const createdAt = new Date().toISOString();
     const id = `aex_${randomUUID().replace(/-/g, '').slice(0, 16)}`;
     const executionTimeMs = Date.now() - startedAt;

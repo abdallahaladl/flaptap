@@ -20,7 +20,6 @@ import { HistoryController } from './modules/history/history.controller';
 import { LanguagesController } from './modules/languages/languages.controller';
 import { HealthController } from './modules/health/health.controller';
 import { AiProvidersModule } from './modules/ai-providers/ai-providers.module';
-import { TechLinguistModule } from './modules/tech-linguist/tech-linguist.module';
 import { LearningLibraryModule } from './modules/learning-library/learning-library.module';
 import { AmericanExtractorModule } from './modules/american-extractor/american-extractor.module';
 import { SharedSourcesModule } from './modules/shared-sources/shared-sources.module';
@@ -29,7 +28,6 @@ import { SharedSourcesModule } from './modules/shared-sources/shared-sources.mod
   imports: [
     SharedSourcesModule,
     AiProvidersModule,
-    TechLinguistModule,
     LearningLibraryModule,
     AmericanExtractorModule,
   ],

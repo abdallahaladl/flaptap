@@ -109,16 +109,16 @@ export class SharedSourcesService {
     return this.repository.upsert(userId, input);
   }
 
+  updateTitle(userId: string, id: string, title: string): void {
+    this.repository.updateTitle(userId, id, title);
+  }
+
   listForUser(userId: string, limit = 50): SharedSourceSummary[] {
     return this.repository.listSummaries(userId, limit);
   }
 
   linkLessonToSource(userId: string, lessonId: string, sourceId: string): void {
     this.repository.linkLessonToSource(userId, lessonId, sourceId);
-  }
-
-  linkTechExtractionToSource(userId: string, extractionId: string, sourceId: string): void {
-    this.repository.linkTechExtractionToSource(userId, extractionId, sourceId);
   }
 
   /**
@@ -292,13 +292,11 @@ export class SharedSourcesService {
     if (lesson && !lessonId) lookup.lessonId = lesson.id;
 
     const extractorNotes = this.repository.findLinkedExtractorNotes(userId, lookup);
-    const techLexiconNotes = this.repository.findLinkedTechLexiconNotes(userId, lookup);
 
     return {
       source: sourceRecord ? this.repository.toSummary(sourceRecord) : null,
       lesson,
       extractorNotes,
-      techLexiconNotes,
     };
   }
 }

@@ -580,6 +580,12 @@ html:has(.studio-body),
   color: var(--ap-text-primary);
 }
 
+.studio-body .topbar-cap-btn.is-open,
+.studio-body .studio-toolbar .icon-action.topbar-cap-btn.is-open {
+  background: var(--ap-blue-wash);
+  color: var(--ap-blue);
+}
+
 .studio-body .topbar-cap-btn:active,
 .studio-body .studio-toolbar .icon-action.topbar-cap-btn:active,
 .studio-body .studio-toolbar .icon-btn.topbar-cap-btn:active {
@@ -1682,6 +1688,32 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
 }
 
 /* Shortcuts Popover */
+.studio-body .scb-popover.shortcuts-popover {
+  width: min(580px, calc(100vw - 16px));
+  background: var(--ap-surface) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.studio-body .shortcuts-layout-pill {
+  background: var(--ap-fill);
+  border-color: var(--ap-border);
+  color: var(--ap-text-secondary);
+}
+
+.studio-body .shortcuts-group-title {
+  color: var(--ap-text-secondary);
+  border-bottom-color: var(--ap-border);
+}
+
+.studio-body .shortcut-row {
+  color: var(--ap-text-primary);
+}
+
+.studio-body .shortcut-row--highlight {
+  background: var(--ap-blue-wash);
+}
+
 .studio-body .kbd-chip {
   font-family: var(--ap-font-mono);
   font-size: 0.68rem;
@@ -1902,6 +1934,7 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   border-radius: 16px;
   border: 1px solid var(--ap-border);
   background: var(--ap-surface-subtle);
+  cursor: default;
   transition: background-color 0.18s var(--ap-ease), border-color 0.18s var(--ap-ease), box-shadow 0.18s var(--ap-ease);
 }
 
@@ -1944,6 +1977,14 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   box-shadow: inset 3.5px 0 0 var(--ap-blue), 0 8px 22px -10px rgba(0, 113, 227, 0.25);
 }
 
+.studio-body .sent-card-top {
+  cursor: pointer;
+}
+
+.studio-body .sent-meta-left {
+  cursor: pointer;
+}
+
 .studio-body .sent-index-num {
   color: var(--ap-text-tertiary);
 }
@@ -1958,6 +1999,24 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   border: 1px solid var(--ap-border);
   background: var(--ap-surface);
   color: var(--ap-text-secondary);
+  transition: background-color 0.16s var(--ap-ease), border-color 0.16s var(--ap-ease), color 0.16s var(--ap-ease);
+}
+
+.studio-body .sent-meta-left:hover .sent-time-badge {
+  border-color: var(--ap-border-strong);
+  color: var(--ap-text-primary);
+}
+
+.studio-body .sentence-driller-card.active-drilling.is-playing .sent-time-badge {
+  background: var(--ap-blue-wash-strong);
+  border-color: rgba(0, 113, 227, 0.34);
+  color: var(--ap-blue);
+  font-weight: 600;
+}
+
+.studio-body .sent-actions-right {
+  cursor: default;
+  gap: 5px;
 }
 
 .studio-body .sent-actions-divider {
@@ -1972,7 +2031,7 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   border: 1px solid var(--ap-border);
   background: var(--ap-surface);
   color: var(--ap-text-secondary);
-  transition: background-color 0.15s var(--ap-ease), color 0.15s var(--ap-ease), border-color 0.15s var(--ap-ease), transform 0.12s var(--ap-ease);
+  transition: background-color 0.15s var(--ap-ease), color 0.15s var(--ap-ease), border-color 0.15s var(--ap-ease), transform 0.12s var(--ap-ease), box-shadow 0.15s var(--ap-ease);
 }
 
 .studio-body .sent-action-btn:hover {
@@ -1981,14 +2040,53 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   color: var(--ap-text-primary);
 }
 
+.studio-body .sent-action-btn:focus-visible {
+  outline: 2px solid var(--ap-blue);
+  outline-offset: 2px;
+}
+
 .studio-body .sent-action-btn:active {
   transform: scale(0.92);
+}
+
+.studio-body .sent-replay-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+.studio-body .sent-replay-btn:hover {
+  background: var(--ap-blue-wash);
+  border-color: rgba(0, 113, 227, 0.32);
+  color: var(--ap-blue);
+}
+
+@keyframes sentReplayPulse {
+  0% {
+    transform: rotate(0deg) scale(0.94);
+  }
+  60% {
+    transform: rotate(-210deg) scale(1.06);
+  }
+  100% {
+    transform: rotate(-360deg) scale(1);
+  }
+}
+
+.studio-body .sent-replay-btn.is-replaying svg,
+.studio-body #deck-replay-sent-btn.is-replaying svg {
+  animation: sentReplayPulse 0.34s var(--ap-ease);
 }
 
 .studio-body .sent-action-btn.active,
 .studio-body .sent-play-btn.active.is-playing {
   background: var(--ap-blue);
   border-color: transparent;
+  color: #FFFFFF;
+  box-shadow: 0 2px 8px -2px rgba(0, 113, 227, 0.42);
+}
+
+.studio-body .sent-play-btn.active.is-playing:hover {
+  background: var(--ap-blue-hover);
   color: #FFFFFF;
 }
 
@@ -1999,59 +2097,7 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   border-color: transparent;
 }
 
-/* Apple Reminders-style circular completion check button across Studio */
-.studio-body .item-check-btn:not(.item-check-btn--pill) {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  border-radius: 50%;
-  border: 1.5px solid var(--ap-border-strong);
-  background: transparent;
-  color: var(--ap-text-tertiary);
-  transition: background-color 0.18s var(--ap-ease), border-color 0.18s var(--ap-ease), color 0.18s var(--ap-ease), transform 0.16s var(--ap-bounce);
-}
-
-.studio-body .item-check-btn:not(.item-check-btn--pill) .chk-dash {
-  opacity: 0;
-}
-
-.studio-body .item-check-btn:not(.item-check-btn--pill) .chk-tick {
-  opacity: 0.38;
-  stroke-width: 2.2;
-}
-
-.studio-body .item-check-btn:not(.item-check-btn--pill):hover {
-  border-color: var(--ap-green-solid);
-  background: var(--ap-green-wash);
-  color: var(--ap-green);
-}
-
-.studio-body .item-check-btn:not(.item-check-btn--pill):hover .chk-tick {
-  opacity: 1;
-}
-
-.studio-body .item-check-btn:not(.item-check-btn--pill).is-checked {
-  background: rgba(52, 199, 89, 0.15);
-  border-color: rgba(52, 199, 89, 0.55);
-  color: var(--ap-green);
-  box-shadow: none;
-}
-
-:root[data-theme="dark"] .studio-body .item-check-btn:not(.item-check-btn--pill).is-checked {
-  background: rgba(48, 209, 88, 0.16);
-  border-color: rgba(48, 209, 88, 0.48);
-  color: var(--ap-green);
-  box-shadow: none;
-}
-
-.studio-body .item-check-btn:not(.item-check-btn--pill).is-checked:hover {
-  background: rgba(52, 199, 89, 0.24);
-  border-color: var(--ap-green);
-}
-
-.studio-body .item-check-btn:not(.item-check-btn--pill).is-checked .chk-tick {
-  opacity: 1;
-}
+/* Apple Reminders-style circular completion check styles live in /check-button.css */
 
 .studio-body .sent-english-line {
   font-family: var(--ap-font-display);
@@ -2061,6 +2107,7 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   letter-spacing: -0.014em;
   font-feature-settings: "kern" 1, "liga" 1;
   color: var(--ap-text-primary);
+  cursor: text;
 }
 
 .studio-body .sentence-driller-card.active-drilling .sent-english-line {
@@ -2082,6 +2129,12 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   font-weight: 600;
 }
 
+.studio-body .clickable-word {
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.14s var(--ap-ease), color 0.14s var(--ap-ease);
+}
+
 .studio-body .clickable-word:hover {
   background: var(--ap-fill);
 }
@@ -2099,10 +2152,12 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   border-radius: 12px;
   border: 1px solid var(--ap-border);
   background: var(--ap-surface);
+  cursor: text;
 }
 
 .studio-body .sentence-translation-text {
   color: var(--ap-text-secondary);
+  cursor: text;
 }
 
 /* ==========================================================================
@@ -2509,40 +2564,7 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   font-size: 0.8rem !important;
 }
 
-/* Text Selection Action Menu */
-.studio-body .selection-menu {
-  border: 1px solid var(--ap-border-strong);
-  background: var(--ap-glass-popover);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  box-shadow: var(--ap-shadow-popover);
-  padding: 5px 5px 5px 14px;
-}
-
-.studio-body .selection-menu::after {
-  background: var(--ap-glass-popover);
-  border-right: 1px solid var(--ap-border-strong);
-  border-bottom: 1px solid var(--ap-border-strong);
-}
-
-.studio-body .selection-menu-text {
-  font-family: var(--ap-font-text);
-  font-style: normal;
-  font-weight: 500;
-  color: var(--ap-text-secondary);
-}
-
-.studio-body .selection-menu-btn {
-  border: none;
-  background: var(--ap-blue);
-  color: #FFFFFF;
-  font-family: var(--ap-font-text);
-}
-
-.studio-body .selection-menu-btn:hover {
-  background: var(--ap-blue-hover);
-  opacity: 1;
-}
+/* Text Selection Action Menu inherits unified styles from styles.css */
 
 /* Floating Jump Pill & Studio Toast */
 .studio-body .floating-jump-pill {
@@ -2664,6 +2686,11 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
     padding: 0;
   }
 
+  .studio-body .topbar-shortcuts-btn,
+  .studio-body .topbar-shortcuts-sep {
+    display: none;
+  }
+
   .studio-body .topbar-lang-wrap {
     height: 26px;
   }
@@ -2759,11 +2786,15 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
     margin-inline-start: auto;
   }
 
-  .studio-body .sent-action-btn,
-  .studio-body .item-check-btn:not(.item-check-btn--pill) {
+  .studio-body .sent-action-btn {
     width: 26px;
     height: 26px;
     min-width: 26px;
+  }
+
+  .studio-body .item-check-btn:not(.item-check-btn--pill) {
+    --ft-chk-size: 26px;
+    --ft-chk-icon-size: 14px;
   }
 
   .studio-body .sentence-driller-card {

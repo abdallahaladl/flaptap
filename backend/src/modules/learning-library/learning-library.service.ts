@@ -152,7 +152,7 @@ export class LearningLibraryService {
     const strategy = this.domainRegistry.getStrategy(query.domainId);
     const domainId = strategy.id;
 
-    const items = this.repository.listItems(userId, domainId, query);
+    const paged = this.repository.listItemsPaged(userId, domainId, query);
     const stats = this.repository.getStats(userId, domainId);
     const categoryCounts = this.repository.getCategoryCounts(userId, domainId);
     const registerCounts = this.repository.getRegisterCounts(userId, domainId);
@@ -160,9 +160,14 @@ export class LearningLibraryService {
 
     return {
       domain: strategy.metadata,
-      items,
+      items: paged.items,
       totalCount: stats.totalItems,
-      filteredCount: items.length,
+      filteredCount: paged.filteredCount,
+      filteredCompletedCount: paged.filteredCompletedCount,
+      page: paged.page,
+      pageSize: paged.pageSize,
+      totalPages: paged.totalPages,
+      hasMore: paged.hasMore,
       categoryCounts,
       registerCounts,
       stats,

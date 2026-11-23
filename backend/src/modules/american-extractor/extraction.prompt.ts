@@ -682,14 +682,29 @@ export function buildExtractionPrompts(params: {
       : isArabicTarget
         ? {
             localizedMeaning:
-              'natural everyday Egyptian Arabic explanation (عامية مصرية طبيعية وواضحة) matching this exact context',
+              'standalone general Egyptian Arabic (عامية مصرية طبيعية وواضحة) meaning(s) of ONLY the term itself across all its common uses, separated by Arabic commas (،) when multiple meanings exist — NO sentence, NO example, NO context commentary',
+            contextTranslation:
+              'natural, idiomatic Egyptian Arabic (عامية مصرية طبيعية وواضحة) translation of the exact SOURCE TEXT sentence containing "surface", conveying its true intended meaning (never literal word-for-word)',
           }
-        : { localizedMeaning: `natural ${language.name} contextual meaning` }),
+        : {
+            localizedMeaning: `standalone general ${language.name} meaning(s) of ONLY the term itself across all its common uses, separated by commas (,) when multiple meanings exist — NO sentence, NO example, NO context commentary`,
+            contextTranslation: `natural, idiomatic ${language.name} translation of the exact SOURCE TEXT sentence containing "surface", conveying its true intended meaning (never literal word-for-word)`,
+          }),
     usageNote: 'when/where Americans use it + tone, social context, collocation partner, or pitfall (1 crisp sentence)',
     spokenNote: hasAudio
       ? 'concrete General American spoken mechanics grounded in this audio (linking, flap-T, stress, reduction), or "" if plain'
       : 'optional brief pronunciation tip ONLY if standard dictionary phonology is tricky, otherwise "" (never claim acoustic audio cues from text)',
     example: '1 natural, practical spoken American English sentence using the term',
+    ...(isEnglishTarget
+      ? {}
+      : isArabicTarget
+        ? {
+            exampleTranslation:
+              'natural, idiomatic Egyptian Arabic (عامية مصرية طبيعية وواضحة) translation of "example", conveying its true intended meaning (never literal word-for-word)',
+          }
+        : {
+            exampleTranslation: `natural, idiomatic ${language.name} translation of "example", conveying its true intended meaning (never literal word-for-word)`,
+          }),
   };
 
   const levelPersona =
@@ -702,10 +717,26 @@ export function buildExtractionPrompts(params: {
     : '- NO AUDIO IS AVAILABLE (text-only source): You are STRICTLY FORBIDDEN from outputting any audio-dependent category (connected_speech, pronunciation_phonetics, word_sentence_stress, linking_sound_changes) and FORBIDDEN from claiming to hear acoustic speaker stress, pitch, or audio reductions. Extract strictly from the eligible text categories above.';
 
   const translationLine = isEnglishTarget
-    ? '- Target language: English only (no translation field needed).'
+    ? '- Target language: English only (no translation fields needed).'
     : isArabicTarget
-      ? '- Egyptian Arabic explanation: "localizedMeaning" MUST be natural, everyday Egyptian Arabic (عامية مصرية مهذبة وطبيعية) explaining the real meaning and vibe clearly the way an Egyptian speaker actually says it — NEVER stiff robotic literal translation. Keep proper names and English technical terms in Latin script.'
-      : `- Translation: "localizedMeaning" MUST be natural, idiomatic ${language.name} (${language.native}) matching the exact context in the source. Keep proper names and English technical terms in Latin script.`;
+      ? [
+          '- Standalone term meanings ("localizedMeaning"): Translate ONLY the extracted "term" itself (whether idiom, expression, single word, verb, phrasal verb, collocation, slang, or pattern) into its general everyday Egyptian Arabic (عامية مصرية مهذبة وطبيعية) meaning(s) across all common usages — NEVER explain the source sentence, NEVER add an example, and NEVER write context commentary like "هنا معناها..." or "في السياق ده...". When the item has multiple common meanings/senses in English, list ALL of its core general meanings separated by commas (،) — e.g. for "sound": "صوت، سليم، موثوق، متين، يبدو"; for "put the onus on someone": "يحمّل المسؤولية لحد، يرمي العبء على حد"; for "shift left": "تقديم الاختبار والأمان لمراحل التطوير بدري، البدء بالأمان والاختبار مبكرًا". Keep it concise, natural, and strictly standalone.',
+          '- True intended sentence translations ("contextTranslation" & "exampleTranslation"): Translate the exact SOURCE TEXT sentence containing "surface" into "contextTranslation", and translate your "example" sentence into "exampleTranslation". Both MUST be natural, idiomatic Egyptian Arabic (عامية مصرية مهذبة وطبيعية) conveying the true intended meaning of the full English sentence and idiom — NEVER stiff, robotic, or literal word-for-word translation. Keep proper names and English technical terms in Latin script.',
+        ].join('\n')
+      : [
+          `- Standalone term meanings ("localizedMeaning"): Translate ONLY the extracted "term" itself (whether idiom, expression, single word, verb, phrasal verb, collocation, slang, or pattern) into its general ${language.name} (${language.native}) meaning(s) across all common usages — NEVER explain the source sentence, NEVER add an example, and NEVER write context commentary like "here it means..." or "in this context...". When the item has multiple common meanings/senses in English, list ALL of its core general meanings separated by commas (,). Keep it concise, natural, and strictly standalone.`,
+          `- True intended sentence translations ("contextTranslation" & "exampleTranslation"): Translate the exact SOURCE TEXT sentence containing "surface" into "contextTranslation", and translate your "example" sentence into "exampleTranslation". Both MUST be natural, idiomatic ${language.name} (${language.native}) conveying the true intended meaning of the full English sentence and idiom — NEVER stiff, robotic, or literal word-for-word translation. Keep proper names and English technical terms in Latin script.`,
+        ].join('\n');
+
+  const needsContextualTitle = Boolean(
+    params.source.needsContextualTitle || params.source.sourceType === 'image',
+  );
+  const imageCount = Number(
+    params.source.sourceMeta?.imageCount || params.source.sourceMeta?.readableCount || 0,
+  );
+  const contextualTitleLine = needsContextualTitle
+    ? `- Title rule: Author ONE crisp, descriptive 3-8 word English study-guide title capturing the core topic or theme across the entire SOURCE TEXT${imageCount > 1 ? ` (synthesizing all ${imageCount} uploaded images together)` : ''}. NEVER use a filename, file extension (.png, .jpg, .webp), camera/OS code (IMG_..., PXL_...), or generic label like "Screenshot", "Image", or "Untitled".`
+    : '';
 
   const systemPrompt = [
     `You are an elite American English linguist and General American coach ("Anything to Phrases") extracting ${levelPersona}.`,
@@ -716,6 +747,7 @@ export function buildExtractionPrompts(params: {
     '- "term" is the clean canonical form learners should memorize (e.g., surface "doubled down on" -> term "double down on"; surface "chasing our tail" -> term "chase one\'s tail").',
     '- Skip proper nouns alone (unless genuine American cultural references when cultural_reference is active), bare numbers, and irrelevant generic filler. Never return duplicate terms.',
     audioContractLine,
+    contextualTitleLine,
     '',
     'PEDAGOGICAL & AMERICAN ENGLISH STANDARDS:',
     `- Category scope: ${categoryDirective}`,
@@ -736,7 +768,9 @@ export function buildExtractionPrompts(params: {
     '',
     'STRICT OUTPUT FORMAT: Return ONLY one valid compact JSON object (no markdown fences, no commentary, no trailing commas):',
     JSON.stringify({
-      title: 'concise descriptive title (3-8 words)',
+      title: needsContextualTitle
+        ? 'descriptive 3-8 word content title across all images (never a filename)'
+        : 'concise descriptive title (3-8 words)',
       summary: '1-2 crisp sentences summarizing the source topic and its standout American English style',
       speakerStyle: '3-6 word register/delivery tag (e.g. "Candid Silicon Valley engineering standup")',
       items: [itemShape],
@@ -746,7 +780,12 @@ export function buildExtractionPrompts(params: {
     .join('\n');
 
   const metaLines = [
-    `Title: ${params.source.title || 'Untitled source'}`,
+    !needsContextualTitle && params.source.title ? `Title: ${params.source.title}` : '',
+    needsContextualTitle
+      ? imageCount > 1
+        ? `Image batch: ${imageCount} uploaded images combined (author one unified contextual title from their combined content)`
+        : 'Image upload: single image OCR (author a contextual title from its content, never a filename)'
+      : '',
     params.source.creator ? `Creator / author: ${params.source.creator}` : '',
     `Source type: ${params.source.sourceType} (audio=${hasAudio ? 'available' : 'unavailable'})`,
     params.source.sourceUrl ? `Source URL: ${params.source.sourceUrl}` : '',

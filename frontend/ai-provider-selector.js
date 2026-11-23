@@ -214,18 +214,48 @@
       if (!delBtn) return;
       const keyId = delBtn.getAttribute('data-ft-del-key');
       if (!keyId) return;
-      delBtn.disabled = true;
-      try {
-        await fetcher(`/api/ai-providers/keys/${encodeURIComponent(keyId)}`, {
-          method: 'DELETE',
-        });
-        await renderKeysListInModal(fetcher, onChangedAll);
-        await onChangedAll(null);
-        global.FlaptapWorkspace?.showToast?.('Removed saved API key.');
-      } catch (err) {
-        showErr(err?.message || 'Delete failed.');
-        delBtn.disabled = false;
-      }
+      const rowEl = delBtn.closest('.ft-ai-key-row');
+      const keyName = String(rowEl?.querySelector('.ft-ai-key-name')?.textContent || 'API key').trim();
+      const parentEl = rowEl?.parentElement;
+      const nextSibling = rowEl?.nextSibling || null;
+
+      if (!global.FlaptapConfirm?.confirmAndUndo) return;
+
+      await global.FlaptapConfirm.confirmAndUndo({
+        title: 'Remove saved API key?',
+        message: 'This personal encrypted key will be removed from your vault.',
+        detail: keyName,
+        confirmLabel: 'Remove',
+        undoMessage: `Removed "${keyName}"`,
+        restoredMessage: `Restored "${keyName}"`,
+        onApply: () => {
+          if (rowEl) rowEl.remove();
+        },
+        onUndo: () => {
+          if (rowEl && parentEl) {
+            if (nextSibling && nextSibling.parentElement === parentEl) {
+              parentEl.insertBefore(rowEl, nextSibling);
+            } else {
+              parentEl.appendChild(rowEl);
+            }
+          } else {
+            renderKeysListInModal(fetcher, onChangedAll).catch(() => {});
+          }
+        },
+        onCommit: async ({ keepalive = false } = {}) => {
+          await fetcher(`/api/ai-providers/keys/${encodeURIComponent(keyId)}`, {
+            method: 'DELETE',
+            keepalive,
+          });
+          if (!keepalive) {
+            await renderKeysListInModal(fetcher, onChangedAll);
+            await onChangedAll(null);
+          }
+        },
+        onError: (err) => {
+          showErr(err?.message || 'Delete failed.');
+        },
+      });
     });
 
     return wrap;
@@ -437,6 +467,11 @@
             ${
               extraSummaryHtml
                 ? `<div class="ll-direct-blueprint">${extraSummaryHtml}<span class="ll-bp-chip"><span class="ll-bp-k">Transport:</span> <strong>Direct API</strong></span></div>`
+                : ''
+            }
+            ${
+              config.footerHint
+                ? `<span class="ft-ai-footer-hint">${escapeHtml(config.footerHint)}</span>`
                 : ''
             }
           </div>

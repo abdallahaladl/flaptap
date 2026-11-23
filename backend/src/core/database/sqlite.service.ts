@@ -145,34 +145,7 @@ export class SqliteService implements OnModuleDestroy {
       CREATE INDEX IF NOT EXISTS idx_practice_user_date ON practice_logs(user_id, created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_practice_guest_date ON practice_logs(guest_token, created_at DESC);
 
-      CREATE TABLE IF NOT EXISTS tech_linguist_extractions (
-        id TEXT PRIMARY KEY,
-        user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
-        guest_token TEXT,
-        extraction_mode TEXT NOT NULL DEFAULT 'comprehensive',
-        title TEXT NOT NULL,
-        creator TEXT NOT NULL DEFAULT '',
-        summary TEXT NOT NULL DEFAULT '',
-        source_url TEXT NOT NULL,
-        agent_id TEXT NOT NULL,
-        agent_name TEXT NOT NULL,
-        model_name TEXT NOT NULL,
-        reasoning_level TEXT NOT NULL,
-        execution_time_ms INTEGER NOT NULL DEFAULT 0,
-        vocab_count INTEGER NOT NULL DEFAULT 0,
-        idioms_count INTEGER NOT NULL DEFAULT 0,
-        patterns_count INTEGER NOT NULL DEFAULT 0,
-        vocab_items_json TEXT NOT NULL DEFAULT '[]',
-        idiom_items_json TEXT NOT NULL DEFAULT '[]',
-        patterns_json TEXT NOT NULL DEFAULT '[]',
-        full_transcript TEXT NOT NULL DEFAULT '',
-        is_completed INTEGER NOT NULL DEFAULT 0,
-        completion_json TEXT NOT NULL DEFAULT '{}',
-        created_at TEXT NOT NULL
-      );
-
-      CREATE INDEX IF NOT EXISTS idx_tech_linguist_user ON tech_linguist_extractions(user_id, created_at DESC);
-      CREATE INDEX IF NOT EXISTS idx_tech_linguist_guest ON tech_linguist_extractions(guest_token, created_at DESC);
+      DROP TABLE IF EXISTS tech_linguist_extractions;
 
       CREATE TABLE IF NOT EXISTS american_extractor_notes (
         id TEXT PRIMARY KEY,
@@ -327,9 +300,6 @@ export class SqliteService implements OnModuleDestroy {
 
     // Idempotent schema migrations for pre-existing databases
     this.ensureColumn('vocabulary_items', 'general_translation', "TEXT NOT NULL DEFAULT ''");
-    this.ensureColumn('tech_linguist_extractions', 'extraction_mode', "TEXT NOT NULL DEFAULT 'comprehensive'");
-    this.ensureColumn('tech_linguist_extractions', 'creator', "TEXT NOT NULL DEFAULT ''");
-    this.ensureColumn('tech_linguist_extractions', 'summary', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('users', 'google_sub', 'TEXT');
     this.ensureColumn('users', 'avatar_url', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('users', 'auth_provider', "TEXT NOT NULL DEFAULT 'email'");
@@ -354,13 +324,10 @@ export class SqliteService implements OnModuleDestroy {
       'pattern_slots_json',
       "TEXT NOT NULL DEFAULT '[]'",
     );
-    this.ensureColumn('tech_linguist_extractions', 'is_completed', 'INTEGER NOT NULL DEFAULT 0');
-    this.ensureColumn('tech_linguist_extractions', 'completion_json', "TEXT NOT NULL DEFAULT '{}'");
     this.ensureColumn('american_extractor_notes', 'content_hash', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('american_extractor_notes', 'updated_at', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('american_extractor_notes', 'source_id', "TEXT NOT NULL DEFAULT ''");
     this.ensureColumn('lessons', 'source_id', "TEXT NOT NULL DEFAULT ''");
-    this.ensureColumn('tech_linguist_extractions', 'source_id', "TEXT NOT NULL DEFAULT ''");
 
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_aex_notes_user_hash
@@ -371,9 +338,6 @@ export class SqliteService implements OnModuleDestroy {
 
       CREATE INDEX IF NOT EXISTS idx_lessons_user_source
       ON lessons(user_id, source_id);
-
-      CREATE INDEX IF NOT EXISTS idx_tech_linguist_user_source
-      ON tech_linguist_extractions(user_id, source_id);
 
       UPDATE american_extractor_notes
       SET updated_at = created_at

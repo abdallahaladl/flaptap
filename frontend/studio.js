@@ -17,18 +17,23 @@
     '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>';
   const PAUSE_ICON_SVG =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>';
+  const REPLAY_START_ICON_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><polyline points="3 3 3 8 8 8"></polyline><polygon points="10.2 8.8 15.8 12 10.2 15.2 10.2 8.8" fill="currentColor" stroke="none"></polygon></svg>';
   const LOOP_ICON_SVG =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 2 21 6 17 10"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 22 3 18 7 14"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>';
   const TRANSLATE_ICON_SVG =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 8 6 6"></path><path d="m4 14 6-6 2-3"></path><path d="M2 5h12"></path><path d="M7 2h1"></path><path d="m22 22-5-10-5 10"></path><path d="M14 18h6"></path></svg>';
   const SPEAKER_ICON_SVG =
     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>';
+  const MUTE_ICON_SVG =
+    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>';
   const SPINNER_ICON_SVG =
     '<svg class="trans-spin-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>';
   const CHECK_ICON_SVG =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
   const ITEM_CHECK_ICON_SVG =
-    '<svg class="chk-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line class="chk-dash" x1="6.5" y1="12" x2="17.5" y2="12"></line><polyline class="chk-tick" points="19.5 7 9.5 17 4.5 12"></polyline></svg>';
+    window.FlaptapCheck?.ICON_SVG ||
+    '<svg class="ft-check-svg chk-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path class="ft-check-tick chk-tick" d="M5.2 12.75 L9.55 17.1 Q10.1 17.65 10.65 17.05 L18.9 7.35" pathLength="1" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
 
   const I18N = {
     en: {
@@ -69,12 +74,36 @@
       stopRecord: 'Stop',
       hearSpeaker: 'Speaker',
       replayBtn: 'Replay',
-      keyPlay: 'Play/Pause',
-      keyReplay: 'Replay',
+      keyPlay: 'Play / Pause',
+      keyReplay: 'Replay from start',
       keySeek: 'Seek ±2s',
-      keyPrevNext: 'Prev/Next',
-      keyLoop: 'Loop',
-      keyTrans: 'Translate',
+      keyPrevNext: 'Prev / Next line',
+      keyLoop: 'Toggle loop',
+      keyFlowCycle: 'Cycle flow mode',
+      keyMute: 'Mute / Unmute',
+      keySpeedStep: 'Speed ±0.05x',
+      keyQuickSpeed: 'Quick 0.75x / 0.5x / 1x',
+      keySpeedReset: 'Reset speed 1.00x',
+      keyRecordVoice: 'Record / Stop voice',
+      keyReplayVoice: 'Play your voice',
+      keyABCompare: 'A/B Compare',
+      keyCheckDone: 'Mark line done',
+      keyCheckNext: 'Done & next line',
+      keyTrans: 'Translate line',
+      keyTransToggleAll: 'Show / hide all trans.',
+      keyFollow: 'Auto-Follow',
+      keyJumpActive: 'Jump to active line',
+      keyMouth: 'Mouth / Face focus',
+      keyZoom: 'Zoom in / out / reset',
+      keyPan: 'Pan when zoomed',
+      keyModes: 'Switch modes',
+      keyDictReplay: 'Dictation replay',
+      keyHelpEsc: 'Shortcuts / Close',
+      shortcutsAnyLayout: 'Any layout',
+      shortcutsCatPlayback: 'Playback & Sentences',
+      shortcutsCatSpeedVoice: 'Speed & Shadowing',
+      shortcutsCatStudy: 'Study & Translation',
+      shortcutsCatVideoModes: 'Video & Modes',
       modeShadow: 'Shadow',
       modeRead: 'Read',
       modeListen: 'Listen',
@@ -136,6 +165,8 @@
       playBtn: 'Play',
       playingBtn: 'Playing',
       pauseBtn: 'Pause',
+      replayStartBtn: 'Play from start',
+      jumpPlayTitle: 'Play or pause sentence',
       loopBtn: 'Loop',
       saveBtn: '+ Save',
       savedShortBtn: '✓ Saved',
@@ -197,12 +228,36 @@
       stopRecord: 'إيقاف',
       hearSpeaker: 'المتحدث',
       replayBtn: 'إعادة',
-      keyPlay: 'تشغيل/إيقاف',
-      keyReplay: 'إعادة الجملة',
-      keySeek: 'تقديم/تأخير ٢ث',
-      keyPrevNext: 'السابق/التالي',
-      keyLoop: 'تكرار',
-      keyTrans: 'ترجمة',
+      keyPlay: 'تشغيل / إيقاف',
+      keyReplay: 'إعادة الجملة من البداية',
+      keySeek: 'تقديم / تأخير ٢ث',
+      keyPrevNext: 'الجملة السابقة / التالية',
+      keyLoop: 'تفعيل / إيقاف التكرار',
+      keyFlowCycle: 'تبديل وضع التدفق',
+      keyMute: 'كتم / تشغيل الصوت',
+      keySpeedStep: 'السرعة ±0.05x',
+      keyQuickSpeed: 'سرعة سريعة 0.75 / 0.5 / 1x',
+      keySpeedReset: 'إعادة السرعة 1.00x',
+      keyRecordVoice: 'تسجيل / إيقاف صوتك',
+      keyReplayVoice: 'تشغيل تسجيلك',
+      keyABCompare: 'مقارنة A/B',
+      keyCheckDone: 'تحديد الجملة كمكتملة',
+      keyCheckNext: 'إكمال والانتقال للتالية',
+      keyTrans: 'ترجمة الجملة',
+      keyTransToggleAll: 'إظهار / إخفاء كل الترجمات',
+      keyFollow: 'المتابعة التلقائية',
+      keyJumpActive: 'الانتقال للجملة النشطة',
+      keyMouth: 'تركيز الفم / الوجه',
+      keyZoom: 'تكبير / تصغير / إعادة',
+      keyPan: 'تحريك الفيديو المكبّر',
+      keyModes: 'تبديل الأوضاع',
+      keyDictReplay: 'إعادة الجملة بالإملاء',
+      keyHelpEsc: 'الاختصارات / إغلاق',
+      shortcutsAnyLayout: 'أي لغة لوحة مفاتيح',
+      shortcutsCatPlayback: 'التشغيل والجمل',
+      shortcutsCatSpeedVoice: 'السرعة والترديد',
+      shortcutsCatStudy: 'الدراسة والترجمة',
+      shortcutsCatVideoModes: 'الفيديو والأوضاع',
       modeShadow: 'الترديد',
       modeRead: 'القراءة',
       modeListen: 'الإملاء',
@@ -264,6 +319,8 @@
       playBtn: 'تشغيل',
       playingBtn: 'يعمل',
       pauseBtn: 'إيقاف',
+      replayStartBtn: 'التشغيل من البداية',
+      jumpPlayTitle: 'تشغيل أو إيقاف الجملة',
       loopBtn: 'تكرار',
       saveBtn: '+ حفظ',
       savedShortBtn: '✓ محفوظ',
@@ -390,7 +447,9 @@
     })(),
     seekTargetStart: 0,
     awaitingOnsetUnmute: false,
+    userMuted: false,
     lastSeekTime: 0,
+    pendingSeek: null,
     playbackTicker: null,
     translationLang: initialTranslationLang,
     translationRtl: RTL_LANGUAGE_CODES.has(initialTranslationLang),
@@ -519,18 +578,32 @@
     const loopIdx = studioState.loopSentenceIndex;
     const isPlaying = Boolean(studioState.isPlaying);
 
-    // 1. Play/Pause Buttons (Pure Icon, 2 States Only: Play vs Pause)
+    // 1. Play/Pause & Play-from-Start Buttons + Active Card Playing Class
+    document.querySelectorAll('.sentence-driller-card[data-sentence-index]').forEach((card) => {
+      const idx = Number(card.dataset.sentenceIndex);
+      const isThisPlaying = isPlaying && activeIdx !== null && idx === activeIdx;
+      card.classList.toggle('is-playing', isThisPlaying);
+    });
+
+    document.querySelectorAll('[data-replay-sent]').forEach((btn) => {
+      const label = t('replayStartBtn');
+      btn.title = `${label} (R)`;
+      btn.setAttribute('aria-label', label);
+    });
+
     document.querySelectorAll('[data-play-sent]').forEach((btn) => {
       const idx = Number(btn.dataset.playSent);
       const isThisActive = activeIdx !== null && idx === activeIdx;
       const isThisPlaying = isPlaying && isThisActive;
+      const nextState = isThisPlaying ? 'playing' : 'idle';
 
       btn.classList.toggle('active', isThisPlaying);
       btn.classList.toggle('is-playing', isThisPlaying);
       btn.setAttribute('aria-pressed', isThisPlaying ? 'true' : 'false');
-      btn.dataset.playState = isThisPlaying ? 'playing' : 'idle';
       btn.title = isThisPlaying ? t('pauseBtn') : t('playBtn');
       btn.setAttribute('aria-label', isThisPlaying ? t('pauseBtn') : t('playBtn'));
+      if (btn.dataset.playState === nextState) return;
+      btn.dataset.playState = nextState;
       btn.innerHTML = isThisPlaying ? PAUSE_ICON_SVG : PLAY_ICON_SVG;
     });
 
@@ -670,7 +743,7 @@
     };
     const label = labelMap[mode] || t('playbackFlowLabel');
     flowBtn.setAttribute('aria-label', label);
-    flowBtn.setAttribute('title', label);
+    flowBtn.setAttribute('title', `${label} (L: Loop · Shift+L: Cycle)`);
     flowBtn.setAttribute('aria-pressed', mode !== 'pause' ? 'true' : 'false');
   }
 
@@ -762,6 +835,7 @@
     { triggerId: 'speed-trigger-btn', popoverId: 'speed-popover' },
     { triggerId: 'voice-menu-btn', popoverId: 'voice-popover' },
     { triggerId: 'trans-trigger-btn', popoverId: 'translation-control-deck' },
+    { triggerId: 'studio-shortcuts-btn', popoverId: 'shortcuts-popover' },
     { triggerId: 'shortcuts-trigger-btn', popoverId: 'shortcuts-popover' },
   ];
 
@@ -853,6 +927,15 @@
 
   function renderStudioCheckBtnHtml({ checked = false, subject, index, pill = false } = {}) {
     const titleText = checked ? t('completedLabel') : t('markComplete');
+    if (window.FlaptapCheck?.buttonHtml) {
+      return window.FlaptapCheck.buttonHtml({
+        checked,
+        pill,
+        text: pill ? titleText : '',
+        label: titleText,
+        attrs: `data-studio-check-subject="${escapeHtml(subject)}" data-studio-check-index="${Number(index)}"`,
+      });
+    }
     const pillClass = pill ? ' item-check-btn--pill' : '';
     const inner = pill ? `<span>${escapeHtml(titleText)}</span>` : '';
     return `<button type="button" class="item-check-btn${pillClass}${checked ? ' is-checked' : ''}" data-studio-check-subject="${escapeHtml(subject)}" data-studio-check-index="${Number(index)}" aria-pressed="${checked ? 'true' : 'false'}" aria-label="${escapeHtml(titleText)}" title="${escapeHtml(titleText)}">${ITEM_CHECK_ICON_SVG}${inner}</button>`;
@@ -1283,34 +1366,42 @@
     syncStudioTopProgressDom();
   }
 
-  function syncDictationCompletionButtonDom() {
+  function syncDictationCompletionButtonDom(animate = false) {
     const btn = document.getElementById('dict-check-complete-btn');
     const lbl = document.getElementById('dict-complete-label');
     const card = document.querySelector('#mode-panel-listen .dictation-card');
     if (!btn) return;
     const isDone = getStudioCompletedSet('listen').has(Number(studioState.dictationIndex));
-    btn.classList.toggle('is-checked', isDone);
-    btn.setAttribute('aria-pressed', isDone ? 'true' : 'false');
     const doneLabel = isDone ? t('completedLabel') : t('markComplete');
-    btn.setAttribute('aria-label', doneLabel);
-    btn.title = doneLabel;
+    if (window.FlaptapCheck?.setState) {
+      window.FlaptapCheck.setState(btn, isDone, { label: doneLabel, animate });
+    } else {
+      btn.classList.toggle('is-checked', isDone);
+      btn.setAttribute('aria-pressed', isDone ? 'true' : 'false');
+      btn.setAttribute('aria-label', doneLabel);
+      btn.title = doneLabel;
+    }
     if (lbl) lbl.textContent = doneLabel;
     if (card) card.classList.toggle('is-item-completed', isDone);
   }
 
   function updateStudioItemCompletionDom(subject, index, checked) {
     if (subject === 'listen') {
-      syncDictationCompletionButtonDom();
+      syncDictationCompletionButtonDom(true);
     } else {
       const selector = `[data-studio-check-subject="${subject}"][data-studio-check-index="${index}"]`;
+      const label = checked ? t('completedLabel') : t('markComplete');
       document.querySelectorAll(selector).forEach((btn) => {
-        btn.classList.toggle('is-checked', checked);
-        btn.setAttribute('aria-pressed', checked ? 'true' : 'false');
-        const label = checked ? t('completedLabel') : t('markComplete');
-        btn.setAttribute('aria-label', label);
-        btn.setAttribute('title', label);
-        const pillLabel = btn.querySelector('span');
-        if (pillLabel) pillLabel.textContent = label;
+        if (window.FlaptapCheck?.setState) {
+          window.FlaptapCheck.setState(btn, checked, { label, animate: true });
+        } else {
+          btn.classList.toggle('is-checked', checked);
+          btn.setAttribute('aria-pressed', checked ? 'true' : 'false');
+          btn.setAttribute('aria-label', label);
+          btn.setAttribute('title', label);
+          const pillLabel = btn.querySelector('span');
+          if (pillLabel) pillLabel.textContent = label;
+        }
         const card = btn.closest('.sentence-driller-card, .editorial-paragraph-block, .coach-item-card');
         if (card) card.classList.toggle('is-item-completed', checked);
       });
@@ -1352,7 +1443,22 @@
       }
       syncStudioTopProgressDom();
       if (!prevLessonCompleted && Boolean(item.isCompleted)) {
-        showToast(studioState.uiLang === 'ar' ? 'تم إكمال جميع عناصر الدرس!' : 'All items checked — Lesson completed!');
+        const isAr = studioState.uiLang === 'ar';
+        const originBtn =
+          subject === 'listen'
+            ? document.getElementById('dictation-complete-btn')
+            : document.querySelector(
+                `[data-studio-check-subject="${CSS.escape(String(subject))}"][data-studio-check-index="${CSS.escape(String(numIdx))}"]`,
+              );
+        if (window.FlaptapCelebrate?.trigger) {
+          window.FlaptapCelebrate.trigger({
+            title: isAr ? 'تم إكمال الدرس!' : 'Lesson Completed!',
+            subtitle: isAr ? 'تم إكمال جميع عناصر الدرس بنجاح' : 'All items in this lesson are checked off',
+            originEl: originBtn,
+          });
+        } else {
+          showToast(isAr ? 'تم إكمال جميع عناصر الدرس!' : 'All items checked — Lesson completed!');
+        }
       }
     } catch (err) {
       progress[subject] = prevArr;
@@ -1499,11 +1605,11 @@
           return `
             <article
               id="sent-card-${s.index}"
-              class="sentence-driller-card ${isActive ? 'active-drilling' : ''}${isDone ? ' is-item-completed' : ''}"
+              class="sentence-driller-card ${isActive ? 'active-drilling' : ''}${isThisPlaying ? ' is-playing' : ''}${isDone ? ' is-item-completed' : ''}"
               data-sentence-index="${s.index}"
             >
               <div class="sent-card-top">
-                <div class="sent-meta-left">
+                <div class="sent-meta-left" title="${escapeHtml(t('jumpPlayTitle'))}">
                   <span class="sent-index-num">#${String(s.index).padStart(2, '0')}</span>
                   <span class="sent-time-badge">${escapeHtml(s.timeRange || '')}</span>
                 </div>
@@ -1520,6 +1626,15 @@
                     ${isSentLoading ? 'disabled' : ''}
                   >
                     ${isSentLoading ? SPINNER_ICON_SVG : TRANSLATE_ICON_SVG}
+                  </button>
+                  <button
+                    type="button"
+                    class="sent-action-btn sent-icon-btn sent-replay-btn"
+                    data-replay-sent="${s.index}"
+                    title="${escapeHtml(t('replayStartBtn'))}"
+                    aria-label="${escapeHtml(t('replayStartBtn'))}"
+                  >
+                    ${REPLAY_START_ICON_SVG}
                   </button>
                   <button
                     type="button"
@@ -1727,6 +1842,11 @@
     const width = viewport.clientWidth || 800;
     const height = viewport.clientHeight || 450;
 
+    if (videoZoom.scale >= 1.75 && videoZoom.scale <= 1.85) {
+      resetZoom(animate);
+      return;
+    }
+
     const faceContentX = width * 0.50;
     const faceContentY = height * 0.40;
     const targetScale = 1.8;
@@ -1856,15 +1976,28 @@
     }, 450);
   }
 
-  function showActionFlash(isPlaying) {
+  function showActionFlash(kind) {
     const flash = document.getElementById('video-action-flash');
     if (!flash) return;
-    flash.innerHTML = isPlaying ? PLAY_ICON_SVG : PAUSE_ICON_SVG;
+    let iconHtml = PLAY_ICON_SVG;
+    if (kind === 'replay') {
+      iconHtml = REPLAY_START_ICON_SVG;
+    } else if (kind === 'mute') {
+      iconHtml = MUTE_ICON_SVG;
+    } else if (kind === 'unmute') {
+      iconHtml = SPEAKER_ICON_SVG;
+    } else if (kind === 'pause' || kind === false) {
+      iconHtml = PAUSE_ICON_SVG;
+    } else {
+      iconHtml = PLAY_ICON_SVG;
+    }
+    flash.innerHTML = iconHtml;
     flash.hidden = false;
     flash.classList.remove('animate');
     void flash.offsetWidth;
     flash.classList.add('animate');
-    setTimeout(() => {
+    window.clearTimeout(flash.__flashTimer);
+    flash.__flashTimer = window.setTimeout(() => {
       flash.hidden = true;
       flash.classList.remove('animate');
     }, 380);
@@ -2213,11 +2346,27 @@
       });
 
       videoEl.addEventListener('pause', () => {
+        if (
+          studioState.pendingSeek &&
+          Date.now() - studioState.pendingSeek.issuedAt < 2500
+        ) {
+          return;
+        }
+        if (studioState.playbackTicker) {
+          clearInterval(studioState.playbackTicker);
+          studioState.playbackTicker = null;
+        }
         studioState.isPlaying = false;
         syncPlaybackButtonsDom();
       });
 
       videoEl.addEventListener('ended', () => {
+        studioState.pendingSeek = null;
+        studioState.awaitingOnsetUnmute = false;
+        if (studioState.playbackTicker) {
+          clearInterval(studioState.playbackTicker);
+          studioState.playbackTicker = null;
+        }
         studioState.isPlaying = false;
         syncPlaybackButtonsDom();
       });
@@ -2343,6 +2492,7 @@
     const playerVars = {
       autoplay: 0,
       controls: 1,
+      disablekb: 1,
       modestbranding: 1,
       rel: 0,
       playsinline: 1,
@@ -2358,6 +2508,8 @@
       events: {
         onReady: (ev) => {
           const player = ev?.target || studioState.ytPlayer;
+          if (player) delete player.__flaptapAwaitingReady;
+          if (studioState.ytPlayer) delete studioState.ytPlayer.__flaptapAwaitingReady;
           studioState.ytReady = true;
           enforceHd1080Quality(player);
           try {
@@ -2387,18 +2539,40 @@
         },
         onStateChange: (ev) => {
           const player = ev?.target || studioState.ytPlayer;
+          if (ev?.data === 1 || ev?.data === 2 || ev?.data === 3) {
+            reclaimFocusFromPlayerIframe();
+          }
           if (ev?.data === 1) {
             if (handleInitialNativePlayStart(player)) return;
             studioState.isPlaying = true;
             syncPlaybackButtonsDom();
             startPlaybackTicker();
           } else if (ev?.data === 2 || ev?.data === 0) {
+            // Ignore transient PAUSED (2) emitted by YouTube while an async seekTo()+playVideo() is settling.
+            if (
+              ev?.data === 2 &&
+              studioState.pendingSeek &&
+              Date.now() - studioState.pendingSeek.issuedAt < 2500
+            ) {
+              return;
+            }
+            if (ev?.data === 0) {
+              studioState.pendingSeek = null;
+              studioState.awaitingOnsetUnmute = false;
+            }
+            if (studioState.playbackTicker) {
+              clearInterval(studioState.playbackTicker);
+              studioState.playbackTicker = null;
+            }
             studioState.isPlaying = false;
             syncPlaybackButtonsDom();
           }
         },
       },
     });
+    if (studioState.ytPlayer && !studioState.ytReady) {
+      studioState.ytPlayer.__flaptapAwaitingReady = true;
+    }
   }
 
   function updateActiveSentenceDom(index) {
@@ -2434,10 +2608,20 @@
       clearInterval(studioState.playbackTicker);
       studioState.playbackTicker = null;
     }
-    if (studioState.ytPlayer && typeof studioState.ytPlayer.pauseVideo === 'function') {
-      try {
-        studioState.ytPlayer.pauseVideo();
-      } catch {}
+    const wasAwaitingUnmute = Boolean(studioState.awaitingOnsetUnmute);
+    studioState.pendingSeek = null;
+    studioState.awaitingOnsetUnmute = false;
+    if (studioState.ytPlayer) {
+      if (wasAwaitingUnmute && !studioState.userMuted && typeof studioState.ytPlayer.unMute === 'function') {
+        try {
+          studioState.ytPlayer.unMute();
+        } catch {}
+      }
+      if (typeof studioState.ytPlayer.pauseVideo === 'function') {
+        try {
+          studioState.ytPlayer.pauseVideo();
+        } catch {}
+      }
     }
     if ('speechSynthesis' in window) {
       try {
@@ -2532,7 +2716,7 @@
     }
 
     const player = studioState.ytPlayer;
-    if (!player || typeof player.seekTo !== 'function') {
+    if (!player || player.__flaptapAwaitingReady || typeof player.seekTo !== 'function') {
       studioState.pendingPlaySentenceIndex = sentence.index;
       return;
     }
@@ -2541,6 +2725,14 @@
     // 1. Seek to exact `startSec`
     // 2. Mute during asynchronous seek, unmute at word onset
     // 3. Play through natural sentence acoustic decay before pausing/looping
+    const preSeekTime =
+      typeof player.getCurrentTime === 'function' ? Number(player.getCurrentTime() || 0) : 0;
+    studioState.pendingSeek = {
+      targetSec: sentence.startSec,
+      sentenceIndex: sentence.index,
+      issuedAt: Date.now(),
+      preSeekTime,
+    };
     studioState.awaitingOnsetUnmute = true;
     studioState.lastSeekTime = Date.now();
 
@@ -2556,16 +2748,335 @@
 
   window.playSentence = playSentence;
 
-  function handleSentencePlayButtonClick(idx) {
-    if (studioState.isPlaying && studioState.activeSentence?.index === idx) {
-      pauseCurrentPlayback();
-    } else {
-      const isLoopMode =
-        studioState.loopSentenceIndex === idx || studioState.endAction === 'loop';
-      playSentence(idx, {
-        forceMode: isLoopMode ? 'loop' : 'once',
-      });
+  function getSentenceEndCutoff(sentence) {
+    const sentences = studioState.item?.sentences || [];
+    const nextSentence = sentences.find((s) => s.index === sentence.index + 1);
+    const safeBoundaryEnd =
+      nextSentence && nextSentence.startSec <= sentence.endSec + 0.01
+        ? Number(Math.max(sentence.startSec + 0.05, nextSentence.startSec - 0.050).toFixed(3))
+        : sentence.endSec;
+    return Math.max(sentence.startSec + 0.05, safeBoundaryEnd);
+  }
+
+  function resumeActiveSentence(sentence) {
+    const player = studioState.ytPlayer;
+    if (!player || player.__flaptapAwaitingReady || typeof player.playVideo !== 'function') {
+      return false;
     }
+    const isLoopMode =
+      studioState.loopSentenceIndex === sentence.index || studioState.endAction === 'loop';
+    if (isLoopMode) {
+      studioState.loopSentenceIndex = sentence.index;
+      studioState.endAction = 'loop';
+      studioState.activeSentenceStep = 'looping';
+    } else {
+      studioState.loopSentenceIndex = null;
+      studioState.activeSentenceStep = 'playing-once';
+    }
+    studioState.endedNaturally = false;
+    studioState.pendingSeek = null;
+    studioState.awaitingOnsetUnmute = false;
+    studioState.isPlaying = true;
+    updateActiveSentenceDom(sentence.index);
+    syncPlaybackButtonsDom();
+    try {
+      if (typeof player.setPlaybackRate === 'function') player.setPlaybackRate(studioState.speed);
+      player.playVideo();
+    } catch {}
+    startPlaybackTicker();
+    return true;
+  }
+
+  function handleSentencePlayButtonClick(idx) {
+    const targetIdx = Number(idx);
+    if (studioState.isPlaying && studioState.activeSentence?.index === targetIdx) {
+      pauseCurrentPlayback();
+      return;
+    }
+
+    const active = studioState.activeSentence;
+    const player = studioState.ytPlayer;
+    if (
+      active &&
+      active.index === targetIdx &&
+      studioState.hasStartedPlaybackOnce &&
+      !studioState.endedNaturally &&
+      player &&
+      typeof player.getCurrentTime === 'function'
+    ) {
+      const current = Number(player.getCurrentTime() || 0);
+      const endCutoff = getSentenceEndCutoff(active);
+      if (current > active.startSec + 0.05 && current < endCutoff - 0.08) {
+        if (resumeActiveSentence(active)) return;
+      }
+    }
+
+    const isLoopMode =
+      studioState.loopSentenceIndex === targetIdx || studioState.endAction === 'loop';
+    playSentence(targetIdx, {
+      forceMode: isLoopMode ? 'loop' : 'once',
+    });
+  }
+
+  function pulseReplayButton(el) {
+    if (!el) return;
+    el.classList.remove('is-replaying');
+    void el.offsetWidth;
+    el.classList.add('is-replaying');
+    window.clearTimeout(el.__replayAnimTimer);
+    el.__replayAnimTimer = window.setTimeout(() => {
+      el.classList.remove('is-replaying');
+    }, 360);
+  }
+
+  function getActiveShortcutSentenceIndex() {
+    const sentences = studioState.item?.sentences || [];
+    if (!sentences.length) return 0;
+    if (studioState.mode === 'listen') {
+      const idx = Number(studioState.dictationIndex);
+      if (Number.isFinite(idx) && idx >= 1 && idx <= sentences.length) return idx;
+    }
+    const activeIdx = Number(studioState.activeSentence?.index);
+    if (Number.isFinite(activeIdx) && activeIdx >= 1) return activeIdx;
+    return Number(sentences[0]?.index || 1);
+  }
+
+  function replayActiveSentenceFromStart(targetIdxOverride, opts) {
+    const options = opts || {};
+    const targetIdx = Number(targetIdxOverride) || getActiveShortcutSentenceIndex();
+    if (!Number.isFinite(targetIdx) || targetIdx <= 0) return;
+
+    const isLoopMode =
+      studioState.loopSentenceIndex === targetIdx || studioState.endAction === 'loop';
+    playSentence(targetIdx, {
+      forceMode: isLoopMode ? 'loop' : 'once',
+    });
+
+    studioState.userScrolledAway = false;
+    scrollSentenceIntoView(targetIdx, true);
+    syncFloatingJumpButton();
+
+    pulseReplayButton(document.querySelector(`[data-replay-sent="${targetIdx}"]`));
+    pulseReplayButton(document.getElementById('deck-replay-sent-btn'));
+    if (options.showFlash !== false) {
+      showActionFlash('replay');
+    }
+  }
+
+  function handleSentenceReplayFromStartClick(idx) {
+    replayActiveSentenceFromStart(idx, { showFlash: false });
+  }
+
+  window.handleSentenceReplayFromStartClick = handleSentenceReplayFromStartClick;
+  window.replayActiveSentenceFromStart = replayActiveSentenceFromStart;
+
+  function navigateSentenceByDelta(delta) {
+    const sentences = studioState.item?.sentences || [];
+    if (!sentences.length || !delta) return false;
+
+    if (studioState.mode === 'listen') {
+      const curr = Number(studioState.dictationIndex) || 1;
+      const next = Math.max(1, Math.min(sentences.length, curr + delta));
+      if (next === curr) {
+        if (delta < 0 && curr === 1) {
+          replayActiveSentenceFromStart(1, { showFlash: false });
+          return true;
+        }
+        return false;
+      }
+      closeWordLookupPopover();
+      studioState.dictationIndex = next;
+      renderDictationCard();
+      playSentence(next);
+      return true;
+    }
+
+    const currIdx = getActiveShortcutSentenceIndex();
+    const currentPos = sentences.findIndex((s) => Number(s.index) === currIdx);
+    const basePos = currentPos >= 0 ? currentPos : 0;
+    const nextPos = basePos + delta;
+
+    if (nextPos < 0) {
+      if (studioState.isPlaying) {
+        closeWordLookupPopover();
+        replayActiveSentenceFromStart(sentences[0].index, { showFlash: false });
+        return true;
+      }
+      return false;
+    }
+    if (nextPos >= sentences.length) {
+      return false;
+    }
+
+    const targetIdx = Number(sentences[nextPos].index);
+    closeWordLookupPopover();
+    playSentence(targetIdx);
+    studioState.userScrolledAway = false;
+    scrollSentenceIntoView(targetIdx, true);
+    syncFloatingJumpButton();
+    return true;
+  }
+
+  function cycleSentenceFlow() {
+    const order = ['loop', 'pause', 'continue'];
+    const curr = order.includes(studioState.endAction) ? studioState.endAction : 'loop';
+    const next = order[(order.indexOf(curr) + 1) % order.length];
+    studioState.endAction = next;
+    if (next === 'loop') {
+      studioState.loopSentenceIndex = studioState.activeSentence?.index ?? null;
+      studioState.activeSentenceStep = studioState.isPlaying ? 'looping' : 'paused-from-once';
+    } else {
+      studioState.loopSentenceIndex = null;
+      studioState.activeSentenceStep = studioState.isPlaying ? 'playing-once' : 'idle';
+    }
+    syncPlaybackButtonsDom();
+    const toastMap = {
+      pause: t('flowPause'),
+      loop: t('flowLoop'),
+      continue: t('flowContinue'),
+    };
+    showToast(`${t('playbackFlowLabel')}: ${toastMap[next] || next}`);
+  }
+
+  function cycleQuickSpeed() {
+    const curr = Number(studioState.speed) || 1.0;
+    let next = 1.0;
+    if (Math.abs(curr - 1.0) < 0.001) {
+      next = 0.75;
+    } else if (Math.abs(curr - 0.75) < 0.001) {
+      next = 0.5;
+    } else {
+      next = 1.0;
+    }
+    setStudioSpeed(next);
+    showToast(`${t('playbackSpeedLabel')}: ${studioState.speed.toFixed(2)}x`);
+  }
+
+  function toggleStudioMute() {
+    const player = studioState.ytPlayer;
+    if (!player) return;
+    studioState.userMuted = !studioState.userMuted;
+    try {
+      if (studioState.userMuted) {
+        if (typeof player.mute === 'function') player.mute();
+      } else if (typeof player.unMute === 'function') {
+        player.unMute();
+      }
+    } catch {}
+    showActionFlash(studioState.userMuted ? 'mute' : 'unmute');
+    showToast(studioState.userMuted ? 'Muted' : 'Unmuted');
+  }
+
+  function toggleAllTranslationsVisibility() {
+    if (studioState.translationLang === 'none') {
+      studioState.translationLang = studioState.defaultLanguage || 'ar';
+      try {
+        localStorage.setItem('flaptap_trans_lang', studioState.translationLang);
+      } catch {}
+      studioState.showTranslations = true;
+    } else {
+      studioState.showTranslations = !studioState.showTranslations;
+    }
+    syncTranslationUiState();
+    showToast(studioState.showTranslations ? 'Translations shown' : 'Translations hidden');
+  }
+
+  function toggleActiveItemCompletion({ advanceAfter = false } = {}) {
+    const sentences = studioState.item?.sentences || [];
+    if (!sentences.length) return;
+    const currIdx = getActiveShortcutSentenceIndex();
+
+    if (studioState.mode === 'read') {
+      const chunks = studioState.item?.chunks || [];
+      const chunkPos = chunks.findIndex(
+        (c) => Array.isArray(c.sentenceIndices) && c.sentenceIndices.includes(currIdx),
+      );
+      if (chunkPos >= 0) {
+        const paraNum = chunkPos + 1;
+        if (advanceAfter) {
+          setStudioItemCompletion('paragraphs', paraNum, true);
+          const nextChunk = chunks[chunkPos + 1];
+          const nextSentIdx = Array.isArray(nextChunk?.sentenceIndices)
+            ? Number(nextChunk.sentenceIndices[0])
+            : NaN;
+          if (Number.isFinite(nextSentIdx) && nextSentIdx > 0) {
+            closeWordLookupPopover();
+            playSentence(nextSentIdx);
+            studioState.userScrolledAway = false;
+            scrollSentenceIntoView(nextSentIdx, true);
+            syncFloatingJumpButton();
+          } else {
+            navigateSentenceByDelta(1);
+          }
+          showToast(`Paragraph #${paraNum} done`);
+        } else {
+          const wasDone = getStudioCompletedSet('paragraphs').has(paraNum);
+          toggleStudioItemCompletion('paragraphs', paraNum);
+          showToast(wasDone ? `Paragraph #${paraNum} unmarked` : `Paragraph #${paraNum} done`);
+        }
+        return;
+      }
+    }
+
+    if (studioState.mode === 'listen') {
+      const idx = Number(studioState.dictationIndex) || currIdx;
+      if (advanceAfter) {
+        setStudioItemCompletion('listen', idx, true);
+        navigateSentenceByDelta(1);
+        showToast(`Dictation #${String(idx).padStart(2, '0')} done`);
+      } else {
+        const wasDone = getStudioCompletedSet('listen').has(idx);
+        toggleStudioItemCompletion('listen', idx);
+        showToast(
+          wasDone
+            ? `Dictation #${String(idx).padStart(2, '0')} unmarked`
+            : `Dictation #${String(idx).padStart(2, '0')} done`,
+        );
+      }
+      return;
+    }
+
+    if (advanceAfter) {
+      setStudioItemCompletion('sentences', currIdx, true);
+      navigateSentenceByDelta(1);
+      showToast(`Sentence #${String(currIdx).padStart(2, '0')} done`);
+    } else {
+      const wasDone = getStudioCompletedSet('sentences').has(currIdx);
+      toggleStudioItemCompletion('sentences', currIdx);
+      showToast(
+        wasDone
+          ? `Sentence #${String(currIdx).padStart(2, '0')} unmarked`
+          : `Sentence #${String(currIdx).padStart(2, '0')} done`,
+      );
+    }
+  }
+
+  let pointerInYtControlStrip = false;
+  let iframeFocusReclaimTimer = null;
+
+  function isPlayerIframeElement(el) {
+    if (!el || el.tagName !== 'IFRAME') return false;
+    const stage = document.getElementById('video-stage-container');
+    return Boolean(stage && stage.contains(el));
+  }
+
+  function reclaimFocusFromPlayerIframe() {
+    if (document.visibilityState !== 'visible') return false;
+    if (typeof document.hasFocus === 'function' && !document.hasFocus()) return false;
+    const activeEl = document.activeElement;
+    if (!isPlayerIframeElement(activeEl)) return false;
+    try {
+      activeEl.blur();
+    } catch {}
+    if (document.body) {
+      if (!document.body.hasAttribute('tabindex')) {
+        document.body.setAttribute('tabindex', '-1');
+      }
+      try {
+        document.body.focus({ preventScroll: true });
+      } catch {}
+    }
+    return true;
   }
 
   function handleSentenceLoopButtonClick(idx) {
@@ -2646,12 +3157,12 @@
     if (seekLabelEl) seekLabelEl.textContent = `${labelStr}s`;
     const backBtn = document.getElementById('deck-seek-back-btn');
     if (backBtn) {
-      backBtn.title = `Rewind ${labelStr}s (Left Arrow)`;
+      backBtn.title = `Rewind ${labelStr}s (A / ←)`;
       backBtn.setAttribute('aria-label', `Rewind ${labelStr} seconds`);
     }
     const fwdBtn = document.getElementById('deck-seek-fwd-btn');
     if (fwdBtn) {
-      fwdBtn.title = `Forward ${labelStr}s (Right Arrow)`;
+      fwdBtn.title = `Forward ${labelStr}s (D / →)`;
       fwdBtn.setAttribute('aria-label', `Forward ${labelStr} seconds`);
     }
     const shortcutSeek = document.getElementById('shortcuts-seek-label');
@@ -2719,22 +3230,48 @@
     const current = Number(player.getCurrentTime() || 0);
     const active = studioState.activeSentence;
 
-    // 1. Precise Onset Unmute:
-    // Only unmute once the playhead has physically repositioned back to the active sentence onset.
-    // Prevents unmuting while the player is still resolving the async seek near the previous tail.
+    // 1. Asynchronous Seek Resolution & Precise Onset Unmute:
+    // Wait until the player's playhead has physically arrived at the pending seek target
+    // before enforcing end-of-sentence boundaries or playhead-to-sentence tracking.
+    // Prevents stale pre-seek getCurrentTime() values from snapping activeSentence back
+    // to the previous sentence and looping it repeatedly.
+    const pending = studioState.pendingSeek;
+    if (pending) {
+      if (studioState.lastSeekTime === 0) {
+        studioState.pendingSeek = null;
+      } else {
+        const elapsed = Date.now() - pending.issuedAt;
+        const target = pending.targetSec;
+        const arrivedTight = current >= target - 0.15 && current <= target + 0.45;
+        const movedFromPreSeek = Math.abs(current - pending.preSeekTime) > 0.01;
+        const preSeekAlreadyNear = Math.abs(pending.preSeekTime - target) <= 0.25;
+        const arrived =
+          (arrivedTight && (!preSeekAlreadyNear || movedFromPreSeek || elapsed >= 120)) ||
+          (elapsed >= 450 && movedFromPreSeek && current >= target - 1.0 && current <= target + 0.85) ||
+          elapsed >= 2500;
+
+        if (!arrived) {
+          return;
+        }
+        studioState.pendingSeek = null;
+        if (studioState.awaitingOnsetUnmute) {
+          if (!studioState.userMuted && typeof player.unMute === 'function') player.unMute();
+          studioState.awaitingOnsetUnmute = false;
+        }
+      }
+    } else if (studioState.lastSeekTime > 0 && Date.now() - studioState.lastSeekTime < 90) {
+      // Ignore stale pre-seek playhead values briefly after manual micro-seek nudges
+      return;
+    }
+
     if (active && studioState.awaitingOnsetUnmute) {
       const arrivedAtOnset =
         Math.abs(current - active.startSec) <= 0.15 ||
         (current >= active.startSec - 0.05 && current <= active.startSec + 0.20);
       if (arrivedAtOnset) {
-        if (typeof player.unMute === 'function') player.unMute();
+        if (!studioState.userMuted && typeof player.unMute === 'function') player.unMute();
         studioState.awaitingOnsetUnmute = false;
       }
-    }
-
-    // Ignore stale pre-seek playhead values for 90ms after issuing an async seek
-    if (studioState.lastSeekTime > 0 && Date.now() - studioState.lastSeekTime < 90) {
-      return;
     }
 
     const sentences = studioState.item?.sentences || [];
@@ -2742,21 +3279,19 @@
     // 2. Playback Boundary Enforcement (runs FIRST to guarantee loop & auto-pause boundaries)
     if (active) {
       const nextSentence = sentences.find((s) => s.index === active.index + 1);
-
-      // Strict acoustic lead-out boundary:
-      // Even if legacy data has contiguous timestamps, ensure boundary stops strictly before next sentence onset
-      const safeBoundaryEnd = nextSentence && nextSentence.startSec <= active.endSec + 0.01
-        ? Number(Math.max(active.startSec + 0.05, nextSentence.startSec - 0.050).toFixed(3))
-        : active.endSec;
-
-      // Play through sentence's full acoustic decay till the end of the sentence
-      const endCutoff = Math.max(active.startSec + 0.05, safeBoundaryEnd);
+      const endCutoff = getSentenceEndCutoff(active);
 
       if (current >= endCutoff) {
         const shouldLoop =
           studioState.loopSentenceIndex === active.index || studioState.endAction === 'loop';
 
         if (shouldLoop) {
+          studioState.pendingSeek = {
+            targetSec: active.startSec,
+            sentenceIndex: active.index,
+            issuedAt: Date.now(),
+            preSeekTime: current,
+          };
           studioState.awaitingOnsetUnmute = true;
           studioState.lastSeekTime = Date.now();
           if (typeof player.mute === 'function') player.mute();
@@ -2818,12 +3353,18 @@
         studioState.endAction === 'loop' ||
         studioState.endAction === 'pause';
 
+      const msSinceSeek = studioState.lastSeekTime > 0 ? Date.now() - studioState.lastSeekTime : Infinity;
       const isOutsideActive =
-        !active || current < active.startSec - 0.35 || current > active.endSec + 0.35;
+        !active ||
+        (msSinceSeek > 2500 &&
+          (current < active.startSec - 1.5 || current > active.endSec + 1.5));
 
       if (!isDrillingSentence || isOutsideActive) {
         const match = sentences.find((s) => current >= s.startSec && current < s.endSec);
         if (match && (!active || active.index !== match.index)) {
+          if (studioState.loopSentenceIndex !== null) {
+            studioState.loopSentenceIndex = match.index;
+          }
           studioState.activeSentence = match;
           updateActiveSentenceDom(match.index);
           syncPlaybackButtonsDom();
@@ -4697,6 +5238,7 @@
 
     document.getElementById('studio-ui-lang-select')?.addEventListener('change', (e) => {
       applyUiLanguage(e.target.value);
+      e.target.blur?.();
     });
 
     document.getElementById('loader-retry-btn')?.addEventListener('click', () => {
@@ -4734,24 +5276,7 @@
 
     // Unified Single-Icon Sentence Flow Cycling (#studio-flow-btn)
     document.getElementById('studio-flow-btn')?.addEventListener('click', () => {
-      const order = ['loop', 'pause', 'continue'];
-      const curr = order.includes(studioState.endAction) ? studioState.endAction : 'loop';
-      const next = order[(order.indexOf(curr) + 1) % order.length];
-      studioState.endAction = next;
-      if (next === 'loop') {
-        studioState.loopSentenceIndex = studioState.activeSentence?.index ?? null;
-        studioState.activeSentenceStep = studioState.isPlaying ? 'looping' : 'paused-from-once';
-      } else {
-        studioState.loopSentenceIndex = null;
-        studioState.activeSentenceStep = studioState.isPlaying ? 'playing-once' : 'idle';
-      }
-      syncPlaybackButtonsDom();
-      const toastMap = {
-        pause: t('flowPause'),
-        loop: t('flowLoop'),
-        continue: t('flowContinue'),
-      };
-      showToast(`${t('playbackFlowLabel')}: ${toastMap[next] || next}`);
+      cycleSentenceFlow();
     });
 
     // Control Bar Popover Triggers
@@ -4777,7 +5302,7 @@
       SCB_POPOVER_PAIRS.forEach(({ triggerId, popoverId }) => {
         const pop = document.getElementById(popoverId);
         const trg = document.getElementById(triggerId);
-        if (pop && !pop.hidden && trg) {
+        if (pop && !pop.hidden && trg && trg.getAttribute('aria-expanded') === 'true') {
           positionControlPopover(pop, trg);
         }
       });
@@ -4804,41 +5329,20 @@
 
     // Master Sentence Transport Controls
     document.getElementById('deck-prev-sent-btn')?.addEventListener('click', () => {
-      const curr = studioState.activeSentence?.index || 1;
-      if (curr > 1) {
-        closeWordLookupPopover();
-        const prevIdx = curr - 1;
-        playSentence(prevIdx);
-        studioState.userScrolledAway = false;
-        scrollSentenceIntoView(prevIdx, true);
-        syncFloatingJumpButton();
-      }
+      navigateSentenceByDelta(-1);
     });
 
     document.getElementById('deck-next-sent-btn')?.addEventListener('click', () => {
-      const sentences = studioState.item?.sentences || [];
-      const curr = studioState.activeSentence?.index || 1;
-      if (curr < sentences.length) {
-        closeWordLookupPopover();
-        const nextIdx = curr + 1;
-        playSentence(nextIdx);
-        studioState.userScrolledAway = false;
-        scrollSentenceIntoView(nextIdx, true);
-        syncFloatingJumpButton();
-      }
+      navigateSentenceByDelta(1);
     });
 
     document.getElementById('deck-play-active-btn')?.addEventListener('click', () => {
-      const curr = studioState.activeSentence?.index || 1;
+      const curr = getActiveShortcutSentenceIndex() || 1;
       handleSentencePlayButtonClick(curr);
     });
 
     document.getElementById('deck-replay-sent-btn')?.addEventListener('click', () => {
-      const curr = studioState.activeSentence?.index || 1;
-      playSentence(curr, { forceMode: studioState.endAction === 'loop' ? 'loop' : 'once' });
-      studioState.userScrolledAway = false;
-      scrollSentenceIntoView(curr, true);
-      syncFloatingJumpButton();
+      replayActiveSentenceFromStart(null, { showFlash: false });
     });
 
     document.getElementById('deck-seek-back-btn')?.addEventListener('click', () => {
@@ -4851,6 +5355,7 @@
 
     document.getElementById('seek-step-select')?.addEventListener('change', (e) => {
       setStudioSeekStep(e.target.value);
+      e.target.blur?.();
     });
     document.getElementById('seek-step-up-btn')?.addEventListener('click', () => stepSeekDuration(0.5));
     document.getElementById('seek-step-down-btn')?.addEventListener('click', () => stepSeekDuration(-0.5));
@@ -4898,7 +5403,8 @@
       }
     }, { passive: true });
 
-    // Shadow Mode Sentence Interactions (Check Complete, Play/Pause, Translate, Select Text, Click Card)
+    // Shadow Mode Sentence Interactions (Check Complete, Play/Pause, Translate, Drag-Select Text, Full-Card Click & Dblclick)
+    // Shadow Mode Sentence Interactions (Check Complete, Translate, Play from Start, Play/Pause, Click Word, Click Header/Card)
     document.getElementById('subview-sentences-list')?.addEventListener('click', (e) => {
       const checkBtn = e.target.closest('[data-studio-check-subject]');
       if (checkBtn) {
@@ -4918,6 +5424,14 @@
         return;
       }
 
+      const replayBtn = e.target.closest('[data-replay-sent]');
+      if (replayBtn) {
+        e.stopPropagation();
+        const idx = Number(replayBtn.dataset.replaySent);
+        handleSentenceReplayFromStartClick(idx);
+        return;
+      }
+
       const playBtn = e.target.closest('[data-play-sent]');
       if (playBtn) {
         e.stopPropagation();
@@ -4926,7 +5440,16 @@
         return;
       }
 
-      // Full Item Clickable: Clicking anywhere on the sentence card triggers playback
+      if (e.target.closest('.clickable-word, .sent-english-line, .sentence-translation-box')) {
+        return;
+      }
+
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && String(sel.toString() || '').trim().length > 0) {
+        return;
+      }
+
+      // Clicking card header/frame (outside words, buttons, and translation text) plays/pauses
       const card = e.target.closest('.sentence-driller-card[data-sentence-index]');
       if (card) {
         const sentIdx = Number(card.dataset.sentenceIndex);
@@ -4961,6 +5484,7 @@
       studioState.translationLang = e.target.value || 'none';
       localStorage.setItem('flaptap_trans_lang', studioState.translationLang);
       syncTranslationUiState();
+      e.target.blur?.();
     });
 
     document.getElementById('trans-all-btn')?.addEventListener('click', (e) => {
@@ -5019,9 +5543,14 @@
     });
 
     document.getElementById('dictation-sentence-area')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
+      if (e.code === 'Enter' || e.key === 'Enter') {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
         e.preventDefault();
-        checkDictationAnswers(false);
+        if (e.shiftKey) {
+          replayActiveSentenceFromStart(studioState.dictationIndex, { showFlash: true });
+        } else {
+          checkDictationAnswers(false);
+        }
       }
     });
 
@@ -5098,7 +5627,7 @@
             studioState.activeSentence?.index ||
             studioState.item?.sentences?.[0]?.index ||
             1;
-          openWordLookup(text, sentenceIndex, null);
+          openWordLookup(text, sentenceIndex, meta?.sourceEl || null);
         },
       });
     };
@@ -5125,7 +5654,7 @@
             studioState.activeSentence?.index ||
             studioState.item?.sentences?.[0]?.index ||
             1;
-          openWordLookup(text, sentenceIndex, null);
+          openWordLookup(text, sentenceIndex, meta?.sourceEl || null);
         },
       });
     }
@@ -5167,45 +5696,62 @@
     document.getElementById('sp-reset-progress-btn')?.addEventListener('click', async (e) => {
       e.stopPropagation();
       const btn = e.currentTarget;
-      if (!studioState.item?.id) return;
-      if (!btn.dataset.armed) {
-        btn.dataset.armed = '1';
-        btn.classList.add('is-armed');
-        btn.textContent = studioState.uiLang === 'ar' ? 'اضغط مجدداً للتأكيد' : 'Confirm reset?';
-        clearTimeout(resetConfirmArmTimer);
-        resetConfirmArmTimer = setTimeout(() => {
-          delete btn.dataset.armed;
-          btn.classList.remove('is-armed');
-          btn.textContent = studioState.uiLang === 'ar' ? 'إعادة ضبط التقدّم' : 'Reset Progress';
-        }, 3000);
-        return;
-      }
+      const lessonId = studioState.item?.id;
+      if (!lessonId || !window.FlaptapConfirm?.confirmAndUndo) return;
 
-      clearTimeout(resetConfirmArmTimer);
-      delete btn.dataset.armed;
-      btn.classList.remove('is-armed');
-      btn.disabled = true;
-      try {
-        await apiFetch(`/api/history/${encodeURIComponent(studioState.item.id)}/reset-progress`, {
-          method: 'POST',
-          body: JSON.stringify({ clearNotes: false }),
-        });
-        studioState.item.completionProgress = {};
-        studioState.item.isCompleted = false;
-        studioState.item.completedDrills = 0;
+      closeAllControlPopovers();
+      const snapshot = {
+        completionProgress: JSON.parse(JSON.stringify(studioState.item.completionProgress || {})),
+        isCompleted: Boolean(studioState.item.isCompleted),
+        completedDrills: Number(studioState.item.completedDrills || 0),
+      };
+      const rerenderProgress = () => {
         renderSentencesAndParagraphs();
         renderDictationCard();
         if (studioState.item.aiAnalysis) {
           renderCoachAnalysis(studioState.item.aiAnalysis);
         }
         refreshAllStudioProgressBars();
-        closeAllControlPopovers();
-        showToast(studioState.uiLang === 'ar' ? 'تم إعادة ضبط التقدّم' : 'Lesson progress reset.');
-      } catch (err) {
-        showToast(err?.message || 'Could not reset progress.');
-      } finally {
-        btn.disabled = false;
-      }
+      };
+
+      btn.disabled = true;
+      await window.FlaptapConfirm.confirmAndUndo({
+        title: studioState.uiLang === 'ar' ? 'إعادة ضبط تقدّم الدرس؟' : 'Reset lesson progress?',
+        message:
+          studioState.uiLang === 'ar'
+            ? 'سيتم مسح علامات إكمال الجمل والتمارين لهذا الدرس.'
+            : 'Completed checkmarks and drill progress for this lesson will be reset.',
+        detail: studioState.item?.title || '',
+        confirmLabel: studioState.uiLang === 'ar' ? 'إعادة الضبط' : 'Reset Progress',
+        tone: 'primary',
+        undoMessage:
+          studioState.uiLang === 'ar' ? 'تمت إعادة ضبط التقدّم' : 'Lesson progress reset',
+        restoredMessage:
+          studioState.uiLang === 'ar' ? 'تم استرجاع التقدّم' : 'Lesson progress restored',
+        onApply: () => {
+          studioState.item.completionProgress = {};
+          studioState.item.isCompleted = false;
+          studioState.item.completedDrills = 0;
+          rerenderProgress();
+        },
+        onUndo: () => {
+          studioState.item.completionProgress = snapshot.completionProgress;
+          studioState.item.isCompleted = snapshot.isCompleted;
+          studioState.item.completedDrills = snapshot.completedDrills;
+          rerenderProgress();
+        },
+        onCommit: async ({ keepalive = false } = {}) => {
+          await apiFetch(`/api/history/${encodeURIComponent(lessonId)}/reset-progress`, {
+            method: 'POST',
+            keepalive,
+            body: JSON.stringify({ clearNotes: false }),
+          });
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not reset progress.');
+        },
+      });
+      btn.disabled = false;
     });
 
     // Cross-Feature Sync: Jump to existing Anything to Phrases guide or pre-load this lesson on demand
@@ -5271,165 +5817,390 @@
       startABComparison();
     });
 
-    // Keyboard Shortcuts
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
+    // Reclaim focus from YouTube iframe without ever stealing OS focus from another app/tab
+    const videoStageEl = document.getElementById('video-stage-container');
+    if (videoStageEl) {
+      videoStageEl.addEventListener(
+        'mousemove',
+        (e) => {
+          const rect = videoStageEl.getBoundingClientRect();
+          pointerInYtControlStrip = e.clientY >= rect.bottom - 56;
+        },
+        { passive: true },
+      );
+      videoStageEl.addEventListener(
+        'mouseleave',
+        () => {
+          pointerInYtControlStrip = false;
+          reclaimFocusFromPlayerIframe();
+        },
+        { passive: true },
+      );
+    }
+
+    window.addEventListener('blur', () => {
+      window.clearTimeout(iframeFocusReclaimTimer);
+      iframeFocusReclaimTimer = window.setTimeout(() => {
+        if (!pointerInYtControlStrip && isPlayerIframeElement(document.activeElement)) {
+          reclaimFocusFromPlayerIframe();
+        }
+      }, 180);
+    });
+
+    /* ========================================================================
+       STUDIO KEYBOARD SHORTCUT ENGINE (Layout-Independent e.code · Zero-Mouse)
+       ======================================================================== */
+
+    const TEXT_INPUT_TYPES = new Set([
+      '',
+      'text',
+      'search',
+      'email',
+      'password',
+      'url',
+      'tel',
+      'number',
+      'date',
+      'datetime-local',
+      'month',
+      'time',
+      'week',
+    ]);
+
+    function isTextEntryElement(el) {
+      if (!el || el === document.body || el === document.documentElement) return false;
+      if (el.isContentEditable) return true;
+      const tag = (el.tagName || '').toLowerCase();
+      if (tag === 'textarea' || tag === 'select') return true;
+      if (tag === 'input') {
+        const type = String(el.type || 'text').toLowerCase();
+        return TEXT_INPUT_TYPES.has(type);
+      }
+      return false;
+    }
+
+    function isConfirmDialogOpen() {
+      return document.documentElement.classList.contains('ft-confirm-open');
+    }
+
+    function handleStudioKeydown(e) {
+      if (e.isComposing || e.keyCode === 229) return;
+      if (isConfirmDialogOpen()) return;
+
+      const code = e.code || '';
+      const key = e.key || '';
+
+      // 1. Escape: close popovers first, otherwise exit focused text input/select
+      if (code === 'Escape' || key === 'Escape') {
         const hasOpenCtrlPopover = SCB_POPOVER_PAIRS.some(({ popoverId }) => {
           const p = document.getElementById(popoverId);
           return p && !p.hidden;
         });
         if (hasOpenCtrlPopover) {
+          e.preventDefault();
           closeAllControlPopovers();
           return;
         }
-        const popover = document.getElementById('word-lookup-popover');
-        if (popover && !popover.hidden) {
+        const wordPop = document.getElementById('word-lookup-popover');
+        if (wordPop && !wordPop.hidden) {
+          e.preventDefault();
           closeWordLookupPopover();
           return;
         }
-      }
-
-      const tag = (e.target?.tagName || '').toLowerCase();
-      if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable) {
+        if (isTextEntryElement(e.target)) {
+          e.preventDefault();
+          e.target.blur?.();
+        }
         return;
       }
-      if (!studioState.item) return;
 
-      // Do not intercept native OS / browser shortcuts with Cmd/Meta, Ctrl, or Alt
+      // Never intercept typing inside text fields, textareas, contentEditable, or open <select>
+      if (isTextEntryElement(e.target)) {
+        return;
+      }
+
+      // Never intercept native OS / browser shortcuts (Cmd/Meta, Ctrl, Alt)
       if (e.metaKey || e.ctrlKey || e.altKey) {
         return;
       }
 
+      // 2. Help Sheet toggle (`?` = Shift + Slash) — works even before sentences load
+      if ((code === 'Slash' && e.shiftKey) || key === '?') {
+        if (e.repeat) {
+          e.preventDefault();
+          return;
+        }
+        e.preventDefault();
+        const topbarBtn = document.getElementById('studio-shortcuts-btn');
+        const hasVisibleTopbarBtn =
+          topbarBtn && topbarBtn.getBoundingClientRect().width > 0;
+        toggleControlPopover(
+          hasVisibleTopbarBtn ? 'studio-shortcuts-btn' : 'shortcuts-trigger-btn',
+          'shortcuts-popover',
+        );
+        return;
+      }
+
+      if (!studioState.item) return;
       const sentences = studioState.item.sentences || [];
       if (!sentences.length) return;
 
-      const currIdx = studioState.activeSentence ? studioState.activeSentence.index : 0;
+      const currIdx = getActiveShortcutSentenceIndex() || 1;
+      const shift = Boolean(e.shiftKey);
 
-      if (videoZoom.scale > 1.001 && e.shiftKey) {
-        if (e.key === 'ArrowRight') {
+      // 3. Zoomed Video Panning (Shift + Arrows or Shift + WASD when scale > 100%)
+      if (videoZoom.scale > 1.001 && shift) {
+        if (code === 'ArrowRight' || code === 'KeyD') {
           e.preventDefault();
           panBy(-40, 0);
           return;
-        } else if (e.key === 'ArrowLeft') {
+        }
+        if (code === 'ArrowLeft' || code === 'KeyA') {
           e.preventDefault();
           panBy(40, 0);
           return;
-        } else if (e.key === 'ArrowUp') {
+        }
+        if (code === 'ArrowUp' || code === 'KeyW') {
           e.preventDefault();
           panBy(0, 40);
           return;
-        } else if (e.key === 'ArrowDown') {
+        }
+        if (code === 'ArrowDown' || code === 'KeyS') {
           e.preventDefault();
           panBy(0, -40);
           return;
         }
       }
 
-      if (e.code === 'Space') {
+      // 4. Core Playback & Sentence Navigation (Physical e.code works on EN/AR/any layout)
+      if (code === 'Space' && !shift) {
         e.preventDefault();
-        handleSentencePlayButtonClick(currIdx || 1);
-      } else if (e.key === 'ArrowDown') {
+        if (e.repeat) return;
+        const wasPlayingSame = studioState.isPlaying && studioState.activeSentence?.index === currIdx;
+        handleSentencePlayButtonClick(currIdx);
+        showActionFlash(wasPlayingSame ? 'pause' : 'play');
+        return;
+      }
+
+      if ((code === 'KeyR' || code === 'Backspace') && !shift) {
         e.preventDefault();
-        if (currIdx < sentences.length) {
-          closeWordLookupPopover();
-          const nextIdx = Math.max(1, currIdx + 1);
-          playSentence(nextIdx);
-          studioState.userScrolledAway = false;
-          scrollSentenceIntoView(nextIdx, true);
-          syncFloatingJumpButton();
-        }
-      } else if (e.key === 'ArrowUp') {
+        if (e.repeat) return;
+        replayActiveSentenceFromStart(currIdx, { showFlash: true });
+        return;
+      }
+
+      if ((code === 'ArrowUp' || code === 'KeyW') && !shift) {
         e.preventDefault();
-        if (currIdx > 1) {
-          closeWordLookupPopover();
-          const prevIdx = currIdx - 1;
-          playSentence(prevIdx);
-          studioState.userScrolledAway = false;
-          scrollSentenceIntoView(prevIdx, true);
-          syncFloatingJumpButton();
-        } else if (currIdx === 1 && studioState.isPlaying) {
-          closeWordLookupPopover();
-          playSentence(1);
-          studioState.userScrolledAway = false;
-          scrollSentenceIntoView(1, true);
-          syncFloatingJumpButton();
-        }
-      } else if (e.key === 'ArrowRight') {
+        navigateSentenceByDelta(-1);
+        return;
+      }
+
+      if ((code === 'ArrowDown' || code === 'KeyS') && !shift) {
         e.preventDefault();
-        if (e.shiftKey || !studioState.isPlaying) {
-          if (currIdx < sentences.length) {
-            closeWordLookupPopover();
-            const nextIdx = Math.max(1, currIdx + 1);
-            playSentence(nextIdx);
-            studioState.userScrolledAway = false;
-            scrollSentenceIntoView(nextIdx, true);
-            syncFloatingJumpButton();
-          }
+        navigateSentenceByDelta(1);
+        return;
+      }
+
+      if (code === 'ArrowLeft' && shift) {
+        e.preventDefault();
+        navigateSentenceByDelta(-1);
+        return;
+      }
+
+      if (code === 'ArrowRight' && shift) {
+        e.preventDefault();
+        navigateSentenceByDelta(1);
+        return;
+      }
+
+      if ((code === 'ArrowLeft' || code === 'KeyA') && !shift) {
+        e.preventDefault();
+        nudgePlayback(-(studioState.seekStepSec || 2));
+        return;
+      }
+
+      if ((code === 'ArrowRight' || code === 'KeyD') && !shift) {
+        e.preventDefault();
+        nudgePlayback(studioState.seekStepSec || 2);
+        return;
+      }
+
+      if (code === 'KeyL') {
+        e.preventDefault();
+        if (e.repeat) return;
+        if (shift) {
+          cycleSentenceFlow();
         } else {
-          nudgePlayback(studioState.seekStepSec || 2);
+          handleSentenceLoopButtonClick(currIdx);
+          const isLoopNow =
+            studioState.loopSentenceIndex === currIdx || studioState.endAction === 'loop';
+          showToast(isLoopNow ? `${t('playbackFlowLabel')}: ${t('flowLoop')}` : `${t('playbackFlowLabel')}: ${t('flowPause')}`);
         }
-      } else if (e.key === 'ArrowLeft') {
+        return;
+      }
+
+      if (code === 'KeyM' && !shift) {
         e.preventDefault();
-        if (e.shiftKey || !studioState.isPlaying) {
-          if (currIdx > 1) {
-            closeWordLookupPopover();
-            const prevIdx = currIdx - 1;
-            playSentence(prevIdx);
-            studioState.userScrolledAway = false;
-            scrollSentenceIntoView(prevIdx, true);
-            syncFloatingJumpButton();
-          } else if (currIdx === 1 && studioState.isPlaying) {
-            closeWordLookupPopover();
-            playSentence(1);
-            studioState.userScrolledAway = false;
-            scrollSentenceIntoView(1, true);
-            syncFloatingJumpButton();
-          }
-        } else {
-          nudgePlayback(-(studioState.seekStepSec || 2));
-        }
-      } else if (e.key === 'r' || e.key === 'R') {
-        e.preventDefault();
-        const curr = studioState.activeSentence?.index || 1;
-        playSentence(curr, { forceMode: studioState.endAction === 'loop' ? 'loop' : 'once' });
-        studioState.userScrolledAway = false;
-        scrollSentenceIntoView(curr, true);
-        syncFloatingJumpButton();
-      } else if (e.key === 'l' || e.key === 'L') {
-        e.preventDefault();
-        handleSentenceLoopButtonClick(currIdx || 1);
-      } else if (e.key === 't' || e.key === 'T') {
-        if (studioState.mode === 'shadow' && studioState.translationLang !== 'none') {
-          e.preventDefault();
-          handleSentenceTranslateButtonClick(currIdx || 1);
-        }
-      } else if (e.key === 'f' || e.key === 'F') {
-        e.preventDefault();
-        toggleAutoFollow();
-      } else if (e.key === '+' || e.key === '=') {
-        e.preventDefault();
-        zoomByStep(0.25, true);
-      } else if (e.key === '-' || e.key === '_') {
-        e.preventDefault();
-        zoomByStep(-0.25, true);
-      } else if (e.key === '0') {
-        if (videoZoom.scale > 1.001) {
-          e.preventDefault();
-          resetZoom(true);
-        }
-      } else if (e.key === 'z' || e.key === 'Z') {
-        e.preventDefault();
-        focusMouth(true);
-      } else if (e.key === '[') {
+        if (e.repeat) return;
+        toggleStudioMute();
+        return;
+      }
+
+      // 5. Speed Controls (Left-hand Q/E/` + Right-hand [/]/\)
+      if ((code === 'KeyQ' || code === 'BracketLeft') && !shift) {
         e.preventDefault();
         stepSpeed(-0.05);
         showToast(`${t('playbackSpeedLabel')}: ${studioState.speed.toFixed(2)}x`);
-      } else if (e.key === ']') {
+        return;
+      }
+
+      if ((code === 'KeyE' || code === 'BracketRight') && !shift) {
         e.preventDefault();
         stepSpeed(0.05);
         showToast(`${t('playbackSpeedLabel')}: ${studioState.speed.toFixed(2)}x`);
+        return;
       }
-    });
+
+      if ((code === 'Backquote' || code === 'IntlBackslash') && !shift) {
+        e.preventDefault();
+        if (e.repeat) return;
+        cycleQuickSpeed();
+        return;
+      }
+
+      if (code === 'Backslash' && !shift) {
+        e.preventDefault();
+        if (e.repeat) return;
+        setStudioSpeed(1.0);
+        showToast(`${t('playbackSpeedLabel')}: 1.00x`);
+        return;
+      }
+
+      // 6. Voice Shadowing (Record V · Play Recording Shift+V · A/B Compare B)
+      if (code === 'KeyV') {
+        e.preventDefault();
+        if (e.repeat) return;
+        if (shift) {
+          if (!studioState.recordedAudioUrl) {
+            showToast('Record your voice first (press V).');
+          } else {
+            playUserRecording();
+            showToast('Playing your voice');
+          }
+        } else {
+          toggleVoiceRecording();
+        }
+        return;
+      }
+
+      if (code === 'KeyB' && !shift) {
+        e.preventDefault();
+        if (e.repeat) return;
+        startABComparison();
+        return;
+      }
+
+      // 7. Study Progress, Translation & Navigation (C / Shift+C · T / Shift+T · F · G)
+      if (code === 'KeyC') {
+        e.preventDefault();
+        if (e.repeat) return;
+        toggleActiveItemCompletion({ advanceAfter: shift });
+        return;
+      }
+
+      if (code === 'KeyT') {
+        e.preventDefault();
+        if (e.repeat) return;
+        if (shift) {
+          toggleAllTranslationsVisibility();
+        } else if (studioState.mode === 'shadow') {
+          handleSentenceTranslateButtonClick(currIdx);
+        }
+        return;
+      }
+
+      if (code === 'KeyF' && !shift) {
+        e.preventDefault();
+        if (e.repeat) return;
+        toggleAutoFollow();
+        showToast(`${t('autoFollowLabel')}: ${studioState.autoFollow ? 'ON' : 'OFF'}`);
+        return;
+      }
+
+      if (code === 'KeyG' && !shift) {
+        e.preventDefault();
+        if (e.repeat) return;
+        jumpToActiveItem({ resetFilter: true });
+        return;
+      }
+
+      // 8. Video Framing & Zoom (Z Mouth · Shift+Z Face · +/- Zoom · 0 Reset)
+      if (code === 'KeyZ') {
+        e.preventDefault();
+        if (e.repeat) return;
+        setZoomPassthrough(false);
+        if (shift) {
+          focusFace(true);
+        } else {
+          focusMouth(true);
+        }
+        return;
+      }
+
+      if (code === 'Equal' || code === 'NumpadAdd' || key === '+') {
+        e.preventDefault();
+        setZoomPassthrough(false);
+        zoomByStep(0.25, true);
+        return;
+      }
+
+      if (code === 'Minus' || code === 'NumpadSubtract' || key === '-') {
+        e.preventDefault();
+        setZoomPassthrough(false);
+        zoomByStep(-0.25, true);
+        return;
+      }
+
+      if ((code === 'Digit0' || code === 'Numpad0') && !shift) {
+        if (videoZoom.scale > 1.001) {
+          e.preventDefault();
+          if (e.repeat) return;
+          resetZoom(true);
+          showToast('Zoom: 100%');
+        }
+        return;
+      }
+
+      // 9. Instant Learning Mode Switching (1–5)
+      if (!shift) {
+        const modeMap = {
+          Digit1: 'shadow',
+          Digit2: 'read',
+          Digit3: 'listen',
+          Digit4: 'coach',
+          Digit5: 'notes',
+        };
+        if (modeMap[code]) {
+          e.preventDefault();
+          if (e.repeat) return;
+          switchStudioMode(modeMap[code]);
+        }
+      }
+    }
+
+    document.addEventListener('keydown', handleStudioKeydown);
+
+    window.FlaptapStudioShortcuts = {
+      isTextEntryElement,
+      reclaimFocusFromPlayerIframe,
+      replayActiveSentenceFromStart,
+      navigateSentenceByDelta,
+      cycleSentenceFlow,
+      cycleQuickSpeed,
+      toggleStudioMute,
+      toggleActiveItemCompletion,
+      toggleAllTranslationsVisibility,
+    };
 
     window.addEventListener('beforeunload', () => {
       if (studioState.mediaRecorder && studioState.mediaRecorder.state === 'recording') {

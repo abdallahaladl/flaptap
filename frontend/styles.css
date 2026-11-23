@@ -205,42 +205,62 @@ html[data-sidebar="collapsed"] .app-shell {
 .brand-link {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 10.5px;
   min-width: 0;
   flex-shrink: 0;
+  text-decoration: none;
 }
 
 .brand-mark {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-xs);
-  background: var(--ink);
-  color: var(--bg-sheet);
+  width: 30px;
+  height: 30px;
+  border-radius: 0;
+  background: transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   position: relative;
   flex-shrink: 0;
+  overflow: visible;
+  box-shadow: none;
+  transition: transform 0.2s var(--ap-spring, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
-.brand-mark::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  inset-inline-end: -2px;
-  width: 8px;
-  height: 8px;
-  background: var(--vox-yellow);
-  border: 1.5px solid var(--ink);
+.brand-mark svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.brand-link:hover .brand-mark {
+  transform: translateY(-1px) scale(1.06);
+  box-shadow: none;
 }
 
 .brand-wordmark {
   font-family: var(--font-serif);
-  font-weight: 700;
-  font-size: 1.2rem;
-  letter-spacing: -0.02em;
+  font-weight: 760;
+  font-size: 1.22rem;
+  letter-spacing: -0.03em;
   line-height: 1;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: baseline;
+}
+
+.brand-wordmark-accent {
+  background: linear-gradient(135deg, #0071E3 0%, #00A6FF 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+[data-theme="dark"] .brand-wordmark-accent {
+  background: linear-gradient(135deg, #38BDF8 0%, #818CF8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .icon-btn.sidebar-collapse-btn {
@@ -4446,20 +4466,25 @@ button:disabled {
   }
 }
 
-/* Selection action bar — shown after selecting text, before any lookup runs. */
+/* Selection action bar — Apple HUD glass pill shown after selecting text. */
 .selection-menu {
   position: fixed;
   z-index: 660;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
-  max-width: min(440px, calc(100vw - 20px));
-  padding: 5px 5px 5px 12px;
-  border: 1.5px solid var(--ink);
+  max-width: min(460px, calc(100vw - 20px));
+  padding-block: 5px;
+  padding-inline: 14px 5px;
+  border: 1px solid var(--ap-border-strong, rgba(0, 0, 0, 0.13));
   border-radius: 999px;
-  background: var(--bg-sheet);
-  box-shadow: var(--shadow-float);
-  animation: selectionMenuIn 0.14s var(--ease-editorial);
+  background: var(--ap-glass-popover, var(--bg-sheet));
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  box-shadow:
+    var(--ap-shadow-popover, var(--shadow-float)),
+    var(--ap-specular, inset 0 1px 0 rgba(255, 255, 255, 0.08));
+  animation: selectionMenuIn 0.16s var(--ap-spring, var(--ease-editorial));
 }
 
 .selection-menu[hidden] {
@@ -4469,14 +4494,14 @@ button:disabled {
 .selection-menu::after {
   content: '';
   position: absolute;
-  left: 50%;
+  left: var(--selection-caret-x, 50%);
   bottom: -5px;
   width: 8px;
   height: 8px;
   margin-left: -4px;
-  background: var(--bg-sheet);
-  border-right: 1.5px solid var(--ink);
-  border-bottom: 1.5px solid var(--ink);
+  background: var(--ap-glass-popover, var(--bg-sheet));
+  border-right: 1px solid var(--ap-border-strong, rgba(0, 0, 0, 0.13));
+  border-bottom: 1px solid var(--ap-border-strong, rgba(0, 0, 0, 0.13));
   transform: rotate(45deg);
 }
 
@@ -4486,16 +4511,36 @@ button:disabled {
   transform: rotate(-135deg);
 }
 
+.selection-menu-preview {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 175px;
+}
+
 .selection-menu-text {
   min-width: 0;
-  max-width: 220px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-family: var(--font-serif);
-  font-size: 0.85rem;
-  font-style: italic;
-  color: var(--ink-secondary);
+  font-family: var(--ap-font-text, var(--font-sans));
+  font-size: 0.8125rem;
+  font-style: normal;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--ap-text-primary, var(--ink));
+}
+
+.selection-menu-divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  flex-shrink: 0;
+  border-radius: 1px;
+  background: var(--ap-border-strong, rgba(128, 128, 134, 0.24));
+  opacity: 0.72;
 }
 
 .selection-menu-actions {
@@ -4505,35 +4550,75 @@ button:disabled {
   flex-shrink: 0;
 }
 
+.selection-menu-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
 .selection-menu-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   height: 28px;
   padding: 0 12px;
-  border: 1px solid var(--ink);
+  border: none;
   border-radius: 999px;
-  background: var(--ink);
-  color: var(--bg-sheet);
-  font-family: var(--font-sans);
-  font-size: 0.74rem;
-  font-weight: 650;
+  background: var(--ap-blue, #0071e3);
+  color: #ffffff;
+  font-family: var(--ap-font-text, var(--font-sans));
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: -0.006em;
   white-space: nowrap;
   cursor: pointer;
-  transition: opacity 0.14s ease, transform 0.1s ease;
+  transition:
+    background-color 0.14s ease,
+    color 0.14s ease,
+    opacity 0.14s ease,
+    transform 0.12s var(--ap-spring, ease);
+}
+
+.selection-menu-btn .ft-icon {
+  display: block;
 }
 
 .selection-menu-btn:hover {
-  opacity: 0.86;
+  background: var(--ap-blue-hover, #0077ed);
+  opacity: 1;
 }
 
 .selection-menu-btn:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 .selection-menu-btn:focus-visible {
-  outline: 2px solid var(--status-info);
+  outline: 2px solid var(--status-info, var(--ap-blue));
   outline-offset: 2px;
+}
+
+/* Secondary utility buttons: background-free & borderless icons */
+.selection-menu-btn.is-secondary.is-icon-only {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  color: var(--ap-text-secondary, var(--ink-secondary));
+}
+
+.selection-menu-btn.is-secondary.is-icon-only:hover {
+  background: transparent;
+  color: var(--ap-text-primary, var(--ink));
+  transform: scale(1.08);
+}
+
+.selection-menu-btn.is-secondary.is-icon-only:active {
+  background: transparent;
+  transform: scale(0.92);
 }
 
 @keyframes selectionMenuIn {
@@ -4556,8 +4641,14 @@ button:disabled {
 }
 
 @media (max-width: 560px) {
-  .selection-menu-text {
-    max-width: 110px;
+  .selection-menu {
+    padding-block: 5px;
+    padding-inline: 12px 5px;
+    gap: 5px;
+  }
+
+  .selection-menu-preview {
+    max-width: 105px;
   }
 }
 
@@ -5549,134 +5640,7 @@ button:disabled {
   color: var(--status-success);
 }
 
-/* Checkable Item Toggle Button (Grayed-out Dash -> Emerald Checkmark) */
-.item-check-btn {
-  width: 26px;
-  height: 26px;
-  min-width: 26px;
-  padding: 0;
-  border-radius: 7px;
-  border: 1px solid var(--rule-strong);
-  background: color-mix(in srgb, var(--ink) 7%, var(--bg-inset));
-  color: var(--ink-muted);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  position: relative;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease,
-    box-shadow 140ms ease,
-    transform 90ms ease;
-}
-
-.item-check-btn svg,
-.item-check-btn .chk-svg {
-  width: 14px;
-  height: 14px;
-  stroke-width: 2.5;
-  pointer-events: none;
-  flex-shrink: 0;
-}
-
-.item-check-btn .chk-dash {
-  opacity: 0.92;
-  transform: scaleX(1);
-  transform-origin: center;
-  transition: opacity 120ms ease, transform 140ms ease;
-}
-
-.item-check-btn .chk-tick {
-  opacity: 0;
-  transform: scale(0.65);
-  transform-origin: center;
-  transition: opacity 120ms ease, transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.item-check-btn:hover {
-  border-color: var(--ink-secondary);
-  background: color-mix(in srgb, var(--ink) 12%, var(--bg-inset));
-  color: var(--ink);
-}
-
-.item-check-btn:active {
-  transform: scale(0.93);
-}
-
-.item-check-btn.is-checked {
-  background: var(--status-success);
-  border-color: color-mix(in srgb, var(--status-success) 80%, #000);
-  color: #FFFFFF;
-  box-shadow:
-    0 1px 2px rgba(0, 0, 0, 0.14),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-[data-theme="dark"] .item-check-btn.is-checked {
-  border-color: color-mix(in srgb, var(--status-success) 75%, #fff);
-  color: #07140D;
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.38),
-    inset 0 1px 0 rgba(255, 255, 255, 0.24);
-}
-
-.item-check-btn.is-checked .chk-dash {
-  opacity: 0;
-  transform: scaleX(0.3);
-}
-
-.item-check-btn.is-checked .chk-tick {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.item-check-btn.is-checked:hover {
-  filter: brightness(1.06);
-  color: #FFFFFF;
-}
-
-[data-theme="dark"] .item-check-btn.is-checked:hover {
-  color: #07140D;
-}
-
-.item-check-btn--pill {
-  width: auto;
-  height: 28px;
-  padding: 0 10px;
-  gap: 6px;
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: var(--ink-secondary);
-}
-
-.item-check-btn--pill svg,
-.item-check-btn--pill .chk-svg {
-  width: 13px;
-  height: 13px;
-}
-
-.item-check-btn--pill.is-checked {
-  background: var(--status-success-wash);
-  border-color: color-mix(in srgb, var(--status-success) 58%, var(--rule));
-  color: var(--status-success);
-  box-shadow: none;
-}
-
-[data-theme="dark"] .item-check-btn--pill.is-checked {
-  color: var(--status-success);
-  border-color: color-mix(in srgb, var(--status-success) 55%, var(--rule));
-}
-
-@media (pointer: coarse) {
-  .item-check-btn::after {
-    content: "";
-    position: absolute;
-    inset: -7px;
-  }
-}
+/* Checkable Item Toggle Button styles live in /check-button.css */
 
 /* Completed Item Editorial Surface Cues */
 .is-item-completed {

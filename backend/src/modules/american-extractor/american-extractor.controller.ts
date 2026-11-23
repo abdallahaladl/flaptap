@@ -12,10 +12,10 @@ import {
   Query,
   Req,
   Res,
-  UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { Request, Response } from 'express';
 import { requireAuthenticatedUser } from '../auth/auth.request';
@@ -25,7 +25,9 @@ import {
   ExtractorInputKind,
   HistorySortBy,
   HistoryStatusFilter,
+  UploadedFileInput,
 } from './american-extractor.types';
+import { MAX_IMAGES_PER_EXTRACTION } from './sources/vision-ocr.service';
 
 interface ExtractBody {
   inputKind?: ExtractorInputKind;
@@ -91,13 +93,15 @@ export class AmericanExtractorController {
     @Query('limit') limit?: string,
   ) {
     const identity = requireAuthenticatedUser(req, this.authService);
+    const parsedPage = page !== undefined && page !== '' ? Number(page) : undefined;
+    const parsedLimit = limit !== undefined && limit !== '' ? Number(limit) : undefined;
     const history = this.extractor.listHistory(identity.userId, {
       q,
       sourceType,
       status: status as HistoryStatusFilter | undefined,
       sort: sort as HistorySortBy | undefined,
-      page: page !== undefined ? Number(page) : undefined,
-      limit: limit !== undefined ? Number(limit) : undefined,
+      page: Number.isFinite(parsedPage) ? parsedPage : undefined,
+      limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
     });
     return { success: true, ...history };
   }
@@ -226,27 +230,32 @@ export class AmericanExtractorController {
 
   @Post('extract/upload')
   @UseInterceptors(
-    FileInterceptor('file', {
-      storage: memoryStorage(),
-      limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
-    }),
+    FileFieldsInterceptor(
+      [
+        { name: 'file', maxCount: MAX_IMAGES_PER_EXTRACTION },
+        { name: 'files', maxCount: MAX_IMAGES_PER_EXTRACTION },
+      ],
+      {
+        storage: memoryStorage(),
+        limits: { fileSize: MAX_UPLOAD_BYTES, files: MAX_IMAGES_PER_EXTRACTION },
+      },
+    ),
   )
   async extractUpload(
-    @UploadedFile() file: any,
+    @UploadedFiles() filesMap: { file?: any[]; files?: any[] } | undefined,
     @Body() body: ExtractBody,
     @Req() req: Request,
   ) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    if (!file?.buffer?.length) {
+    const files = collectUploadedFiles(filesMap);
+    if (files.length === 0) {
       throw new BadRequestException('Choose a file to upload.');
     }
 
     try {
-      const data = await this.extractor.extractUpload({
+      const data = await this.extractor.extractUploads({
         userId: identity.userId,
-        buffer: file.buffer,
-        originalName: file.originalname || 'upload',
-        mimeType: file.mimetype || '',
+        files,
         language: body?.language,
         extractionType: body?.extractionType,
         categories: parseCategoriesParam(body?.categories),
@@ -263,19 +272,25 @@ export class AmericanExtractorController {
       });
       return { success: true, data, cached: Boolean(data.cached) };
     } catch (error: any) {
-      throw toHttpException(error, 'Failed to extract text from that file.');
+      throw toHttpException(error, 'Failed to extract text from that upload.');
     }
   }
 
   @Post('extract/upload/stream')
   @UseInterceptors(
-    FileInterceptor('file', {
-      storage: memoryStorage(),
-      limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
-    }),
+    FileFieldsInterceptor(
+      [
+        { name: 'file', maxCount: MAX_IMAGES_PER_EXTRACTION },
+        { name: 'files', maxCount: MAX_IMAGES_PER_EXTRACTION },
+      ],
+      {
+        storage: memoryStorage(),
+        limits: { fileSize: MAX_UPLOAD_BYTES, files: MAX_IMAGES_PER_EXTRACTION },
+      },
+    ),
   )
   async extractUploadStream(
-    @UploadedFile() file: any,
+    @UploadedFiles() filesMap: { file?: any[]; files?: any[] } | undefined,
     @Body() body: ExtractBody,
     @Req() req: Request,
     @Res() res: Response,
@@ -287,7 +302,8 @@ export class AmericanExtractorController {
       return sendAuthErrorJson(res, authErr);
     }
 
-    if (!file?.buffer?.length) {
+    const files = collectUploadedFiles(filesMap);
+    if (files.length === 0) {
       return res.status(HttpStatus.BAD_REQUEST).json({
         statusCode: HttpStatus.BAD_REQUEST,
         message: 'Choose a file to upload.',
@@ -298,12 +314,10 @@ export class AmericanExtractorController {
     openSse();
 
     try {
-      const data = await this.extractor.extractUpload(
+      const data = await this.extractor.extractUploads(
         {
           userId: identity.userId,
-          buffer: file.buffer,
-          originalName: file.originalname || 'upload',
-          mimeType: file.mimetype || '',
+          files,
           language: body?.language,
           extractionType: body?.extractionType,
           categories: parseCategoriesParam(body?.categories),
@@ -333,7 +347,7 @@ export class AmericanExtractorController {
         endSse();
         return;
       }
-      const httpErr = toHttpException(error, 'Failed to extract text from that file.');
+      const httpErr = toHttpException(error, 'Failed to extract text from that upload.');
       const status = httpErr.getStatus();
       writeSse('error', {
         statusCode: status,
@@ -522,6 +536,17 @@ function createSseChannel(res: Response) {
   };
 
   return { ac, openSse, writeSse, endSse };
+}
+
+function collectUploadedFiles(
+  filesMap?: { file?: any[]; files?: any[] },
+): UploadedFileInput[] {
+  const raw = [...(filesMap?.files || []), ...(filesMap?.file || [])];
+  return raw.map((item) => ({
+    buffer: item?.buffer || Buffer.alloc(0),
+    originalName: item?.originalname || 'upload',
+    mimeType: item?.mimetype || '',
+  }));
 }
 
 function toHttpException(error: any, fallback: string): HttpException {

@@ -98,7 +98,7 @@ interface TranscriptCacheFile {
 export class TranscriptService {
   private readonly logger = new Logger(TranscriptService.name);
   private readonly cacheDir = path.resolve(__dirname, '../../../../../data/transcripts');
-  private readonly cacheVersion = 2;
+  private readonly cacheVersion = 3;
   private readonly cacheTtlMs = 7 * 24 * 60 * 60 * 1000;
 
   async extract(url: string, force = false): Promise<TranscriptResult> {

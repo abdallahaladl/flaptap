@@ -165,7 +165,9 @@
     menu.setAttribute('role', 'toolbar');
     menu.setAttribute('aria-label', 'Actions for the selected text');
     menu.innerHTML = `
-      <span class="selection-menu-text" id="selection-menu-text"></span>
+      <span class="selection-menu-preview" id="selection-menu-preview">
+        <span class="selection-menu-text" id="selection-menu-text" dir="auto"></span>
+      </span>
       <span class="selection-menu-actions" id="selection-menu-actions"></span>
     `;
     menu.addEventListener('pointerdown', (event) => {
@@ -181,7 +183,7 @@
       const action = state.actions.find((entry, index) => String(entry.id || index) === id);
       if (!action || typeof action.run !== 'function') return;
       try {
-        action.run({ text: state.text, range: state.range });
+        action.run({ text: state.text, range: state.range, sourceEl: state.sourceEl || null });
       } catch {}
     });
     document.body.appendChild(menu);
@@ -253,9 +255,30 @@
     }
     top = Math.max(margin, Math.min(top, viewportH - menuRect.height - margin));
 
+    const targetCenterX = rect.left + rect.width / 2;
+    const caretX = Math.max(18, Math.min(menuRect.width - 18, targetCenterX - left));
+
     menu.style.left = `${Math.round(left)}px`;
     menu.style.top = `${Math.round(top)}px`;
+    menu.style.setProperty('--selection-caret-x', `${Math.round(caretX)}px`);
     menu.dataset.placement = placement;
+  }
+
+  function renderSelectionActionButton(action, index) {
+    const isSecondary = action.variant === 'secondary';
+    const isIconOnly = Boolean((action.iconOnly || isSecondary) && action.icon);
+    const classes = ['selection-menu-btn'];
+    if (isSecondary) classes.push('is-secondary');
+    if (isIconOnly) classes.push('is-icon-only');
+    const actionId = escapeText(action.id || index);
+    const label = escapeText(action.label);
+    const title = escapeText(action.title || action.label);
+    const iconHtml = action.icon ? icon(action.icon, { size: isIconOnly ? 15 : 14 }) : '';
+    const labelHtml = isIconOnly ? '' : `<span>${label}</span>`;
+    return `
+      <button type="button" class="${classes.join(' ')}" data-selection-action="${actionId}" aria-label="${label}" title="${title}">
+        ${iconHtml}${labelHtml}
+      </button>`;
   }
 
   function showSelectionMenu(text, range, actions, options) {
@@ -266,22 +289,28 @@
     bindSelectionMenuDismiss();
 
     const textEl = menu.querySelector('#selection-menu-text');
-    textEl.textContent = text.length > 34 ? `${text.slice(0, 33)}…` : text;
+    textEl.textContent = text.length > 26 ? `${text.slice(0, 25)}…` : text;
     textEl.title = text;
 
-    menu.querySelector('#selection-menu-actions').innerHTML = list
-      .map(
-        (action, index) => `
-        <button type="button" class="selection-menu-btn" data-selection-action="${escapeText(
-          action.id || index,
-        )}" title="${escapeText(action.title || action.label)}">
-          ${action.icon ? icon(action.icon, { size: 14 }) : ''}
-          <span>${escapeText(action.label)}</span>
-        </button>`,
-      )
-      .join('');
+    const indexed = list.map((action, index) => ({ action, index }));
+    const primary = indexed.filter((entry) => entry.action.variant !== 'secondary');
+    const secondary = indexed.filter((entry) => entry.action.variant === 'secondary');
 
-    selectionMenuState = { text, range, actions: list };
+    const secondaryHtml = secondary.length
+      ? `<span class="selection-menu-tools">${secondary
+          .map(({ action, index }) => renderSelectionActionButton(action, index))
+          .join('')}</span>`
+      : '';
+    const primaryHtml = primary
+      .map(({ action, index }) => renderSelectionActionButton(action, index))
+      .join('');
+    const dividerHtml = primary.length
+      ? '<span class="selection-menu-divider" aria-hidden="true"></span>'
+      : '';
+
+    menu.querySelector('#selection-menu-actions').innerHTML = `${secondaryHtml}${dividerHtml}${primaryHtml}`;
+
+    selectionMenuState = { text, range, sourceEl: options?.sourceEl || null, actions: list };
     positionSelectionMenu(menu, range);
 
     if (options?.focus) {
@@ -295,9 +324,39 @@
     selectionMenuState = null;
   }
 
+  function copySelectionText(text) {
+    const clean = String(text || '').trim();
+    if (!clean) return;
+    const notifyCopied = () => {
+      if (typeof global.FlaptapUtils?.showToast === 'function') {
+        const targetId = document.getElementById('workspace-toast')
+          ? 'workspace-toast'
+          : document.getElementById('studio-toast')
+            ? 'studio-toast'
+            : '';
+        if (targetId) global.FlaptapUtils.showToast('Copied selection', { elementId: targetId });
+      }
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(clean).then(notifyCopied).catch(() => {});
+      return;
+    }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = clean;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;opacity:0;pointer-events:none;';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      notifyCopied();
+    } catch {}
+  }
+
   /**
    * Resolves the action bar contents. Features keep their existing lookup in
-   * `onSelect`; it is invoked only when the learner picks the action.
+   * `onSelect`; it is invoked only when the learner picks Translate.
    */
   function resolveSelectionActions(options, text, range) {
     if (typeof options.actions === 'function') {
@@ -308,15 +367,53 @@
       return options.actions;
     }
     if (typeof options.onSelect !== 'function') return [];
-    return [
+    const list = [
       {
         id: 'translate',
         label: options.actionLabel || 'Translate',
         icon: 'languages',
-        run: ({ text: selectedText, range: selectedRange }) =>
-          options.onSelect(selectedText, { range: selectedRange }),
+        run: ({ text: selectedText, range: selectedRange, sourceEl }) =>
+          options.onSelect(selectedText, { range: selectedRange, sourceEl }),
       },
     ];
+    if (options.includeSecondaryActions !== false) {
+      list.push(
+        {
+          id: 'pronounce',
+          label: 'Pronounce',
+          title: 'Speak aloud (no AI call)',
+          icon: 'volume-2',
+          variant: 'secondary',
+          iconOnly: true,
+          run: ({ text: selectedText }) => speakText(selectedText),
+        },
+        {
+          id: 'copy',
+          label: 'Copy',
+          title: 'Copy selected text',
+          icon: 'copy',
+          variant: 'secondary',
+          iconOnly: true,
+          run: ({ text: selectedText }) => copySelectionText(selectedText),
+        },
+      );
+    }
+    return list;
+  }
+
+  /**
+   * Opens the popup action bar anchored cleanly to any element (such as a `.clickable-word` span)
+   * without calling an AI model until the user clicks Translate.
+   */
+  function showActionMenuForElement(el, options) {
+    if (!el || !options) return;
+    const text = normalizeSelectionText(el.dataset?.word || el.textContent || '');
+    if (!text || text.length < 2) return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    showSelectionMenu(text, range, resolveSelectionActions(options, text, range), {
+      sourceEl: el,
+    });
   }
 
   /**
@@ -414,6 +511,17 @@
     const onSelectionChange = () => {
       if (!pointerIsDown) schedule();
     };
+    const onContainerClick = (event) => {
+      if (options.tapWord === false) return;
+      const wordEl = event.target.closest('.clickable-word');
+      if (!wordEl || !container.contains(wordEl) || wordEl.closest(ignoreSelector)) return;
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed && normalizeSelectionText(selection.toString()).length >= 2) {
+        return;
+      }
+      event.stopPropagation();
+      showActionMenuForElement(wordEl, options);
+    };
 
     document.addEventListener('pointerdown', onPointerDown, true);
     document.addEventListener('touchstart', onPointerDown, { capture: true, passive: true });
@@ -421,6 +529,7 @@
     document.addEventListener('touchend', onTouchEnd, { passive: true });
     document.addEventListener('selectionchange', onSelectionChange);
     container.addEventListener('keyup', onKeyUp);
+    container.addEventListener('click', onContainerClick);
 
     return () => {
       window.clearTimeout(timer);
@@ -430,6 +539,7 @@
       document.removeEventListener('touchend', onTouchEnd);
       document.removeEventListener('selectionchange', onSelectionChange);
       container.removeEventListener('keyup', onKeyUp);
+      container.removeEventListener('click', onContainerClick);
     };
   }
 
@@ -793,6 +903,7 @@
     tokenizeClickableWords,
     speakText,
     bindSelectionLookup,
+    showActionMenuForElement,
     classifySelection,
     normalizeSelectionText,
     open,

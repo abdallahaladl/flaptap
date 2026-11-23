@@ -1,0 +1,261 @@
+/* ==========================================================================
+   FLAPTAP — SHARED PAGINATION, LOADING SKELETON & SPRING ENTRANCE (pagination-ui.css)
+   Consumes global Apple Design Tokens from design-tokens.css & apple-components.css.
+   Shared across Learning Library, Anything to Phrases, and future paginated views.
+   ========================================================================== */
+
+@keyframes ftFadeRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ftCardEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes ftShimmerSweep {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+/* Staggered Apple Spring Entrance for Cards & Rows */
+.ft-items-entering .ft-item-surface {
+  animation: ftCardEnter 0.42s var(--ap-spring) both;
+  animation-delay: calc(var(--ft-stagger, 0) * 36ms);
+  will-change: transform, opacity;
+}
+
+/* Shared Skeleton Card Entrance & Apple Shimmer Sweep */
+.ft-skeleton-item {
+  animation: ftFadeRise 0.26s var(--ap-spring) both;
+  animation-delay: calc(var(--ft-stagger, 0) * 45ms);
+}
+
+.ft-skel-shimmer {
+  position: relative;
+  display: block;
+  background: linear-gradient(
+    90deg,
+    var(--ap-fill-subtle) 0%,
+    var(--ap-fill) 35%,
+    rgba(255, 255, 255, 0.55) 50%,
+    var(--ap-fill) 65%,
+    var(--ap-fill-subtle) 100%
+  );
+  background-size: 240% 100%;
+  animation: ftShimmerSweep 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+[data-theme="dark"] .ft-skel-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.09) 35%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.09) 65%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 240% 100%;
+}
+
+/* Pro Apple Pagination Bar */
+.ft-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 14px 20px;
+  border-radius: 20px;
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-border);
+  box-shadow: var(--ap-shadow-card), var(--ap-specular);
+  animation: ftFadeRise 0.28s var(--ap-spring) both;
+}
+
+.ft-pagination-bar[hidden],
+.ft-page-numbers[hidden],
+.ft-page-size-wrap[hidden] {
+  display: none !important;
+}
+
+.ft-pagination-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.ft-page-info {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ap-text-secondary);
+}
+
+.ft-page-size-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ft-page-size-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ap-text-tertiary);
+}
+
+.ft-page-size-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 10px;
+  background: var(--ap-fill);
+  border: 1px solid var(--ap-border);
+}
+
+.ft-page-size-pill {
+  min-width: 30px;
+  height: 24px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ap-text-secondary);
+  font-family: var(--ap-font-mono);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.ft-page-size-pill:hover:not(.active) {
+  color: var(--ap-text-primary);
+}
+
+.ft-page-size-pill.active {
+  background: var(--ap-surface);
+  color: var(--ap-text-primary);
+  font-weight: 700;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10);
+}
+
+[data-theme="dark"] .ft-page-size-pill.active {
+  background: #3A3A3C;
+  color: #FFFFFF;
+}
+
+.ft-pagination-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ft-pagination-bar .btn-sm {
+  height: 34px;
+  padding: 0 13px;
+  font-size: 0.81rem;
+}
+
+.ft-page-nav-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.ft-page-numbers {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ft-page-num-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 980px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ap-text-secondary);
+  font-family: var(--ap-font-mono);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.14s var(--ap-bounce);
+}
+
+.ft-page-num-btn:hover:not(.active) {
+  background: var(--ap-fill);
+  color: var(--ap-text-primary);
+}
+
+.ft-page-num-btn.active {
+  background: var(--ap-blue);
+  color: #FFFFFF;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.28);
+}
+
+.ft-page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 32px;
+  color: var(--ap-text-tertiary);
+  font-family: var(--ap-font-mono);
+  font-size: 0.8rem;
+  user-select: none;
+}
+
+@media (max-width: 640px) {
+  .ft-pagination-bar {
+    padding: 14px 16px;
+    border-radius: 18px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .ft-pagination-meta {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .ft-pagination-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ft-items-entering .ft-item-surface,
+  .ft-skeleton-item,
+  .ft-skel-shimmer,
+  .ft-pagination-bar {
+    animation: none !important;
+  }
+}

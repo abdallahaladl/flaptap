@@ -110,9 +110,11 @@ export interface ExtractorItem {
   localizedMeaning: string;
   generalMeaning?: string;
   contextSentence: string;
+  contextTranslation?: string;
   usageNote: string;
   spokenNote: string;
   example: string;
+  exampleTranslation?: string;
   techNote?: string;
   tags?: string[];
   /** Exact millisecond-accurate playback boundaries in source audio/video when available. */
@@ -198,12 +200,19 @@ export interface ListHistoryQuery {
   limit?: number;
 }
 
+export interface UploadedFileInput {
+  buffer: Buffer;
+  originalName: string;
+  mimeType?: string;
+}
+
 export interface PaginatedHistoryResult {
   items: ExtractionHistoryItem[];
   total: number;
   filteredTotal: number;
   page: number;
   pageSize: number;
+  totalPages: number;
   hasMore: boolean;
   stats: {
     totalGuides: number;
@@ -228,6 +237,8 @@ export interface ResolvedSource {
   mediaId?: string;
   durationSeconds?: number;
   segments?: SourceSegment[];
+  needsContextualTitle?: boolean;
+  submittedFileNames?: string[];
   sourceMeta: Record<string, any>;
   warnings: string[];
   truncated: boolean;
@@ -262,6 +273,8 @@ export interface ExtractorConfig {
   defaultModel: string;
   defaultVariant: string;
   maxUploadMb: number;
+  maxImagesPerUpload: number;
+  maxImageMb: number;
   acceptedUploadTypes: string[];
   aiConfigured: boolean;
 }

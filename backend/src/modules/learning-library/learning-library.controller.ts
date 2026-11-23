@@ -64,8 +64,12 @@ export class LearningLibraryController {
     @Query('register') register?: string,
     @Query('q') q?: string,
     @Query('sort') sort?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const identity = requireAuthenticatedUser(req, this.authService);
+    const parsedPage = page !== undefined && page !== '' ? Number(page) : undefined;
+    const parsedLimit = limit !== undefined && limit !== '' ? Number(limit) : undefined;
     const query: ListLibraryItemsQuery = {
       domainId,
       categoryId,
@@ -78,6 +82,8 @@ export class LearningLibraryController {
         sort === 'alphabetical' || sort === 'mastery' || sort === 'most_reviewed'
           ? sort
           : 'newest',
+      page: Number.isFinite(parsedPage) ? parsedPage : undefined,
+      limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
     };
 
     return {

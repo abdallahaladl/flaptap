@@ -4,7 +4,6 @@ import { SqliteService } from '../../core/database/sqlite.service';
 import {
   LinkedExtractorNoteSummary,
   LinkedLessonSummary,
-  LinkedTechLexiconSummary,
   SharedMediaKind,
   SharedSourceRecord,
   SharedSourceSummary,
@@ -156,6 +155,14 @@ export class SharedSourcesRepository {
     return this.findById(userId, id)!;
   }
 
+  updateTitle(userId: string, id: string, title: string): void {
+    const clean = String(title || '').trim().slice(0, 140);
+    if (!id || !clean) return;
+    this.sqlite.db
+      .prepare('UPDATE shared_sources SET title = ?, updated_at = ? WHERE id = ? AND user_id = ?')
+      .run(clean, new Date().toISOString(), id, userId);
+  }
+
   listSummaries(userId: string, limit = 50): SharedSourceSummary[] {
     const safeLimit = Math.max(1, Math.min(200, Number(limit) || 50));
     const rows = this.sqlite.db
@@ -180,16 +187,6 @@ export class SharedSourcesRepository {
         .run(sourceId, lessonId, userId);
     } catch (err: any) {
       this.logger.warn(`Could not link lesson ${lessonId} to source ${sourceId}: ${err?.message}`);
-    }
-  }
-
-  linkTechExtractionToSource(userId: string, extractionId: string, sourceId: string): void {
-    try {
-      this.sqlite.db
-        .prepare('UPDATE tech_linguist_extractions SET source_id = ? WHERE id = ? AND user_id = ?')
-        .run(sourceId, extractionId, userId);
-    } catch (err: any) {
-      this.logger.warn(`Could not link tech extraction ${extractionId}: ${err?.message}`);
     }
   }
 
@@ -307,58 +304,6 @@ export class SharedSourcesRepository {
              ORDER BY created_at DESC LIMIT 12`,
           )
           .all(userId, `%"lessonId":"${opts.lessonId}"%`) as Array<Record<string, any>>,
-      );
-    }
-
-    return Array.from(seen.values()).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }
-
-  findLinkedTechLexiconNotes(
-    userId: string,
-    opts: { sourceId?: string; videoId?: string; sourceUrl?: string },
-  ): LinkedTechLexiconSummary[] {
-    const seen = new Map<string, LinkedTechLexiconSummary>();
-    const collect = (rows: Array<Record<string, any>>) => {
-      for (const row of rows || []) {
-        const id = String(row.id);
-        if (seen.has(id)) continue;
-        seen.set(id, {
-          id,
-          title: String(row.title || 'Tech Lexicon Note'),
-          extractionMode: String(row.extraction_mode || 'comprehensive'),
-          vocabCount: Number(row.vocab_count) || 0,
-          idiomsCount: Number(row.idioms_count) || 0,
-          createdAt: String(row.created_at || ''),
-        });
-      }
-    };
-
-    const cols = `id, title, COALESCE(NULLIF(extraction_mode, ''), 'comprehensive') AS extraction_mode, vocab_count, idioms_count, created_at`;
-    if (opts.sourceId) {
-      collect(
-        this.sqlite.db
-          .prepare(
-            `SELECT ${cols} FROM tech_linguist_extractions WHERE user_id = ? AND source_id = ? ORDER BY created_at DESC LIMIT 10`,
-          )
-          .all(userId, opts.sourceId) as Array<Record<string, any>>,
-      );
-    }
-    if (opts.sourceUrl) {
-      collect(
-        this.sqlite.db
-          .prepare(
-            `SELECT ${cols} FROM tech_linguist_extractions WHERE user_id = ? AND source_url = ? ORDER BY created_at DESC LIMIT 10`,
-          )
-          .all(userId, opts.sourceUrl) as Array<Record<string, any>>,
-      );
-    }
-    if (opts.videoId) {
-      collect(
-        this.sqlite.db
-          .prepare(
-            `SELECT ${cols} FROM tech_linguist_extractions WHERE user_id = ? AND source_url LIKE ? ORDER BY created_at DESC LIMIT 10`,
-          )
-          .all(userId, `%${opts.videoId}%`) as Array<Record<string, any>>,
       );
     }
 

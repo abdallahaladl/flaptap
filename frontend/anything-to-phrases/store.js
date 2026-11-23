@@ -366,6 +366,18 @@
     });
   }
 
+  function restoreHistorySnapshot(snapshot) {
+    if (!snapshot) return;
+    if (Array.isArray(snapshot.recentHistory)) state.recentHistory = snapshot.recentHistory;
+    if (typeof snapshot.historyTotal === 'number') state.historyTotal = snapshot.historyTotal;
+    if (snapshot.stats) state.stats = snapshot.stats;
+    emit('history:changed', {
+      recent: state.recentHistory,
+      total: state.historyTotal,
+      stats: state.stats,
+    });
+  }
+
   function resetUserData() {
     state.recentHistory = [];
     state.historyTotal = 0;
@@ -502,21 +514,33 @@
     };
   }
 
-  function detectFileSource(file, maxMb = 50) {
+  function isImageFile(file) {
+    if (!file) return false;
+    const name = String(file.name || '');
+    const ext = (name.match(/(\.[a-z0-9]{1,8})$/i)?.[1] || '').toLowerCase();
+    const mime = String(file.type || '').toLowerCase();
+    return mime.startsWith('image/') || /\.(png|jpe?g|webp|gif)$/.test(ext);
+  }
+
+  function detectFileSource(file, maxMb = 50, maxImageMb = 8) {
     if (!file) return null;
     const name = String(file.name || 'upload');
     const ext = (name.match(/(\.[a-z0-9]{1,8})$/i)?.[1] || '').toLowerCase();
     const mime = String(file.type || '').toLowerCase();
     const sizeMb = file.size / (1024 * 1024);
     const sizeLabel = sizeMb >= 1 ? `${sizeMb.toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+    const isImage = mime.startsWith('image/') || /\.(png|jpe?g|webp|gif)$/.test(ext);
 
+    if (isImage && file.size > maxImageMb * 1024 * 1024) {
+      return { valid: false, label: 'Image too large', pipeline: '', sizeLabel, tone: 'error', hasAudio: false, hasVideo: false, error: `Each image must be ${maxImageMb} MB or smaller.` };
+    }
     if (file.size > maxMb * 1024 * 1024) {
       return { valid: false, label: 'File too large', pipeline: '', sizeLabel, tone: 'error', hasAudio: false, hasVideo: false, error: `Choose a file smaller than ${maxMb} MB.` };
     }
     if (mime === 'application/pdf' || ext === '.pdf') {
       return { valid: true, label: 'PDF Document', pipeline: 'PDF text extraction', sizeLabel, tone: 'text', hasAudio: false, hasVideo: false, error: '' };
     }
-    if (mime.startsWith('image/') || /\.(png|jpe?g|webp|gif)$/.test(ext)) {
+    if (isImage) {
       return { valid: true, label: 'Image · Vision OCR', pipeline: 'Multimodal OCR + extraction', sizeLabel, tone: 'image', hasAudio: false, hasVideo: false, error: '' };
     }
     if (mime.startsWith('audio/') || /\.(mp3|m4a|wav|aac|flac|ogg|opus)$/.test(ext)) {
@@ -573,6 +597,16 @@
         ? note.completionProgress.items.map(Number)
         : [],
     );
+  }
+
+  function getNextUncompletedPage(note, pageSize = 10) {
+    const items = Array.isArray(note?.items) ? note.items : [];
+    const safePageSize = Math.max(1, Math.floor(Number(pageSize) || 10));
+    if (items.length === 0) return 1;
+    const completedSet = completedIndexSet(note);
+    const nextPos = items.findIndex((item) => !completedSet.has(Number(item.index)));
+    if (nextPos < 0) return 1;
+    return Math.floor(nextPos / safePageSize) + 1;
   }
 
   function studyState({ total, done }) {
@@ -796,11 +830,14 @@
     getCachedNote,
     updateCachedNoteMeta,
     removeNoteFromCache,
+    restoreHistorySnapshot,
     resetUserData,
     detectUrlSource,
     detectFileSource,
+    isImageFile,
     estimateTextStats,
     completedIndexSet,
+    getNextUncompletedPage,
     studyState,
     noteStudyState,
     historyStudyState,

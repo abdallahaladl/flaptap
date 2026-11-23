@@ -1,0 +1,383 @@
+/* ==========================================================================
+   Flaptap Shared Apple Confirmation Modal & Animated Timed Undo
+   Shared by both index.html and studio.html (Zero duplicated styles)
+   ========================================================================== */
+
+html.ft-confirm-open,
+html.ft-confirm-open body {
+  overflow: hidden;
+}
+
+.ft-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: var(--ap-backdrop, rgba(15, 15, 20, 0.4));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  opacity: 0;
+  transition: opacity 0.2s var(--ap-ease, cubic-bezier(0.25, 1, 0.5, 1));
+}
+
+.ft-confirm-backdrop[hidden] {
+  display: none;
+}
+
+.ft-confirm-backdrop.is-open {
+  opacity: 1;
+}
+
+.ft-confirm-card {
+  width: min(100%, 380px);
+  padding: 24px 22px 20px;
+  border-radius: 22px;
+  background: var(--ap-glass-popover, rgba(255, 255, 255, 0.96));
+  backdrop-filter: saturate(180%) blur(26px);
+  -webkit-backdrop-filter: saturate(180%) blur(26px);
+  border: 1px solid var(--ap-border-strong, rgba(0, 0, 0, 0.13));
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.22),
+    var(--ap-specular, inset 0 1px 0 rgba(255, 255, 255, 0.9));
+  text-align: center;
+  transform: scale(0.95) translateY(6px);
+  opacity: 0;
+  transition:
+    transform 0.26s var(--ap-spring, cubic-bezier(0.22, 1, 0.36, 1)),
+    opacity 0.2s ease;
+}
+
+.ft-confirm-backdrop.is-open .ft-confirm-card {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+[data-theme='dark'] .ft-confirm-card {
+  box-shadow:
+    0 28px 64px rgba(0, 0, 0, 0.56),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.ft-confirm-icon-wrap {
+  width: 44px;
+  height: 44px;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ap-red-wash, rgba(255, 59, 48, 0.12));
+  color: var(--ap-red, #d70015);
+  border: 1px solid rgba(255, 59, 48, 0.2);
+}
+
+.ft-confirm-card[data-tone='warning'] .ft-confirm-icon-wrap {
+  background: var(--ap-orange-wash, rgba(255, 149, 0, 0.14));
+  color: var(--ap-orange, #c93400);
+  border-color: rgba(255, 149, 0, 0.24);
+}
+
+.ft-confirm-card[data-tone='primary'] .ft-confirm-icon-wrap {
+  background: var(--ap-blue-wash, rgba(0, 113, 227, 0.1));
+  color: var(--ap-blue, #0071e3);
+  border-color: rgba(0, 113, 227, 0.22);
+}
+
+.ft-confirm-title {
+  margin: 0 0 6px;
+  font-family: var(--ap-font-display, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 1.06rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.28;
+  color: var(--ap-text-primary, #1d1d1f);
+}
+
+.ft-confirm-message {
+  margin: 0;
+  font-family: var(--ap-font-text, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 0.875rem;
+  line-height: 1.48;
+  color: var(--ap-text-secondary, #6e6e73);
+}
+
+.ft-confirm-detail {
+  margin: 12px auto 0;
+  padding: 7px 12px;
+  max-width: 100%;
+  border-radius: 10px;
+  background: var(--ap-fill-subtle, rgba(118, 118, 128, 0.08));
+  border: 1px solid var(--ap-border, rgba(0, 0, 0, 0.07));
+  font-family: var(--ap-font-text, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ap-text-primary, #1d1d1f);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ft-confirm-detail[hidden] {
+  display: none;
+}
+
+.ft-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.ft-confirm-cancel,
+.ft-confirm-accept {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 980px;
+  font-family: var(--ap-font-text, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.14s var(--ap-spring, ease),
+    background 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.ft-confirm-cancel {
+  border: 1px solid var(--ap-border-strong, rgba(0, 0, 0, 0.13));
+  background: var(--ap-fill-subtle, rgba(118, 118, 128, 0.08));
+  color: var(--ap-text-primary, #1d1d1f);
+}
+
+.ft-confirm-cancel:hover {
+  background: var(--ap-fill, rgba(118, 118, 128, 0.14));
+}
+
+.ft-confirm-accept {
+  border: none;
+  background: var(--ap-red-solid, #ff3b30);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(255, 59, 48, 0.28);
+}
+
+.ft-confirm-accept:hover {
+  filter: brightness(1.06);
+}
+
+.ft-confirm-card[data-tone='primary'] .ft-confirm-accept {
+  background: var(--ap-blue, #0071e3);
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.28);
+}
+
+.ft-confirm-cancel:active,
+.ft-confirm-accept:active {
+  transform: scale(0.97);
+}
+
+.ft-confirm-cancel:focus-visible,
+.ft-confirm-accept:focus-visible {
+  outline: 2px solid var(--ap-blue, #0071e3);
+  outline-offset: 2px;
+}
+
+/* ==========================================================================
+   ANIMATED TIMED UNDO PILL (Apple Dynamic-Island / Notification Pill)
+   ========================================================================== */
+
+.ft-undo-toast {
+  position: fixed;
+  left: 50%;
+  bottom: max(22px, env(safe-area-inset-bottom, 22px));
+  z-index: 1180;
+  width: min(calc(100vw - 28px), 440px);
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(28, 28, 30, 0.9);
+  backdrop-filter: saturate(180%) blur(22px);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transform: translate3d(-50%, 16px, 0) scale(0.96);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.32s var(--ap-spring, cubic-bezier(0.22, 1, 0.36, 1)),
+    opacity 0.22s ease;
+}
+
+.ft-undo-toast[hidden] {
+  display: none;
+}
+
+.ft-undo-toast.is-open {
+  transform: translate3d(-50%, 0, 0) scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ft-undo-main {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 10px 10px 12px;
+}
+
+.ft-undo-ring {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ft-undo-ring svg {
+  transform: rotate(-90deg);
+}
+
+.ft-undo-ring-track {
+  stroke: rgba(255, 255, 255, 0.18);
+}
+
+.ft-undo-ring-fill {
+  stroke: #0a84ff;
+}
+
+.ft-undo-seconds {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--ap-font-mono, monospace);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  font-variant-numeric: tabular-nums;
+}
+
+.ft-undo-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.ft-undo-msg {
+  display: block;
+  font-family: var(--ap-font-text, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 0.84rem;
+  font-weight: 500;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.94);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ft-undo-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ft-undo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 980px;
+  background: #0a84ff;
+  color: #ffffff;
+  font-family: var(--ap-font-text, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.12s var(--ap-spring, ease);
+}
+
+.ft-undo-btn:hover {
+  background: #2f96ff;
+}
+
+.ft-undo-btn:active {
+  transform: scale(0.96);
+}
+
+.ft-undo-btn .ft-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.ft-undo-close {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.56);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.ft-undo-close:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.ft-undo-bar {
+  height: 2.5px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.ft-undo-bar-fill {
+  height: 100%;
+  width: 100%;
+  transform-origin: left center;
+  background: linear-gradient(90deg, #0a84ff 0%, #5ac8fa 100%);
+}
+
+[dir='rtl'] .ft-undo-bar-fill {
+  transform-origin: right center;
+}
+
+@media (max-width: 560px) {
+  .ft-confirm-card {
+    padding: 20px 18px 18px;
+    border-radius: 20px;
+  }
+
+  .ft-undo-toast {
+    bottom: max(14px, env(safe-area-inset-bottom, 14px));
+    width: calc(100vw - 20px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ft-confirm-backdrop,
+  .ft-confirm-card,
+  .ft-undo-toast {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .ft-confirm-backdrop,
+  .ft-confirm-card,
+  .ft-undo-toast {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}

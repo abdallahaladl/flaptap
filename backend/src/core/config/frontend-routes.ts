@@ -15,9 +15,6 @@ const WORKSPACE_EXACT_PATHS = new Set<string>([
   '/pronunciation',
   '/vocabulary',
   '/history',
-  '/lexicon',
-  '/tech-lexicon',
-  '/tech-linguist',
   '/library',
   '/learning-library',
   '/extractor',
@@ -27,9 +24,6 @@ const WORKSPACE_EXACT_PATHS = new Set<string>([
 ]);
 
 const WORKSPACE_SUBROUTE_PREFIXES = [
-  '/lexicon/',
-  '/tech-lexicon/',
-  '/tech-linguist/',
   '/library/',
   '/learning-library/',
   '/extractor/',

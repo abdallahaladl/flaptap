@@ -197,9 +197,190 @@ def test_fetch_youtube_transcript_mocked():
     print("✅ Verbatim transcript extraction pipeline — cues, sentences, and words assembled")
 
 
+def _assert_json3_invariants(cues, timed_words):
+    cue_words = " ".join(c["text"] for c in cues).split()
+    word_tokens = [w["word"] for w in timed_words]
+    assert word_tokens == cue_words, f"Word mismatch!\n  cues:  {cue_words}\n  words: {word_tokens}"
+    for i, w in enumerate(timed_words):
+        assert w["end_sec"] > w["start_sec"], f"Non-positive duration at {i}: {w}"
+        if i > 0:
+            assert w["start_sec"] >= timed_words[i - 1]["start_sec"], (
+                f"Non-monotonic start_sec at {i}: {timed_words[i - 1]} -> {w}"
+            )
+
+
+def test_parse_json3_events_preserves_exact_order():
+    # 1. Multi-word segs with tight next seg / tight next cue / bracketed tokens / repeated words
+    events = [
+        {"tStartMs": 0, "dDurationMs": 50000, "segs": []},
+        {
+            "tStartMs": 14200,
+            "dDurationMs": 3800,
+            "segs": [
+                {"utf8": "back"},
+                {"utf8": " in the", "tOffsetMs": 100},
+                {"utf8": " day,", "tOffsetMs": 200},
+                {"utf8": " it's", "tOffsetMs": 400},
+            ],
+        },
+        {
+            "tStartMs": 48900,
+            "dDurationMs": 3600,
+            "segs": [
+                {"utf8": "they're going"},
+                {"utf8": " to", "tOffsetMs": 100},
+                {"utf8": " make", "tOffsetMs": 200},
+                {"utf8": " some", "tOffsetMs": 300},
+                {"utf8": " cash", "tOffsetMs": 500},
+            ],
+        },
+        {
+            "tStartMs": 56000,
+            "dDurationMs": 2000,
+            "segs": [
+                {"utf8": "go"},
+                {"utf8": " in the", "tOffsetMs": 1200},
+            ],
+        },
+        {
+            "tStartMs": 57300,
+            "dDurationMs": 2500,
+            "segs": [
+                {"utf8": "program."},
+                {"utf8": " And", "tOffsetMs": 800},
+                {"utf8": " two,", "tOffsetMs": 1100},
+            ],
+        },
+        {
+            "tStartMs": 61000,
+            "dDurationMs": 2000,
+            "segs": [
+                {"utf8": "had"},
+                {"utf8": " no", "tOffsetMs": 200},
+                {"utf8": " [ __ ]", "tOffsetMs": 400},
+                {"utf8": " windows", "tOffsetMs": 500},
+            ],
+        },
+        {
+            "tStartMs": 64000,
+            "dDurationMs": 1800,
+            "segs": [
+                {"utf8": "what"},
+                {"utf8": " is", "tOffsetMs": 200},
+                {"utf8": " is", "tOffsetMs": 205},
+                {"utf8": " no", "tOffsetMs": 400},
+                {"utf8": " no", "tOffsetMs": 400},
+            ],
+        },
+        {
+            "tStartMs": 67000,
+            "dDurationMs": 1500,
+            "segs": [
+                {"utf8": "don"},
+                {"utf8": "'t", "tOffsetMs": 100},
+                {"utf8": " know", "tOffsetMs": 300},
+            ],
+        },
+    ]
+    cues, timed_words = extractor.parse_json3_events(events)
+    _assert_json3_invariants(cues, timed_words)
+    got_words = [w["word"] for w in timed_words]
+    expected_words = [
+        "back", "in", "the", "day,", "it's",
+        "they're", "going", "to", "make", "some", "cash",
+        "go", "in", "the", "program.", "And", "two,",
+        "had", "no", "[", "__", "]", "windows",
+        "what", "is", "is", "no", "no",
+        "don't", "know",
+    ]
+    assert got_words == expected_words, f"Expected {expected_words}, got {got_words}"
+
+    # 2. Out-of-order / jittery raw tOffsetMs & tStartMs never reorder words
+    jittery_events = [
+        {
+            "tStartMs": 1000,
+            "dDurationMs": 1000,
+            "segs": [
+                {"utf8": "first", "tOffsetMs": 400},
+                {"utf8": " second", "tOffsetMs": 200},
+                {"utf8": " third", "tOffsetMs": 500},
+            ],
+        },
+        {
+            "tStartMs": 1900,
+            "dDurationMs": 1000,
+            "segs": [
+                {"utf8": "fourth"},
+                {"utf8": " fifth", "tOffsetMs": 300},
+            ],
+        },
+    ]
+    j_cues, j_words = extractor.parse_json3_events(jittery_events)
+    _assert_json3_invariants(j_cues, j_words)
+    assert [w["word"] for w in j_words] == ["first", "second", "third", "fourth", "fifth"]
+
+    # 3. Manual caption cue with many words in a single seg spans full cue without overshooting next cue
+    manual_events = [
+        {
+            "tStartMs": 0,
+            "dDurationMs": 4000,
+            "segs": [{"utf8": "one two three four five six seven eight nine ten"}],
+        },
+        {
+            "tStartMs": 4000,
+            "dDurationMs": 2000,
+            "segs": [{"utf8": "eleven twelve"}],
+        },
+    ]
+    m_cues, m_words = extractor.parse_json3_events(manual_events)
+    _assert_json3_invariants(m_cues, m_words)
+    assert [w["word"] for w in m_words] == [
+        "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven", "twelve"
+    ]
+    assert m_words[9]["start_sec"] < 4.0 and m_words[9]["end_sec"] <= 4.001
+    assert m_words[10]["start_sec"] == 4.0
+    print("✅ JSON3 event parsing — exact word order, whitespace gluing, repeated words, and monotonic timing")
+
+
+def test_clean_vtt_cues_no_midword_corruption_and_entities():
+    vtt = """WEBVTT
+Kind: captions
+Language: en
+
+00:00:00.000 --> 00:00:01.000
+in
+
+00:00:01.000 --> 00:00:03.000
+thinking about it
+
+00:00:03.000 --> 00:00:05.000
+it&#39;s &amp; &gt;&gt; done
+
+00:00:05.000 --> 00:00:07.000
+it&#39;s &amp; &gt;&gt; done
+going to work
+
+00:00:07.000 --> 00:00:09.000
+going to work
+right now
+"""
+    cues = extractor.clean_vtt_cues(vtt)
+    texts = [c["text"] for c in cues]
+    assert texts == [
+        "in",
+        "thinking about it",
+        "it's & >> done",
+        "going to work",
+        "right now",
+    ], f"Unexpected VTT cues: {texts}"
+    print("✅ WebVTT cues parsing — no mid-word deletion, entity unescaping, and rolling dedup")
+
+
 if __name__ == "__main__":
     test_clean_vtt_cues()
+    test_clean_vtt_cues_no_midword_corruption_and_entities()
     test_extract_timed_words()
+    test_parse_json3_events_preserves_exact_order()
     test_group_cues_into_sentences()
     test_group_cues_by_interval()
     test_extract_youtube_id()

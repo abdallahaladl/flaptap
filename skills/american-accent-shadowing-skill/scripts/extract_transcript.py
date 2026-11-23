@@ -11,6 +11,7 @@ Usage:
 
 import sys
 import os
+import html
 import json
 import re
 import argparse
@@ -92,8 +93,8 @@ def clean_vtt_cues(vtt_content: str) -> List[Dict[str, Any]]:
         match = time_pattern.search(line)
         if match:
             if current_start is not None and buffer_lines:
-                text = " ".join(buffer_lines)
-                text = re.sub(r'<[^>]+>', '', text).strip()
+                text = html.unescape(re.sub(r'<[^>]+>', '', " ".join(buffer_lines)))
+                text = re.sub(r'\s+', ' ', text).strip()
                 if text:
                     cues.append({
                         "start": current_start,
@@ -106,13 +107,14 @@ def clean_vtt_cues(vtt_content: str) -> List[Dict[str, Any]]:
             current_start = match.group(1)
             current_end = match.group(2)
         else:
-            clean_line = re.sub(r'<[^>]+>', '', line).strip()
+            clean_line = html.unescape(re.sub(r'<[^>]+>', '', line))
+            clean_line = re.sub(r'\s+', ' ', clean_line).strip()
             if clean_line and clean_line not in buffer_lines:
                 buffer_lines.append(clean_line)
 
     if current_start is not None and buffer_lines:
-        text = " ".join(buffer_lines)
-        text = re.sub(r'<[^>]+>', '', text).strip()
+        text = html.unescape(re.sub(r'<[^>]+>', '', " ".join(buffer_lines)))
+        text = re.sub(r'\s+', ' ', text).strip()
         if text:
             cues.append({
                 "start": current_start,
@@ -122,23 +124,45 @@ def clean_vtt_cues(vtt_content: str) -> List[Dict[str, Any]]:
                 "text": text,
             })
 
-    # Deduplicate rolling lines in cues
+    # Deduplicate rolling lines strictly at word boundaries (never strip mid-cue or mid-word)
     deduped_cues = []
-    last_text = ""
+    last_raw_text = ""
+    last_emitted_text = ""
     for cue in cues:
-        cue_text = cue["text"]
-        if cue_text == last_text:
+        raw_text = cue["text"]
+        if raw_text == last_raw_text or raw_text == last_emitted_text:
+            last_raw_text = raw_text
             continue
-        if last_text and cue_text.startswith(last_text):
-            cue_text = cue_text[len(last_text):].strip()
-        elif last_text and last_text in cue_text:
-            idx = cue_text.find(last_text)
-            cue_text = (cue_text[:idx] + cue_text[idx + len(last_text):]).strip()
 
+        cue_text = raw_text
+        matched_prefix = ""
+        for prev_text in (last_raw_text, last_emitted_text):
+            if prev_text and raw_text.startswith(prev_text + " ") and len(prev_text) > len(matched_prefix):
+                matched_prefix = prev_text
+
+        if matched_prefix:
+            cue_text = raw_text[len(matched_prefix) + 1:].strip()
+        else:
+            curr_words = raw_text.split()
+            best_overlap = 0
+            for prev_text in (last_raw_text, last_emitted_text):
+                if not prev_text:
+                    continue
+                prev_words = prev_text.split()
+                max_k = min(len(prev_words), len(curr_words))
+                for k in range(max_k, 1, -1):
+                    if prev_words[-k:] == curr_words[:k]:
+                        if k > best_overlap:
+                            best_overlap = k
+                        break
+            if best_overlap >= 2:
+                cue_text = " ".join(curr_words[best_overlap:]).strip()
+
+        last_raw_text = raw_text
         if cue_text:
             cue["text"] = cue_text
             deduped_cues.append(cue)
-            last_text = cue["text"]
+            last_emitted_text = cue_text
 
     # Ensure strictly sequential and positive boundaries across consecutive cues
     for i in range(len(deduped_cues)):
@@ -211,55 +235,115 @@ def extract_timed_words(cues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def parse_json3_events(events: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """
-    Parses native YouTube JSON3 caption events into deduplicated cues and exact
+    Parses native YouTube JSON3 caption events into verbatim cues and exact
     per-word timed_words with monotonic millisecond precision.
+
+    Strictly preserves the original word sequence and never sorts or drops words.
     """
-    timed_words = []
-    cues = []
+    timed_words: List[Dict[str, Any]] = []
+    cues: List[Dict[str, Any]] = []
 
     def clean_token(token: str) -> str:
         return re.sub(r'^[^\w\']+|[^\w\']+$', '', token.lower())
 
+    # Pass 1: collect text-bearing events in exact original order
+    parsed_events: List[Dict[str, Any]] = []
     for ev in events:
-        t_start = ev.get('tStartMs', 0) / 1000.0
-        d_dur = ev.get('dDurationMs', 0) / 1000.0
         segs = ev.get('segs', [])
         if not segs:
             continue
 
-        cue_text_parts = []
-        event_words = []
+        t_start = round((ev.get('tStartMs', 0) or 0) / 1000.0, 3)
+        d_dur = max(0.0, (ev.get('dDurationMs', 0) or 0) / 1000.0)
+
+        seg_groups: List[Dict[str, Any]] = []
+        prev_ended_with_ws = True
 
         for s in segs:
             utf8 = s.get('utf8', '')
             if not utf8:
                 continue
-            cleaned = utf8.replace('\n', ' ')
-            tokens = cleaned.strip().split()
-            if not tokens:
+            normalized = utf8.replace('\r', ' ').replace('\n', ' ')
+            if not normalized.strip():
+                prev_ended_with_ws = True
                 continue
 
-            offset = s.get('tOffsetMs', 0) / 1000.0
-            w_start = round(t_start + offset, 3)
+            starts_with_ws = normalized[0].isspace()
+            ends_with_ws = normalized[-1].isspace()
+            tokens = normalized.strip().split()
+            offset = (s.get('tOffsetMs', 0) or 0) / 1000.0
+            seg_start = round(t_start + offset, 3)
 
-            for idx, tok in enumerate(tokens):
-                cue_text_parts.append(tok)
-                tok_start = w_start if idx == 0 else round(w_start + idx * 0.12, 3)
+            if not starts_with_ws and not prev_ended_with_ws and seg_groups:
+                seg_groups[-1]['tokens'][-1] += tokens[0]
+                tokens = tokens[1:]
+
+            if tokens:
+                seg_groups.append({'start_sec': seg_start, 'tokens': tokens})
+
+            prev_ended_with_ws = ends_with_ws
+
+        if seg_groups:
+            parsed_events.append({
+                't_start': t_start,
+                'd_dur': d_dur,
+                'seg_groups': seg_groups,
+            })
+
+    # Pass 2: bounded interpolation within each seg_group window; no sorting, no word dropping
+    for ev_idx, ev in enumerate(parsed_events):
+        t_start = ev['t_start']
+        d_dur = ev['d_dur']
+        seg_groups = ev['seg_groups']
+        next_ev_start = parsed_events[ev_idx + 1]['t_start'] if ev_idx + 1 < len(parsed_events) else None
+        raw_end = round(t_start + d_dur, 3) if d_dur > 0 else None
+
+        if next_ev_start is not None and next_ev_start > t_start:
+            ev_window_end = (
+                min(raw_end, next_ev_start)
+                if (raw_end is not None and raw_end > t_start)
+                else next_ev_start
+            )
+        elif raw_end is not None and raw_end > t_start:
+            ev_window_end = raw_end
+        else:
+            ev_window_end = None
+
+        event_words: List[Dict[str, Any]] = []
+        for g_idx, grp in enumerate(seg_groups):
+            g_start = grp['start_sec']
+            tokens = grp['tokens']
+            if g_idx + 1 < len(seg_groups):
+                g_end = seg_groups[g_idx + 1]['start_sec']
+            elif ev_window_end is not None and ev_window_end > g_start:
+                g_end = ev_window_end
+            elif next_ev_start is not None and next_ev_start > g_start:
+                g_end = next_ev_start
+            else:
+                g_end = round(g_start + max(0.25, 0.22 * len(tokens)), 3)
+
+            if g_end < g_start:
+                g_end = g_start
+
+            g_dur = g_end - g_start
+            m = len(tokens)
+            for tok_idx, tok in enumerate(tokens):
+                tok_start = round(g_start, 3) if m == 1 else round(g_start + (tok_idx / m) * g_dur, 3)
                 event_words.append({
                     'word': tok,
                     'clean': clean_token(tok),
                     'start_sec': tok_start,
                 })
 
-        if not event_words:
-            continue
-
-        cue_text = ' '.join(cue_text_parts).strip()
-        if not cue_text:
-            continue
+        if ev_window_end is not None and ev_window_end > event_words[-1]['start_sec']:
+            cue_end = round(ev_window_end, 3)
+        elif next_ev_start is not None and next_ev_start > event_words[-1]['start_sec']:
+            cue_end = round(next_ev_start, 3)
+        else:
+            cue_end = round(max(t_start + d_dur, event_words[-1]['start_sec'] + 0.25), 3)
 
         cue_idx = len(cues)
-        cue_end = round(max(t_start + d_dur, event_words[-1]['start_sec'] + 0.25), 3)
+        cue_text = ' '.join(w['word'] for w in event_words)
 
         cues.append({
             'start': format_seconds_str(t_start),
@@ -274,23 +358,26 @@ def parse_json3_events(events: List[Dict[str, Any]]) -> Tuple[List[Dict[str, Any
             w['cue_end'] = (i == len(event_words) - 1)
             timed_words.append(w)
 
-    timed_words.sort(key=lambda w: w['start_sec'])
+    # Pass 3: in-place monotonic clamping & end_sec assignment — never sort or drop words
+    for i in range(1, len(timed_words)):
+        if timed_words[i]['start_sec'] < timed_words[i - 1]['start_sec']:
+            timed_words[i]['start_sec'] = timed_words[i - 1]['start_sec']
 
-    deduped_words = []
-    for w in timed_words:
-        if deduped_words and deduped_words[-1]['word'] == w['word'] and abs(deduped_words[-1]['start_sec'] - w['start_sec']) < 0.01:
-            continue
-        deduped_words.append(w)
-
-    for i in range(len(deduped_words)):
-        w = deduped_words[i]
-        if i + 1 < len(deduped_words):
-            next_start = deduped_words[i + 1]['start_sec']
-            w['end_sec'] = round(max(w['start_sec'] + 0.05, next_start), 3)
+    for i, w in enumerate(timed_words):
+        if i + 1 < len(timed_words):
+            next_start = timed_words[i + 1]['start_sec']
+            cue_end = cues[w['cue_index']]['end_sec']
+            if w['cue_end'] and w['start_sec'] < cue_end < next_start:
+                w['end_sec'] = round(cue_end, 3)
+            elif next_start > w['start_sec']:
+                w['end_sec'] = round(next_start, 3)
+            else:
+                w['end_sec'] = round(w['start_sec'] + 0.01, 3)
         else:
-            w['end_sec'] = round(w['start_sec'] + 0.35, 3)
+            last_cue_end = cues[-1]['end_sec'] if cues else w['start_sec'] + 0.35
+            w['end_sec'] = round(max(w['start_sec'] + 0.35, last_cue_end), 3)
 
-    return cues, deduped_words
+    return cues, timed_words
 
 
 def group_cues_into_sentences(cues: List[Dict[str, Any]]) -> List[Dict[str, Any]]:

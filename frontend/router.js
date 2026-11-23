@@ -38,16 +38,8 @@
       section: 'learning-library',
       path: '/library',
       aliases: ['/learning-library'],
-      title: 'Learning Library',
+      title: 'Generate Phrases',
       i18nKey: 'navLearningLibrary',
-      group: 'Knowledge',
-    },
-    'tech-linguist': {
-      section: 'tech-linguist',
-      path: '/lexicon',
-      aliases: ['/tech-lexicon', '/tech-linguist'],
-      title: 'Tech Lexicon',
-      i18nKey: 'navTechLinguist',
       group: 'Knowledge',
     },
     'american-extractor': {
@@ -88,7 +80,6 @@
 
   function normalizeSectionAlias(raw) {
     const val = String(raw || '').trim().toLowerCase();
-    if (val === 'tech-lexicon' || val === 'lexicon' || val === 'tech-linguist') return 'tech-linguist';
     if (val === 'library' || val === 'learning-library') return 'learning-library';
     if (
       val === 'extractor' ||
@@ -114,30 +105,6 @@
         subview: 'browse',
         domainId: params.get('domain') || '',
         noteId: '',
-        searchParams: params,
-        canonicalizedFromQuery: false,
-      };
-    }
-
-    // Sub-routes: Tech Lexicon
-    if (pathname === '/lexicon/library' || pathname === '/tech-lexicon/library' || pathname === '/tech-linguist/library') {
-      return {
-        section: 'tech-linguist',
-        subview: 'library',
-        domainId: '',
-        noteId: '',
-        searchParams: params,
-        canonicalizedFromQuery: false,
-      };
-    }
-    if (pathname.startsWith('/lexicon/note/') || pathname.startsWith('/tech-lexicon/note/') || pathname.startsWith('/tech-linguist/note/')) {
-      const parts = pathname.split('/');
-      const noteId = decodeURIComponent(parts[parts.length - 1] || '');
-      return {
-        section: 'tech-linguist',
-        subview: noteId ? 'note' : 'extract',
-        domainId: '',
-        noteId,
         searchParams: params,
         canonicalizedFromQuery: false,
       };
@@ -239,14 +206,6 @@
       if (options.domainId && options.domainId !== 'natural_american_english') {
         nextParams.set('domain', options.domainId);
       }
-    } else if (section === 'tech-linguist') {
-      if (options.subview === 'library') {
-        pathname = '/lexicon/library';
-      } else if (options.subview === 'note' && options.noteId) {
-        pathname = `/lexicon/note/${encodeURIComponent(options.noteId)}`;
-      } else {
-        pathname = '/lexicon';
-      }
     } else if (section === 'american-extractor') {
       if (options.subview === 'library') {
         pathname = '/extractor/library';
@@ -288,11 +247,6 @@
       if (route.subview === 'browse') return 'Browse Library';
       return '';
     }
-    if (route.section === 'tech-linguist') {
-      if (route.subview === 'library') return 'Study Library';
-      if (route.subview === 'note') return 'Active Study Note';
-      return '';
-    }
     if (route.section === 'american-extractor') {
       if (route.subview === 'library') return 'Library';
       if (route.subview === 'detail' || route.subview === 'note') return 'Study Guide';
@@ -328,38 +282,44 @@
       }
     });
 
-    // Sync crisp contextual breadcrumb inside the topbar
+    // Sync crisp contextual Apple path bar inside the topbar
     const crumbEl = document.getElementById('topbar-breadcrumb');
     if (crumbEl) {
+      const makeChevron = () => {
+        const sep = document.createElement('span');
+        sep.className = 'crumb-sep';
+        sep.setAttribute('aria-hidden', 'true');
+        sep.innerHTML =
+          '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>';
+        return sep;
+      };
+
       crumbEl.replaceChildren();
 
       const groupSpan = document.createElement('span');
       groupSpan.className = 'crumb-group';
       groupSpan.textContent = def.group;
       crumbEl.appendChild(groupSpan);
-
-      const sep1 = document.createElement('span');
-      sep1.className = 'crumb-sep';
-      sep1.setAttribute('aria-hidden', 'true');
-      sep1.textContent = '/';
-      crumbEl.appendChild(sep1);
-
-      const curSpan = document.createElement('span');
-      curSpan.className = subLabel ? 'crumb-parent' : 'crumb-current';
-      curSpan.textContent = translatedTitle;
-      crumbEl.appendChild(curSpan);
+      crumbEl.appendChild(makeChevron());
 
       if (subLabel) {
-        const sep2 = document.createElement('span');
-        sep2.className = 'crumb-sep';
-        sep2.setAttribute('aria-hidden', 'true');
-        sep2.textContent = '/';
-        crumbEl.appendChild(sep2);
+        const parentBtn = document.createElement('button');
+        parentBtn.type = 'button';
+        parentBtn.className = 'crumb-parent crumb-parent-btn';
+        parentBtn.setAttribute('data-route-section', route.section);
+        parentBtn.textContent = translatedTitle;
+        crumbEl.appendChild(parentBtn);
+        crumbEl.appendChild(makeChevron());
 
         const subSpan = document.createElement('span');
         subSpan.className = 'crumb-current';
         subSpan.textContent = subLabel;
         crumbEl.appendChild(subSpan);
+      } else {
+        const curSpan = document.createElement('span');
+        curSpan.className = 'crumb-current';
+        curSpan.textContent = translatedTitle;
+        crumbEl.appendChild(curSpan);
       }
     }
   }
@@ -426,8 +386,6 @@
       normalizePath(global.location.pathname) === '/index.html' ||
       normalizePath(global.location.pathname) === '/lessons' ||
       normalizePath(global.location.pathname) === '/learning-library' ||
-      normalizePath(global.location.pathname) === '/tech-lexicon' ||
-      normalizePath(global.location.pathname) === '/tech-linguist' ||
       normalizePath(global.location.pathname) === '/american-extractor' ||
       normalizePath(global.location.pathname) === '/american-english' ||
       normalizePath(global.location.pathname) === '/phrases'

@@ -486,7 +486,11 @@ export class LearningLibraryRepository {
     return rows.map((r) => this.rowToBatch(r));
   }
 
-  listItems(userId: string, domainId: string, query: ListLibraryItemsQuery): LearningLibraryItem[] {
+  private buildListFilterClause(
+    userId: string,
+    domainId: string,
+    query: ListLibraryItemsQuery,
+  ): { whereSql: string; params: any[]; orderBy: string } {
     const conditions: string[] = ['user_id = ?', 'domain_id = ?'];
     const params: any[] = [userId, domainId];
 
@@ -534,7 +538,16 @@ export class LearningLibraryRepository {
       orderBy = 'review_count DESC, created_at DESC';
     }
 
-    const sql = `SELECT * FROM learning_library_items WHERE ${conditions.join(' AND ')} ORDER BY ${orderBy}`;
+    return {
+      whereSql: conditions.join(' AND '),
+      params,
+      orderBy,
+    };
+  }
+
+  listItems(userId: string, domainId: string, query: ListLibraryItemsQuery): LearningLibraryItem[] {
+    const { whereSql, params, orderBy } = this.buildListFilterClause(userId, domainId, query);
+    const sql = `SELECT * FROM learning_library_items WHERE ${whereSql} ORDER BY ${orderBy}`;
     const rows = this.sqlite.db.prepare(sql).all(...params) as Array<Record<string, any>>;
     const sequenceMap = this.buildSequenceMap(userId, domainId);
     return rows.map((r) => {
@@ -542,6 +555,67 @@ export class LearningLibraryRepository {
       if (!item.sequenceNumber) item.sequenceNumber = sequenceMap.get(item.id) || 0;
       return item;
     });
+  }
+
+  listItemsPaged(
+    userId: string,
+    domainId: string,
+    query: ListLibraryItemsQuery,
+  ): {
+    items: LearningLibraryItem[];
+    filteredCount: number;
+    filteredCompletedCount: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    hasMore: boolean;
+  } {
+    const { whereSql, params, orderBy } = this.buildListFilterClause(userId, domainId, query);
+    const aggRow = this.sqlite.db
+      .prepare(
+        `SELECT
+          COUNT(*) AS filteredCount,
+          COALESCE(SUM(CASE WHEN is_completed = 1 THEN 1 ELSE 0 END), 0) AS filteredCompletedCount
+         FROM learning_library_items
+         WHERE ${whereSql}`,
+      )
+      .get(...params) as Record<string, any> | undefined;
+
+    const filteredCount = Number(aggRow?.filteredCount) || 0;
+    const filteredCompletedCount = Number(aggRow?.filteredCompletedCount) || 0;
+
+    const hasPagination = query.page !== undefined || query.limit !== undefined;
+    const pageSize = hasPagination
+      ? Math.max(1, Math.min(100, Math.floor(Number(query.limit) || 10)))
+      : Math.max(1, filteredCount);
+    const totalPages = Math.max(1, hasPagination ? Math.ceil(filteredCount / pageSize) : 1);
+    const page = hasPagination
+      ? Math.min(totalPages, Math.max(1, Math.floor(Number(query.page) || 1)))
+      : 1;
+    const offset = (page - 1) * pageSize;
+
+    const sql = hasPagination
+      ? `SELECT * FROM learning_library_items WHERE ${whereSql} ORDER BY ${orderBy} LIMIT ? OFFSET ?`
+      : `SELECT * FROM learning_library_items WHERE ${whereSql} ORDER BY ${orderBy}`;
+    const queryParams = hasPagination ? [...params, pageSize, offset] : params;
+    const rows = this.sqlite.db.prepare(sql).all(...queryParams) as Array<Record<string, any>>;
+    const sequenceMap = this.buildSequenceMap(userId, domainId);
+
+    const items = rows.map((r) => {
+      const item = this.rowToItem(r);
+      if (!item.sequenceNumber) item.sequenceNumber = sequenceMap.get(item.id) || 0;
+      return item;
+    });
+
+    return {
+      items,
+      filteredCount,
+      filteredCompletedCount,
+      page,
+      pageSize,
+      totalPages,
+      hasMore: page < totalPages,
+    };
   }
 
   getItemById(userId: string, id: string): LearningLibraryItem | null {

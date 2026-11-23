@@ -1,0 +1,313 @@
+/* ==========================================================================
+   Flaptap — Apple-Crafted Completion Check Button (`check-button.css`)
+   Single source of truth for item completion toggles across the entire app:
+   Anything to Phrases, Learning Library, Tech Lexicon, Vocabulary, & Studio.
+   ========================================================================== */
+
+:root {
+  --ft-chk-size: 28px;
+  --ft-chk-icon-size: 15px;
+
+  --ft-chk-border: rgba(0, 0, 0, 0.17);
+  --ft-chk-bg: rgba(0, 0, 0, 0.02);
+  --ft-chk-ink: rgba(29, 29, 31, 0.44);
+  --ft-chk-idle-opacity: 0.48;
+
+  --ft-chk-hover-border: #16A36A;
+  --ft-chk-hover-bg: rgba(22, 163, 106, 0.11);
+  --ft-chk-hover-ink: #12784D;
+
+  --ft-chk-checked-bg: #158052;
+  --ft-chk-checked-bg-hover: #116D45;
+  --ft-chk-checked-border: #158052;
+  --ft-chk-checked-ink: #FFFFFF;
+  --ft-chk-halo: rgba(22, 163, 106, 0.17);
+  --ft-chk-ripple: rgba(22, 163, 106, 0.44);
+  --ft-chk-focus: rgba(0, 113, 227, 0.35);
+}
+
+[data-theme="dark"] {
+  --ft-chk-border: rgba(255, 255, 255, 0.25);
+  --ft-chk-bg: rgba(255, 255, 255, 0.045);
+  --ft-chk-ink: rgba(235, 235, 245, 0.56);
+  --ft-chk-idle-opacity: 0.58;
+
+  --ft-chk-hover-border: #28C87A;
+  --ft-chk-hover-bg: rgba(40, 200, 122, 0.16);
+  --ft-chk-hover-ink: #34D399;
+
+  --ft-chk-checked-bg: #178052;
+  --ft-chk-checked-bg-hover: #1C9460;
+  --ft-chk-checked-border: rgba(52, 211, 153, 0.44);
+  --ft-chk-checked-ink: #FFFFFF;
+  --ft-chk-halo: rgba(48, 209, 88, 0.22);
+  --ft-chk-ripple: rgba(52, 211, 153, 0.52);
+  --ft-chk-focus: rgba(10, 132, 255, 0.46);
+}
+
+/* --- Keyframes: Tactile Apple-HIG Spring + Stroke Draw + Halo Ripple ------ */
+
+@keyframes ftCheckBounce {
+  0% {
+    transform: scale(0.84);
+  }
+  42% {
+    transform: scale(1.12);
+  }
+  72% {
+    transform: scale(0.97);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ftCheckRipple {
+  0% {
+    opacity: 0.65;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.62);
+  }
+}
+
+@keyframes ftCheckDraw {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+}
+
+@keyframes ftCheckUncheck {
+  0% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* --- Base Circular Apple Reminders Check Button --------------------------- */
+
+.item-check-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ft-chk-size);
+  height: var(--ft-chk-size);
+  min-width: var(--ft-chk-size);
+  padding: 0;
+  border-radius: 50%;
+  border: 1.75px solid var(--ft-chk-border);
+  background: var(--ft-chk-bg);
+  color: var(--ft-chk-ink);
+  cursor: pointer;
+  flex-shrink: 0;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color 200ms var(--ap-ease, cubic-bezier(0.25, 1, 0.5, 1)),
+    border-color 200ms var(--ap-ease, cubic-bezier(0.25, 1, 0.5, 1)),
+    color 200ms var(--ap-ease, cubic-bezier(0.25, 1, 0.5, 1)),
+    box-shadow 220ms var(--ap-ease, cubic-bezier(0.25, 1, 0.5, 1)),
+    transform 150ms var(--ap-bounce, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+/* Subtle expanding emerald completion halo (fires only on user check) */
+.item-check-btn::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  border: 2px solid var(--ft-chk-ripple);
+  opacity: 0;
+  transform: scale(0.9);
+  pointer-events: none;
+}
+
+.item-check-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ft-chk-focus);
+}
+
+/* Stylized SF-Symbol Checkmark SVG */
+.item-check-btn .ft-check-svg,
+.item-check-btn .chk-svg {
+  width: var(--ft-chk-icon-size);
+  height: var(--ft-chk-icon-size);
+  display: block;
+  pointer-events: none;
+  flex-shrink: 0;
+  overflow: visible;
+}
+
+.item-check-btn .chk-dash {
+  display: none;
+}
+
+.item-check-btn .ft-check-tick,
+.item-check-btn .chk-tick {
+  stroke: currentColor;
+  stroke-width: 2.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  opacity: var(--ft-chk-idle-opacity);
+  transition:
+    opacity 160ms ease,
+    stroke-width 160ms ease,
+    filter 160ms ease;
+}
+
+/* Hover (unchecked) */
+.item-check-btn:hover {
+  border-color: var(--ft-chk-hover-border);
+  background: var(--ft-chk-hover-bg);
+  color: var(--ft-chk-hover-ink);
+}
+
+.item-check-btn:hover .ft-check-tick,
+.item-check-btn:hover .chk-tick {
+  opacity: 0.96;
+  stroke-width: 2.85;
+}
+
+/* Active tactile press */
+.item-check-btn:active {
+  transform: scale(0.88);
+}
+
+/* Checked State: Pure crisp #FFFFFF bold checkmark on Apple Botanical Emerald */
+.item-check-btn.is-checked {
+  background: var(--ft-chk-checked-bg);
+  border-color: var(--ft-chk-checked-border);
+  color: var(--ft-chk-checked-ink);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 1px 2px rgba(0, 0, 0, 0.16),
+    0 0 0 3px var(--ft-chk-halo);
+}
+
+.item-check-btn.is-checked .ft-check-svg,
+.item-check-btn.is-checked .chk-svg {
+  opacity: 1;
+}
+
+.item-check-btn.is-checked .ft-check-tick,
+.item-check-btn.is-checked .chk-tick {
+  opacity: 1;
+  stroke: #FFFFFF;
+  stroke-width: 3.25;
+  filter: drop-shadow(0 0.75px 1px rgba(0, 0, 0, 0.22));
+}
+
+.item-check-btn.is-checked:hover {
+  background: var(--ft-chk-checked-bg-hover);
+  border-color: var(--ft-chk-checked-border);
+  color: #FFFFFF;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.22),
+    0 0 0 4px var(--ft-chk-halo);
+}
+
+.item-check-btn.is-checked:hover .ft-check-tick,
+.item-check-btn.is-checked:hover .chk-tick {
+  opacity: 1;
+  stroke: #FFFFFF;
+  stroke-width: 3.25;
+}
+
+/* --- User-Triggered Micro-Animations -------------------------------------- */
+
+.item-check-btn.is-just-checked {
+  animation: ftCheckBounce 440ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.item-check-btn.is-just-checked::before {
+  animation: ftCheckRipple 520ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.item-check-btn.is-just-checked .ft-check-tick,
+.item-check-btn.is-just-checked .chk-tick {
+  animation: ftCheckDraw 340ms cubic-bezier(0.22, 1, 0.36, 1) 40ms both;
+}
+
+.item-check-btn.is-just-unchecked {
+  animation: ftCheckUncheck 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* --- Size Modifiers ------------------------------------------------------- */
+
+.item-check-btn--sm {
+  --ft-chk-size: 24px;
+  --ft-chk-icon-size: 13px;
+}
+
+.item-check-btn--lg {
+  --ft-chk-size: 30px;
+  --ft-chk-icon-size: 16px;
+}
+
+/* --- Labeled Pill Variant (Drawer / Header Completion Toggle) ------------- */
+
+.item-check-btn--pill {
+  width: auto;
+  min-width: 0;
+  height: 30px;
+  padding: 0 12px 0 9px;
+  gap: 6px;
+  border-radius: 980px;
+  font-family: var(--ap-font-text, inherit);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ap-text-secondary, var(--ink-secondary));
+}
+
+.item-check-btn--pill .ft-check-svg,
+.item-check-btn--pill .chk-svg {
+  width: 14px;
+  height: 14px;
+}
+
+.item-check-btn--pill.is-checked {
+  background: var(--ft-chk-checked-bg);
+  border-color: var(--ft-chk-checked-border);
+  color: #FFFFFF;
+}
+
+.item-check-btn--pill.is-checked:hover {
+  background: var(--ft-chk-checked-bg-hover);
+  color: #FFFFFF;
+}
+
+/* --- Touch Ergonomics (Coarse Pointer Hit Target) ------------------------- */
+
+@media (pointer: coarse) {
+  .item-check-btn::after {
+    content: "";
+    position: absolute;
+    inset: -7px;
+  }
+}
+
+/* --- Accessibility: Reduced Motion ---------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .item-check-btn,
+  .item-check-btn::before,
+  .item-check-btn .ft-check-tick,
+  .item-check-btn .chk-tick {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}

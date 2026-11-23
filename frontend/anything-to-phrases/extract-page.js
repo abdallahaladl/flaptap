@@ -39,7 +39,9 @@
     const local = {
       mounted: false,
       sourceTab: 'link',
-      selectedFile: null,
+      selectedFiles: [],
+      previewUrls: new Map(),
+      appendNextPick: false,
       selectedCategories: new Set(), // empty = 'all' (default)
       pendingLessonId: '',
       aiSelector: null,
@@ -107,8 +109,10 @@
         return Boolean(info?.valid && info?.hasAudio);
       }
       if (local.sourceTab === 'upload') {
-        if (!local.selectedFile) return false;
-        const info = store.detectFileSource(local.selectedFile, Number(store.state.config?.maxUploadMb) || 50);
+        if (local.selectedFiles.length !== 1) return false;
+        const maxMb = Number(store.state.config?.maxUploadMb) || 50;
+        const maxImageMb = Number(store.state.config?.maxImageMb) || 8;
+        const info = store.detectFileSource(local.selectedFiles[0], maxMb, maxImageMb);
         return Boolean(info?.valid && info?.hasAudio);
       }
       if (local.sourceTab === 'text') {
@@ -141,20 +145,23 @@
       if (audioStatus) {
         audioStatus.dataset.audio = hasAudio ? '1' : '0';
         audioStatus.textContent = hasAudio
-          ? 'Audio detected · all 20 categories unlocked'
-          : 'Text mode · 16 core (4 audio categories unlock with audio/video)';
+          ? 'Audio · all 20 unlocked'
+          : '16 core · +4 with audio';
+        audioStatus.title = hasAudio
+          ? 'Audio detected — all 20 categories (including pronunciation, stress, linking & intonation) are unlocked.'
+          : 'Text mode — 16 core categories active. 4 audio-dependent categories unlock automatically for YouTube, audio, or video sources.';
       }
 
       if (badge) {
         if (local.selectedCategories.size === 0) {
-          badge.textContent = hasAudio ? 'All 20 categories (Default)' : 'All 16 core categories (Default)';
+          badge.textContent = hasAudio ? 'All 20 eligible' : 'All 16 core';
           badge.classList.remove('is-custom');
         } else if (local.selectedCategories.size === 1) {
           const single = Array.from(local.selectedCategories)[0];
           badge.textContent = store.CATEGORY_LABELS[single] || single;
           badge.classList.add('is-custom');
         } else {
-          badge.textContent = `${local.selectedCategories.size} categories selected`;
+          badge.textContent = `${local.selectedCategories.size} selected`;
           badge.classList.add('is-custom');
         }
       }
@@ -324,36 +331,198 @@
       syncAiSummary();
     }
 
-    function setSelectedFile(file) {
-      const maxMb = Number(store.state.config?.maxUploadMb) || 50;
+    function formatFileSize(bytes) {
+      const sizeMb = (Number(bytes) || 0) / (1024 * 1024);
+      return sizeMb >= 1
+        ? `${sizeMb.toFixed(1)} MB`
+        : `${Math.max(1, Math.round((Number(bytes) || 0) / 1024))} KB`;
+    }
+
+    function fileSignature(file) {
+      return `${file?.name || ''}:${file?.size || 0}:${file?.lastModified || 0}`;
+    }
+
+    function getPreviewUrl(file) {
+      if (!file || typeof URL === 'undefined' || typeof URL.createObjectURL !== 'function') return '';
+      if (!local.previewUrls.has(file)) {
+        local.previewUrls.set(file, URL.createObjectURL(file));
+      }
+      return local.previewUrls.get(file) || '';
+    }
+
+    function revokePreviewUrl(file) {
+      const url = local.previewUrls.get(file);
+      if (url && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+        URL.revokeObjectURL(url);
+      }
+      local.previewUrls.delete(file);
+    }
+
+    function clearSelectedFiles() {
+      for (const file of local.previewUrls.keys()) {
+        revokePreviewUrl(file);
+      }
+      local.selectedFiles = [];
+      local.appendNextPick = false;
+      const input = el('aex-file-input');
+      if (input) input.value = '';
+      renderSelectedFiles();
+      renderCategoryPicker();
+    }
+
+    function removeSelectedFileAt(index) {
+      const idx = Number(index);
+      if (!Number.isInteger(idx) || idx < 0 || idx >= local.selectedFiles.length) return;
+      const [removed] = local.selectedFiles.splice(idx, 1);
+      if (removed) revokePreviewUrl(removed);
+      const input = el('aex-file-input');
+      if (input && local.selectedFiles.length === 0) input.value = '';
+      renderSelectedFiles();
+      renderCategoryPicker();
+    }
+
+    function renderSelectedFiles() {
       const chip = el('aex-file-chip');
       const nameEl = el('aex-file-name');
       const metaEl = el('aex-file-meta');
-      const input = el('aex-file-input');
+      const queue = el('aex-image-queue');
+      const summary = el('aex-image-queue-summary');
+      const grid = el('aex-image-grid');
+      const addBtn = el('aex-images-add');
+      const maxImages = Number(store.state.config?.maxImagesPerUpload) || 10;
+      const maxMb = Number(store.state.config?.maxUploadMb) || 50;
+      const maxImageMb = Number(store.state.config?.maxImageMb) || 8;
 
-      if (!file) {
-        local.selectedFile = null;
+      if (local.selectedFiles.length === 0) {
         if (chip) chip.hidden = true;
+        if (queue) queue.hidden = true;
+        if (grid) grid.innerHTML = '';
+        return;
+      }
+
+      const allImages = local.selectedFiles.every((f) => store.isImageFile(f));
+      if (!allImages && local.selectedFiles.length === 1) {
+        if (queue) queue.hidden = true;
+        if (grid) grid.innerHTML = '';
+        const file = local.selectedFiles[0];
+        const info = store.detectFileSource(file, maxMb, maxImageMb);
+        if (nameEl) nameEl.textContent = file.name;
+        if (metaEl) metaEl.textContent = `${info.label} · ${info.sizeLabel}`;
+        if (chip) {
+          chip.hidden = false;
+          chip.dataset.tone = info.tone;
+        }
+        return;
+      }
+
+      // Render visual image queue for 1 or more images (contextual title generated from content)
+      if (chip) chip.hidden = true;
+      if (!queue || !grid) return;
+
+      const totalBytes = local.selectedFiles.reduce((sum, f) => sum + (Number(f.size) || 0), 0);
+      if (summary) {
+        summary.textContent = `${local.selectedFiles.length} of ${maxImages} image${
+          local.selectedFiles.length === 1 ? '' : 's'
+        } selected · ${formatFileSize(totalBytes)}`;
+      }
+      if (addBtn) {
+        addBtn.disabled = local.selectedFiles.length >= maxImages;
+      }
+      grid.innerHTML = local.selectedFiles
+        .map((file, idx) => {
+          const url = getPreviewUrl(file);
+          return `
+            <div class="aex-image-thumb-card" role="listitem">
+              <span class="aex-image-thumb-index ltr-num">${idx + 1}</span>
+              ${
+                url
+                  ? `<img class="aex-image-thumb-img" src="${escapeHtml(url)}" alt="Selected image ${idx + 1}" loading="lazy" />`
+                  : '<div class="aex-image-thumb-placeholder" aria-hidden="true">IMG</div>'
+              }
+              <span class="aex-image-thumb-size ltr-num">${escapeHtml(formatFileSize(file.size))}</span>
+              <button type="button" class="aex-image-thumb-remove" data-aex-remove-image="${idx}" aria-label="Remove image ${
+                idx + 1
+              }">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>`;
+        })
+        .join('');
+      queue.hidden = false;
+    }
+
+    function addOrSetSelectedFiles(fileList, { append = false } = {}) {
+      const incoming = Array.from(fileList || []).filter(Boolean);
+      const input = el('aex-file-input');
+      if (incoming.length === 0) return;
+
+      const maxMb = Number(store.state.config?.maxUploadMb) || 50;
+      const maxImageMb = Number(store.state.config?.maxImageMb) || 8;
+      const maxImages = Number(store.state.config?.maxImagesPerUpload) || 10;
+
+      const canAppend =
+        append &&
+        local.selectedFiles.length > 0 &&
+        local.selectedFiles.every((f) => store.isImageFile(f));
+
+      if ((canAppend || incoming.length > 1) && !incoming.every((f) => store.isImageFile(f))) {
+        showInlineError(
+          'Images only for multi-upload',
+          'Multiple selection supports images only (PNG, JPEG, WebP, GIF). Upload PDFs, audio, video, or text files one at a time.',
+        );
         if (input) input.value = '';
-        renderCategoryPicker();
         return;
       }
 
-      const info = store.detectFileSource(file, maxMb);
-      if (!info?.valid) {
-        showInlineError(info?.label || 'Unsupported file', info?.error || 'Choose a supported file.');
-        setSelectedFile(null);
+      for (const file of incoming) {
+        const info = store.detectFileSource(file, maxMb, maxImageMb);
+        if (!info?.valid) {
+          showInlineError(info?.label || 'Unsupported file', info?.error || 'Choose a supported file.');
+          if (input) input.value = '';
+          return;
+        }
+      }
+
+      let nextFiles;
+      if (canAppend) {
+        const seen = new Set(local.selectedFiles.map(fileSignature));
+        nextFiles = [...local.selectedFiles];
+        for (const file of incoming) {
+          const sig = fileSignature(file);
+          if (seen.has(sig)) continue;
+          seen.add(sig);
+          nextFiles.push(file);
+        }
+      } else {
+        for (const oldFile of local.selectedFiles) {
+          if (!incoming.includes(oldFile)) revokePreviewUrl(oldFile);
+        }
+        nextFiles = [...incoming];
+      }
+
+      if (nextFiles.length > maxImages) {
+        showInlineError(
+          'Too many images',
+          `Select up to ${maxImages} images per extraction (currently ${nextFiles.length}).`,
+        );
+        nextFiles = nextFiles.slice(0, maxImages);
+      } else {
+        hideInlineError();
+      }
+
+      const totalBytes = nextFiles.reduce((sum, f) => sum + (Number(f.size) || 0), 0);
+      if (totalBytes > maxMb * 1024 * 1024) {
+        showInlineError(
+          'Total upload too large',
+          `Combined files must be ${maxMb} MB or smaller.`,
+        );
+        if (input) input.value = '';
         return;
       }
 
-      local.selectedFile = file;
-      if (nameEl) nameEl.textContent = file.name;
-      if (metaEl) metaEl.textContent = `${info.label} · ${info.sizeLabel}`;
-      if (chip) {
-        chip.hidden = false;
-        chip.dataset.tone = info.tone;
-      }
-      hideInlineError();
+      local.selectedFiles = nextFiles;
+      if (input) input.value = '';
+      renderSelectedFiles();
       renderCategoryPicker();
     }
 
@@ -486,6 +655,7 @@
         hideMetaChips: true,
         title: 'AI Model',
         actionLabel: 'Extract Phrases',
+        footerHint: 'Press Enter to extract · Saved privately to Library',
         fetcher: api.apiFetch,
         onToast: showToast,
         onRun: () => handleRun(),
@@ -593,11 +763,11 @@
           };
         }
       } else if (payload.tab === 'upload') {
-        if (!local.selectedFile) {
+        if (local.selectedFiles.length === 0) {
           el('aex-file-drop')?.focus();
           return {
-            title: 'Choose a file',
-            message: 'Drop a file or click Browse to pick text, subtitles, an image, audio, or video.',
+            title: 'Choose a file or images',
+            message: 'Drop images or a file here, or click Browse to pick one or more images, PDF, audio, video, or text.',
           };
         }
       }
@@ -652,7 +822,13 @@
         let response;
         if (payload.tab === 'upload') {
           const form = new FormData();
-          form.append('file', local.selectedFile);
+          if (local.selectedFiles.length > 1) {
+            for (const file of local.selectedFiles) {
+              form.append('files', file);
+            }
+          } else {
+            form.append('file', local.selectedFiles[0]);
+          }
           form.append('language', payload.language);
           for (const spec of store.OPTION_SPECS) {
             form.append(spec.key, payload[spec.key]);
@@ -775,13 +951,21 @@
         previewWrap.innerHTML = renderSkeletonPreviews();
       }
 
+      const uploadCount = local.selectedFiles.length;
+      const uploadLabel =
+        uploadCount > 1
+          ? `Uploading & scanning ${uploadCount} images…`
+          : store.isImageFile(local.selectedFiles[0])
+            ? 'Uploading & scanning image…'
+            : 'Uploading & reading file…';
+
       updateProgressStage({
         stage: 'detecting',
         label:
           payload.tab === 'link'
             ? 'Connecting to source link…'
             : payload.tab === 'upload'
-              ? 'Uploading & reading file…'
+              ? uploadLabel
               : payload.lessonId
                 ? 'Loading saved lesson transcript…'
                 : 'Preparing text for extraction…',
@@ -1005,14 +1189,39 @@
       });
 
       const fileInput = el('aex-file-input');
-      fileInput?.addEventListener('change', () => setSelectedFile(fileInput.files?.[0] || null));
+      fileInput?.addEventListener('change', () => {
+        const append = Boolean(local.appendNextPick);
+        local.appendNextPick = false;
+        if (fileInput.files && fileInput.files.length > 0) {
+          addOrSetSelectedFiles(fileInput.files, { append });
+        }
+      });
       el('aex-file-clear')?.addEventListener('click', (e) => {
         e.preventDefault();
-        setSelectedFile(null);
+        clearSelectedFiles();
+      });
+      el('aex-images-add')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        local.appendNextPick = true;
+        fileInput?.click();
+      });
+      el('aex-images-clear')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        clearSelectedFiles();
+      });
+      el('aex-image-grid')?.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('[data-aex-remove-image]');
+        if (!removeBtn) return;
+        e.preventDefault();
+        removeSelectedFileAt(Number(removeBtn.dataset.aexRemoveImage));
       });
 
       const dropzone = el('aex-file-drop');
+      const queueBox = el('aex-image-queue');
       if (dropzone) {
+        dropzone.addEventListener('click', () => {
+          local.appendNextPick = false;
+        });
         ['dragenter', 'dragover'].forEach((ev) => {
           dropzone.addEventListener(ev, (e) => {
             e.preventDefault();
@@ -1026,16 +1235,74 @@
           });
         });
         dropzone.addEventListener('drop', (e) => {
-          const file = e.dataTransfer?.files?.[0];
-          if (file) setSelectedFile(file);
+          const files = e.dataTransfer?.files;
+          if (!files || files.length === 0) return;
+          const append =
+            local.selectedFiles.length > 0 &&
+            local.selectedFiles.every((f) => store.isImageFile(f)) &&
+            Array.from(files).every((f) => store.isImageFile(f));
+          addOrSetSelectedFiles(files, { append });
         });
         dropzone.addEventListener('keydown', (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
+            local.appendNextPick = false;
             fileInput?.click();
           }
         });
       }
+      if (queueBox) {
+        ['dragenter', 'dragover'].forEach((ev) => {
+          queueBox.addEventListener(ev, (e) => {
+            e.preventDefault();
+            queueBox.classList.add('is-dragover');
+          });
+        });
+        ['dragleave', 'drop'].forEach((ev) => {
+          queueBox.addEventListener(ev, (e) => {
+            e.preventDefault();
+            queueBox.classList.remove('is-dragover');
+          });
+        });
+        queueBox.addEventListener('drop', (e) => {
+          const files = e.dataTransfer?.files;
+          if (files && files.length > 0) {
+            addOrSetSelectedFiles(files, { append: true });
+          }
+        });
+      }
+
+      el('section-american-extractor')?.addEventListener('paste', (e) => {
+        if (local.sourceTab !== 'upload') return;
+        const activeTag = document.activeElement?.tagName;
+        if (activeTag === 'INPUT' || activeTag === 'TEXTAREA' || document.activeElement?.isContentEditable) {
+          return;
+        }
+        const pasted = [];
+        for (const item of Array.from(e.clipboardData?.items || [])) {
+          if (item.kind === 'file' && String(item.type || '').startsWith('image/')) {
+            const file = item.getAsFile?.();
+            if (file) pasted.push(file);
+          }
+        }
+        if (pasted.length === 0) {
+          for (const file of Array.from(e.clipboardData?.files || [])) {
+            if (store.isImageFile(file)) pasted.push(file);
+          }
+        }
+        if (pasted.length > 0) {
+          e.preventDefault();
+          const append =
+            local.selectedFiles.length > 0 &&
+            local.selectedFiles.every((f) => store.isImageFile(f));
+          addOrSetSelectedFiles(pasted, { append });
+          showToast(
+            pasted.length === 1
+              ? 'Pasted screenshot into upload queue.'
+              : `Pasted ${pasted.length} images into upload queue.`,
+          );
+        }
+      });
 
       el('aex-language-select')?.addEventListener('change', (e) => {
         store.setPreferredLanguage(e.target.value);

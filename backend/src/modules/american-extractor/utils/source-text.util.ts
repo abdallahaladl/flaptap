@@ -221,7 +221,7 @@ export function computeExtractionHash(params: {
       ? Array.from(new Set(params.categories.map((c) => String(c).trim().toLowerCase()))).sort().join(',')
       : '';
   const payload = [
-    'v3',
+    'v4',
     normalizedText,
     params.targetLanguage || 'ar',
     params.extractionType || 'all',

@@ -399,6 +399,48 @@ async function run() {
     assert(imageNote.sourceType === 'image', 'Image upload is classified correctly');
     assert(/flaptap|spoken english/i.test(imageNote.sourceText), 'OCR transcribed the screenshot text');
     assert(imageNote.items.length >= 5, `OCR source yielded ${imageNote.items.length} study items`);
+    assert(
+      Boolean(imageNote.title) &&
+        !/product[-_\s]?screenshot|\.png|^\s*screenshot\s*$/i.test(imageNote.title),
+      `Single image upload generated a non-filename contextual title ("${imageNote.title}")`,
+    );
+
+    /* ------------------------------------------------------------------ */
+    /* 4b. Multi-image OCR batch + contextual naming + newest-first order */
+    /* ------------------------------------------------------------------ */
+    console.log('\n--- Multi-image OCR batch ---');
+    const secondImageBuffer = await fs.promises.readFile(path.join(ROOT, 'frontend/screenshot-mobile.png'));
+    const multiImageForm = new FormData();
+    multiImageForm.append('files', new Blob([imageBuffer], { type: 'image/png' }), 'IMG_4829_raw.png');
+    multiImageForm.append('files', new Blob([secondImageBuffer], { type: 'image/png' }), 'Screenshot_2026_11_21.png');
+    multiImageForm.append('language', 'ar');
+    multiImageForm.append('focus', 'balanced');
+    const multiExtraction = await api(baseUrl, '/api/american-extractor/extract/upload', {
+      token,
+      method: 'POST',
+      form: multiImageForm,
+    });
+    assert(multiExtraction.ok && multiExtraction.data?.data, 'Multi-image OCR batch extraction succeeded');
+    const multiNote = multiExtraction.data.data;
+    created.push(multiNote.id);
+    assert(multiNote.sourceType === 'image', 'Multi-image upload keeps image sourceType');
+    assert(
+      Number(multiNote.sourceMeta?.imageCount) === 2,
+      `Multi-image extraction recorded imageCount=${multiNote.sourceMeta?.imageCount}`,
+    );
+    assert(multiNote.items.length >= 5, `Multi-image batch yielded ${multiNote.items.length} study items`);
+    assert(
+      Boolean(multiNote.title) &&
+        !/img[-_\s]?4829|screenshot[-_\s]?2026|\.png|^\s*(screenshot|image)\s*$/i.test(multiNote.title),
+      `Multi-image upload generated a contextual title without filenames ("${multiNote.title}")`,
+    );
+
+    const historyPageRes = await api(baseUrl, '/api/american-extractor/history?page=1&limit=10', { token });
+    assert(historyPageRes.ok && Array.isArray(historyPageRes.data?.items), 'Paginated history endpoint returned items');
+    assert(
+      Number(historyPageRes.data.pageSize) === 10 && historyPageRes.data.items[0]?.id === multiNote.id,
+      'Newest generated multi-image guide appears first (#1) on Page 1 with 10-per-page default',
+    );
 
     /* ------------------------------------------------------------------ */
     /* 5. Audio transcription                                             */
@@ -465,7 +507,11 @@ async function run() {
     assert(lessonExtraction.ok && lessonExtraction.data?.data, 'Existing transcript extraction succeeded');
     const lessonNote = lessonExtraction.data.data;
     created.push(lessonNote.id);
-    assert(lessonNote.sourceType === 'lesson', 'Saved transcript is classified as a lesson source');
+    assert(
+      (lessonNote.sourceType === 'lesson' || lessonNote.sourceType === 'youtube') &&
+        lessonNote.sourceMeta?.lessonId === lessonId,
+      'Saved transcript preserves lesson linkage in source metadata',
+    );
     assert(/New York City|tech boom/i.test(lessonNote.sourceText), 'Saved lesson transcript text is reused');
     assert(lessonNote.items.length >= 5, `Saved transcript yielded ${lessonNote.items.length} study items`);
 
@@ -476,6 +522,7 @@ async function run() {
     const articleExtraction = await api(baseUrl, '/api/american-extractor/extract', {
       token,
       method: 'POST',
+      timeoutMs: 420000,
       body: {
         inputKind: 'url',
         url: 'https://paulgraham.com/greatwork.html',
@@ -502,6 +549,7 @@ async function run() {
         url: 'https://www.youtube.com/watch?v=C89c0fsHYIQ',
         language: 'ar',
         focus: 'professional',
+        force: true,
       },
     });
     assert(youtubeExtraction.ok && youtubeExtraction.data?.data, 'YouTube URL extraction succeeded');
@@ -585,6 +633,11 @@ async function run() {
       document.getElementById('aex-focus-select').value = 'professional';
       document.getElementById('aex-language-select').value = 'ar';
       document.getElementById('aex-language-select').dispatchEvent(new Event('change', { bubbles: true }));
+      const force = document.getElementById('aex-force-fresh');
+      if (force) {
+        force.checked = true;
+        force.dispatchEvent(new Event('change', { bubbles: true }));
+      }
     }, RICH_TEXT, 'Browser standup study map');
 
     const uiStart = Date.now();
@@ -601,8 +654,39 @@ async function run() {
     const uiMs = Date.now() - uiStart;
     note(`Browser extraction completed in ${(uiMs / 1000).toFixed(1)}s`);
 
-    const uiNote = await page.evaluate(() => {
+    const uiNote = await page.evaluate(async () => {
       const items = [...document.querySelectorAll('#aex-items-list .aex-item')];
+      const dock = document.getElementById('aex-sticky-dock');
+      const noteCard = document.getElementById('aex-note-card');
+      const list = document.getElementById('aex-items-list');
+      const dockRectBefore = dock?.getBoundingClientRect();
+      const listRectBefore = list?.getBoundingClientRect();
+      const dockContains = Boolean(
+        dock &&
+          dock.contains(document.getElementById('aex-note-progress')) &&
+          dock.contains(document.getElementById('aex-note-scope')) &&
+          dock.contains(document.getElementById('aex-recall-toggle')) &&
+          dock.contains(document.getElementById('aex-category-filters')) &&
+          dock.contains(document.getElementById('aex-note-search')),
+      );
+      const dockExcludesHeader = Boolean(
+        dock &&
+          !dock.contains(noteCard) &&
+          !dock.contains(document.getElementById('aex-note-title')) &&
+          !dock.contains(document.getElementById('aex-note-summary-wrap')) &&
+          !dock.contains(document.querySelector('.aex-shell-bar')),
+      );
+      const dockPosition = dock ? getComputedStyle(dock).position : '';
+
+      window.scrollTo(0, 900);
+      await new Promise((resolve) => setTimeout(resolve, 140));
+      const dockRectStuck = dock?.getBoundingClientRect();
+      const noteCardRectStuck = noteCard?.getBoundingClientRect();
+      const dockIsStuckClass = Boolean(dock?.classList.contains('is-stuck'));
+      window.scrollTo(0, 0);
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      const dockIsStuckReset = Boolean(dock && !dock.classList.contains('is-stuck'));
+
       return {
         path: location.pathname,
         id: location.pathname.split('/').pop(),
@@ -617,9 +701,19 @@ async function run() {
         summary: document.getElementById('aex-note-summary')?.textContent?.length,
         viewTabs: [...document.querySelectorAll('.aex-view-nav [role="tab"]')].map((tab) => tab.id),
         stateChip: document.querySelector('#aex-note-progress .sp-state')?.textContent?.trim(),
-        progressOnTop:
-          document.getElementById('aex-note-progress')?.getBoundingClientRect().top <
-          document.getElementById('aex-note-summary-wrap')?.getBoundingClientRect().top,
+        dockAboveList: Boolean(dockRectBefore && listRectBefore && dockRectBefore.bottom <= listRectBefore.top + 2),
+        dockContains,
+        dockExcludesHeader,
+        dockPosition,
+        dockStaysPinned: Boolean(
+          dockRectStuck &&
+            dockRectStuck.top >= 45 &&
+            dockRectStuck.top <= 75 &&
+            noteCardRectStuck &&
+            noteCardRectStuck.top < 0 &&
+            dockIsStuckClass,
+        ),
+        dockIsStuckReset,
       };
     });
     assert(uiNote.path.startsWith('/extractor/library/'), 'Successful extraction updates the URL to the detail route');
@@ -630,20 +724,65 @@ async function run() {
         persistedUiNote.data?.data?.reasoningLevel === 'medium',
       `UI-triggered extraction persisted backend execution with model=${persistedUiNote.data?.data?.modelUsed}, reasoning=${persistedUiNote.data?.data?.reasoningLevel}`,
     );
+    const persistedCount = Number(persistedUiNote.data?.data?.itemCount) || 0;
     assert(uiNote.title === 'Browser standup study map', 'Study map title is preserved');
-    assert(uiNote.count >= 8, `Browser study map renders ${uiNote.count} item cards`);
+    assert(
+      uiNote.count === Math.min(10, persistedCount) && persistedCount >= 8,
+      `Browser study map renders ${uiNote.count} item cards on Page 1 (of ${persistedCount} total)`,
+    );
     assert(uiNote.arabic >= Math.ceil(uiNote.count * 0.8), `Arabic translations render on ${uiNote.arabic}/${uiNote.count} cards`);
     assert(uiNote.contexts >= Math.ceil(uiNote.count * 0.8), 'Context quotes render on most cards');
     assert(uiNote.firstIpa && uiNote.firstIpa.includes('/'), 'IPA renders on the first card');
     assert(uiNote.sourceLength > 300, 'Selectable source is rendered');
-    assert(Number(uiNote.progressTotal) === uiNote.count, 'Progress bar total matches item count');
+    assert(Number(uiNote.progressTotal) === persistedCount, 'Progress bar total matches total persisted item count');
     assert(uiNote.summary > 20, 'Editorial summary is available');
     assert(
       uiNote.viewTabs.length === 2 && !uiNote.viewTabs.includes('aex-tab-note'),
       'Study map opens as a sub-route, not as a third tab',
     );
     assert(uiNote.stateChip === 'Not started', 'Fresh study map reports the Not started state');
-    assert(uiNote.progressOnTop, 'Study progress sits at the top of the study map');
+    assert(
+      uiNote.dockAboveList &&
+        uiNote.dockContains &&
+        uiNote.dockExcludesHeader &&
+        uiNote.dockPosition === 'sticky' &&
+        uiNote.dockStaysPinned &&
+        uiNote.dockIsStuckReset,
+      'Sticky Study Dock pins progress and all filters above the list while header and takeaway scroll away',
+    );
+
+    if (persistedCount > 10) {
+      const detailPageCheck = await page.evaluate(async () => {
+        const bar = document.getElementById('aex-items-pagination');
+        const page1Info = document.getElementById('aex-items-page-info')?.textContent?.trim() || '';
+        const hiddenBefore = bar ? bar.hidden : true;
+        bar?.querySelector('[data-ft-page="2"]')?.click();
+        await new Promise((r) => setTimeout(r, 80));
+        const page2Url = location.pathname + location.search;
+        const page2Info = document.getElementById('aex-items-page-info')?.textContent?.trim() || '';
+        const page2Count = document.querySelectorAll('#aex-items-list .aex-item:not(.aex-item-skel)').length;
+        bar?.querySelector('[data-ft-page="1"]')?.click();
+        await new Promise((r) => setTimeout(r, 80));
+        return {
+          hiddenBefore,
+          page1Info,
+          page2Url,
+          page2Info,
+          page2Count,
+          backPage1Info: document.getElementById('aex-items-page-info')?.textContent?.trim() || '',
+        };
+      });
+      assert(
+        detailPageCheck.hiddenBefore === false && /Showing 1–10 of \d+ · Page 1 of \d+/.test(detailPageCheck.page1Info),
+        `Study guide phrases pagination bar visible on Page 1 (${detailPageCheck.page1Info})`,
+      );
+      assert(
+        detailPageCheck.page2Url.includes('?page=2') &&
+          detailPageCheck.page2Count === Math.min(10, persistedCount - 10) &&
+          /Page 2 of/.test(detailPageCheck.page2Info),
+        `Clicking Page 2 switches detail phrases cleanly (${detailPageCheck.page2Info})`,
+      );
+    }
 
     // Category filter + note search.
     const filterResult = await page.evaluate(async () => {
@@ -685,7 +824,8 @@ async function run() {
     await page.waitForFunction(
       () => {
         const menu = document.getElementById('selection-action-menu');
-        return Boolean(menu && !menu.hidden);
+        const preview = document.getElementById('selection-menu-text')?.textContent || '';
+        return Boolean(menu && !menu.hidden && /double down on/i.test(preview));
       },
       { timeout: 8000 },
     );
@@ -694,14 +834,14 @@ async function run() {
       return !pop || pop.hidden;
     });
     assert(lookupDeferred, 'Selecting text reveals actions without calling the model yet');
-    await page.click('#selection-action-menu [data-selection-action="translate"]');
+    await page.$eval('#selection-action-menu [data-selection-action="translate"]', (btn) => btn.click());
     await page.waitForFunction(
       () => {
         const menu = document.getElementById('selection-action-menu');
         const definition = document.getElementById('wp-def')?.textContent || '';
         return (!menu || menu.hidden) && definition.length > 0 && !/Looking up/i.test(definition);
       },
-      { timeout: 30000 },
+      { timeout: 45000 },
     );
     assert(true, 'Choosing the selection action runs the contextual lookup');
     const uiLookup = await page.evaluate(() => ({
@@ -782,8 +922,22 @@ async function run() {
 
     // Library + search + deletion.
     await page.click('#aex-tab-library');
-    await page.waitForFunction(() => location.pathname === '/extractor/library', { timeout: 10000 });
-    const libraryBefore = await page.evaluate(() => document.querySelectorAll('#aex-library-grid .aex-library-card-item').length);
+    await page.waitForFunction(
+      () => {
+        const grid = document.getElementById('aex-library-grid');
+        return (
+          location.pathname === '/extractor/library' &&
+          document.getElementById('aex-view-library')?.hidden === false &&
+          grid &&
+          grid.getAttribute('aria-busy') !== 'true' &&
+          grid.querySelectorAll('.aex-library-card-item:not(.aex-lib-skel)').length > 0
+        );
+      },
+      { timeout: 15000 },
+    );
+    const libraryBefore = await page.evaluate(
+      () => document.querySelectorAll('#aex-library-grid .aex-library-card-item:not(.aex-lib-skel)').length,
+    );
     assert(libraryBefore >= 3, `Library renders ${libraryBefore} persisted study maps`);
     const libraryStates = await page.evaluate(() => {
       const cards = [...document.querySelectorAll('#aex-library-grid .aex-library-card-item')];
@@ -794,7 +948,7 @@ async function run() {
         states: cards.map((card) => card.dataset.state),
         browserState: browser?.dataset.state,
         browserCount: browser?.querySelector('.aex-card-progress-count')?.textContent?.trim(),
-        browserAction: browser?.querySelector('[data-aex-open]')?.textContent?.trim(),
+        browserAction: browser?.querySelector('.aex-lib-open-btn[data-aex-open]')?.textContent?.trim(),
       };
     });
     assert(
@@ -817,23 +971,48 @@ async function run() {
       search.value = 'Browser standup';
       search.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    const filteredLibrary = await page.evaluate(() => document.querySelectorAll('#aex-library-grid .aex-library-card-item').length);
+    await page.waitForFunction(
+      () => {
+        const grid = document.getElementById('aex-library-grid');
+        if (!grid || grid.getAttribute('aria-busy') === 'true') return false;
+        const cards = [...grid.querySelectorAll('.aex-library-card-item:not(.aex-lib-skel)')];
+        return cards.length === 1 && /Browser standup/i.test(cards[0].textContent || '');
+      },
+      { timeout: 15000 },
+    );
+    const filteredLibrary = await page.evaluate(
+      () => document.querySelectorAll('#aex-library-grid .aex-library-card-item:not(.aex-lib-skel)').length,
+    );
     assert(filteredLibrary === 1, `Library search narrows ${libraryBefore} cards to ${filteredLibrary}`);
     await page.evaluate(() => {
       const search = document.getElementById('aex-library-search');
       search.value = '';
       search.dispatchEvent(new Event('input', { bubbles: true }));
     });
+    await page.waitForFunction(
+      () => {
+        const grid = document.getElementById('aex-library-grid');
+        if (!grid || grid.getAttribute('aria-busy') === 'true') return false;
+        return grid.querySelectorAll('.aex-library-card-item:not(.aex-lib-skel)').length > 1;
+      },
+      { timeout: 15000 },
+    );
 
     // YouTube notes expose the core Studio integration.
     const openedYoutube = await page.evaluate(async () => {
-      const cards = [...document.querySelectorAll('#aex-library-grid .aex-library-card-item')];
+      const cards = [...document.querySelectorAll('#aex-library-grid .aex-library-card-item:not(.aex-lib-skel)')];
       const target = cards.find((card) => Boolean(card.querySelector('.aex-source-badge.is-video')));
       if (!target) return { skipped: true };
-      target.querySelector('[data-aex-open]')?.click();
+      const targetId = target.dataset.aexLibraryId || '';
+      target.querySelector('.aex-lib-open-btn[data-aex-open]')?.click();
       const startedAt = Date.now();
       while (Date.now() - startedAt < 15000) {
-        if (document.getElementById('aex-view-note')?.hidden === false && document.querySelectorAll('#aex-items-list .aex-item').length > 0) break;
+        const ready =
+          document.getElementById('aex-view-note')?.hidden === false &&
+          document.getElementById('aex-detail-ready')?.hidden === false &&
+          (!targetId || location.pathname.endsWith(targetId)) &&
+          document.querySelectorAll('#aex-items-list .aex-item').length > 0;
+        if (ready) break;
         await new Promise((resolve) => setTimeout(resolve, 150));
       }
       const button = document.getElementById('aex-studio-btn');
@@ -848,65 +1027,108 @@ async function run() {
     assert(/youtube/i.test(openedYoutube.sourceLabel || ''), 'YouTube study map rehydrates its source label');
     assert(openedYoutube.studioHidden === false, 'YouTube notes expose the Train in Studio action');
     assert(
-      /^\/studio\?url=https%3A%2F%2F/i.test(openedYoutube.studioTarget),
-      `Studio action targets the saved video URL (${openedYoutube.studioTarget})`,
+      /^\/studio\?(id=[^&]+|url=https%3A%2F%2F)/i.test(openedYoutube.studioTarget),
+      `Studio action targets the synced lesson or saved video URL (${openedYoutube.studioTarget})`,
     );
     await page.goto(`${baseUrl}/extractor/library`, { waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForFunction(
-      () =>
-        document.getElementById('aex-view-library')?.hidden === false &&
-        document.querySelectorAll('#aex-library-grid .aex-library-card-item').length > 0,
+      () => {
+        const grid = document.getElementById('aex-library-grid');
+        return (
+          document.getElementById('aex-view-library')?.hidden === false &&
+          grid &&
+          grid.getAttribute('aria-busy') !== 'true' &&
+          grid.querySelectorAll('.aex-library-card-item:not(.aex-lib-skel)').length > 0
+        );
+      },
       { timeout: 20000 },
     );
 
     const deleteResult = await page.evaluate(async () => {
-      const cards = [...document.querySelectorAll('#aex-library-grid .aex-library-card-item')];
+      const cards = [...document.querySelectorAll('#aex-library-grid .aex-library-card-item:not(.aex-lib-skel)')];
       const target = cards.find((card) => /markdown|migration/i.test(card.textContent || ''));
       if (!target) return { skipped: true };
       const title = target.querySelector('.aex-library-card-title')?.textContent;
       const before = cards.length;
       target.querySelector('[data-aex-delete]')?.click();
       await new Promise((resolve) => setTimeout(resolve, 120));
-      const armedCard = [...document.querySelectorAll('#aex-library-grid .aex-library-card-item')].find(
+      const confirmOpen = document.getElementById('ft-confirm-backdrop')?.hidden === false;
+      document.getElementById('ft-confirm-accept-btn')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      const undoVisible = document.getElementById('ft-undo-toast')?.hidden === false;
+      const midCount = document.querySelectorAll('#aex-library-grid .aex-library-card-item:not(.aex-lib-skel)').length;
+      // Undo once to verify restore works cleanly
+      document.getElementById('ft-undo-btn')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      const restoredCount = document.querySelectorAll('#aex-library-grid .aex-library-card-item:not(.aex-lib-skel)').length;
+
+      // Delete again and dismiss Undo pill to commit DELETE immediately before reload
+      const reTarget = [...document.querySelectorAll('#aex-library-grid .aex-library-card-item:not(.aex-lib-skel)')].find(
         (card) => card.querySelector('.aex-library-card-title')?.textContent === title,
       );
-      const armedButton = armedCard?.querySelector('[data-aex-delete]');
-      const armed = Boolean(armedButton?.classList.contains('is-armed'));
-      armedButton?.click();
+      reTarget?.querySelector('[data-aex-delete]')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      document.getElementById('ft-confirm-accept-btn')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      document.getElementById('ft-undo-close-btn')?.click();
+      await new Promise((resolve) => setTimeout(resolve, 350));
       const startedAt = Date.now();
       while (Date.now() - startedAt < 15000) {
-        if (document.querySelectorAll('#aex-library-grid .aex-library-card-item').length < before) break;
+        const grid = document.getElementById('aex-library-grid');
+        if (
+          grid &&
+          grid.getAttribute('aria-busy') !== 'true' &&
+          grid.querySelectorAll('.aex-library-card-item:not(.aex-lib-skel)').length === before - 1
+        ) {
+          break;
+        }
         await new Promise((resolve) => setTimeout(resolve, 120));
       }
+      await new Promise((resolve) => setTimeout(resolve, 250));
       return {
         skipped: false,
         title,
-        armed,
+        confirmOpen,
+        undoVisible,
+        midCount,
+        restoredCount,
         before,
-        after: document.querySelectorAll('#aex-library-grid .aex-library-card-item').length,
-        toast: document.getElementById('workspace-toast')?.textContent,
+        after: document.querySelectorAll('#aex-library-grid .aex-library-card-item:not(.aex-lib-skel)').length,
       };
     });
-    assert(!deleteResult.skipped && deleteResult.armed, 'Delete uses a two-step confirmation');
+    assert(
+      !deleteResult.skipped &&
+        deleteResult.confirmOpen &&
+        deleteResult.undoVisible &&
+        deleteResult.midCount === deleteResult.before - 1 &&
+        deleteResult.restoredCount === deleteResult.before,
+      'Delete uses themed confirmation modal + animated timed Undo restore',
+    );
     assert(
       !deleteResult.skipped && deleteResult.after === deleteResult.before - 1,
-      `Confirmed delete removes the study map (${deleteResult.before} → ${deleteResult.after}; ${deleteResult.toast || 'no toast'})`,
+      `Confirmed delete removes the study map (${deleteResult.before} → ${deleteResult.after})`,
     );
 
     // Hard refresh on the library route must preserve the library view, not
     // flash back to the extractor while history loads in the background.
     await page.reload({ waitUntil: 'domcontentloaded', timeout: 60000 });
     await page.waitForFunction(
-      () =>
-        document.getElementById('aex-view-library')?.hidden === false &&
-        document.querySelectorAll('#aex-library-grid .aex-library-card-item').length > 0,
+      () => {
+        const grid = document.getElementById('aex-library-grid');
+        return (
+          document.getElementById('aex-view-library')?.hidden === false &&
+          grid &&
+          grid.getAttribute('aria-busy') !== 'true' &&
+          grid.querySelectorAll('.aex-library-card-item:not(.aex-lib-skel)').length > 0
+        );
+      },
       { timeout: 20000 },
     );
     const libraryReload = await page.evaluate(() => ({
       path: location.pathname,
       libraryHidden: document.getElementById('aex-view-library')?.hidden,
       extractHidden: document.getElementById('aex-view-extract')?.hidden,
-      cards: document.querySelectorAll('#aex-library-grid .aex-library-card-item').length,
+      cards: document.querySelectorAll('#aex-library-grid .aex-library-card-item:not(.aex-lib-skel)').length,
       activeTab: document.querySelector('.aex-view-nav .lexicon-view-tab.active')?.id,
     }));
     assert(libraryReload.path === '/extractor/library', 'Hard refresh keeps the /extractor/library route');
@@ -916,6 +1138,147 @@ async function run() {
     );
     assert(libraryReload.activeTab === 'aex-tab-library', 'Hard refresh marks the Library tab active');
     assert(libraryReload.cards >= 3, 'Hard refresh rehydrates the library cards');
+
+    // Auto-resume incomplete multi-page Library lesson to the page of the next uncompleted item.
+    const resumeTargetId = await page.evaluate((primaryNoteUrl) => {
+      const primaryId = new URL(primaryNoteUrl).pathname.split('/').pop();
+      const cards = [...document.querySelectorAll('#aex-library-grid .aex-library-card-item:not(.aex-lib-skel)')];
+      const multiPage = cards.find((card) => {
+        const id = card.dataset.aexLibraryId || '';
+        const text = card.querySelector('.aex-library-card-meta')?.textContent || '';
+        const count = Number(text.match(/(\d+)\s+phrases/i)?.[1] || 0);
+        return id && id !== primaryId && count >= 12;
+      });
+      return multiPage?.dataset?.aexLibraryId || '';
+    }, noteUrl);
+    assert(Boolean(resumeTargetId), 'Library has a secondary multi-page study map for auto-resume verification');
+
+    const resumeDetail = await api(baseUrl, `/api/american-extractor/notes/${resumeTargetId}`, { token });
+    const resumeItemCount = Number(resumeDetail.data?.data?.itemCount || resumeDetail.data?.data?.items?.length || 0);
+    assert(resumeItemCount >= 12, `Auto-resume study map has ${resumeItemCount} items`);
+
+    for (let idx = 0; idx < 10; idx += 1) {
+      const patchRes = await api(baseUrl, `/api/american-extractor/notes/${resumeTargetId}/items/${idx}`, {
+        method: 'PATCH',
+        token,
+        body: { completed: true },
+      });
+      assert(patchRes.ok, `Marked item ${idx} completed for auto-resume setup`);
+    }
+
+    await page.goto(`${baseUrl}/extractor/library`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForFunction(
+      (targetId) => {
+        const grid = document.getElementById('aex-library-grid');
+        return (
+          document.getElementById('aex-view-library')?.hidden === false &&
+          grid &&
+          grid.getAttribute('aria-busy') !== 'true' &&
+          Boolean(document.querySelector(`[data-aex-library-id="${CSS.escape(targetId)}"] .aex-lib-open-btn[data-aex-open]`))
+        );
+      },
+      { timeout: 20000 },
+      resumeTargetId,
+    );
+
+    await page.evaluate((targetId) => {
+      document
+        .querySelector(`[data-aex-library-id="${CSS.escape(targetId)}"] .aex-lib-open-btn[data-aex-open]`)
+        ?.click();
+    }, resumeTargetId);
+
+    await page.waitForFunction(
+      (targetId) =>
+        location.pathname.endsWith(targetId) &&
+        document.getElementById('aex-detail-ready')?.hidden === false &&
+        document.querySelectorAll('#aex-items-list .aex-item:not(.aex-item-skel)').length > 0,
+      { timeout: 20000 },
+      resumeTargetId,
+    );
+    await new Promise((r) => setTimeout(r, 80));
+
+    const autoResumePg2 = await page.evaluate(() => ({
+      search: location.search,
+      pageInfo: document.getElementById('aex-items-page-info')?.textContent?.trim() || '',
+      firstIndex: document.querySelector('#aex-items-list .aex-item')?.dataset?.aexIndex,
+    }));
+    assert(
+      autoResumePg2.search.includes('page=2') &&
+        /Page 2 of/.test(autoResumePg2.pageInfo) &&
+        autoResumePg2.firstIndex === '10',
+      `Opening incomplete lesson auto-resumes to Page 2 showing next uncompleted item #11 (${autoResumePg2.pageInfo})`,
+    );
+
+    // Explicit ?page=1 URL parameter overrides auto-resume cleanly.
+    await page.goto(`${baseUrl}/extractor/library/${resumeTargetId}?page=1`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    });
+    await page.waitForFunction(
+      () => document.querySelectorAll('#aex-items-list .aex-item:not(.aex-item-skel)').length > 0,
+      { timeout: 20000 },
+    );
+    const explicitPg1 = await page.evaluate(() => ({
+      pageInfo: document.getElementById('aex-items-page-info')?.textContent?.trim() || '',
+      firstIndex: document.querySelector('#aex-items-list .aex-item')?.dataset?.aexIndex,
+    }));
+    assert(
+      /Page 1 of/.test(explicitPg1.pageInfo) && explicitPg1.firstIndex === '0',
+      `Explicit ?page=1 deep link overrides auto-resume (${explicitPg1.pageInfo})`,
+    );
+
+    // Completing every remaining item causes opening from Library to start on Page 1.
+    for (let idx = 10; idx < resumeItemCount; idx += 1) {
+      const patchRes = await api(baseUrl, `/api/american-extractor/notes/${resumeTargetId}/items/${idx}`, {
+        method: 'PATCH',
+        token,
+        body: { completed: true },
+      });
+      assert(patchRes.ok, `Marked remaining item ${idx} completed`);
+    }
+
+    await page.goto(`${baseUrl}/extractor/library`, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForFunction(
+      (targetId) => {
+        const grid = document.getElementById('aex-library-grid');
+        return (
+          document.getElementById('aex-view-library')?.hidden === false &&
+          grid &&
+          grid.getAttribute('aria-busy') !== 'true' &&
+          Boolean(document.querySelector(`[data-aex-library-id="${CSS.escape(targetId)}"] .aex-lib-open-btn[data-aex-open]`))
+        );
+      },
+      { timeout: 20000 },
+      resumeTargetId,
+    );
+
+    await page.evaluate((targetId) => {
+      document
+        .querySelector(`[data-aex-library-id="${CSS.escape(targetId)}"] .aex-lib-open-btn[data-aex-open]`)
+        ?.click();
+    }, resumeTargetId);
+
+    await page.waitForFunction(
+      (targetId) =>
+        location.pathname.endsWith(targetId) &&
+        document.getElementById('aex-detail-ready')?.hidden === false &&
+        document.querySelectorAll('#aex-items-list .aex-item:not(.aex-item-skel)').length > 0,
+      { timeout: 20000 },
+      resumeTargetId,
+    );
+    await new Promise((r) => setTimeout(r, 80));
+
+    const completedOpen = await page.evaluate(() => ({
+      search: location.search,
+      pageInfo: document.getElementById('aex-items-page-info')?.textContent?.trim() || '',
+      firstIndex: document.querySelector('#aex-items-list .aex-item')?.dataset?.aexIndex,
+    }));
+    assert(
+      !completedOpen.search.includes('page=2') &&
+        /Page 1 of/.test(completedOpen.pageInfo) &&
+        completedOpen.firstIndex === '0',
+      `Opening a 100% completed lesson opens on Page 1 (${completedOpen.pageInfo})`,
+    );
 
     // Mobile layout + no horizontal overflow.
     const notePath = new URL(noteUrl).pathname;
@@ -928,7 +1291,7 @@ async function run() {
       document.getElementById('aex-source-toggle')?.click();
       const sourcePanel = document.getElementById('aex-source-panel');
       const source = sourcePanel?.getBoundingClientRect();
-      const items = document.querySelector('.aex-items-column')?.getBoundingClientRect();
+      const items = document.querySelector('.aex-items-root, .aex-items-column')?.getBoundingClientRect();
       return {
         innerWidth: window.innerWidth,
         scrollWidth: root.scrollWidth,

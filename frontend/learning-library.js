@@ -6,7 +6,19 @@
 (function (global) {
   'use strict';
 
+  const P = global.FlaptapPagination;
   const PRESET_COUNTS = [3, 5, 8, 12, 20];
+  const PAGE_SIZE_OPTIONS = [10, 20, 50];
+  const DEFAULT_PAGE_SIZE = P?.DEFAULT_PAGE_SIZE || 10;
+
+  function readSavedPageSize() {
+    try {
+      const n = Number(localStorage.getItem('flaptap_ll_page_size'));
+      return PAGE_SIZE_OPTIONS.includes(n) ? n : DEFAULT_PAGE_SIZE;
+    } catch {
+      return DEFAULT_PAGE_SIZE;
+    }
+  }
 
   const llState = {
     initialized: false,
@@ -25,7 +37,7 @@
     elapsedTimer: null,
     streamingItems: [],
     justGeneratedIds: new Set(),
-    // Library State
+    // Library & Pagination State
     items: [],
     stats: {
       totalItems: 0,
@@ -43,6 +55,15 @@
     browseRegister: 'all',
     browseSearch: '',
     browseSort: 'newest',
+    page: 1,
+    pageSize: readSavedPageSize(),
+    totalPages: 1,
+    filteredCount: 0,
+    filteredCompletedCount: 0,
+    hasMore: false,
+    hasLoadedOnce: false,
+    isLoadingList: false,
+    animateNextRender: false,
     viewMode:
       localStorage.getItem('flaptap_ll_view_mode') || (window.innerWidth < 720 ? 'cards' : 'table'),
     recallMaskMode: false,
@@ -54,6 +75,27 @@
   let inflightDomainsPromise = null;
   let libraryLoadSeq = 0;
   let lastAuthUserId = null;
+
+  const skeletonGate = P.createSkeletonGate(190);
+  const scrollRestorer = P.createScrollRestorer({
+    storageKey: 'flaptap_ll_scroll_v1',
+    isActive: () =>
+      document.body?.dataset?.activeSection === 'learning-library' &&
+      !llState.isLoadingList &&
+      llState.hasLoadedOnce,
+    getContainer: () => document.getElementById('ll-browse-items-container'),
+  });
+  const paginationBar = P.createBar({
+    barId: 'll-browse-pagination',
+    infoId: 'll-page-info',
+    numbersId: 'll-page-numbers',
+    prevId: 'll-page-prev-btn',
+    nextId: 'll-page-next-btn',
+    pageSizePillsId: 'll-page-size-pills',
+    pageAttr: 'data-ll-page',
+    pageSizeAttr: 'data-ll-page-size',
+    pageSizeOptions: PAGE_SIZE_OPTIONS,
+  });
 
   function ws() {
     return global.FlaptapWorkspace || null;
@@ -102,6 +144,13 @@
   }
 
   function renderCheckButton(checked, itemId, pillLabel) {
+    if (global.FlaptapCheck?.buttonHtml) {
+      return global.FlaptapCheck.buttonHtml({
+        checked,
+        pillLabel: pillLabel || '',
+        attrs: `data-ll-toggle-complete="${escapeHtml(itemId)}"`,
+      });
+    }
     if (ws()?.renderCheckButtonHtml) {
       return ws().renderCheckButtonHtml({
         checked,
@@ -110,17 +159,85 @@
       });
     }
     const cls = `item-check-btn${pillLabel ? ' item-check-btn--pill' : ''}${checked ? ' is-checked' : ''}`;
-    return `<button type="button" class="${cls}" data-ll-toggle-complete="${escapeHtml(itemId)}" aria-pressed="${checked ? 'true' : 'false'}" aria-label="Mark expression complete" title="Mark expression complete"><svg class="chk-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line class="chk-dash" x1="6.5" y1="12" x2="17.5" y2="12"></line><polyline class="chk-tick" points="19.5 7 9.5 17 4.5 12"></polyline></svg>${pillLabel ? `<span>${escapeHtml(pillLabel)}</span>` : ''}</button>`;
+    return `<button type="button" class="${cls}" data-ll-toggle-complete="${escapeHtml(itemId)}" aria-pressed="${checked ? 'true' : 'false'}" aria-label="Mark expression complete" title="Mark expression complete"><svg class="ft-check-svg chk-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path class="ft-check-tick chk-tick" d="M5.2 12.75 L9.55 17.1 Q10.1 17.65 10.65 17.05 L18.9 7.35" pathLength="1" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>${pillLabel ? `<span>${escapeHtml(pillLabel)}</span>` : ''}</button>`;
   }
 
-  function tokenizeExampleSentence(sentence, itemId) {
+  const CATEGORY_TONE_MAP = {
+    fillers_hesitation: 'orange',
+    modern_slang: 'orange',
+    casual_reactions_banter: 'orange',
+    connected_speech_reductions: 'teal',
+    everyday_phrasal_expressions: 'teal',
+    concurrency_async: 'teal',
+    networking_distributed: 'teal',
+    sentence_starters_frames: 'indigo',
+    architecture_systems: 'indigo',
+    data_structures_algorithms: 'indigo',
+    testing_reliability: 'green',
+    security_auth: 'green',
+    devops_cloud: 'green',
+    discourse_markers: 'blue',
+    softeners_hedges: 'blue',
+    storytelling_transitions: 'blue',
+  };
+
+  function getCategoryTone(categoryId) {
+    const key = String(categoryId || '').trim().toLowerCase();
+    return CATEGORY_TONE_MAP[key] || 'blue';
+  }
+
+  function highlightExpressionInSentence(sentence, expression, spokenForm) {
+    const text = String(sentence || '');
+    if (!text) return '';
+
+    const rawCandidates = [spokenForm, expression]
+      .map((s) =>
+        String(s || '')
+          .replace(/\[[^[\]]*\]/g, ' ')
+          .replace(/[?.!,;:]+$/g, '')
+          .replace(/\s+/g, ' ')
+          .trim(),
+      )
+      .filter((s) => s.length >= 3);
+
+    for (const candidate of rawCandidates) {
+      const escaped = candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/['’]/g, "['’]");
+      let regex;
+      try {
+        regex = new RegExp(
+          `(?<![\\p{L}\\p{N}_])(${escaped}(?:['’]?s|es|ed|d|ing|er|ers)?)(?![\\p{L}\\p{N}_])`,
+          'giu',
+        );
+      } catch {
+        continue;
+      }
+      const matches = Array.from(text.matchAll(regex));
+      if (matches.length === 0) continue;
+
+      let output = '';
+      let lastIndex = 0;
+      for (const match of matches) {
+        const index = match.index ?? 0;
+        output += escapeHtml(text.slice(lastIndex, index));
+        output += `<mark class="lexicon-highlight">${escapeHtml(match[1])}</mark>`;
+        lastIndex = index + match[0].length;
+      }
+      output += escapeHtml(text.slice(lastIndex));
+      return output;
+    }
+
+    return escapeHtml(text);
+  }
+
+  function tokenizeExampleSentence(sentence, itemId, expression, spokenForm) {
+    const highlightedHtml = highlightExpressionInSentence(sentence, expression, spokenForm);
     if (global.FlaptapWordLookup?.tokenizeClickableWords) {
-      return global.FlaptapWordLookup.tokenizeClickableWords(escapeHtml(sentence), {
+      return global.FlaptapWordLookup.tokenizeClickableWords(highlightedHtml, {
         contextSentence: sentence,
         llItemId: itemId,
       });
     }
-    return escapeHtml(sentence);
+    return highlightedHtml;
   }
 
   /** Slot names in order of appearance, e.g. "run [X] against [Y]" -> ["X", "Y"]. */
@@ -141,7 +258,8 @@
 
   /** Render an expression/translation, wrapping reusable [slots] as tokens. */
   function renderSlotizedText(text) {
-    return escapeHtml(text).replace(/\[([^[\]]{1,40})\]/g, (_match, name) => {
+    const normalized = String(text || '').replace(/(\[[^[\]]{1,40}\])\s+([?!.,;:])/g, '$1$2');
+    return escapeHtml(normalized).replace(/\[([^[\]]{1,40})\]/g, (_match, name) => {
       return `<span class="ll-slot" dir="ltr">[${name}]</span>`;
     });
   }
@@ -256,6 +374,25 @@
      INITIALIZATION & DOMAIN LOADING
      ======================================================================== */
 
+  function readRoutePage(routeState) {
+    const raw = Number(routeState?.searchParams?.get?.('page'));
+    return Number.isFinite(raw) && raw >= 1 ? Math.floor(raw) : 1;
+  }
+
+  function syncLibraryRoute(replace = true) {
+    const r = router();
+    if (!r?.updateSubroute) return;
+    const opts = {
+      subview: llState.activeView,
+      domainId: llState.activeDomainId,
+      replace,
+    };
+    if (llState.page > 1) {
+      opts.extraQuery = { page: llState.page };
+    }
+    r.updateSubroute('learning-library', opts);
+  }
+
   async function init(routeState) {
     if (!llState.initialized) {
       llState.initialized = true;
@@ -274,35 +411,48 @@
     if (activeRoute?.domainId) {
       llState.activeDomainId = activeRoute.domainId;
     }
+    const routePage = readRoutePage(activeRoute);
+    if (routePage !== llState.page) {
+      llState.page = routePage;
+    }
 
-    const tasks = [];
+    // Launch domain catalog + AI model discovery in parallel so list fetch
+    // never stalls behind model probing on entry.
+    const prereqTasks = [];
     if (!llState.domainsLoaded) {
-      tasks.push(loadDomainsCatalog());
+      prereqTasks.push(loadDomainsCatalog());
     }
     if (llState.aiSelector) {
-      tasks.push(llState.aiSelector.init());
+      prereqTasks.push(llState.aiSelector.init());
     }
-    if (tasks.length > 0) {
-      await Promise.all(tasks);
-      syncGenerateButtonLabel();
-    }
+
+    const wasPendingRestore = scrollRestorer.hasPending();
 
     if (activeRoute) {
-      await applyRouteState(activeRoute);
+      await applyRouteState(activeRoute, { deferScrollReset: wasPendingRestore });
     } else if (getCurrentUser()) {
-      await loadLibraryItems();
+      await loadLibraryItems({ showSkeleton: true, animate: !wasPendingRestore });
     } else {
+      llState.isLoadingList = false;
       renderBrowseAuthState();
     }
+
+    if (prereqTasks.length > 0) {
+      await Promise.all(prereqTasks);
+      syncGenerateButtonLabel();
+      if (getCurrentUser()) renderBrowseFilters();
+    }
+
+    scrollRestorer.finishRestore();
   }
 
-  async function applyRouteState(routeState) {
+  async function applyRouteState(routeState, options = {}) {
     if (!routeState || routeState.section !== 'learning-library') return;
 
     if (
       routeState.domainId &&
-      llState.domains.some((d) => d.id === routeState.domainId) &&
-      routeState.domainId !== llState.activeDomainId
+      routeState.domainId !== llState.activeDomainId &&
+      (!llState.domainsLoaded || llState.domains.some((d) => d.id === routeState.domainId))
     ) {
       llState.activeDomainId = routeState.domainId;
       llState.genCategoryId = 'all';
@@ -313,20 +463,22 @@
       renderDomainContext();
     }
 
+    llState.page = readRoutePage(routeState);
     llState.activeView = routeState.subview === 'browse' ? 'browse' : 'generate';
 
+    const skipEntranceAnim = Boolean(options.deferScrollReset || scrollRestorer.hasPending());
     if (getCurrentUser()) {
-      await loadLibraryItems();
+      await loadLibraryItems({ showSkeleton: true, animate: !skipEntranceAnim });
     } else {
+      llState.isLoadingList = false;
       renderBrowseAuthState();
     }
 
-    if (llState.activeView === 'browse') {
+    if (llState.activeView === 'browse' && !options.deferScrollReset && !scrollRestorer.hasPending()) {
       const shelf = document.getElementById('ll-library-shelf');
       if (shelf) {
         requestAnimationFrame(() => {
-          const targetTop = Math.max(0, shelf.getBoundingClientRect().top + window.scrollY - 78);
-          window.scrollTo({ top: targetTop, behavior: 'smooth' });
+          P.scrollToTop(shelf, { force: true });
         });
       }
     }
@@ -429,7 +581,7 @@
     container.innerHTML = llState.domains
       .map((d) => {
         const active = d.id === llState.activeDomainId;
-        return `<button type="button" class="filter-pill ${active ? 'active' : ''}" data-ll-domain="${escapeHtml(d.id)}" aria-pressed="${active ? 'true' : 'false'}">${icon(domainIcon(d.id))}<span>${escapeHtml(d.title)}</span></button>`;
+        return `<button type="button" class="lexicon-view-tab filter-pill ${active ? 'active' : ''}" data-ll-domain="${escapeHtml(d.id)}" aria-pressed="${active ? 'true' : 'false'}">${icon(domainIcon(d.id))}<span>${escapeHtml(d.title)}</span></button>`;
       })
       .join('');
   }
@@ -441,25 +593,32 @@
     const kickerEl = document.getElementById('ll-domain-kicker');
     const headlineEl = document.getElementById('ll-domain-headline');
     const subcopyEl = document.getElementById('ll-domain-subcopy');
+    const capHintEl = document.getElementById('ll-source-cap-hint');
     const focusInput = document.getElementById('ll-focus-topic-input');
     const libHeadingEl = document.getElementById('ll-library-heading');
+    const libSubEl = document.getElementById('ll-library-sub');
 
-    if (kickerEl) kickerEl.textContent = `${domain.title} · Learning Library`;
+    if (kickerEl) kickerEl.textContent = domain.title;
     if (headlineEl) {
-      headlineEl.innerHTML =
-        domain.id === 'natural_american_english'
-          ? 'Build your living <span class="vox-underline">Natural American English</span> library.'
-          : `Build your <span class="vox-underline">${escapeHtml(domain.title)}</span> library.`;
+      headlineEl.textContent = domain.title;
     }
     if (subcopyEl) subcopyEl.textContent = domain.subtitle;
+    if (capHintEl) {
+      const catCount = Array.isArray(domain.categories) ? domain.categories.length : 8;
+      const regCount = Array.isArray(domain.registers) ? domain.registers.length : 5;
+      capHintEl.textContent = `${catCount} categories · ${regCount} spoken registers · IPA & reusable [X] patterns`;
+    }
     if (libHeadingEl) {
       const plural = capitalize(domain.itemNounPlural || 'Expressions');
       libHeadingEl.textContent = `${plural} Library`;
       const statTotalLabel = document.getElementById('ll-stat-total-label');
       if (statTotalLabel) statTotalLabel.textContent = `Saved ${plural}`;
     }
+    if (libSubEl) {
+      libSubEl.textContent = `${domain.title} · Source-grounded usage, IPA, spoken reductions, and reusable patterns`;
+    }
     if (focusInput && domain.suggestedFocusTopics?.length) {
-      focusInput.placeholder = `Optional situation or topic (e.g. ${domain.suggestedFocusTopics.slice(0, 2).join(', ')})...`;
+      focusInput.placeholder = `Optional focus (e.g. ${domain.suggestedFocusTopics[0]})`;
     }
 
     renderCountControls();
@@ -573,7 +732,7 @@
     if (ws()?.requireAuthBeforeAction) {
       const ok = ws().requireAuthBeforeAction(
         { type: 'learning_library_generate', payload },
-        'Sign in or create an account to generate and permanently save expressions to your personal Learning Library.',
+        'Sign in or create an account to generate and permanently save expressions in Generate Phrases.',
       );
       if (!ok) return;
     }
@@ -902,20 +1061,34 @@
         syncFilterPillsUi();
 
         // The stream already returned every saved item plus fresh stats: merge
-        // locally instead of paying another roundtrip before showing results.
+        // locally into Page 1 instead of paying another roundtrip before showing results.
         const freshItems = Array.isArray(completedResult.items) ? completedResult.items : [];
         if (freshItems.length > 0) {
+          llState.page = 1;
           const freshIds = new Set(freshItems.map((it) => it.id));
-          llState.items = [...freshItems, ...llState.items.filter((it) => !freshIds.has(it.id))];
+          const merged = [...freshItems, ...llState.items.filter((it) => !freshIds.has(it.id))].sort(
+            compareLibraryItems,
+          );
+          llState.items = merged.slice(0, llState.pageSize);
           if (completedResult.stats) llState.stats = completedResult.stats;
           if (completedResult.categoryCounts) llState.categoryCounts = completedResult.categoryCounts;
           if (completedResult.registerCounts) llState.registerCounts = completedResult.registerCounts;
+          llState.filteredCount = Number(llState.stats?.totalItems) || merged.length;
+          llState.filteredCompletedCount =
+            Number(llState.stats?.completedCount) || merged.filter((it) => it.isCompleted).length;
+          llState.totalPages = Math.max(1, Math.ceil(llState.filteredCount / llState.pageSize));
+          llState.hasMore = llState.page < llState.totalPages;
+          llState.isLoadingList = false;
+          llState.hasLoadedOnce = true;
+          llState.animateNextRender = true;
+          syncLibraryRoute(true);
           renderBrowseAuthState();
           renderBrowseStats();
           renderBrowseFilters();
           renderBrowseItems();
         } else {
-          await loadLibraryItems();
+          llState.page = 1;
+          await loadLibraryItems({ showSkeleton: false, animate: true });
         }
 
         showLatestBatchBanner(completedResult);
@@ -993,13 +1166,104 @@
     });
   }
 
-  async function loadLibraryItems() {
+  function renderSkeletonCardHtml(idx, isCardsMode) {
+    const bottomCount = isCardsMode ? 2 : 3;
+    const bottomBoxes = Array.from({ length: bottomCount }, () => `
+      <div class="ll-skel-box">
+        <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--kicker"></span>
+        <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--line"></span>
+        <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--line-short"></span>
+      </div>
+    `).join('');
+
+    return `
+      <div class="ll-skeleton-card ft-skeleton-item" aria-hidden="true" style="--ft-stagger: ${Math.min(idx, 4)}">
+        <div class="ll-skel-head">
+          <div class="ll-skel-head-left">
+            <div class="ll-skel-title-row">
+              <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--index"></span>
+              <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--title"></span>
+            </div>
+            <div class="ll-skel-pills-row">
+              <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--pill"></span>
+              <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--pill-sm"></span>
+              <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--pill"></span>
+            </div>
+          </div>
+          <div class="ll-skel-actions">
+            <span class="ll-skel-circle ft-skel-shimmer"></span>
+            <span class="ll-skel-circle ft-skel-shimmer"></span>
+            <span class="ll-skel-circle ft-skel-shimmer"></span>
+            <span class="ll-skel-circle ft-skel-shimmer"></span>
+          </div>
+        </div>
+        <div class="ll-skel-bento-top">
+          <div class="ll-skel-box">
+            <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--kicker"></span>
+            <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--line"></span>
+            <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--line-short"></span>
+          </div>
+          <div class="ll-skel-box">
+            <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--kicker"></span>
+            <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--line"></span>
+            <span class="ll-skel-bar ft-skel-shimmer ll-skel-bar--line-short"></span>
+          </div>
+        </div>
+        <div class="ll-skel-bento-bottom">${bottomBoxes}</div>
+      </div>
+    `;
+  }
+
+  function renderSkeletonsHtml() {
+    const isCardsMode = llState.viewMode === 'cards';
+    const count = isCardsMode ? 4 : 3;
+    const cards = Array.from({ length: count }, (_, idx) => renderSkeletonCardHtml(idx, isCardsMode)).join('');
+    return isCardsMode
+      ? `<div class="ll-cards-grid">${cards}</div>`
+      : `<div class="ll-skeleton-list">${cards}</div>`;
+  }
+
+  function showSkeletonLoadingState() {
+    llState.isLoadingList = true;
+    const container = document.getElementById('ll-browse-items-container');
+    const emptyEl = document.getElementById('ll-browse-empty');
+    const telemetryStrip = document.querySelector('#section-learning-library .ll-telemetry-strip');
+
+    if (emptyEl) emptyEl.hidden = true;
+    paginationBar.hide();
+    if (telemetryStrip && !llState.hasLoadedOnce) {
+      telemetryStrip.classList.add('is-loading');
+    }
+    if (container && !container.querySelector('.ll-skeleton-card')) {
+      container.classList.remove('ft-items-entering');
+      container.innerHTML = renderSkeletonsHtml();
+      skeletonGate.start();
+    } else {
+      skeletonGate.start();
+    }
+  }
+
+  function clearTelemetryLoadingState() {
+    document
+      .querySelector('#section-learning-library .ll-telemetry-strip')
+      ?.classList.remove('is-loading');
+  }
+
+  async function loadLibraryItems(options = {}) {
+    const { showSkeleton = true, animate = true } = options;
+
     if (!getCurrentUser()) {
+      llState.isLoadingList = false;
+      clearTelemetryLoadingState();
       renderBrowseAuthState();
       return;
     }
 
     const seq = ++libraryLoadSeq;
+    if (showSkeleton) {
+      showSkeletonLoadingState();
+    }
+
     const params = new URLSearchParams();
     params.set('domainId', llState.activeDomainId);
     if (llState.browseCategoryId !== 'all') params.set('categoryId', llState.browseCategoryId);
@@ -1011,16 +1275,36 @@
     if (llState.browseRegister !== 'all') params.set('register', llState.browseRegister);
     if (llState.browseSearch.trim()) params.set('q', llState.browseSearch.trim());
     params.set('sort', llState.browseSort || 'newest');
+    params.set('page', String(Math.max(1, llState.page || 1)));
+    params.set('limit', String(llState.pageSize || DEFAULT_PAGE_SIZE));
 
     try {
       const res = await apiFetch(`/api/learning-library/items?${params.toString()}`, {
         method: 'GET',
       });
       if (seq !== libraryLoadSeq) return;
+
+      if (showSkeleton) {
+        const stillCurrent = await skeletonGate.waitRemaining(() => seq === libraryLoadSeq);
+        if (!stillCurrent) return;
+      }
+
       llState.items = Array.isArray(res?.items) ? res.items : [];
       if (res?.stats) llState.stats = res.stats;
       llState.categoryCounts = res?.categoryCounts || {};
       llState.registerCounts = res?.registerCounts || {};
+      llState.filteredCount =
+        typeof res?.filteredCount === 'number' ? res.filteredCount : llState.items.length;
+      llState.filteredCompletedCount =
+        typeof res?.filteredCompletedCount === 'number'
+          ? res.filteredCompletedCount
+          : llState.items.filter((it) => it.isCompleted).length;
+      llState.page = Math.max(1, Number(res?.page) || llState.page || 1);
+      llState.totalPages = Math.max(
+        1,
+        Number(res?.totalPages) || Math.ceil(llState.filteredCount / (llState.pageSize || DEFAULT_PAGE_SIZE)) || 1,
+      );
+      llState.hasMore = Boolean(res?.hasMore ?? llState.page < llState.totalPages);
 
       try {
         await hydrateSequenceNumbers(seq);
@@ -1028,6 +1312,12 @@
         // Index is non-critical; render the library even if it can't be hydrated.
       }
       if (seq !== libraryLoadSeq) return;
+
+      llState.isLoadingList = false;
+      llState.hasLoadedOnce = true;
+      llState.animateNextRender = Boolean(animate);
+      skeletonGate.reset();
+      clearTelemetryLoadingState();
 
       renderBrowseAuthState();
       renderBrowseStats();
@@ -1038,19 +1328,16 @@
       }
     } catch (err) {
       if (seq !== libraryLoadSeq) return;
+      llState.isLoadingList = false;
+      skeletonGate.reset();
+      clearTelemetryLoadingState();
       if (err.status === 401) {
         renderBrowseAuthState();
         return;
       }
-      showToast(err?.message || 'Could not load Learning Library.');
+      renderBrowseItems();
+      showToast(err?.message || 'Could not load Generate Phrases.');
     }
-  }
-
-  function syncSidebarLlBadge(total, user) {
-    const badge = document.getElementById('nav-ll-badge');
-    if (!badge) return;
-    badge.textContent = String(total || 0);
-    badge.hidden = !user || (total || 0) === 0;
   }
 
   function renderBrowseAuthState() {
@@ -1061,18 +1348,30 @@
     const emptyEl = document.getElementById('ll-browse-empty');
     const progressEl = document.getElementById('ll-browse-progress-bar');
 
-    syncSidebarLlBadge(llState.stats?.totalItems || 0, user);
-
     if (gate) gate.hidden = Boolean(user);
     if (controls) controls.hidden = !user;
 
     if (!user) {
-      if (container) container.innerHTML = '';
+      clearTelemetryLoadingState();
+      if (container) {
+        container.classList.remove('ft-items-entering');
+        container.innerHTML = '';
+      }
       if (emptyEl) emptyEl.hidden = true;
       if (progressEl) progressEl.hidden = true;
+      paginationBar.hide();
       const countEl = document.getElementById('ll-library-count-label');
       if (countEl) countEl.textContent = '0';
     }
+  }
+
+  function syncLibraryTopRail(total, completed) {
+    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+    const tone = total > 0 && completed === total ? 'done' : completed > 0 ? 'progress' : 'new';
+    const card = document.getElementById('ll-library-header-card');
+    if (card) card.dataset.guideState = tone;
+    const topFill = document.getElementById('ll-guide-top-fill');
+    if (topFill) topFill.style.width = `${tone === 'done' ? 100 : pct}%`;
   }
 
   function renderBrowseStats() {
@@ -1091,7 +1390,7 @@
     set('ll-stat-favorites', favorites);
     set('ll-stat-progress', `${pct}%`);
 
-    syncSidebarLlBadge(total, getCurrentUser());
+    syncLibraryTopRail(total, completed);
   }
 
   function syncFilterPillsUi() {
@@ -1178,6 +1477,41 @@
     return String(b.id || '').localeCompare(String(a.id || ''));
   }
 
+  function renderBrowsePagination() {
+    paginationBar.render({
+      page: llState.page,
+      pageSize: llState.pageSize || DEFAULT_PAGE_SIZE,
+      total: Number(llState.filteredCount) || 0,
+      totalPages: llState.totalPages,
+      itemsCount: llState.items?.length || 0,
+      loading: llState.isLoadingList,
+      visible: Boolean(getCurrentUser()),
+    });
+  }
+
+  async function goToPage(nextPage) {
+    const clamped = Math.max(1, Math.min(llState.totalPages || 1, Math.floor(Number(nextPage) || 1)));
+    if (clamped === llState.page && !llState.isLoadingList) return;
+    scrollRestorer.clear();
+    llState.page = clamped;
+    syncLibraryRoute(false);
+    P.scrollToTop(document.getElementById('ll-library-shelf'));
+    await loadLibraryItems({ showSkeleton: true, animate: true });
+  }
+
+  async function setPageSize(nextSize) {
+    if (!PAGE_SIZE_OPTIONS.includes(nextSize) || nextSize === llState.pageSize) return;
+    scrollRestorer.clear();
+    llState.pageSize = nextSize;
+    llState.page = 1;
+    try {
+      localStorage.setItem('flaptap_ll_page_size', String(nextSize));
+    } catch {}
+    syncLibraryRoute(true);
+    P.scrollToTop(document.getElementById('ll-library-shelf'));
+    await loadLibraryItems({ showSkeleton: true, animate: true });
+  }
+
   function renderBrowseItems() {
     const container = document.getElementById('ll-browse-items-container');
     const emptyEl = document.getElementById('ll-browse-empty');
@@ -1186,135 +1520,241 @@
 
     const items = llState.items || [];
     items.sort(compareLibraryItems);
-    if (countEl) countEl.textContent = String(items.length);
+    const filteredTotal =
+      llState.hasLoadedOnce && typeof llState.filteredCount === 'number'
+        ? llState.filteredCount
+        : items.length;
+    const filteredCompleted =
+      llState.hasLoadedOnce && typeof llState.filteredCompletedCount === 'number'
+        ? llState.filteredCompletedCount
+        : items.filter((it) => it.isCompleted).length;
+
+    if (countEl) countEl.textContent = String(filteredTotal);
 
     if (!getCurrentUser()) {
+      container.classList.remove('ft-items-entering');
       container.innerHTML = '';
       if (emptyEl) emptyEl.hidden = true;
+      paginationBar.hide();
+      return;
+    }
+
+    if (llState.isLoadingList) {
       return;
     }
 
     ws()?.renderSubjectProgressBar?.('ll-browse-progress-bar', {
-      total: items.length,
-      completed: items.filter((it) => it.isCompleted).length,
+      total: filteredTotal,
+      completed: filteredCompleted,
     });
 
     if (emptyEl) emptyEl.hidden = items.length > 0;
     if (items.length === 0) {
+      container.classList.remove('ft-items-entering');
       container.innerHTML = '';
+      renderBrowsePagination();
       return;
     }
+
+    const shouldAnimate = Boolean(llState.animateNextRender);
+    llState.animateNextRender = false;
+    container.classList.remove('ft-items-entering');
 
     if (llState.viewMode === 'table') {
       container.innerHTML = renderCompactTableHtml(items);
-      return;
+    } else {
+      container.innerHTML = `<div class="ll-cards-grid">${items
+        .map((item, idx) => renderItemCardHtml(item, idx))
+        .join('')}</div>`;
     }
 
-    container.innerHTML = `<div class="ll-cards-grid">${items
-      .map((item) => renderItemCardHtml(item))
-      .join('')}</div>`;
+    if (shouldAnimate) {
+      P.triggerEntrance(container);
+    }
+
+    renderBrowsePagination();
   }
 
-  function renderExampleBlock(ex, itemId, showNote) {
+  function renderExampleBlock(ex, item, index = 0, showNote = true) {
+    const itemId = typeof item === 'object' ? item?.id : item;
+    const expr = typeof item === 'object' ? item?.expression : '';
+    const spoken = typeof item === 'object' ? item?.spokenForm : '';
+    const boxTypeClass = index === 0 ? 'll-box-context' : 'll-box-example';
+    const prefixLabel = index === 0 ? 'In context' : 'Example';
+    const ctxText = ex.speakerContext ? `${prefixLabel} · ${ex.speakerContext}` : prefixLabel;
+
     return `
-      <div class="ll-example-item">
-        <div class="ll-example-head">
-          <span class="ll-example-ctx" dir="ltr">${escapeHtml(ex.speakerContext || 'Everyday Spoken')}</span>
-          <button type="button" class="lex-mini-btn" data-ll-speak="${escapeHtml(ex.sentence)}" title="Listen to example">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+      <div class="ll-card-box ${boxTypeClass}">
+        <div class="ll-box-head">
+          <span class="ll-sense-label" dir="ltr">${escapeHtml(ctxText)}</span>
+          <button type="button" class="ll-mini-speak-btn" data-ll-speak="${escapeHtml(ex.sentence)}" title="Listen to example" aria-label="Listen to example">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
             <span>Listen</span>
           </button>
         </div>
-        <div class="ll-example-sentence" dir="ltr">“${tokenizeExampleSentence(ex.sentence, itemId)}”</div>
-        ${showNote && ex.explanation ? `<div class="ll-example-note">${escapeHtml(ex.explanation)}</div>` : ''}
+        <blockquote class="ll-context-quote" dir="ltr">“${tokenizeExampleSentence(ex.sentence, itemId, expr, spoken)}”</blockquote>
+        ${showNote && ex.explanation ? `<p class="ll-example-note">${escapeHtml(ex.explanation)}</p>` : ''}
       </div>
     `;
   }
 
-  function renderItemCardHtml(item) {
+  function renderItemHeaderHtml(item, { sequenceNumber, isDone, isMasked, isSavedToVocab }) {
+    const showRegister = isDistinctLabel(item.register, item.categoryLabel);
+    const showSpoken = isDistinctLabel(item.spokenForm, item.expression);
+    const catTone = getCategoryTone(item.categoryId);
+    const goalLang = String(item.targetLanguage || 'ar').toLowerCase();
+    const isRtl = ['ar', 'fa', 'he', 'ur'].includes(goalLang);
+
+    const copyBtn = window.FlaptapCopy
+      ? window.FlaptapCopy.buttonHtml(item.expression, {
+          className: 'icon-action icon-action--sm ll-util-btn',
+          label: `Copy ${item.expression}`,
+        })
+      : '';
+
+    return `
+      <div class="ll-item-head">
+        <span class="ll-item-index ltr-num" title="Item ${sequenceNumber || 1}" aria-label="Item ${sequenceNumber || 1}">
+          <span class="ll-index-hash">#</span>${sequenceNumber || '•'}
+        </span>
+
+        <div class="ll-item-heading">
+          <div class="ll-item-line-1">
+            <button type="button" class="ll-expr-title-btn" data-ll-open-study="${escapeHtml(item.id)}" title="Open item study page" aria-label="Study ${escapeHtml(item.expression)}">
+              <h3 class="ll-expr-title" dir="ltr"><span class="ll-term-mark"><span class="ll-term-text">${renderSlotizedText(item.expression)}</span></span></h3>
+            </button>
+            ${item.ipa ? `<span class="ll-expr-ipa ltr-num" dir="ltr">${escapeHtml(item.ipa)}</span>` : ''}
+            <span class="ll-badge is-category" data-cat-tone="${escapeHtml(catTone)}">${escapeHtml(item.categoryLabel)}</span>
+            ${item.level ? `<span class="ll-badge is-level ltr-num">${escapeHtml(item.level)}</span>` : ''}
+            ${showRegister ? `<span class="ll-badge is-register">${escapeHtml(item.register)}</span>` : ''}
+            ${showSpoken ? `<span class="ll-badge is-spoken" dir="ltr"><span class="ll-meta-label">Spoken</span> <strong>${escapeHtml(item.spokenForm)}</strong></span>` : ''}
+            ${isDone ? '<span class="ll-item-done-tag">Studied</span>' : ''}
+          </div>
+
+          ${
+            item.localizedMeaning
+              ? `<div class="ll-item-line-2${isMasked ? ' is-masked' : ''}"${
+                  isMasked
+                    ? ` data-ll-reveal="${escapeHtml(item.id)}" role="button" tabindex="0" aria-label="Reveal translation for ${escapeHtml(item.expression)}"`
+                    : ''
+                }>
+                  <p class="ll-head-translation" dir="${isRtl ? 'rtl' : 'ltr'}" lang="${escapeHtml(goalLang)}">${renderSlotizedText(item.localizedMeaning)}</p>
+                  ${isMasked ? '<span class="ll-recall-inline-hint">Click to reveal</span>' : ''}
+                </div>`
+              : ''
+          }
+        </div>
+
+        <div class="ll-item-actions">
+          <div class="ll-action-utils">
+            <button type="button" class="icon-action icon-action--sm ll-util-btn" data-ll-speak="${escapeHtml(getSpeakableText(item))}" title="Pronounce (TTS)" aria-label="Pronounce ${escapeHtml(item.expression)}">
+              ${icon('volume-2')}
+            </button>
+            ${copyBtn}
+            <button type="button" class="icon-action icon-action--sm ll-util-btn${item.isFavorite ? ' is-favorite' : ''}" data-ll-toggle-fav="${escapeHtml(item.id)}" title="${item.isFavorite ? 'Favorited' : 'Favorite'}" aria-label="Toggle favorite">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="${item.isFavorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            </button>
+            <button type="button" class="icon-action icon-action--sm ll-util-btn${isSavedToVocab ? ' is-saved' : ''}" data-ll-save-vocab="${escapeHtml(item.id)}" title="${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}" aria-label="${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}">
+              ${icon(isSavedToVocab ? 'bookmark-check' : 'bookmark-plus')}
+            </button>
+            <button type="button" class="icon-action icon-action--sm ll-util-btn" data-ll-open-study="${escapeHtml(item.id)}" title="Open study page" aria-label="Open study page for ${escapeHtml(item.expression)}">
+              ${icon('arrow-up-right')}
+            </button>
+            <button type="button" class="icon-action icon-action--sm ll-util-btn is-delete" data-ll-delete-item="${escapeHtml(item.id)}" title="Delete expression" aria-label="Delete ${escapeHtml(item.expression)}">
+              ${icon('trash')}
+            </button>
+          </div>
+          <span class="ll-action-divider" aria-hidden="true"></span>
+          ${renderCheckButton(isDone, item.id)}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderItemBodyBoxesHtml(item, isMasked, { compact = false } = {}) {
+    const examples = (Array.isArray(item.examples) ? item.examples : []).slice(0, 2);
+    const patternHtml = renderPatternGuideHtml(item);
+
+    // Row 1: Separate boxes for In Context + Example
+    const row1Boxes = examples.map((ex, idx) => renderExampleBlock(ex, item, idx, !compact));
+
+    // Row 2: Meaning + Usage (+ Spoken tip in full list view)
+    const meaningBox = `
+      <div class="ll-card-box ll-box-meaning ll-meaning-block${isMasked ? ' is-masked' : ''}"${
+        isMasked
+          ? ` data-ll-reveal="${escapeHtml(item.id)}" role="button" tabindex="0" aria-label="Reveal meaning for ${escapeHtml(item.expression)}"`
+          : ''
+      }>
+        ${
+          isMasked
+            ? `<button type="button" class="ll-recall-veil ll-recall-reveal-btn" data-ll-reveal="${escapeHtml(item.id)}"><span>Click to reveal meaning</span></button>`
+            : ''
+        }
+        <span class="ll-sense-label">Meaning</span>
+        <div class="ll-meaning-body">
+          <p class="ll-core-meaning">${escapeHtml(item.coreMeaning)}</p>
+          ${
+            item.textbookEquivalent
+              ? `<p class="ll-general-sense"><span class="ll-inline-label">Instead of</span><span class="ll-textbook-inline">${escapeHtml(item.textbookEquivalent)}</span></p>`
+              : ''
+          }
+        </div>
+      </div>
+    `;
+
+    const usageCopy = item.nativeContext || item.mistakesToAvoid || (!compact ? '' : item.phoneticBreakdown) || '';
+    const usageBox =
+      patternHtml || usageCopy
+        ? `<div class="ll-card-box ll-box-usage">
+             <span class="ll-sense-label">Usage</span>
+             ${patternHtml}
+             ${usageCopy ? `<p class="ll-note-copy">${escapeHtml(usageCopy)}</p>` : ''}
+           </div>`
+        : '';
+
+    const spokenBox =
+      !compact && item.phoneticBreakdown
+        ? `<div class="ll-card-box ll-box-spoken">
+             <span class="ll-sense-label">Spoken tip</span>
+             <p class="ll-note-copy">${escapeHtml(item.phoneticBreakdown)}</p>
+           </div>`
+        : '';
+
+    const row2Boxes = [meaningBox, usageBox, spokenBox].filter(Boolean);
+
+    return `
+      <div class="ll-item-body">
+        ${
+          row1Boxes.length
+            ? `<div class="ll-box-row ll-row-quotes" data-cols="${compact ? 1 : row1Boxes.length}">${row1Boxes.join('')}</div>`
+            : ''
+        }
+        ${
+          row2Boxes.length
+            ? `<div class="ll-box-row ll-row-insights" data-cols="${compact ? 1 : row2Boxes.length}">${row2Boxes.join('')}</div>`
+            : ''
+        }
+      </div>
+    `;
+  }
+
+  function renderItemCardHtml(item, idx = 0) {
     const isDone = Boolean(item.isCompleted);
     const isMasked = Boolean(llState.recallMaskMode && !llState.revealedCardIds.has(item.id));
     const isJustGenerated = llState.justGeneratedIds.has(item.id);
     const isSavedToVocab = Boolean(
       ws()?.isVocabularySaved && ws()?.isVocabularySaved(item.expression),
     );
-    const showRegister = isDistinctLabel(item.register, item.categoryLabel);
-    const showSpoken = isDistinctLabel(item.spokenForm, item.expression);
-    const cardExamples = (Array.isArray(item.examples) ? item.examples : []).slice(0, 2);
     const sequenceNumber = Number(item.sequenceNumber) > 0 ? Number(item.sequenceNumber) : 0;
+    const catTone = getCategoryTone(item.categoryId);
 
     return `
-      <article class="ll-card${isDone ? ' is-item-completed' : ''}${isJustGenerated ? ' is-just-generated' : ''}" data-ll-card-id="${escapeHtml(item.id)}">
-        <div class="ll-card-top">
-          <div class="ll-card-lead">
-            ${sequenceNumber ? `<span class="ll-item-index" title="Item ${sequenceNumber}" aria-label="Item ${sequenceNumber}">${sequenceNumber}</span>` : ''}
-            <div class="ll-card-badges">
-              <span class="ll-badge is-category">${escapeHtml(item.categoryLabel)}</span>
-              ${showRegister ? `<span class="ll-badge is-register">${escapeHtml(item.register)}</span>` : ''}
-            </div>
-          </div>
-          <div class="ll-card-top-actions">
-            ${renderCheckButton(isDone, item.id)}
-            ${window.FlaptapCopy ? window.FlaptapCopy.buttonHtml(item.expression, { className: 'll-icon-action' }) : ''}
-            <button type="button" class="ll-icon-action" data-ll-speak="${escapeHtml(getSpeakableText(item))}" title="Pronounce expression" aria-label="Pronounce ${escapeHtml(item.expression)}">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
-            </button>
-            <button type="button" class="ll-icon-action ${item.isFavorite ? 'is-favorite' : ''}" data-ll-toggle-fav="${escapeHtml(item.id)}" title="Toggle favorite" aria-label="Toggle favorite">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="${item.isFavorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.9"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-            </button>
-            <button type="button" class="ll-icon-action is-delete" data-ll-delete-item="${escapeHtml(item.id)}" title="Delete expression" aria-label="Delete ${escapeHtml(item.expression)}">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-            </button>
-          </div>
-        </div>
-
-        <div class="ll-expr-head">
-          <button type="button" class="ll-expr-title-btn" data-ll-open-study="${escapeHtml(item.id)}">
-            <h3 class="ll-expr-title" dir="ltr">${renderSlotizedText(item.expression)}</h3>
-          </button>
-          ${
-            item.ipa || showSpoken
-              ? `<div class="ll-expr-meta-line" dir="ltr">
-                  ${item.ipa ? `<span class="ll-expr-ipa ltr-num">${escapeHtml(item.ipa)}</span>` : ''}
-                  ${showSpoken ? `<span class="ll-spoken-inline">Spoken: <strong>${escapeHtml(item.spokenForm)}</strong></span>` : ''}
-                </div>`
-              : ''
-          }
-        </div>
-
-        ${renderPatternGuideHtml(item)}
-
-        <div class="ll-meaning-block ${isMasked ? 'is-masked' : ''}">
-          <div class="ll-meaning-body">
-            <p class="ll-core-meaning">${escapeHtml(item.coreMeaning)}</p>
-            ${
-              item.localizedMeaning
-                ? `<p class="ll-localized-meaning" dir="auto">${renderSlotizedText(item.localizedMeaning)}</p>`
-                : ''
-            }
-          </div>
-          ${
-            isMasked
-              ? `<button type="button" class="ll-recall-reveal-btn" data-ll-reveal="${escapeHtml(item.id)}">Reveal Meaning</button>`
-              : ''
-          }
-        </div>
-
-        ${
-          cardExamples.length
-            ? `<div class="ll-examples-list">${cardExamples
-                .map((ex) => renderExampleBlock(ex, item.id, false))
-                .join('')}</div>`
-            : ''
-        }
-
+      <article class="ll-card ll-item-surface ft-item-surface${isDone ? ' is-item-completed' : ''}${isJustGenerated ? ' is-just-generated' : ''}" data-ll-card-id="${escapeHtml(item.id)}" data-cat-tone="${escapeHtml(catTone)}" style="--ft-stagger: ${Math.min(idx, 7)}">
+        ${renderItemHeaderHtml(item, { sequenceNumber, isDone, isMasked, isSavedToVocab })}
+        ${renderItemBodyBoxesHtml(item, isMasked, { compact: true })}
         <div class="ll-card-footer">
-          <button type="button" class="lex-mini-btn ${isSavedToVocab ? 'is-saved' : ''}" data-ll-save-vocab="${escapeHtml(item.id)}" title="${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}" aria-label="${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}">
-            ${icon(isSavedToVocab ? 'bookmark-check' : 'bookmark-plus')}
-            <span>${isSavedToVocab ? 'In Flashcards' : 'Flashcards'}</span>
-          </button>
-          <button type="button" class="ll-study-link" data-ll-open-study="${escapeHtml(item.id)}" title="Study details" aria-label="Study details">
-            <span>Study Details</span>
+          <button type="button" class="btn-secondary btn-sm ll-card-open-btn" data-ll-open-study="${escapeHtml(item.id)}" title="Open full item study page" aria-label="Study ${escapeHtml(item.expression)}">
+            <span>${isDone ? 'Review Item' : 'Study Item'}</span>
             ${icon('arrow-up-right')}
           </button>
         </div>
@@ -1326,94 +1766,28 @@
     return `
       <div class="ll-table-wrap">
         <table class="ll-table">
-          <thead>
+          <thead class="visually-hidden">
             <tr>
-              <th class="ll-col-expression">Expression &amp; natural meaning</th>
-              <th class="ll-col-examples">Where &amp; when you'll use it</th>
-              <th class="ll-col-actions" aria-label="Row actions"></th>
+              <th class="ll-col-expression">Expression, meaning &amp; examples</th>
             </tr>
           </thead>
           <tbody>
             ${items
-              .map((item) => {
-                const examples = (Array.isArray(item.examples) ? item.examples : []).slice(0, 2);
+              .map((item, idx) => {
                 const isDone = Boolean(item.isCompleted);
-                const showSpoken = isDistinctLabel(item.spokenForm, item.expression);
                 const isMasked = Boolean(llState.recallMaskMode && !llState.revealedCardIds.has(item.id));
+                const isJustGenerated = llState.justGeneratedIds.has(item.id);
                 const isSavedToVocab = Boolean(
                   ws()?.isVocabularySaved && ws().isVocabularySaved(item.expression),
                 );
                 const sequenceNumber = Number(item.sequenceNumber) > 0 ? Number(item.sequenceNumber) : 0;
-                const goalLang = String(item.targetLanguage || 'ar').toLowerCase();
-                const isRtl = ['ar', 'fa', 'he', 'ur'].includes(goalLang);
-                const copyBtn = window.FlaptapCopy
-                  ? window.FlaptapCopy.buttonHtml(item.expression, { className: 'll-row-icon' })
-                  : '';
+                const catTone = getCategoryTone(item.categoryId);
+
                 return `
-                  <tr class="${isDone ? 'is-item-completed' : ''}" data-ll-row-id="${escapeHtml(item.id)}">
-                    <td class="ll-cell-expression">
-                      <div class="ll-row-primary">
-                        ${sequenceNumber ? `<span class="ll-item-index" title="Item ${sequenceNumber}" aria-label="Item ${sequenceNumber}">${sequenceNumber}</span>` : ''}
-                        ${renderCheckButton(isDone, item.id)}
-                        <div class="ll-row-primary-body">
-                          <div class="ll-expr-line">
-                            <button type="button" class="ll-expr-title-btn" data-ll-open-study="${escapeHtml(item.id)}" title="Open study details" aria-label="Study ${escapeHtml(item.expression)}">
-                              <span class="ll-expr-title" dir="ltr">${renderSlotizedText(item.expression)}</span>
-                            </button>
-                            <div class="ll-expr-inline-tools">
-                              ${copyBtn}
-                              <button type="button" class="ll-row-icon" data-ll-speak="${escapeHtml(getSpeakableText(item))}" title="Listen" aria-label="Listen to ${escapeHtml(item.expression)}">
-                                ${icon('volume-2')}
-                              </button>
-                            </div>
-                          </div>
-                          ${
-                            item.ipa || showSpoken
-                              ? `<div class="ll-expr-meta-line" dir="ltr">
-                                  ${item.ipa ? `<span class="ll-expr-ipa ltr-num">${escapeHtml(item.ipa)}</span>` : ''}
-                                  ${showSpoken ? `<span class="ll-spoken-inline"><span class="ll-meta-label">Spoken</span> <strong>${escapeHtml(item.spokenForm)}</strong></span>` : ''}
-                                </div>`
-                              : ''
-                          }
-                          ${renderPatternGuideHtml(item)}
-                          ${
-                            item.localizedMeaning
-                              ? `<div class="ll-arabic-block ${isMasked ? 'is-masked' : ''}">
-                                  <p class="ll-arabic-text" dir="${isRtl ? 'rtl' : 'ltr'}" lang="${escapeHtml(goalLang)}">${renderSlotizedText(item.localizedMeaning)}</p>
-                                  ${isMasked ? `<button type="button" class="ll-recall-reveal-btn" data-ll-reveal="${escapeHtml(item.id)}">Reveal Meaning</button>` : ''}
-                                </div>`
-                              : ''
-                          }
-                        </div>
-                      </div>
-                    </td>
-                    <td class="ll-cell-examples">
-                      ${
-                        examples.length
-                          ? `<div class="ll-use-list">${examples
-                              .map(
-                                (ex) => `
-                                <div class="ll-use-item">
-                                  <span class="ll-use-when" dir="ltr">${escapeHtml(ex.speakerContext || 'Everyday')}</span>
-                                  <p class="ll-use-quote" dir="ltr">“${tokenizeExampleSentence(ex.sentence, item.id)}”</p>
-                                </div>`,
-                              )
-                              .join('')}</div>`
-                          : '<span class="ll-example-empty" aria-hidden="true">—</span>'
-                      }
-                    </td>
-                    <td class="ll-cell-actions">
-                      <div class="ll-row-actions">
-                        <button type="button" class="ll-row-icon" data-ll-open-study="${escapeHtml(item.id)}" title="Study details" aria-label="Study details">
-                          ${icon('chevron-right')}
-                        </button>
-                        <button type="button" class="ll-row-icon ${isSavedToVocab ? 'is-saved' : ''}" data-ll-save-vocab="${escapeHtml(item.id)}" title="${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}" aria-label="${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}">
-                          ${icon(isSavedToVocab ? 'bookmark-check' : 'bookmark-plus')}
-                        </button>
-                        <button type="button" class="ll-row-icon is-delete" data-ll-delete-item="${escapeHtml(item.id)}" title="Delete expression" aria-label="Delete ${escapeHtml(item.expression)}">
-                          ${icon('x')}
-                        </button>
-                      </div>
+                  <tr class="ll-item-row ll-item-surface ft-item-surface${isDone ? ' is-item-completed' : ''}${isJustGenerated ? ' is-just-generated' : ''}" data-ll-row-id="${escapeHtml(item.id)}" data-cat-tone="${escapeHtml(catTone)}" style="--ft-stagger: ${Math.min(idx, 7)}">
+                    <td class="ll-cell-bento">
+                      ${renderItemHeaderHtml(item, { sequenceNumber, isDone, isMasked, isSavedToVocab })}
+                      ${renderItemBodyBoxesHtml(item, isMasked, { compact: false })}
                     </td>
                   </tr>
                 `;
@@ -1426,7 +1800,7 @@
   }
 
   /* ========================================================================
-     SLIDE-OVER STUDY DETAIL DRAWER
+     ITEM STUDY DETAIL PAGE / SHEET (#ll-study-drawer-backdrop)
      ======================================================================== */
 
   function openStudyDrawer(itemId) {
@@ -1459,6 +1833,7 @@
     const counter = document.getElementById('ll-study-counter');
     const prevBtn = document.getElementById('ll-study-prev-btn');
     const nextBtn = document.getElementById('ll-study-next-btn');
+    const crumbDomain = document.getElementById('ll-study-crumb-domain');
     if (!body) return;
 
     const item = findItemAnywhere(llState.activeStudyItemId);
@@ -1485,7 +1860,15 @@
       ws()?.isVocabularySaved && ws().isVocabularySaved(item.expression),
     );
     const examples = Array.isArray(item.examples) ? item.examples : [];
-    // The expression frame itself is already shown above; only list extra frames.
+    const sequenceNumber = Number(item.sequenceNumber) > 0 ? Number(item.sequenceNumber) : idx + 1;
+    const catTone = getCategoryTone(item.categoryId);
+    const goalLang = String(item.targetLanguage || 'ar').toLowerCase();
+    const isRtl = ['ar', 'fa', 'he', 'ur'].includes(goalLang);
+
+    if (crumbDomain) {
+      crumbDomain.textContent = `${domain?.title || 'Generate Phrases'} · ${item.categoryLabel || 'Expression'}`;
+    }
+
     const patternKey = (value) =>
       String(value || '')
         .replace(/\s+/g, ' ')
@@ -1499,144 +1882,218 @@
     );
 
     const drawerEl = document.querySelector('.ll-study-drawer');
-    if (drawerEl) drawerEl.classList.toggle('is-item-completed', isDone);
+    if (drawerEl) {
+      drawerEl.classList.toggle('is-item-completed', isDone);
+      drawerEl.dataset.guideState = isDone ? 'done' : 'progress';
+    }
+
+    const contrastAndMechanicsRow = [
+      item.textbookEquivalent
+        ? `<div class="ll-card-box ll-box-contrast">
+             <span class="ll-sense-label">${escapeHtml(labels.textbookContrastHeading || 'Textbook vs. Natural Native')}</span>
+             <div class="ll-contrast-strip">
+               <div class="ll-contrast-col">
+                 <span class="ll-contrast-label">Textbook / Literal</span>
+                 <span class="ll-contrast-textbook">${escapeHtml(item.textbookEquivalent)}</span>
+               </div>
+               <div class="ll-contrast-col">
+                 <span class="ll-contrast-label">Natural American</span>
+                 <span class="ll-contrast-native" dir="ltr">${renderSlotizedText(item.expression)}</span>
+               </div>
+             </div>
+           </div>`
+        : '',
+      item.phoneticBreakdown || showSpoken
+        ? `<div class="ll-card-box ll-box-spoken">
+             <span class="ll-sense-label">${escapeHtml(labels.mechanicsHeading || 'Spoken Mechanics & Delivery')}</span>
+             ${showSpoken ? `<p class="ll-spoken-callout" dir="ltr"><span class="ll-inline-label">Spoken reduction</span><strong>${escapeHtml(item.spokenForm)}</strong></p>` : ''}
+             ${item.phoneticBreakdown ? `<p class="ll-note-copy">${escapeHtml(item.phoneticBreakdown)}</p>` : ''}
+           </div>`
+        : '',
+    ].filter(Boolean);
+
+    const nuanceHeadingText = String(labels.nuanceHeading || 'Context & Native Vibe')
+      .replace(/\s*&\s*mistakes to avoid/i, '')
+      .trim();
+
+    const nuanceAndMistakesRow = [
+      item.nativeContext
+        ? `<div class="ll-card-box ll-box-usage">
+             <span class="ll-sense-label">${escapeHtml(nuanceHeadingText || 'Context & Native Vibe')}</span>
+             <p class="ll-note-copy">${escapeHtml(item.nativeContext)}</p>
+           </div>`
+        : '',
+      item.mistakesToAvoid
+        ? `<div class="ll-card-box ll-box-avoid">
+             <span class="ll-sense-label">Mistakes to Avoid</span>
+             <p class="ll-note-copy">${escapeHtml(item.mistakesToAvoid)}</p>
+           </div>`
+        : '',
+    ].filter(Boolean);
+
+    const variationsAndPatternsRow = [
+      item.variations?.length || item.combinations?.length
+        ? `<div class="ll-card-box ll-box-variations">
+             ${
+               item.variations?.length
+                 ? `<div class="ll-chip-section">
+                      <span class="ll-sense-label">${escapeHtml(labels.variationsHeading || 'Variations & Shortcuts')}</span>
+                      <div class="ll-chips-wrap">${item.variations
+                        .map(
+                          (v) =>
+                            `<button type="button" class="ll-chip" data-ll-speak="${escapeHtml(v)}" title="Listen to variation" dir="ltr">${escapeHtml(v)}</button>`,
+                        )
+                        .join('')}</div>
+                    </div>`
+                 : ''
+             }
+             ${
+               item.combinations?.length
+                 ? `<div class="ll-chip-section">
+                      <span class="ll-sense-label">${escapeHtml(labels.combinationsHeading || 'Combinations & Collocations')}</span>
+                      <div class="ll-chips-wrap">${item.combinations
+                        .map(
+                          (c) =>
+                            `<button type="button" class="ll-chip is-combo" data-ll-speak="${escapeHtml(c)}" title="Listen to collocation" dir="ltr">${renderSlotizedText(c)}</button>`,
+                        )
+                        .join('')}</div>
+                    </div>`
+                 : ''
+             }
+           </div>`
+        : '',
+      extraPatterns.length || item.relatedExpressions?.length || getPatternGuide(item)
+        ? `<div class="ll-card-box ll-box-patterns">
+             <span class="ll-sense-label">${escapeHtml(labels.patternsHeading || 'Usage Patterns & Related')}</span>
+             ${renderPatternGuideHtml(item, { stacked: true })}
+             ${
+               extraPatterns.length
+                 ? `<div class="ll-patterns-stack">
+                      ${extraPatterns
+                        .map(
+                          (p) => `
+                          <div class="ll-pattern-item">
+                            <span class="ll-pattern-formula" dir="ltr">${renderSlotizedText(p.pattern)}</span>
+                            ${p.meaning ? `<span class="ll-pattern-meaning">${escapeHtml(p.meaning)}</span>` : ''}
+                            ${p.example ? `<span class="ll-pattern-example" dir="ltr">“${tokenizeExampleSentence(p.example, item.id, item.expression, item.spokenForm)}”</span>` : ''}
+                          </div>`,
+                        )
+                        .join('')}
+                    </div>`
+                 : ''
+             }
+             ${
+               item.relatedExpressions?.length
+                 ? `<div class="ll-chip-section">
+                      <span class="ll-sense-label">Related Native Expressions</span>
+                      <div class="ll-chips-wrap">${item.relatedExpressions
+                        .map(
+                          (r) =>
+                            `<button type="button" class="ll-chip" data-ll-speak="${escapeHtml(r)}" title="Listen" dir="ltr">${escapeHtml(r)}</button>`,
+                        )
+                        .join('')}</div>
+                    </div>`
+                 : ''
+             }
+           </div>`
+        : '',
+    ].filter(Boolean);
 
     body.innerHTML = `
-      <div class="ll-card-badges">
-        <span class="ll-badge is-category">${escapeHtml(item.categoryLabel)}</span>
-        ${showRegister ? `<span class="ll-badge is-register">${escapeHtml(item.register)}</span>` : ''}
-        ${item.tone ? `<span class="ll-badge">${escapeHtml(item.tone)}</span>` : ''}
+      <div class="ll-detail-hero">
+        <div class="ll-study-actions-bar">
+          ${renderCheckButton(isDone, item.id, isDone ? 'Completed' : 'Mark Done')}
+          <button type="button" class="btn-secondary btn-sm" data-ll-speak="${escapeHtml(getSpeakableText(item))}" title="Pronounce" aria-label="Pronounce">
+            ${icon('volume-2')}
+            <span>Pronounce</span>
+          </button>
+          ${window.FlaptapCopy ? window.FlaptapCopy.buttonHtml(item.expression, { className: 'btn-secondary btn-sm' }) : ''}
+          <button type="button" class="btn-secondary btn-sm ${item.isFavorite ? 'is-favorite' : ''}" data-ll-toggle-fav="${escapeHtml(item.id)}" title="${item.isFavorite ? 'Favorited' : 'Favorite'}" aria-label="${item.isFavorite ? 'Favorited' : 'Favorite'}">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="${item.isFavorite ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+            <span>${item.isFavorite ? 'Favorited' : 'Favorite'}</span>
+          </button>
+          <button type="button" class="btn-vox btn-sm ${isSavedToVocab ? 'is-saved' : ''}" data-ll-save-vocab="${escapeHtml(item.id)}" title="${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}" aria-label="${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}">
+            ${icon(isSavedToVocab ? 'bookmark-check' : 'bookmark-plus')}
+            <span>${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}</span>
+          </button>
+          <button type="button" class="btn-secondary btn-sm is-danger-ghost" data-ll-delete-item="${escapeHtml(item.id)}" title="Delete expression" aria-label="Delete expression">
+            ${icon('trash')}
+          </button>
+        </div>
+
+        <div class="ll-detail-title-row">
+          <span class="ll-item-index ll-detail-index ltr-num"><span class="ll-index-hash">#</span>${sequenceNumber}</span>
+          <h2 class="ll-study-title" id="ll-study-title" dir="ltr"><span class="ll-term-text">${renderSlotizedText(item.expression)}</span></h2>
+        </div>
+
+        <div class="ll-card-badges ll-detail-meta">
+          ${item.ipa ? `<span class="ll-expr-ipa ltr-num" dir="ltr">${escapeHtml(item.ipa)}</span>` : ''}
+          <span class="ll-badge is-category" data-cat-tone="${escapeHtml(catTone)}">${escapeHtml(item.categoryLabel)}</span>
+          ${item.level ? `<span class="ll-badge is-level ltr-num">${escapeHtml(item.level)}</span>` : ''}
+          ${showRegister ? `<span class="ll-badge is-register">${escapeHtml(item.register)}</span>` : ''}
+          ${item.tone ? `<span class="ll-badge">${escapeHtml(item.tone)}</span>` : ''}
+          ${showSpoken ? `<span class="ll-badge is-spoken" dir="ltr"><span class="ll-meta-label">${escapeHtml(labels.spokenHeading || 'Spoken')}</span> <strong>${escapeHtml(item.spokenForm)}</strong></span>` : ''}
+          ${item.modelName ? `<span class="ll-badge is-model">${escapeHtml(item.agentName || 'AI')} · ${escapeHtml(item.modelName)}</span>` : ''}
+          ${isDone ? '<span class="ll-item-done-tag">Studied</span>' : ''}
+        </div>
       </div>
 
-      <div class="ll-expr-head">
-        <h2 class="ll-study-title" id="ll-study-title">${renderSlotizedText(item.expression)}</h2>
+      <!-- Takeaway / Core Meaning Callout Banner (Matches Anything to Phrases .aex-summary-banner) -->
+      <div class="ll-summary-banner ll-meaning-block ${isMasked ? 'is-masked' : ''}">
         ${
-          item.ipa || showSpoken
-            ? `<div class="ll-expr-meta-line">
-                ${item.ipa ? `<span class="ll-expr-ipa ltr-num">${escapeHtml(item.ipa)}</span>` : ''}
-                ${showSpoken ? `<span class="ll-spoken-inline">${escapeHtml(labels.spokenHeading || 'Spoken')}: <strong>${escapeHtml(item.spokenForm)}</strong></span>` : ''}
-              </div>`
+          isMasked
+            ? `<button type="button" class="ll-recall-veil ll-recall-reveal-btn" data-ll-reveal="${escapeHtml(item.id)}"><span>Click to reveal meaning</span></button>`
             : ''
         }
-      </div>
-
-      ${renderPatternGuideHtml(item, { stacked: true, onlySlots: true })}
-
-      <div class="ll-study-actions-bar">
-        ${renderCheckButton(isDone, item.id, isDone ? 'Completed' : 'Mark Done')}
-        ${window.FlaptapCopy ? window.FlaptapCopy.buttonHtml(item.expression, { className: 'btn-secondary btn-xs' }) : ''}
-        <button type="button" class="btn-secondary btn-xs" data-ll-speak="${escapeHtml(getSpeakableText(item))}" title="Pronounce" aria-label="Pronounce">${icon('volume-2')}</button>
-        <button type="button" class="btn-secondary btn-xs ${item.isFavorite ? 'is-favorite' : ''}" data-ll-toggle-fav="${escapeHtml(item.id)}" title="${item.isFavorite ? 'Favorited' : 'Favorite'}" aria-label="${item.isFavorite ? 'Favorited' : 'Favorite'}">${icon('star')}</button>
-        <button type="button" class="lex-mini-btn ${isSavedToVocab ? 'is-saved' : ''}" data-ll-save-vocab="${escapeHtml(item.id)}" title="${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}" aria-label="${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}">
-          ${icon(isSavedToVocab ? 'bookmark-check' : 'bookmark-plus')}
-          <span>${isSavedToVocab ? 'In Flashcards' : 'Save to Flashcards'}</span>
-        </button>
-      </div>
-
-      <div class="ll-meaning-block ${isMasked ? 'is-masked' : ''}">
-        <div class="ll-meaning-body">
-          <p class="ll-core-meaning">${escapeHtml(item.coreMeaning)}</p>
-          ${item.localizedMeaning ? `<p class="ll-localized-meaning" dir="auto">${renderSlotizedText(item.localizedMeaning)}</p>` : ''}
+        <div class="ll-summary-head">
+          <span class="ll-summary-kicker">Core Meaning &amp; Takeaway</span>
+          <span class="ll-summary-style">${escapeHtml(item.register || item.categoryLabel || '')}</span>
         </div>
-        ${isMasked ? `<button type="button" class="ll-recall-reveal-btn" data-ll-reveal="${escapeHtml(item.id)}">Reveal Meaning</button>` : ''}
+        <div class="ll-meaning-body">
+          <p class="ll-summary-body ll-core-meaning">${escapeHtml(item.coreMeaning)}</p>
+          ${
+            item.localizedMeaning
+              ? `<p class="ll-localized-meaning" dir="${isRtl ? 'rtl' : 'ltr'}" lang="${escapeHtml(goalLang)}">${renderSlotizedText(item.localizedMeaning)}</p>`
+              : ''
+          }
+        </div>
       </div>
-
-      ${
-        item.textbookEquivalent
-          ? `<div class="ll-contrast-strip">
-              <div class="ll-contrast-col">
-                <span class="ll-contrast-label">${escapeHtml(labels.textbookContrastHeading || 'Textbook / Literal')}</span>
-                <span class="ll-contrast-textbook">${escapeHtml(item.textbookEquivalent)}</span>
-              </div>
-              <div class="ll-contrast-col">
-                <span class="ll-contrast-label">Natural Native</span>
-                <span class="ll-contrast-native">${renderSlotizedText(item.expression)}</span>
-              </div>
-            </div>`
-          : ''
-      }
 
       ${
         examples.length
-          ? `<div class="ll-chip-section">
-              <span class="ll-sub-label">${escapeHtml(labels.examplesHeading || 'Natural Spoken Examples')}</span>
-              <div class="ll-examples-list">
-                ${examples.map((ex) => renderExampleBlock(ex, item.id, true)).join('')}
-              </div>
-            </div>`
+          ? `<div class="ll-box-row ll-row-quotes" data-cols="${Math.min(2, examples.length)}">
+               ${examples.map((ex, exIdx) => renderExampleBlock(ex, item, exIdx, true)).join('')}
+             </div>`
           : ''
       }
 
       ${
-        item.variations?.length
-          ? `<div class="ll-chip-section">
-              <span class="ll-sub-label">${escapeHtml(labels.variationsHeading || 'Variations & Shortcuts')}</span>
-              <div class="ll-chips-wrap">${item.variations.map((v) => `<span class="ll-chip">${escapeHtml(v)}</span>`).join('')}</div>
-            </div>`
+        contrastAndMechanicsRow.length
+          ? `<div class="ll-box-row ll-row-insights" data-cols="${contrastAndMechanicsRow.length}">${contrastAndMechanicsRow.join('')}</div>`
           : ''
       }
 
       ${
-        item.combinations?.length
-          ? `<div class="ll-chip-section">
-              <span class="ll-sub-label">${escapeHtml(labels.combinationsHeading || 'Combinations & Collocations')}</span>
-              <div class="ll-chips-wrap">${item.combinations.map((c) => `<span class="ll-chip is-combo">${escapeHtml(c)}</span>`).join('')}</div>
-            </div>`
+        nuanceAndMistakesRow.length
+          ? `<div class="ll-box-row ll-row-insights" data-cols="${nuanceAndMistakesRow.length}">${nuanceAndMistakesRow.join('')}</div>`
           : ''
       }
 
       ${
-        extraPatterns.length
-          ? `<div class="ll-chip-section">
-              <span class="ll-sub-label">${escapeHtml(labels.patternsHeading || 'Usage Patterns')}</span>
-              ${extraPatterns
-                .map(
-                  (p) => `
-                  <div class="ll-pattern-item">
-                    <span class="ll-pattern-formula">${renderSlotizedText(p.pattern)}</span>
-                    ${p.meaning ? `<span class="ll-pattern-meaning">${escapeHtml(p.meaning)}</span>` : ''}
-                    ${p.example ? `<span class="ll-pattern-example">“${tokenizeExampleSentence(p.example, item.id)}”</span>` : ''}
-                  </div>`,
-                )
-                .join('')}
-            </div>`
+        variationsAndPatternsRow.length
+          ? `<div class="ll-box-row ll-row-insights" data-cols="${variationsAndPatternsRow.length}">${variationsAndPatternsRow.join('')}</div>`
           : ''
       }
 
-      ${
-        item.phoneticBreakdown
-          ? `<div class="ll-detail-callout"><strong>${escapeHtml(labels.mechanicsHeading || 'Spoken Mechanics')}:</strong> ${escapeHtml(item.phoneticBreakdown)}</div>`
-          : ''
-      }
-
-      ${
-        item.nativeContext || item.mistakesToAvoid
-          ? `<div class="ll-detail-callout">
-              ${item.nativeContext ? `<div><strong>${escapeHtml(labels.nuanceHeading || 'Context & Vibe')}:</strong> ${escapeHtml(item.nativeContext)}</div>` : ''}
-              ${item.mistakesToAvoid ? `<div style="margin-top: 6px;"><strong>Avoid:</strong> ${escapeHtml(item.mistakesToAvoid)}</div>` : ''}
-            </div>`
-          : ''
-      }
-
-      ${
-        item.relatedExpressions?.length
-          ? `<div class="ll-chip-section">
-              <span class="ll-sub-label">Related Native Expressions</span>
-              <div class="ll-chips-wrap">${item.relatedExpressions.map((r) => `<span class="ll-chip">${escapeHtml(r)}</span>`).join('')}</div>
-            </div>`
-          : ''
-      }
-
-      <div class="ll-chip-section">
-        <span class="ll-sub-label">Personal Note</span>
+      <div class="ll-card-box ll-box-notes">
+        <span class="ll-sense-label">Personal Memory Note</span>
         <div class="ll-notes-row">
-          <input type="text" class="ll-notes-input" data-ll-note-input="${escapeHtml(item.id)}" value="${escapeHtml(item.userNotes || '')}" placeholder="Add a personal memory cue or note..." />
-          <button type="button" class="icon-action icon-action--sm" data-ll-save-note="${escapeHtml(item.id)}" title="Save note" aria-label="Save note">${icon('check')}</button>
+          <input type="text" class="ll-notes-input" data-ll-note-input="${escapeHtml(item.id)}" value="${escapeHtml(item.userNotes || '')}" placeholder="Add a personal memory cue or example sentence..." />
+          <button type="button" class="btn-vox btn-sm" data-ll-save-note="${escapeHtml(item.id)}" title="Save note" aria-label="Save note">
+            ${icon('check')}
+            <span>Save Note</span>
+          </button>
         </div>
-      </div>
-
-      <div class="ll-study-drawer-footer">
-        <button type="button" class="icon-action icon-action--sm is-danger" data-ll-delete-item="${escapeHtml(item.id)}" title="Delete expression" aria-label="Delete expression">${icon('trash')}</button>
       </div>
     `;
   }
@@ -1679,6 +2136,12 @@
     const syncBtn = ws()?.setCheckButtonState;
 
     document.querySelectorAll(`[data-ll-toggle-complete="${id}"]`).forEach((btn) => {
+      const isPill = btn.classList.contains('item-check-btn--pill');
+      const pillText = isPill ? (checked ? 'Completed' : 'Mark Done') : '';
+      if (global.FlaptapCheck?.setState) {
+        global.FlaptapCheck.setState(btn, checked, { text: pillText, animate: true });
+        return;
+      }
       if (syncBtn) {
         syncBtn(btn, checked);
         return;
@@ -1689,11 +2152,24 @@
 
     document
       .querySelectorAll(`[data-ll-row-id="${id}"], [data-ll-card-id="${id}"]`)
-      .forEach((node) => node.classList.toggle('is-item-completed', checked));
+      .forEach((node) => {
+        node.classList.toggle('is-item-completed', checked);
+        const line1 = node.querySelector('.ll-item-line-1');
+        const existingTag = line1?.querySelector('.ll-item-done-tag');
+        if (checked && line1 && !existingTag) {
+          const tag = document.createElement('span');
+          tag.className = 'll-item-done-tag';
+          tag.textContent = 'Studied';
+          line1.appendChild(tag);
+        } else if (!checked && existingTag) {
+          existingTag.remove();
+        }
+      });
 
     const drawer = document.querySelector('.ll-study-drawer');
     if (drawer && llState.activeStudyItemId === itemId) {
       drawer.classList.toggle('is-item-completed', checked);
+      drawer.dataset.guideState = checked ? 'done' : 'progress';
     }
   }
 
@@ -1714,16 +2190,30 @@
     const pctEl = document.getElementById('ll-stat-progress');
     if (pctEl) pctEl.textContent = `${pct}%`;
 
-    syncSidebarLlBadge(total, getCurrentUser());
+    syncLibraryTopRail(total, completed);
+
+    const items = llState.items || [];
+    const listTotal =
+      llState.hasLoadedOnce && typeof llState.filteredCount === 'number'
+        ? llState.filteredCount
+        : items.length;
+    if (listTotal === 0) return;
+
+    const nextFilteredCompleted = Math.max(
+      0,
+      Math.min(
+        listTotal,
+        (llState.hasLoadedOnce && typeof llState.filteredCompletedCount === 'number'
+          ? llState.filteredCompletedCount
+          : items.filter((it) => it.isCompleted).length) + delta,
+      ),
+    );
+    llState.filteredCompletedCount = nextFilteredCompleted;
 
     const bar = document.getElementById('ll-browse-progress-bar');
     if (!bar) return;
-    const items = llState.items || [];
-    const listTotal = items.length;
-    if (listTotal === 0) return;
-    const listCompleted = items.filter((it) => it.isCompleted).length;
-    const listPct = Math.round((listCompleted / listTotal) * 100);
-    const remaining = Math.max(0, listTotal - listCompleted);
+    const listPct = Math.round((nextFilteredCompleted / listTotal) * 100);
+    const remaining = Math.max(0, listTotal - nextFilteredCompleted);
     const setText = (selector, value) => {
       const node = bar.querySelector(selector);
       if (node) node.textContent = String(value);
@@ -1732,10 +2222,10 @@
     bar.hidden = false;
     bar.classList.toggle('is-all-done', remaining === 0);
     setText('[data-sp-total]', listTotal);
-    setText('[data-sp-completed]', listCompleted);
+    setText('[data-sp-completed]', nextFilteredCompleted);
     setText('[data-sp-remaining]', remaining);
     const track = bar.querySelector('.subject-progress-track');
-    if (track) track.setAttribute('aria-valuenow', String(listCompleted));
+    if (track) track.setAttribute('aria-valuenow', String(nextFilteredCompleted));
     const fill = bar.querySelector('.subject-progress-fill');
     if (fill) fill.style.width = `${listPct}%`;
     const pctNode = bar.querySelector('.subject-progress-pct');
@@ -1756,12 +2246,23 @@
     patchCompletionCounters(checked ? 1 : -1);
   }
 
-  /** A mastery filter can hide the row once its state flips; then re-render. */
+  /** A mastery filter can hide the row once its state flips; then re-render/refetch. */
   function dropRowWhenFilteredOut(itemId) {
     const item = findItemAnywhere(itemId);
     if (!item || matchesBrowseMasteryFilter(item)) return;
     llState.items = llState.items.filter((it) => it.id !== itemId);
+    llState.filteredCount = Math.max(0, (llState.filteredCount || 0) - 1);
+    if (item.isCompleted && llState.browseMastery === 'pending') {
+      llState.filteredCompletedCount = Math.max(0, llState.filteredCompletedCount - 1);
+    }
     if (llState.activeStudyItemId === itemId) closeStudyDrawer();
+    if (llState.filteredCount > llState.items.length || (llState.items.length === 0 && llState.page > 1)) {
+      if (llState.items.length === 0 && llState.page > 1) {
+        llState.page = Math.max(1, llState.page - 1);
+      }
+      void loadLibraryItems({ showSkeleton: false, animate: false });
+      return;
+    }
     renderBrowseStats();
     renderBrowseItems();
   }
@@ -1832,7 +2333,7 @@
           generalTranslation: item.textbookEquivalent ? `Contrast: ${item.textbookEquivalent}` : '',
           translation: item.localizedMeaning || '',
           contextSentence: item.examples?.[0]?.sentence || '',
-          lessonTitle: `${getActiveDomain()?.title || 'Learning Library'} · ${item.categoryLabel}`,
+          lessonTitle: `${getActiveDomain()?.title || 'Generate Phrases'} · ${item.categoryLabel}`,
         }),
       });
       if (ws()?.refreshVocabulary) {
@@ -1842,7 +2343,9 @@
         .querySelectorAll(`[data-ll-save-vocab="${CSS.escape(item.id)}"]`)
         .forEach((btn) => {
           btn.classList.add('is-saved');
-          btn.innerHTML = btn.classList.contains('ll-row-icon')
+          const iconOnly =
+            btn.classList.contains('ll-row-icon') || btn.classList.contains('ll-util-btn');
+          btn.innerHTML = iconOnly
             ? icon('bookmark-check')
             : `${icon('bookmark-check')}<span>In Flashcards</span>`;
           btn.title = 'In Flashcards';
@@ -1896,7 +2399,7 @@
               generalTranslation: lookup.generalTranslation || '',
               translation: lookup.translation || '',
               contextSentence: lookup.contextSentence || '',
-              lessonTitle: getActiveDomain()?.title || 'Learning Library',
+              lessonTitle: getActiveDomain()?.title || 'Generate Phrases',
             }),
           });
           if (ws()?.refreshVocabulary) await ws().refreshVocabulary();
@@ -1925,7 +2428,7 @@
         JSON.stringify(data, null, 2),
         'application/json;charset=utf-8',
       );
-      showToast('Learning Library exported (.json)');
+      showToast('Generate Phrases exported (.json)');
     } catch (err) {
       showToast(err?.message || 'Export failed.');
     }
@@ -1940,7 +2443,7 @@
     }
 
     const lines = [
-      `# Flaptap Learning Library — ${domain?.title || llState.activeDomainId}`,
+      `# Flaptap Generate Phrases — ${domain?.title || llState.activeDomainId}`,
       `Exported: ${new Date().toISOString()} · ${items.length} items`,
       '',
     ];
@@ -1985,7 +2488,7 @@
       lines.join('\n'),
       'text/markdown;charset=utf-8',
     );
-    showToast('Learning Library exported (.md)');
+    showToast('Generate Phrases exported (.md)');
   }
 
   /* ========================================================================
@@ -2002,6 +2505,18 @@
       const prev = Boolean(item.isCompleted);
       const next = !prev;
 
+      const prevTotal = Number(llState.stats?.totalItems) || 0;
+      const prevCompleted = Number(llState.stats?.completedCount) || 0;
+      const prevFilteredTotal =
+        llState.hasLoadedOnce && typeof llState.filteredCount === 'number'
+          ? llState.filteredCount
+          : (llState.items || []).length;
+      const prevFilteredCompleted =
+        llState.hasLoadedOnce && typeof llState.filteredCompletedCount === 'number'
+          ? llState.filteredCompletedCount
+          : (llState.items || []).filter((it) => it.isCompleted).length;
+      const prevBrowseMastery = llState.browseMastery;
+
       applyCompletionState(id, next);
 
       const { token, run } = requestCompletionPatch(id, next);
@@ -2012,6 +2527,40 @@
           replaceItemInMemory(res.item);
           patchCompletionDom(res.item.id, Boolean(res.item.isCompleted));
         }
+
+        if (next === true) {
+          const nextTotal = Number(llState.stats?.totalItems) || prevTotal;
+          const nextCompleted = Number(llState.stats?.completedCount) || 0;
+          const justCompletedAll =
+            nextTotal > 0 && prevCompleted < nextTotal && nextCompleted >= nextTotal;
+          const justCompletedFiltered =
+            prevBrowseMastery === 'pending'
+              ? prevFilteredTotal === 1
+              : prevFilteredTotal > 0 &&
+                prevFilteredCompleted < prevFilteredTotal &&
+                (Number(llState.filteredCompletedCount) || 0) >= prevFilteredTotal;
+
+          if (justCompletedAll) {
+            global.FlaptapCelebrate?.trigger?.({
+              title: 'Generate Phrases Completed!',
+              subtitle: `All ${nextTotal} expression${nextTotal === 1 ? '' : 's'} mastered`,
+              originEl: completeBtn,
+            });
+          } else if (justCompletedFiltered) {
+            global.FlaptapCelebrate?.trigger?.({
+              title:
+                prevBrowseMastery === 'pending'
+                  ? 'All Remaining Studied!'
+                  : 'Collection Completed!',
+              subtitle:
+                prevBrowseMastery === 'pending'
+                  ? 'Zero unstudied expressions left in this view'
+                  : `All ${prevFilteredTotal} expression${prevFilteredTotal === 1 ? '' : 's'} in this view studied`,
+              originEl: completeBtn,
+            });
+          }
+        }
+
         dropRowWhenFilteredOut(id);
       } catch (err) {
         if (!isLatestCompletionWrite(id, token)) return true;
@@ -2081,22 +2630,106 @@
     if (deleteBtn) {
       e.stopPropagation();
       const id = deleteBtn.getAttribute('data-ll-delete-item');
-      try {
-        await apiFetch(`/api/learning-library/items/${encodeURIComponent(id)}`, {
-          method: 'DELETE',
-        });
+      const targetItem = llState.items.find((entry) => entry.id === id);
+      const exprLabel = String(targetItem?.expression || 'Expression').trim();
+
+      const snapshot = {
+        items: [...llState.items],
+        stats: { ...(llState.stats || {}) },
+        filteredCount: llState.filteredCount,
+        filteredCompletedCount: llState.filteredCompletedCount,
+        page: llState.page,
+        totalPages: llState.totalPages,
+        activeStudyItemId: llState.activeStudyItemId,
+      };
+
+      const renderCurrentSnapshot = () => {
+        renderBrowseStats();
+        renderBrowseFilters();
+        renderBrowseItems();
+        renderBrowsePagination();
+      };
+
+      const applyOptimisticDelete = () => {
+        llState.items = llState.items.filter((entry) => entry.id !== id);
+        if (llState.stats) {
+          llState.stats.totalItems = Math.max(0, (Number(llState.stats.totalItems) || 0) - 1);
+          if (targetItem?.isCompleted) {
+            llState.stats.completedCount = Math.max(0, (Number(llState.stats.completedCount) || 0) - 1);
+          }
+          if (targetItem?.isFavorite) {
+            llState.stats.favoritesCount = Math.max(0, (Number(llState.stats.favoritesCount) || 0) - 1);
+          }
+        }
+        llState.filteredCount = Math.max(0, (Number(llState.filteredCount) || 0) - 1);
+        if (targetItem?.isCompleted) {
+          llState.filteredCompletedCount = Math.max(0, (Number(llState.filteredCompletedCount) || 0) - 1);
+        }
         if (llState.activeStudyItemId === id) {
           closeStudyDrawer();
         }
-        await loadLibraryItems();
-        showToast('Expression removed from Learning Library');
-      } catch (err) {
-        showToast(err?.message || 'Delete failed.');
+        renderCurrentSnapshot();
+      };
+
+      const restoreSnapshot = () => {
+        llState.items = snapshot.items;
+        llState.stats = snapshot.stats;
+        llState.filteredCount = snapshot.filteredCount;
+        llState.filteredCompletedCount = snapshot.filteredCompletedCount;
+        llState.page = snapshot.page;
+        llState.totalPages = snapshot.totalPages;
+        renderCurrentSnapshot();
+      };
+
+      const commitDelete = async ({ keepalive = false } = {}) => {
+        await apiFetch(`/api/learning-library/items/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          keepalive,
+        });
+        if (!keepalive) {
+          if (llState.items.length === 0 && llState.page > 1) {
+            llState.page = Math.max(1, llState.page - 1);
+            syncLibraryRoute(true);
+          }
+          await loadLibraryItems({ showSkeleton: false, animate: false });
+        }
+      };
+
+      if (global.FlaptapConfirm?.confirmAndUndo) {
+        await global.FlaptapConfirm.confirmAndUndo({
+          title: 'Remove expression?',
+          message: 'This expression will be removed from Generate Phrases.',
+          detail: exprLabel,
+          confirmLabel: 'Remove',
+          undoMessage: `Removed "${exprLabel}"`,
+          restoredMessage: `Restored "${exprLabel}"`,
+          onApply: applyOptimisticDelete,
+          onUndo: restoreSnapshot,
+          onCommit: commitDelete,
+        });
       }
       return true;
     }
 
     return false;
+  }
+
+  function bindLibrarySelectionLookup(container) {
+    if (!container || !global.FlaptapWordLookup?.bindSelectionLookup) return;
+    global.FlaptapWordLookup.bindSelectionLookup(container, {
+      maxLength: 320,
+      onSelect: (text, meta) => {
+        const node = meta?.range?.startContainer;
+        const element = node?.nodeType === 1 ? node : node?.parentElement;
+        const word = element?.closest('.clickable-word');
+        handleOpenWordLookup(
+          text,
+          word?.dataset.contextSentence || text,
+          word?.dataset.llItemId || llState.activeStudyItemId || '',
+          meta?.sourceEl || null,
+        );
+      },
+    });
   }
 
   /* ========================================================================
@@ -2132,19 +2765,17 @@
       llState.genRegister = '';
       llState.browseCategoryId = 'all';
       llState.browseRegister = 'all';
+      llState.page = 1;
       llState.justGeneratedIds.clear();
       const banner = document.getElementById('ll-latest-batch-banner');
       if (banner) banner.hidden = true;
 
-      router()?.updateSubroute('learning-library', {
-        subview: llState.activeView,
-        domainId: llState.activeDomainId,
-      });
+      syncLibraryRoute(true);
 
       renderDomainSwitcher();
       renderDomainContext();
       if (getCurrentUser()) {
-        await loadLibraryItems();
+        await loadLibraryItems({ showSkeleton: true, animate: true });
       }
     });
 
@@ -2208,30 +2839,46 @@
     document.querySelectorAll('[data-ll-mastery-filter]').forEach((pill) => {
       pill.addEventListener('click', () => {
         llState.browseMastery = pill.getAttribute('data-ll-mastery-filter') || 'all';
+        llState.page = 1;
+        syncLibraryRoute(true);
         syncFilterPillsUi();
-        loadLibraryItems();
+        loadLibraryItems({ showSkeleton: true, animate: true });
       });
     });
 
     document.getElementById('ll-browse-category-select')?.addEventListener('change', (e) => {
       llState.browseCategoryId = e.target.value || 'all';
-      loadLibraryItems();
+      llState.page = 1;
+      syncLibraryRoute(true);
+      loadLibraryItems({ showSkeleton: true, animate: true });
     });
 
     document.getElementById('ll-browse-register-select')?.addEventListener('change', (e) => {
       llState.browseRegister = e.target.value || 'all';
-      loadLibraryItems();
+      llState.page = 1;
+      syncLibraryRoute(true);
+      loadLibraryItems({ showSkeleton: true, animate: true });
     });
 
     document.getElementById('ll-browse-sort-select')?.addEventListener('change', (e) => {
       llState.browseSort = e.target.value || 'newest';
-      loadLibraryItems();
+      llState.page = 1;
+      syncLibraryRoute(true);
+      loadLibraryItems({ showSkeleton: true, animate: true });
     });
 
     document.getElementById('ll-browse-search-input')?.addEventListener('input', (e) => {
       llState.browseSearch = e.target.value || '';
+      llState.page = 1;
+      syncLibraryRoute(true);
       clearTimeout(searchDebounceTimer);
-      searchDebounceTimer = setTimeout(() => loadLibraryItems(), 180);
+      searchDebounceTimer = setTimeout(() => loadLibraryItems({ showSkeleton: true, animate: true }), 180);
+    });
+
+    // Pagination Controls (delegated to shared FlaptapPagination)
+    paginationBar.bind({
+      onPageChange: goToPage,
+      onPageSizeChange: setPageSize,
     });
 
     // Recall Mode & View Mode
@@ -2239,26 +2886,45 @@
       llState.recallMaskMode = !llState.recallMaskMode;
       llState.revealedCardIds.clear();
       e.currentTarget.classList.toggle('active', llState.recallMaskMode);
+      e.currentTarget.setAttribute('aria-pressed', llState.recallMaskMode ? 'true' : 'false');
       renderBrowseItems();
       if (llState.activeStudyItemId) renderStudyDrawer();
     });
 
+    document.getElementById('ll-shell-brand-btn')?.addEventListener('click', () => {
+      scrollRestorer.clear();
+      switchView('generate');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
     document.getElementById('ll-view-cards-btn')?.addEventListener('click', () => {
+      if (llState.viewMode === 'cards') return;
       llState.viewMode = 'cards';
+      llState.animateNextRender = true;
       try {
         localStorage.setItem('flaptap_ll_view_mode', 'cards');
       } catch {}
       syncViewModeButtons();
-      renderBrowseItems();
+      if (llState.isLoadingList) {
+        showSkeletonLoadingState();
+      } else {
+        renderBrowseItems();
+      }
     });
 
     document.getElementById('ll-view-table-btn')?.addEventListener('click', () => {
+      if (llState.viewMode === 'table') return;
       llState.viewMode = 'table';
+      llState.animateNextRender = true;
       try {
         localStorage.setItem('flaptap_ll_view_mode', 'table');
       } catch {}
       syncViewModeButtons();
-      renderBrowseItems();
+      if (llState.isLoadingList) {
+        showSkeletonLoadingState();
+      } else {
+        renderBrowseItems();
+      }
     });
 
     // More Menu (Export & Clear)
@@ -2290,29 +2956,71 @@
     document.getElementById('ll-clear-domain-btn')?.addEventListener('click', async () => {
       closeMoreMenu();
       const domain = getActiveDomain();
-      if (!window.confirm(`Permanently delete all saved "${domain?.title || 'Learning Library'}" expressions?`)) {
-        return;
-      }
-      try {
-        const res = await apiFetch('/api/learning-library/clear', {
-          method: 'POST',
-          body: JSON.stringify({ domainId: llState.activeDomainId }),
-        });
-        llState.justGeneratedIds.clear();
-        const banner = document.getElementById('ll-latest-batch-banner');
-        if (banner) banner.hidden = true;
-        closeStudyDrawer();
-        await loadLibraryItems();
-        showToast(`Cleared ${res.removedCount || 0} items from ${domain?.title || 'domain'}`);
-      } catch (err) {
-        showToast(err?.message || 'Could not clear library.');
-      }
+      const domainId = llState.activeDomainId;
+      const domainTitle = domain?.title || 'Generate Phrases';
+      if (!global.FlaptapConfirm?.confirmAndUndo) return;
+
+      const snapshot = {
+        items: [...llState.items],
+        stats: { ...(llState.stats || {}) },
+        filteredCount: llState.filteredCount,
+        filteredCompletedCount: llState.filteredCompletedCount,
+        page: llState.page,
+        totalPages: llState.totalPages,
+      };
+      const renderSnapshot = () => {
+        renderBrowseStats();
+        renderBrowseFilters();
+        renderBrowseItems();
+        renderBrowsePagination();
+      };
+
+      await global.FlaptapConfirm.confirmAndUndo({
+        title: `Clear ${domainTitle}?`,
+        message: `All saved expressions in "${domainTitle}" will be removed.`,
+        detail: `${Number(snapshot.stats?.totalItems || snapshot.items.length)} saved item(s)`,
+        confirmLabel: 'Clear All',
+        undoMessage: `Cleared ${domainTitle} expressions`,
+        restoredMessage: `Restored ${domainTitle} expressions`,
+        onApply: () => {
+          llState.items = [];
+          llState.stats = { ...(llState.stats || {}), totalItems: 0, completedCount: 0, favoritesCount: 0 };
+          llState.filteredCount = 0;
+          llState.filteredCompletedCount = 0;
+          llState.page = 1;
+          llState.totalPages = 1;
+          llState.justGeneratedIds.clear();
+          const banner = document.getElementById('ll-latest-batch-banner');
+          if (banner) banner.hidden = true;
+          closeStudyDrawer();
+          renderSnapshot();
+        },
+        onUndo: () => {
+          llState.items = snapshot.items;
+          llState.stats = snapshot.stats;
+          llState.filteredCount = snapshot.filteredCount;
+          llState.filteredCompletedCount = snapshot.filteredCompletedCount;
+          llState.page = snapshot.page;
+          llState.totalPages = snapshot.totalPages;
+          renderSnapshot();
+        },
+        onCommit: async ({ keepalive = false } = {}) => {
+          await apiFetch('/api/learning-library/clear', {
+            method: 'POST',
+            keepalive,
+            body: JSON.stringify({ domainId }),
+          });
+          if (!keepalive) await loadLibraryItems({ showSkeleton: false, animate: false });
+        },
+      });
     });
 
     // Study Drawer Controls
     const studyBackdrop = document.getElementById('ll-study-drawer-backdrop');
     const studyDrawerBody = document.getElementById('ll-study-drawer-body');
+    const browseItemsContainer = document.getElementById('ll-browse-items-container');
     document.getElementById('ll-study-close-btn')?.addEventListener('click', closeStudyDrawer);
+    document.getElementById('ll-study-back-btn')?.addEventListener('click', closeStudyDrawer);
     document.getElementById('ll-study-prev-btn')?.addEventListener('click', () => stepStudyDrawer(-1));
     document.getElementById('ll-study-next-btn')?.addEventListener('click', () => stepStudyDrawer(1));
     studyBackdrop?.addEventListener('click', (e) => {
@@ -2321,22 +3029,8 @@
     studyDrawerBody?.addEventListener('click', (e) => {
       handleDelegatedActionClick(e);
     });
-    if (studyDrawerBody && global.FlaptapWordLookup?.bindSelectionLookup) {
-      global.FlaptapWordLookup.bindSelectionLookup(studyDrawerBody, {
-        maxLength: 320,
-        onSelect: (text, meta) => {
-          const node = meta?.range?.startContainer;
-          const element = node?.nodeType === 1 ? node : node?.parentElement;
-          const word = element?.closest('.clickable-word');
-          handleOpenWordLookup(
-            text,
-            word?.dataset.contextSentence || text,
-            word?.dataset.llItemId || llState.activeStudyItemId || '',
-            null,
-          );
-        },
-      });
-    }
+    bindLibrarySelectionLookup(browseItemsContainer);
+    bindLibrarySelectionLookup(studyDrawerBody);
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -2364,9 +3058,17 @@
       populateLanguagesSelect();
       if (!changed) return;
       if (nextUser) {
-        loadLibraryItems();
+        llState.page = 1;
+        loadLibraryItems({ showSkeleton: true, animate: true });
       } else {
         llState.items = [];
+        llState.page = 1;
+        llState.totalPages = 1;
+        llState.filteredCount = 0;
+        llState.filteredCompletedCount = 0;
+        llState.hasMore = false;
+        llState.hasLoadedOnce = false;
+        llState.isLoadingList = false;
         llState.justGeneratedIds.clear();
         llState.stats = {
           totalItems: 0,
@@ -2388,6 +3090,24 @@
     global.addEventListener('flaptap:languages-loaded', () => {
       populateLanguagesSelect();
     });
+
+    // Save exact scroll position so page refresh restores pixel-for-pixel
+    scrollRestorer.bindLifecycle();
+  }
+
+  // Paint Apple skeleton placeholders on frame 0 when entering /library so the
+  // user sees calm visual feedback immediately while auth & data hydrate.
+  const bootPath = (global.location?.pathname || '').toLowerCase().replace(/\/+$/, '') || '/';
+  if (
+    bootPath === '/library' ||
+    bootPath === '/learning-library' ||
+    bootPath === '/library/browse' ||
+    bootPath === '/learning-library/browse'
+  ) {
+    const authGate = document.getElementById('ll-auth-gate-card');
+    if (authGate) authGate.hidden = true;
+    scrollRestorer.prepareFromNavigation();
+    showSkeletonLoadingState();
   }
 
   global.FlaptapLearningLibrary = {

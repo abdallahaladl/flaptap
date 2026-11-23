@@ -174,6 +174,8 @@ export interface ListLibraryItemsQuery {
   register?: string;
   q?: string;
   sort?: 'newest' | 'alphabetical' | 'mastery' | 'most_reviewed';
+  page?: number;
+  limit?: number;
 }
 
 export interface UpdateLibraryItemDto {

@@ -171,9 +171,10 @@
     });
   }
 
-  async function deleteNote(id) {
+  async function deleteNote(id, options = {}) {
     return apiFetch(`${BASE}/notes/${encodeURIComponent(id)}`, {
       method: 'DELETE',
+      keepalive: Boolean(options?.keepalive),
     });
   }
 

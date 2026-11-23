@@ -12,7 +12,8 @@
 (function (global) {
   'use strict';
 
-  const PAGE_SIZE = 12;
+  const DEFAULT_PAGE_SIZE = global.FlaptapPagination?.DEFAULT_PAGE_SIZE || 10;
+  const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
   const SOURCE_FILTERS = [
     { id: 'all', label: 'All' },
@@ -27,6 +28,7 @@
     const store = deps.store;
     const api = deps.api;
     const nav = deps.nav;
+    const P = global.FlaptapPagination;
     const U = global.FlaptapUtils;
     const escapeHtml = U.escapeHtml;
 
@@ -38,7 +40,11 @@
       total: 0,
       filteredTotal: 0,
       page: 1,
+      pageSize: DEFAULT_PAGE_SIZE,
+      totalPages: 1,
       hasMore: false,
+      hasLoadedOnce: false,
+      animateNextRender: false,
       stats: { totalGuides: 0, totalItems: 0, completedGuides: 0, inProgressGuides: 0 },
       q: '',
       sourceType: 'all',
@@ -50,6 +56,24 @@
       fetchSeq: 0,
       unsubs: [],
     };
+
+    const pager = P.createBar({
+      barId: 'aex-library-pagination',
+      infoId: 'aex-lib-page-info',
+      numbersId: 'aex-lib-page-numbers',
+      prevId: 'aex-lib-prev-btn',
+      nextId: 'aex-lib-next-btn',
+      pageSizePillsId: 'aex-lib-page-size-pills',
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
+      ariaLabel: 'Phrase Library pagination',
+    });
+
+    const skeletonGate = P.createSkeletonGate(190);
+    const scrollRestorer = P.createScrollRestorer({
+      storageKey: 'flaptap:aex-library-scroll:v1',
+      isActive: () => store.state.activeView === 'library',
+      getContainer: () => el('aex-library-grid'),
+    });
 
     function el(id) {
       return document.getElementById(id);
@@ -63,15 +87,34 @@
       return Boolean(local.q.trim() || local.sourceType !== 'all' || local.status !== 'all');
     }
 
+    function buildRouteQuery() {
+      const extraQuery = {};
+      if (local.page > 1) extraQuery.page = local.page;
+      if (local.pageSize !== DEFAULT_PAGE_SIZE) extraQuery.limit = local.pageSize;
+      return extraQuery;
+    }
+
+    function syncLibraryRoute(replace = true) {
+      if (store.state.activeView !== 'library') return;
+      global.FlaptapRouter?.updateSubroute?.('american-extractor', {
+        subview: 'library',
+        extraQuery: buildRouteQuery(),
+        replace,
+      });
+    }
+
     /* --------------------------------------------------------------------
        DATA LOADING
        -------------------------------------------------------------------- */
 
-    async function loadPage(pageNum = local.page) {
+    async function loadPage(pageNum = local.page, options = {}) {
       if (!store.currentUser()) {
+        skeletonGate.reset();
         local.items = [];
         local.total = 0;
         local.filteredTotal = 0;
+        local.totalPages = 1;
+        local.hasMore = false;
         local.loading = false;
         local.error = '';
         render();
@@ -79,11 +122,16 @@
       }
 
       const seq = ++local.fetchSeq;
-      local.page = Math.max(1, Number(pageNum) || 1);
+      local.page = Math.max(1, Math.floor(Number(pageNum) || 1));
       local.loading = true;
       local.error = '';
+      if (options.scrollToTop) {
+        P.scrollToTop('#aex-library-grid', { offset: 96 });
+      }
+      skeletonGate.start();
       render();
 
+      let loadedOk = false;
       try {
         const res = await api.listHistory({
           q: local.q.trim(),
@@ -91,19 +139,33 @@
           status: local.status,
           sort: local.sort,
           page: local.page,
-          limit: PAGE_SIZE,
+          limit: local.pageSize,
         });
         if (seq !== local.fetchSeq) return;
+        const stillCurrent = await skeletonGate.waitRemaining(() => seq === local.fetchSeq);
+        if (!stillCurrent) return;
 
         local.items = Array.isArray(res.items) ? res.items : [];
         local.total = Number(res.total) || 0;
         local.filteredTotal = Number(res.filteredTotal ?? local.items.length);
+        local.page = Math.max(1, Number(res.page) || local.page);
+        local.pageSize = Math.max(1, Number(res.pageSize) || local.pageSize);
+        local.totalPages = Math.max(
+          1,
+          Number(res.totalPages) || Math.ceil(local.filteredTotal / local.pageSize) || 1,
+        );
         local.hasMore = Boolean(res.hasMore);
         if (res.stats) local.stats = res.stats;
+        local.hasLoadedOnce = true;
+        local.animateNextRender = Boolean(options.animate);
+        loadedOk = true;
 
         // Keep global store count synced when unfiltered
         if (!hasActiveFilters() && local.page === 1) {
           store.setHistorySnapshot(res);
+        }
+        if (options.syncRoute || local.page > 1 || local.pageSize !== DEFAULT_PAGE_SIZE) {
+          syncLibraryRoute(true);
         }
       } catch (err) {
         if (seq !== local.fetchSeq) return;
@@ -112,8 +174,12 @@
         }
       } finally {
         if (seq === local.fetchSeq) {
+          skeletonGate.reset();
           local.loading = false;
           render();
+          if (loadedOk) {
+            scrollRestorer.finishRestore();
+          }
         }
       }
     }
@@ -136,20 +202,17 @@
     }
 
     function renderSkeletons() {
-      return [0, 1, 2, 3, 4, 5]
-        .map(
-          () => `
-          <div class="aex-library-card-item aex-lib-skel" aria-hidden="true">
-            <div class="aex-skel-bar aex-skel-bar--sm"></div>
-            <div class="aex-skel-bar aex-skel-bar--title"></div>
-            <div class="aex-skel-bar aex-skel-bar--body"></div>
-            <div class="aex-skel-bar aex-skel-bar--meta"></div>
-          </div>`,
-        )
-        .join('');
+      const count = Math.min(local.pageSize, 6);
+      return Array.from({ length: count }, (_, idx) => `
+          <div class="aex-library-card-item aex-lib-skel ft-skeleton-item" style="--ft-stagger:${idx}" aria-hidden="true">
+            <div class="aex-skel-bar aex-skel-bar--sm ft-skel-shimmer"></div>
+            <div class="aex-skel-bar aex-skel-bar--title ft-skel-shimmer"></div>
+            <div class="aex-skel-bar aex-skel-bar--body ft-skel-shimmer"></div>
+            <div class="aex-skel-bar aex-skel-bar--meta ft-skel-shimmer"></div>
+          </div>`).join('');
     }
 
-    function renderCard(item) {
+    function renderCard(item, idx = 0) {
       const armed = local.armedDeleteId === item.id;
       const renaming = local.renamingId === item.id;
       const stats = store.historyStudyState(item);
@@ -172,7 +235,7 @@
            </h3>`;
 
       return `
-        <article class="aex-library-card-item" data-state="${stats.tone}" data-aex-library-id="${escapeHtml(item.id)}">
+        <article class="aex-library-card-item ft-item-surface" style="--ft-stagger:${idx}" data-state="${stats.tone}" data-aex-library-id="${escapeHtml(item.id)}">
           <div class="aex-recent-top">
             ${store.sourceBadgeHtml(item.source_type)}
             <span class="aex-recent-meta">${escapeHtml(store.formatDate(item.created_at))}</span>
@@ -225,10 +288,12 @@
       const signedIn = Boolean(store.currentUser());
       if (authGate) authGate.hidden = signedIn;
       if (!signedIn) {
+        grid.removeAttribute('aria-busy');
+        grid.classList.remove('ft-items-entering');
         grid.innerHTML = '';
         if (empty) empty.hidden = true;
         if (errBox) errBox.hidden = true;
-        if (pagination) pagination.hidden = true;
+        pager.hide();
         if (totalEl) totalEl.textContent = 'Sign in to view your saved guides';
         return;
       }
@@ -250,13 +315,20 @@
       }
 
       if (local.loading) {
+        grid.setAttribute('aria-busy', 'true');
+        grid.classList.remove('ft-items-entering');
         grid.innerHTML = renderSkeletons();
         if (empty) empty.hidden = true;
-        if (pagination) pagination.hidden = true;
+        pager.hide();
         return;
       }
 
-      grid.innerHTML = local.items.map(renderCard).join('');
+      grid.removeAttribute('aria-busy');
+      grid.innerHTML = local.items.map((item, idx) => renderCard(item, idx)).join('');
+      if (local.animateNextRender) {
+        local.animateNextRender = false;
+        P.triggerEntrance(grid);
+      }
 
       if (local.renamingId) {
         const input = grid.querySelector(`[data-aex-rename-form="${CSS.escape(local.renamingId)}"] .aex-rename-input`);
@@ -286,22 +358,15 @@
         }
       }
 
-      // Pagination bar
-      if (pagination) {
-        const totalPages = Math.max(1, Math.ceil(local.filteredTotal / PAGE_SIZE));
-        const showPager = local.filteredTotal > PAGE_SIZE;
-        pagination.hidden = !showPager;
-        if (showPager) {
-          const from = (local.page - 1) * PAGE_SIZE + 1;
-          const to = Math.min(local.filteredTotal, from + local.items.length - 1);
-          const info = el('aex-lib-page-info');
-          if (info) info.textContent = `Showing ${from}–${to} of ${local.filteredTotal} · Page ${local.page} of ${totalPages}`;
-          const prevBtn = el('aex-lib-prev-btn');
-          const nextBtn = el('aex-lib-next-btn');
-          if (prevBtn) prevBtn.disabled = local.page <= 1;
-          if (nextBtn) nextBtn.disabled = !local.hasMore;
-        }
-      }
+      pager.render({
+        page: local.page,
+        pageSize: local.pageSize,
+        total: local.filteredTotal,
+        totalPages: local.totalPages,
+        itemsCount: local.items.length,
+        loading: local.loading,
+        visible: signedIn && !local.error,
+      });
     }
 
     /* --------------------------------------------------------------------
@@ -338,33 +403,62 @@
       }
     }
 
-    async function handleDelete(id, button) {
-      const armed = button.dataset.armed === '1' && local.armedDeleteId === id;
-      if (!armed) {
-        local.armedDeleteId = id;
-        render();
-        showToast('Click delete again to confirm.');
-        setTimeout(() => {
-          if (local.armedDeleteId === id) {
-            local.armedDeleteId = '';
-            render();
-          }
-        }, 3500);
-        return;
-      }
+    async function handleDelete(id) {
+      const target = local.items.find((entry) => entry.id === id);
+      const guideTitle = String(target?.title || 'Study guide').trim();
+      if (!global.FlaptapConfirm?.confirmAndUndo) return;
 
-      local.armedDeleteId = '';
-      try {
-        await api.deleteNote(id);
-        store.removeNoteFromCache(id);
-        showToast('Study guide deleted.');
-        // Reload current page (step back a page if we deleted the last item on page > 1)
-        const targetPage = local.items.length <= 1 && local.page > 1 ? local.page - 1 : local.page;
-        await loadPage(targetPage);
-      } catch (err) {
-        showToast(err?.message || 'Could not delete that study guide.');
-        render();
-      }
+      const snapshot = {
+        items: [...local.items],
+        total: local.total,
+        filteredTotal: local.filteredTotal,
+        totalPages: local.totalPages,
+        hasMore: local.hasMore,
+        page: local.page,
+        recentHistory: [...(store.state.recentHistory || [])],
+        historyTotal: store.state.historyTotal,
+        stats: { ...(store.state.stats || {}) },
+      };
+
+      await global.FlaptapConfirm.confirmAndUndo({
+        title: 'Delete study guide?',
+        message: 'This study guide and its extracted phrases will be removed.',
+        detail: guideTitle,
+        confirmLabel: 'Delete',
+        undoMessage: `Deleted "${guideTitle}"`,
+        restoredMessage: `Restored "${guideTitle}"`,
+        onApply: () => {
+          local.items = local.items.filter((entry) => entry.id !== id);
+          local.total = Math.max(0, (Number(local.total) || 0) - 1);
+          local.filteredTotal = Math.max(0, (Number(local.filteredTotal) || 0) - 1);
+          local.totalPages = Math.max(1, Math.ceil(local.filteredTotal / local.pageSize) || 1);
+          local.hasMore = local.page < local.totalPages;
+          store.removeNoteFromCache(id);
+          render();
+        },
+        onUndo: () => {
+          local.items = snapshot.items;
+          local.total = snapshot.total;
+          local.filteredTotal = snapshot.filteredTotal;
+          local.totalPages = snapshot.totalPages;
+          local.hasMore = snapshot.hasMore;
+          local.page = snapshot.page;
+          store.restoreHistorySnapshot(snapshot);
+          render();
+        },
+        onCommit: async ({ keepalive = false } = {}) => {
+          await api.deleteNote(id, { keepalive });
+          if (!keepalive) {
+            const targetPage = local.items.length === 0 && local.page > 1 ? local.page - 1 : local.page;
+            await loadPage(targetPage, { animate: false, syncRoute: true });
+            deps.reloadHistory?.().catch(() => {});
+          }
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not delete that study guide.');
+          render();
+        },
+      });
     }
 
     function clearAllFilters() {
@@ -376,7 +470,7 @@
       if (el('aex-library-search')) el('aex-library-search').value = '';
       if (el('aex-lib-status-select')) el('aex-lib-status-select').value = 'all';
       if (el('aex-lib-sort-select')) el('aex-lib-sort-select').value = 'newest';
-      loadPage(1);
+      loadPage(1, { animate: true, syncRoute: true });
     }
 
     /* --------------------------------------------------------------------
@@ -390,17 +484,17 @@
       el('aex-library-search')?.addEventListener('input', (e) => {
         local.q = String(e.target.value || '');
         clearTimeout(local.searchTimer);
-        local.searchTimer = setTimeout(() => loadPage(1), 180);
+        local.searchTimer = setTimeout(() => loadPage(1, { animate: true, syncRoute: true }), 180);
       });
 
       el('aex-lib-status-select')?.addEventListener('change', (e) => {
         local.status = e.target.value || 'all';
-        loadPage(1);
+        loadPage(1, { animate: true, syncRoute: true });
       });
 
       el('aex-lib-sort-select')?.addEventListener('change', (e) => {
         local.sort = e.target.value || 'newest';
-        loadPage(1);
+        loadPage(1, { animate: true, syncRoute: true });
       });
 
       el('aex-library-new-btn')?.addEventListener('click', () => nav.goToExtract({ focusInput: true }));
@@ -408,18 +502,21 @@
       el('aex-library-clear-filters-btn')?.addEventListener('click', clearAllFilters);
       el('aex-library-retry-btn')?.addEventListener('click', () => loadPage(local.page));
 
-      el('aex-lib-prev-btn')?.addEventListener('click', () => {
-        if (local.page > 1) loadPage(local.page - 1);
-      });
-      el('aex-lib-next-btn')?.addEventListener('click', () => {
-        if (local.hasMore) loadPage(local.page + 1);
+      pager.bind({
+        onPageChange: (nextPage) => {
+          loadPage(nextPage, { animate: true, scrollToTop: true, syncRoute: true });
+        },
+        onPageSizeChange: (nextSize) => {
+          local.pageSize = nextSize;
+          loadPage(1, { animate: true, scrollToTop: true, syncRoute: true });
+        },
       });
 
       root.addEventListener('click', (e) => {
         const sourceBtn = e.target.closest('[data-aex-lib-source]');
         if (sourceBtn) {
           local.sourceType = sourceBtn.dataset.aexLibSource || 'all';
-          loadPage(1);
+          loadPage(1, { animate: true, syncRoute: true });
           return;
         }
 
@@ -471,6 +568,7 @@
       if (local.mounted) return;
       local.mounted = true;
       bindEvents();
+      scrollRestorer.bindLifecycle();
 
       local.unsubs.push(
         store.subscribe('note:updated', ({ id, patch }) => {
@@ -488,14 +586,29 @@
       );
     }
 
-    async function onActivate() {
-      await loadPage(local.page);
+    async function onActivate(routeState) {
+      if (routeState?.searchParams) {
+        const qPage = Number(routeState.searchParams.get('page'));
+        const qLimit = Number(routeState.searchParams.get('limit'));
+        local.page = Number.isFinite(qPage) && qPage >= 1 ? Math.floor(qPage) : 1;
+        local.pageSize = PAGE_SIZE_OPTIONS.includes(qLimit) ? qLimit : DEFAULT_PAGE_SIZE;
+      }
+      if (!local.hasLoadedOnce) {
+        scrollRestorer.prepareFromNavigation();
+      }
+      await loadPage(local.page, {
+        animate: local.hasLoadedOnce,
+        syncRoute: true,
+      });
     }
 
     return {
       mount,
       onActivate,
-      refresh: () => loadPage(1),
+      resetToFirstPage: () => {
+        local.page = 1;
+      },
+      refresh: () => loadPage(1, { animate: true, syncRoute: true }),
     };
   }
 

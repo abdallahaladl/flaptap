@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { createHash } from 'crypto';
 import * as path from 'path';
 import { HistoryRepository } from '../../../core/database/history.repository';
 import { segmentSentences } from '../../../core/linguistics/segmentation';
@@ -11,18 +12,31 @@ import {
 } from '../../shared-sources/shared-sources.service';
 import { SharedMediaKind, SourceSegment } from '../../shared-sources/shared-sources.types';
 import { TranscriptService } from '../../tracks/shadowing/transcript.service';
-import { ResolvedSource } from '../american-extractor.types';
+import { ResolvedSource, UploadedFileInput } from '../american-extractor.types';
+import { isGenericOrFilenameTitle } from '../utils/extraction-normalize.util';
 import { cleanSourceText, countWords, truncateSource } from '../utils/source-text.util';
 import { parseSubtitleSegments } from '../utils/timestamp-anchor.util';
 import { ArticleReaderService } from './article-reader.service';
 import { MediaTranscriptionService } from './media-transcription.service';
-import { VisionOcrService } from './vision-ocr.service';
+import {
+  detectImageMime,
+  MAX_IMAGE_BYTES,
+  MAX_IMAGES_PER_EXTRACTION,
+  VisionOcrService,
+} from './vision-ocr.service';
 
 const MEDIA_EXTENSIONS =
   /\.(mp3|m4a|wav|aac|flac|ogg|opus|mp4|mov|m4v|webm|mkv|avi|mpg|mpeg)(?:$|\?)/i;
 const TEXT_EXTENSIONS = /\.(txt|md|markdown|srt|vtt|json|text|log|csv)$/i;
 const IMAGE_EXTENSIONS = /\.(png|jpe?g|webp|gif)$/i;
 const PDF_EXTENSION = /\.pdf$/i;
+const MAX_MULTI_IMAGE_TOTAL_BYTES = 50 * 1024 * 1024;
+
+export function isImageUploadFile(originalName?: string, mimeType?: string): boolean {
+  const mime = String(mimeType || '').toLowerCase().trim();
+  const ext = path.extname(String(originalName || '')).toLowerCase();
+  return mime.startsWith('image/') || IMAGE_EXTENSIONS.test(ext);
+}
 
 const MEDIA_FIRST_PLATFORMS = new Set([
   'TikTok',
@@ -61,10 +75,19 @@ export class SourceResolverService {
       throw new BadRequestException('That saved source has no readable text to extract from.');
     }
 
+    const metaFileNames: string[] = Array.isArray(record.sourceMeta?.fileNames)
+      ? record.sourceMeta.fileNames.map((n: any) => String(n || '').trim()).filter(Boolean)
+      : record.sourceMeta?.fileName
+        ? [String(record.sourceMeta.fileName).trim()]
+        : [];
+    const isImageSource = record.sourceType === 'image';
+    const hasGenericOrFilenameTitle =
+      isImageSource && isGenericOrFilenameTitle(record.title || '', metaFileNames);
+
     return this.finalize({
       sourceId: record.id,
       sourceKey: record.sourceKey,
-      title: record.title || 'Saved Source',
+      title: hasGenericOrFilenameTitle ? '' : record.title || (isImageSource ? '' : 'Saved Source'),
       creator: record.creator || 'Flaptap Library',
       sourceType: record.sourceType,
       sourceUrl: record.sourceUrl || '',
@@ -76,6 +99,8 @@ export class SourceResolverService {
       mediaId: record.mediaId,
       durationSeconds: record.durationSeconds,
       segments: record.segments,
+      needsContextualTitle: isImageSource || hasGenericOrFilenameTitle,
+      submittedFileNames: metaFileNames,
       sourceMeta: {
         ...(record.sourceMeta || {}),
         sourceId: record.id,
@@ -347,6 +372,8 @@ export class SourceResolverService {
     model?: string;
     variant?: string;
     force?: boolean;
+    signal?: AbortSignal;
+    onProgress?: (progress: { percent: number; message: string; stage: string }) => void;
   }): Promise<ResolvedSource> {
     const buffer = params.buffer;
     if (!buffer || buffer.length === 0) {
@@ -357,6 +384,21 @@ export class SourceResolverService {
     const extension = path.extname(originalName).toLowerCase();
     const mimeType = String(params.mimeType || '').toLowerCase();
     const displayName = prettifyFileName(originalName);
+
+    // Route image files through the unified multi-image OCR pipeline so filenames never become titles.
+    if (isImageUploadFile(originalName, mimeType)) {
+      return this.resolveImageUploads({
+        userId: params.userId,
+        files: [{ buffer, originalName, mimeType }],
+        keyId: params.keyId,
+        model: params.model,
+        variant: params.variant,
+        force: params.force,
+        signal: params.signal,
+        onProgress: params.onProgress,
+      });
+    }
+
     const fileKey = buildCanonicalSourceKey({ fileBuffer: buffer });
 
     // Reuse previously processed uploaded file (avoid duplicate upload, transcription, OCR, or parsing)
@@ -427,60 +469,7 @@ export class SourceResolverService {
       });
     }
 
-    // 2. Images (Vision OCR)
-    if (mimeType.startsWith('image/') || IMAGE_EXTENSIONS.test(extension)) {
-      const ocr = await this.visionOcr.transcribeImage({
-        userId: params.userId,
-        buffer,
-        mimeType,
-        keyId: params.keyId,
-        model: params.model,
-        variant: params.variant,
-        title: displayName,
-      });
-      const cleaned = cleanSourceText(ocr.text);
-      if (cleaned.length < 12) {
-        throw new BadRequestException('The image OCR result was too short to study.');
-      }
-      const saved = this.sharedSources.upsert(params.userId, {
-        sourceKey: fileKey,
-        sourceType: 'image',
-        title: displayName || 'Screenshot',
-        creator: 'Image OCR',
-        sourceLabel: `Image OCR · ${ocr.modelUsed}`,
-        mimeType,
-        fileName: originalName,
-        hasAudio: false,
-        hasVideo: false,
-        mediaKind: 'none',
-        transcriptText: cleaned,
-        sourceMeta: { mimeType, fileName: originalName, wordCount: countWords(cleaned), ocrModel: ocr.modelUsed },
-      });
-      return this.finalize({
-        sourceId: saved.id,
-        sourceKey: fileKey,
-        title: displayName || 'Screenshot',
-        creator: 'Image OCR',
-        sourceType: 'image',
-        sourceUrl: '',
-        sourceLabel: `Image OCR · ${ocr.modelUsed}`,
-        text: cleaned,
-        hasAudio: false,
-        hasVideo: false,
-        mediaKind: 'none',
-        mediaId: '',
-        segments: [],
-        sourceMeta: {
-          sourceId: saved.id,
-          mimeType,
-          fileName: originalName,
-          wordCount: countWords(cleaned),
-          ocrModel: ocr.modelUsed,
-        },
-        warnings: [],
-        truncated: false,
-      });
-    }
+    // 2. Images are routed through resolveImageUploads() above.
 
     // 3. Audio / Video Uploads (persisted once under data/media/ for original segment playback!)
     const mediaExtension = MEDIA_EXTENSIONS.test(extension);
@@ -577,6 +566,179 @@ export class SourceResolverService {
     throw new BadRequestException(
       'Unsupported file type. Upload PDF, text, Markdown, subtitles (.srt/.vtt), JSON, an image, or audio/video.',
     );
+  }
+
+  async resolveImageUploads(params: {
+    userId: string;
+    files: UploadedFileInput[];
+    keyId?: string;
+    model?: string;
+    variant?: string;
+    force?: boolean;
+    signal?: AbortSignal;
+    onProgress?: (progress: { percent: number; message: string; stage: string }) => void;
+  }): Promise<ResolvedSource> {
+    const files = Array.isArray(params.files) ? params.files : [];
+    if (files.length === 0) {
+      throw new BadRequestException('Choose at least one image to upload.');
+    }
+    if (files.length > MAX_IMAGES_PER_EXTRACTION) {
+      throw new BadRequestException(
+        `Upload up to ${MAX_IMAGES_PER_EXTRACTION} images per extraction.`,
+      );
+    }
+
+    let totalBytes = 0;
+    const normalizedInputs = files.map((file) => {
+      const originalName = String(file?.originalName || 'image').trim();
+      const buffer = file?.buffer;
+      if (!buffer || buffer.length === 0) {
+        throw new BadRequestException('One of the selected images is empty.');
+      }
+      if (buffer.length > MAX_IMAGE_BYTES) {
+        throw new BadRequestException('Each image must be 8 MB or smaller.');
+      }
+      const detectedMime = detectImageMime(buffer, file?.mimeType);
+      if (!detectedMime) {
+        throw new BadRequestException('All selected images must be PNG, JPEG, WebP, or GIF files.');
+      }
+      totalBytes += buffer.length;
+      return {
+        buffer,
+        originalName,
+        mimeType: detectedMime,
+      };
+    });
+
+    if (totalBytes > MAX_MULTI_IMAGE_TOTAL_BYTES) {
+      throw new BadRequestException('Combined upload size must be 50 MB or smaller.');
+    }
+
+    const batchKey =
+      normalizedInputs.length === 1
+        ? buildCanonicalSourceKey({ fileBuffer: normalizedInputs[0].buffer })
+        : buildCanonicalSourceKey({
+            fileDigest: `multi-${createHash('sha256')
+              .update(
+                normalizedInputs
+                  .map((item) => createHash('sha256').update(item.buffer).digest('hex'))
+                  .join(':'),
+              )
+              .digest('hex')
+              .slice(0, 32)}`,
+          });
+
+    if (params.userId && !params.force) {
+      const cached = this.sharedSources.findByKey(params.userId, batchKey);
+      if (cached && cached.transcriptText.trim().length >= 12) {
+        this.logger.log(
+          `Reused uploaded image shared source ${cached.id} (${normalizedInputs.length} image(s))`,
+        );
+        return this.resolveSharedSource(params.userId, cached.id);
+      }
+    }
+
+    const totalImages = normalizedInputs.length;
+    params.onProgress?.({
+      stage: 'resolving',
+      percent: 12,
+      message:
+        totalImages === 1
+          ? 'Reading text from image with Vision OCR...'
+          : `Reading ${totalImages} images with Vision OCR...`,
+    });
+
+    const ocr = await this.visionOcr.transcribeImages({
+      userId: params.userId,
+      images: normalizedInputs.map((item) => ({
+        buffer: item.buffer,
+        mimeType: item.mimeType,
+        originalName: item.originalName,
+      })),
+      keyId: params.keyId,
+      model: params.model,
+      variant: params.variant,
+      signal: params.signal,
+      onProgress: (completed, total) => {
+        if (total <= 1) return;
+        const pct = 12 + Math.round((completed / total) * 22);
+        params.onProgress?.({
+          stage: 'resolving',
+          percent: Math.min(34, pct),
+          message: `Transcribed ${completed} of ${total} images...`,
+        });
+      },
+    });
+
+    const cleaned = cleanSourceText(ocr.text);
+    if (cleaned.length < 12) {
+      throw new BadRequestException(
+        totalImages === 1
+          ? 'The image OCR result was too short to study.'
+          : 'The combined OCR result across the uploaded images was too short to study.',
+      );
+    }
+
+    const submittedFileNames = normalizedInputs.map((item) => item.originalName).filter(Boolean);
+    const sourceLabel =
+      totalImages === 1
+        ? `Image OCR · ${ocr.modelUsed}`
+        : `${ocr.readableCount} images · OCR · ${ocr.modelUsed}`;
+
+    const saved = this.sharedSources.upsert(params.userId, {
+      sourceKey: batchKey,
+      sourceType: 'image',
+      title: 'Image Study Source',
+      creator: 'Image OCR',
+      sourceLabel,
+      mimeType: normalizedInputs[0].mimeType,
+      fileName: submittedFileNames[0] || '',
+      hasAudio: false,
+      hasVideo: false,
+      mediaKind: 'none',
+      transcriptText: cleaned,
+      sourceMeta: {
+        mimeType: normalizedInputs[0].mimeType,
+        fileName: submittedFileNames[0] || '',
+        fileNames: submittedFileNames,
+        imageCount: ocr.imageCount,
+        readableCount: ocr.readableCount,
+        skippedCount: ocr.skippedCount,
+        wordCount: countWords(cleaned),
+        ocrModel: ocr.modelUsed,
+      },
+    });
+
+    return this.finalize({
+      sourceId: saved.id,
+      sourceKey: batchKey,
+      title: '',
+      creator: 'Image OCR',
+      sourceType: 'image',
+      sourceUrl: '',
+      sourceLabel,
+      text: cleaned,
+      hasAudio: false,
+      hasVideo: false,
+      mediaKind: 'none',
+      mediaId: '',
+      segments: [],
+      needsContextualTitle: true,
+      submittedFileNames,
+      sourceMeta: {
+        sourceId: saved.id,
+        mimeType: normalizedInputs[0].mimeType,
+        fileName: submittedFileNames[0] || '',
+        fileNames: submittedFileNames,
+        imageCount: ocr.imageCount,
+        readableCount: ocr.readableCount,
+        skippedCount: ocr.skippedCount,
+        wordCount: countWords(cleaned),
+        ocrModel: ocr.modelUsed,
+      },
+      warnings: ocr.warnings || [],
+      truncated: false,
+    });
   }
 
   private async resolveYouTube(url: string, userId?: string): Promise<ResolvedSource> {

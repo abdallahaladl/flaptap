@@ -17,6 +17,9 @@
     const store = deps.store;
     const api = deps.api;
     const nav = deps.nav;
+    const P = global.FlaptapPagination;
+    const DEFAULT_PAGE_SIZE = P?.DEFAULT_PAGE_SIZE || 10;
+    const PAGE_SIZE_OPTIONS = [10, 20, 50];
     const U = global.FlaptapUtils;
     const escapeHtml = U.escapeHtml;
 
@@ -32,13 +35,37 @@
       revealedIndices: new Set(),
       search: '',
       renaming: false,
+      page: 1,
+      pageSize: DEFAULT_PAGE_SIZE,
+      pageTimer: null,
+      pageSeq: 0,
       mediaPlayer: null,
       linksReqSeq: 0,
+      stickyObserver: null,
+      stickyResizeObserver: null,
+      stickyScrollRaf: 0,
+      stickyTopOffset: 55,
       teardowns: [],
       itemsTeardown: null,
-      listAnimTimer: null,
       unsubs: [],
     };
+
+    const pager = P.createBar({
+      barId: 'aex-items-pagination',
+      infoId: 'aex-items-page-info',
+      numbersId: 'aex-items-page-numbers',
+      prevId: 'aex-items-prev-btn',
+      nextId: 'aex-items-next-btn',
+      pageSizePillsId: 'aex-items-page-size-pills',
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
+      ariaLabel: 'Study guide phrases pagination',
+    });
+
+    const scrollRestorer = P.createScrollRestorer({
+      storageKey: 'flaptap:aex-detail-scroll:v1',
+      isActive: () => store.state.activeView === 'detail',
+      getContainer: () => el('aex-items-list'),
+    });
 
     function ws() {
       return global.FlaptapWorkspace || null;
@@ -74,6 +101,159 @@
     }
 
     /* --------------------------------------------------------------------
+       STICKY STUDY DOCK, FILTER RAIL FADES & PRECISION SCROLLING
+       -------------------------------------------------------------------- */
+
+    function measureTopbarHeight() {
+      const topbar = document.querySelector('.workspace-topbar');
+      const rect = topbar?.getBoundingClientRect();
+      return rect && rect.height > 0 ? Math.max(0, Math.round(rect.height)) : 55;
+    }
+
+    function syncStickyMetrics() {
+      const dock = el('aex-sticky-dock');
+      const root = el('aex-items-root');
+      const nextTop = measureTopbarHeight();
+      local.stickyTopOffset = nextTop;
+      if (dock) {
+        dock.style.setProperty('--aex-sticky-top', `${nextTop}px`);
+      }
+      const dockHeight = dock?.getBoundingClientRect()?.height || 110;
+      if (root) {
+        root.style.setProperty('--aex-scroll-clearance', `${Math.round(nextTop + dockHeight + 16)}px`);
+      }
+      return nextTop;
+    }
+
+    function updateStickyState() {
+      const sentinel = el('aex-sticky-sentinel');
+      const dock = el('aex-sticky-dock');
+      if (
+        !sentinel ||
+        !dock ||
+        dock.hidden ||
+        store.state.activeView !== 'detail' ||
+        el('aex-detail-ready')?.hidden
+      ) {
+        dock?.classList.remove('is-stuck');
+        return;
+      }
+      const stuck = sentinel.getBoundingClientRect().top <= local.stickyTopOffset + 2;
+      dock.classList.toggle('is-stuck', stuck);
+    }
+
+    function scheduleStickyUpdate() {
+      if (local.stickyScrollRaf || store.state.activeView !== 'detail') return;
+      local.stickyScrollRaf = global.requestAnimationFrame(() => {
+        local.stickyScrollRaf = 0;
+        updateStickyState();
+      });
+    }
+
+    function disconnectStickyDock() {
+      if (local.stickyScrollRaf) {
+        global.cancelAnimationFrame?.(local.stickyScrollRaf);
+        local.stickyScrollRaf = 0;
+      }
+      if (local.stickyObserver) {
+        try {
+          local.stickyObserver.disconnect();
+        } catch {}
+        local.stickyObserver = null;
+      }
+      el('aex-sticky-dock')?.classList.remove('is-stuck');
+    }
+
+    function setupStickyDock() {
+      disconnectStickyDock();
+      const sentinel = el('aex-sticky-sentinel');
+      const dock = el('aex-sticky-dock');
+      if (!sentinel || !dock || dock.hidden) return;
+
+      const topOffset = syncStickyMetrics();
+      updateStickyState();
+      if (typeof global.IntersectionObserver !== 'function') return;
+
+      local.stickyObserver = new global.IntersectionObserver(
+        () => {
+          updateStickyState();
+        },
+        {
+          root: null,
+          rootMargin: `-${topOffset + 1}px 0px 0px 0px`,
+          threshold: [0, 1],
+        },
+      );
+      local.stickyObserver.observe(sentinel);
+    }
+
+    function updateFilterRailFades() {
+      const wrap = el('aex-filter-rail-wrap');
+      const rail = el('aex-category-filters');
+      if (!wrap || !rail) return;
+      const maxScroll = Math.max(0, rail.scrollWidth - rail.clientWidth);
+      if (maxScroll <= 2) {
+        wrap.classList.remove('can-scroll-left', 'can-scroll-right');
+        return;
+      }
+      const isRtl = global.getComputedStyle?.(rail)?.direction === 'rtl';
+      if (isRtl) {
+        const pos = Math.abs(rail.scrollLeft);
+        wrap.classList.toggle('can-scroll-right', pos > 4);
+        wrap.classList.toggle('can-scroll-left', pos < maxScroll - 4);
+      } else {
+        wrap.classList.toggle('can-scroll-left', rail.scrollLeft > 4);
+        wrap.classList.toggle('can-scroll-right', rail.scrollLeft < maxScroll - 4);
+      }
+    }
+
+    function centerFilterPillHorizontally(pillBtn) {
+      const rail = el('aex-category-filters');
+      if (!rail || !pillBtn) return;
+      const targetLeft =
+        pillBtn.offsetLeft - rail.clientWidth / 2 + pillBtn.offsetWidth / 2;
+      const reduced = Boolean(global.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+      rail.scrollTo({
+        left: Math.max(0, targetLeft),
+        behavior: reduced ? 'instant' : 'smooth',
+      });
+    }
+
+    function syncClearFiltersButton() {
+      const btn = el('aex-clear-filters-btn');
+      if (!btn) return;
+      const hasActive =
+        local.filterCategory !== 'all' ||
+        local.filterLevel !== 'all' ||
+        local.scopeRemaining ||
+        local.search.trim().length > 0;
+      btn.hidden = !hasActive;
+    }
+
+    function scrollToItemsStart({ onlyIfStuck = false, force = false } = {}) {
+      const dock = el('aex-sticky-dock');
+      if (onlyIfStuck && !dock?.classList.contains('is-stuck')) return;
+      const topOffset = local.stickyTopOffset || measureTopbarHeight();
+      P.scrollToTop('#aex-sticky-sentinel', {
+        offset: topOffset,
+        minTopThreshold: topOffset + 4,
+        force,
+      });
+    }
+
+    function scrollCardIntoViewBelowDock(targetCard) {
+      if (!targetCard || typeof targetCard.getBoundingClientRect !== 'function') return;
+      const topOffset = local.stickyTopOffset || measureTopbarHeight();
+      const dockHeight = el('aex-sticky-dock')?.getBoundingClientRect()?.height || 110;
+      const targetTop = targetCard.getBoundingClientRect().top + global.scrollY - (topOffset + dockHeight + 16);
+      const reduced = Boolean(global.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+      global.scrollTo({
+        top: Math.max(0, targetTop),
+        behavior: reduced ? 'instant' : 'smooth',
+      });
+    }
+
+    /* --------------------------------------------------------------------
        OPEN & HYDRATE
        -------------------------------------------------------------------- */
 
@@ -85,6 +265,13 @@
       if (skel) skel.hidden = mode !== 'loading';
       if (errBox) errBox.hidden = mode !== 'error';
       if (readyWrap) readyWrap.hidden = mode !== 'ready';
+      if (mode === 'ready') {
+        setupStickyDock();
+      } else {
+        disconnectStickyDock();
+        clearTimeout(local.pageTimer);
+        pager.hide();
+      }
     }
 
     async function loadNote(id, options = {}) {
@@ -98,11 +285,16 @@
       }
       if (local.loadingNoteId === id) return;
 
+      if (options?.searchParams) {
+        scrollRestorer.prepareFromNavigation();
+      }
+
       // Instant render from memory cache if already loaded
       const cached = store.getCachedNote(id);
       if (cached && !options.forceFetch) {
-        hydrateNote(cached);
+        hydrateNote(cached, options);
         setViewMode('ready');
+        scrollRestorer.finishRestore();
         return;
       }
 
@@ -114,8 +306,9 @@
         const res = await api.getNote(id);
         if (!res?.data) throw new Error('That study guide could not be opened.');
         store.cacheNote(res.data);
-        hydrateNote(res.data);
+        hydrateNote(res.data, options);
         setViewMode('ready');
+        scrollRestorer.finishRestore();
       } catch (err) {
         if (err?.status === 401) {
           requireNoteAuth();
@@ -136,7 +329,9 @@
       }
     }
 
-    function hydrateNote(note) {
+    function hydrateNote(note, options = {}) {
+      clearTimeout(local.pageTimer);
+      local.pageSeq += 1;
       local.currentNote = note;
       local.filterCategory = 'all';
       local.filterLevel = 'all';
@@ -146,9 +341,33 @@
       local.search = '';
       local.renaming = false;
 
+      const qLimit = Number(options?.searchParams?.get('limit'));
+      local.pageSize = PAGE_SIZE_OPTIONS.includes(qLimit) ? qLimit : DEFAULT_PAGE_SIZE;
+
+      const rawPage = options?.searchParams?.get('page');
+      const hasExplicitPage =
+        rawPage !== null && rawPage !== undefined && String(rawPage).trim() !== '';
+      const qPage = Number(rawPage);
+      let didAutoResume = false;
+      if (hasExplicitPage && Number.isFinite(qPage) && qPage >= 1) {
+        local.page = Math.floor(qPage);
+      } else {
+        const resumePage =
+          typeof store.getNextUncompletedPage === 'function'
+            ? store.getNextUncompletedPage(note, local.pageSize)
+            : 1;
+        local.page = resumePage;
+        didAutoResume = resumePage > 1;
+      }
+
       if (el('aex-note-search')) el('aex-note-search').value = '';
+      el('aex-sticky-dock')?.classList.remove('is-stuck');
       if (note.targetLanguage) store.setPreferredLanguage(note.targetLanguage);
       renderNote(note);
+      syncClearFiltersButton();
+      if (didAutoResume) {
+        syncDetailRoute(true);
+      }
     }
 
     /* --------------------------------------------------------------------
@@ -247,7 +466,6 @@
 
       const studioBtn = el('aex-studio-btn');
       const studioLabel = el('aex-studio-btn-label');
-      const lexiconBtn = el('aex-lexicon-sync-btn');
       if (studioBtn) {
         const lessonId = String(note.sourceMeta?.lessonId || '').trim();
         const isYouTube = /youtube\.com|youtu\.be/i.test(note.sourceUrl || '');
@@ -256,10 +474,6 @@
           ? `/studio?id=${encodeURIComponent(lessonId)}`
           : `/studio?url=${encodeURIComponent(note.sourceUrl)}`;
         if (studioLabel) studioLabel.textContent = lessonId ? 'Open Lesson' : 'Open in Studio';
-      }
-      if (lexiconBtn) {
-        lexiconBtn.hidden = true;
-        lexiconBtn.dataset.aexLexiconNote = '';
       }
 
       if (global.FlaptapA2PMediaPlayer) {
@@ -300,14 +514,6 @@
           studioBtn.title = `Open synced Studio lesson (${res.lesson.sentencesCount} sentences · zero re-fetch)`;
           if (studioLabel) studioLabel.textContent = 'Open Lesson';
         }
-
-        const lexiconBtn = el('aex-lexicon-sync-btn');
-        const firstTech = Array.isArray(res?.techLexiconNotes) ? res.techLexiconNotes[0] : null;
-        if (lexiconBtn && firstTech?.id) {
-          lexiconBtn.hidden = false;
-          lexiconBtn.dataset.aexLexiconNote = firstTech.id;
-          lexiconBtn.title = `Open synced Tech Lexicon note (${firstTech.vocabCount} terms)`;
-        }
       } catch {
         // Non-blocking sync enhancement
       }
@@ -340,7 +546,7 @@
       }
       select.hidden = false;
       select.innerHTML = [
-        '<option value="all">All CEFR levels</option>',
+        '<option value="all">All CEFR</option>',
         ...levels.map((lv) => `<option value="${escapeHtml(lv)}">CEFR ${escapeHtml(lv)}</option>`),
       ].join('');
       select.value = levels.includes(local.filterLevel) ? local.filterLevel : 'all';
@@ -373,22 +579,26 @@
           </button>`,
         )
         .join('');
+      updateFilterRailFades();
+      global.requestAnimationFrame?.(updateFilterRailFades);
     }
 
-    function renderItems(note, options = {}) {
-      const list = el('aex-items-list');
-      const empty = el('aex-empty-filter');
-      if (!list) return;
+    function syncDetailRoute(replace = true) {
+      if (!local.currentNote?.id || store.state.activeView !== 'detail') return;
+      const extraQuery = {};
+      if (local.page > 1) extraQuery.page = local.page;
+      if (local.pageSize !== DEFAULT_PAGE_SIZE) extraQuery.limit = local.pageSize;
+      global.FlaptapRouter?.updateSubroute?.('american-extractor', {
+        subview: 'detail',
+        noteId: local.currentNote.id,
+        extraQuery,
+        replace,
+      });
+    }
 
-      list.classList.toggle('is-entering', Boolean(options.animate));
-      if (options.animate) {
-        clearTimeout(local.listAnimTimer);
-        local.listAnimTimer = setTimeout(() => list.classList.remove('is-entering'), 700);
-      }
-
-      const completedSet = store.completedIndexSet(note);
+    function getFilteredItems(note, completedSet = store.completedIndexSet(note)) {
       const query = local.search.trim().toLowerCase();
-      const items = (note.items || []).filter((item) => {
+      return (note?.items || []).filter((item) => {
         if (local.scopeRemaining && completedSet.has(Number(item.index))) return false;
         if (local.filterCategory !== 'all' && item.category !== local.filterCategory) return false;
         if (local.filterLevel !== 'all' && item.cefr !== local.filterLevel) return false;
@@ -399,21 +609,89 @@
           item.meaning,
           item.localizedMeaning,
           item.contextSentence,
+          item.contextTranslation,
           item.usageNote,
           item.spokenNote,
           item.example,
+          item.exampleTranslation,
         ]
           .filter(Boolean)
           .some((val) => String(val).toLowerCase().includes(query));
       });
+    }
 
-      list.innerHTML = items
+    function renderItemSkeletons() {
+      const count = Math.min(local.pageSize, 5);
+      return Array.from({ length: count }, (_, idx) => `
+          <div class="aex-item aex-item-skel ft-skeleton-item" style="--ft-stagger:${idx}" aria-hidden="true">
+            <div class="aex-skel-bar aex-skel-bar--sm ft-skel-shimmer"></div>
+            <div class="aex-skel-bar aex-skel-bar--title ft-skel-shimmer"></div>
+            <div class="aex-skel-bar aex-skel-bar--body ft-skel-shimmer"></div>
+          </div>`).join('');
+    }
+
+    function goToItemsPage(nextPage, { scrollToTop = true, syncRoute = true, shimmer = true } = {}) {
+      const note = local.currentNote;
+      if (!note) return;
+
+      clearTimeout(local.pageTimer);
+      const seq = ++local.pageSeq;
+      local.page = Math.max(1, Math.floor(Number(nextPage) || 1));
+
+      if (scrollToTop) {
+        scrollToItemsStart({ force: true });
+      }
+      if (syncRoute) {
+        syncDetailRoute(true);
+      }
+
+      const reduced = Boolean(global.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+      const list = el('aex-items-list');
+      if (shimmer && !reduced && list) {
+        list.setAttribute('aria-busy', 'true');
+        list.classList.remove('ft-items-entering');
+        list.innerHTML = renderItemSkeletons();
+        pager.hide();
+        local.pageTimer = setTimeout(() => {
+          if (seq !== local.pageSeq || local.currentNote?.id !== note.id) return;
+          renderItems(note, { animate: true });
+        }, 190);
+        return;
+      }
+
+      renderItems(note, { animate: true });
+    }
+
+    function renderItems(note, options = {}) {
+      const list = el('aex-items-list');
+      const empty = el('aex-empty-filter');
+      if (!list) return;
+
+      clearTimeout(local.pageTimer);
+      list.removeAttribute('aria-busy');
+
+      const completedSet = store.completedIndexSet(note);
+      const filtered = getFilteredItems(note, completedSet);
+      const totalPages = Math.max(1, Math.ceil(filtered.length / local.pageSize));
+      const prevPage = local.page;
+      local.page = Math.max(1, Math.min(totalPages, local.page));
+      const start = (local.page - 1) * local.pageSize;
+      const pageItems = filtered.slice(start, start + local.pageSize);
+
+      list.innerHTML = pageItems
         .map((item, pos) => renderItemCard(note, item, pos, completedSet))
         .join('');
 
+      if (options.animate && pageItems.length > 0) {
+        P.triggerEntrance(list);
+      } else {
+        list.classList.remove('ft-items-entering');
+      }
+
       if (empty) {
-        empty.hidden = items.length > 0;
-        if (items.length === 0) {
+        empty.hidden = filtered.length > 0;
+        if (filtered.length === 0) {
+          const query = local.search.trim();
           const allStudied = local.scopeRemaining && !query && local.filterCategory === 'all' && (note.items || []).length > 0;
           setText('aex-empty-title', allStudied ? 'All phrases studied' : 'No matching phrases');
           setText(
@@ -425,6 +703,21 @@
         }
       }
 
+      pager.render({
+        page: local.page,
+        pageSize: local.pageSize,
+        total: filtered.length,
+        totalPages,
+        itemsCount: pageItems.length,
+        loading: false,
+        visible: Boolean(note),
+      });
+
+      if (local.page !== prevPage) {
+        syncDetailRoute(true);
+      }
+
+      syncClearFiltersButton();
       bindItemsSelection(note);
     }
 
@@ -455,6 +748,14 @@
         item.generalMeaning && item.generalMeaning !== item.meaning ? item.generalMeaning : '';
 
       const showTranslation = !isEnglishTarget && Boolean(item.localizedMeaning);
+      const showContextTranslation =
+        !isEnglishTarget &&
+        Boolean(item.contextTranslation) &&
+        item.contextTranslation !== item.contextSentence;
+      const showExampleTranslation =
+        !isEnglishTarget &&
+        Boolean(item.exampleTranslation) &&
+        item.exampleTranslation !== item.example;
       const isMasked = local.recallMode && !local.revealedIndices.has(idx);
 
       const copyBtn = global.FlaptapCopy?.buttonHtml
@@ -486,13 +787,20 @@
           </button>`
         : '';
 
-      const checkButton = `<button type="button" class="item-check-btn aex-check-btn${
-        completed ? ' is-checked' : ''
-      }" data-aex-check="${escapeHtml(idx)}" aria-pressed="${
-        completed ? 'true' : 'false'
-      }" aria-label="${completed ? 'Completed' : 'Mark phrase studied'}" title="${
-        completed ? 'Completed' : 'Mark phrase studied'
-      }"><svg class="aex-check-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg></button>`;
+      const checkButton = global.FlaptapCheck
+        ? global.FlaptapCheck.buttonHtml({
+            checked: completed,
+            className: 'aex-check-btn',
+            attrs: `data-aex-check="${escapeHtml(idx)}"`,
+            label: completed ? 'Completed' : 'Mark phrase studied',
+          })
+        : `<button type="button" class="item-check-btn aex-check-btn${
+            completed ? ' is-checked' : ''
+          }" data-aex-check="${escapeHtml(idx)}" aria-pressed="${
+            completed ? 'true' : 'false'
+          }" aria-label="${completed ? 'Completed' : 'Mark phrase studied'}" title="${
+            completed ? 'Completed' : 'Mark phrase studied'
+          }"><svg class="ft-check-svg chk-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path class="ft-check-tick chk-tick" d="M5.2 12.75 L9.55 17.1 Q10.1 17.65 10.65 17.05 L18.9 7.35" pathLength="1" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path></svg></button>`;
 
       // Row 1: Separate boxes for In Context + Example
       const row1Boxes = [
@@ -500,12 +808,26 @@
           ? `<div class="aex-card-box aex-box-context">
                <span class="aex-sense-label">In context</span>
                <blockquote class="aex-context-quote">${decoratedContext}</blockquote>
+               ${
+                 showContextTranslation
+                   ? `<p class="aex-quote-translation" dir="${rtl ? 'rtl' : 'ltr'}" lang="${escapeHtml(
+                       note.targetLanguage || 'en',
+                     )}">${escapeHtml(item.contextTranslation)}</p>`
+                   : ''
+               }
              </div>`
           : '',
         item.example
           ? `<div class="aex-card-box aex-box-example">
                <span class="aex-sense-label">Example</span>
                <p class="aex-example">“${escapeHtml(item.example)}”</p>
+               ${
+                 showExampleTranslation
+                   ? `<p class="aex-quote-translation" dir="${rtl ? 'rtl' : 'ltr'}" lang="${escapeHtml(
+                       note.targetLanguage || 'en',
+                     )}">${escapeHtml(item.exampleTranslation)}</p>`
+                   : ''
+               }
              </div>`
           : '',
       ].filter(Boolean);
@@ -553,11 +875,11 @@
       ].filter(Boolean);
 
       return `
-        <article class="aex-item${completed ? ' is-completed' : ''}${
+        <article class="aex-item ft-item-surface${completed ? ' is-completed' : ''}${
           isMasked ? ' is-recall-masked' : ''
         }" data-aex-index="${escapeHtml(idx)}" data-category="${escapeHtml(
           category,
-        )}" data-context="${escapeHtml(item.contextSentence || '')}" style="--aex-order:${Math.min(
+        )}" data-context="${escapeHtml(item.contextSentence || '')}" style="--ft-stagger:${Math.min(
           Number(position) || 0,
           12,
         )}">
@@ -726,6 +1048,11 @@
         topFill.style.width = `${stats.tone === 'done' ? 100 : stats.pct}%`;
       }
 
+      const dock = el('aex-sticky-dock');
+      const progressRow = el('aex-note-progress-row');
+      if (dock) dock.hidden = stats.total === 0;
+      if (progressRow) progressRow.hidden = stats.total === 0;
+
       const bar = el('aex-note-progress');
       if (bar) {
         bar.hidden = stats.total === 0;
@@ -739,7 +1066,10 @@
         const ringSvg =
           stats.tone === 'done'
             ? `<div class="aex-ring-badge is-done" aria-hidden="true">
-                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                 ${
+                   global.FlaptapCheck?.ICON_SVG ||
+                   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.2 12.75 L9.55 17.1 Q10.1 17.65 10.65 17.05 L18.9 7.35"></path></svg>'
+                 }
                </div>`
             : `<div class="aex-ring-badge is-${stats.tone}" aria-hidden="true">
                  <svg class="aex-ring-svg" viewBox="0 0 42 42">
@@ -818,6 +1148,8 @@
         completedCount: stats.done,
         isCompleted: derivedCompleted,
       });
+      syncClearFiltersButton();
+      global.requestAnimationFrame?.(syncStickyMetrics);
     }
 
     /* --------------------------------------------------------------------
@@ -1040,6 +1372,31 @@
       showToast(`Saved ${saved} of ${pending.length} phrases to Vocabulary`);
     }
 
+    function applyCardCompletionDom(sourceButton, completed, animate) {
+      const card = sourceButton?.closest('.aex-item');
+      card?.classList.toggle('is-completed', completed);
+      const line1 = card?.querySelector('.aex-item-line-1');
+      const existingTag = line1?.querySelector('.aex-item-done-tag');
+      if (completed && line1 && !existingTag) {
+        const tag = document.createElement('span');
+        tag.className = 'aex-item-done-tag';
+        tag.textContent = 'Studied';
+        line1.appendChild(tag);
+      } else if (!completed && existingTag) {
+        existingTag.remove();
+      }
+      if (!sourceButton) return;
+      const label = completed ? 'Completed' : 'Mark phrase studied';
+      if (global.FlaptapCheck?.setState) {
+        global.FlaptapCheck.setState(sourceButton, completed, { label, animate });
+      } else if (ws()?.setCheckButtonState) {
+        ws().setCheckButtonState(sourceButton, completed);
+      } else {
+        sourceButton.classList.toggle('is-checked', completed);
+        sourceButton.setAttribute('aria-pressed', completed ? 'true' : 'false');
+      }
+    }
+
     async function toggleItemCompletion(index, sourceButton) {
       const note = local.currentNote;
       if (!note) return;
@@ -1048,6 +1405,9 @@
       const total = Array.isArray(note.items) ? note.items.length : 0;
       const wasAllDone = total > 0 && current.size >= total;
       const next = !current.has(idx);
+
+      // Optimistic tactile update so the Apple spring + white tick draw plays instantaneously
+      applyCardCompletionDom(sourceButton, next, true);
 
       try {
         const res = await api.setItemCompletion(note.id, idx, next);
@@ -1059,33 +1419,23 @@
         note.isCompleted = nowAllDone;
 
         if (!wasAllDone && nowAllDone) {
-          showToast('Every phrase studied — study guide completed!');
+          if (global.FlaptapCelebrate?.trigger) {
+            global.FlaptapCelebrate.trigger({
+              title: 'Study Guide Completed!',
+              subtitle: total > 0 ? `All ${total} phrase${total === 1 ? '' : 's'} studied` : 'Every phrase studied',
+              originEl: sourceButton,
+            });
+          } else {
+            showToast('Every phrase studied — study guide completed!');
+          }
         }
 
         if (local.scopeRemaining) {
           renderItems(note);
-        } else {
-          const card = sourceButton?.closest('.aex-item');
-          card?.classList.toggle('is-completed', next);
-          const line1 = card?.querySelector('.aex-item-line-1');
-          const existingTag = line1?.querySelector('.aex-item-done-tag');
-          if (next && line1 && !existingTag) {
-            const tag = document.createElement('span');
-            tag.className = 'aex-item-done-tag';
-            tag.textContent = 'Studied';
-            line1.appendChild(tag);
-          } else if (!next && existingTag) {
-            existingTag.remove();
-          }
-          if (sourceButton && ws()?.setCheckButtonState) {
-            ws().setCheckButtonState(sourceButton, next);
-          } else if (sourceButton) {
-            sourceButton.classList.toggle('is-checked', next);
-            sourceButton.setAttribute('aria-pressed', next ? 'true' : 'false');
-          }
         }
         renderNoteProgress(note);
       } catch (err) {
+        applyCardCompletionDom(sourceButton, !next, false);
         showToast(err?.message || 'Could not update progress.');
       }
     }
@@ -1139,10 +1489,20 @@
         if (item.localizedMeaning && item.localizedMeaning !== item.meaning) {
           lines.push(`- Translation: ${item.localizedMeaning}`);
         }
-        if (item.contextSentence) lines.push(`- From source: "${item.contextSentence}"`);
+        if (item.contextSentence) {
+          lines.push(`- From source: "${item.contextSentence}"`);
+          if (item.contextTranslation && item.contextTranslation !== item.contextSentence) {
+            lines.push(`  - Translation: ${item.contextTranslation}`);
+          }
+        }
         if (item.usageNote) lines.push(`- Usage: ${item.usageNote}`);
         if (item.spokenNote) lines.push(`- Pronunciation: ${item.spokenNote}`);
-        if (item.example) lines.push(`- Example: ${item.example}`);
+        if (item.example) {
+          lines.push(`- Example: ${item.example}`);
+          if (item.exampleTranslation && item.exampleTranslation !== item.example) {
+            lines.push(`  - Translation: ${item.exampleTranslation}`);
+          }
+        }
         lines.push('');
       }
       return lines.join('\n');
@@ -1224,15 +1584,6 @@
         if (target) global.location.href = target;
       });
 
-      el('aex-lexicon-sync-btn')?.addEventListener('click', (e) => {
-        const techNoteId = e.currentTarget?.dataset?.aexLexiconNote;
-        if (techNoteId && global.FlaptapRouter) {
-          global.FlaptapRouter.navigate('tech-linguist', { subview: 'note', noteId: techNoteId });
-        } else if (techNoteId) {
-          global.location.href = `/lexicon/note/${encodeURIComponent(techNoteId)}`;
-        }
-      });
-
       el('aex-note-lang-select')?.addEventListener('change', (e) => {
         store.setPreferredLanguage(e.target.value);
       });
@@ -1274,9 +1625,12 @@
 
       el('aex-note-scope')?.addEventListener('click', () => {
         local.scopeRemaining = !local.scopeRemaining;
+        local.page = 1;
         if (local.currentNote) {
           renderNoteProgress(local.currentNote);
-          renderItems(local.currentNote);
+          renderItems(local.currentNote, { animate: true });
+          syncDetailRoute(true);
+          scrollToItemsStart({ onlyIfStuck: true, force: true });
         }
       });
 
@@ -1296,12 +1650,93 @@
 
       el('aex-note-level-filter')?.addEventListener('change', (e) => {
         local.filterLevel = e.target.value || 'all';
-        if (local.currentNote) renderItems(local.currentNote);
+        local.page = 1;
+        if (local.currentNote) {
+          renderItems(local.currentNote, { animate: true });
+          syncDetailRoute(true);
+          scrollToItemsStart({ onlyIfStuck: true, force: true });
+        }
       });
 
       el('aex-note-search')?.addEventListener('input', (e) => {
         local.search = String(e.target.value || '');
-        if (local.currentNote) renderItems(local.currentNote);
+        local.page = 1;
+        if (local.currentNote) {
+          renderItems(local.currentNote);
+          syncDetailRoute(true);
+        }
+      });
+
+      el('aex-clear-filters-btn')?.addEventListener('click', () => {
+        local.filterCategory = 'all';
+        local.filterLevel = 'all';
+        local.scopeRemaining = false;
+        local.search = '';
+        local.page = 1;
+        const searchInput = el('aex-note-search');
+        if (searchInput) searchInput.value = '';
+        const levelSelect = el('aex-note-level-filter');
+        if (levelSelect) levelSelect.value = 'all';
+        if (local.currentNote) {
+          renderNoteProgress(local.currentNote);
+          renderCategoryFilters(local.currentNote);
+          renderItems(local.currentNote, { animate: true });
+          syncDetailRoute(true);
+          scrollToItemsStart({ onlyIfStuck: true, force: true });
+        } else {
+          syncClearFiltersButton();
+        }
+      });
+
+      el('aex-category-filters')?.addEventListener('scroll', updateFilterRailFades, {
+        passive: true,
+      });
+
+      const scrollCategoryRail = (direction) => {
+        const rail = el('aex-category-filters');
+        if (!rail) return;
+        const isRtl = global.getComputedStyle?.(rail)?.direction === 'rtl';
+        const delta = (isRtl ? -direction : direction) * 220;
+        const reduced = Boolean(global.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+        rail.scrollBy({
+          left: delta,
+          behavior: reduced ? 'instant' : 'smooth',
+        });
+        setTimeout(updateFilterRailFades, 180);
+      };
+
+      el('aex-filter-scroll-left')?.addEventListener('click', () => scrollCategoryRail(-1));
+      el('aex-filter-scroll-right')?.addEventListener('click', () => scrollCategoryRail(1));
+
+      if (typeof global.ResizeObserver === 'function') {
+        const ro = new global.ResizeObserver(() => {
+          updateFilterRailFades();
+          const prevOffset = local.stickyTopOffset;
+          const nextOffset = syncStickyMetrics();
+          if (nextOffset !== prevOffset && local.currentNote && !el('aex-detail-ready')?.hidden) {
+            setupStickyDock();
+          }
+          updateStickyState();
+        });
+        const topbar = document.querySelector('.workspace-topbar');
+        const dock = el('aex-sticky-dock');
+        const railWrap = el('aex-filter-rail-wrap');
+        if (topbar) ro.observe(topbar);
+        if (dock) ro.observe(dock);
+        if (railWrap) ro.observe(railWrap);
+        local.stickyResizeObserver = ro;
+      }
+
+      global.addEventListener('scroll', scheduleStickyUpdate, { passive: true });
+
+      pager.bind({
+        onPageChange: (nextPage) => {
+          goToItemsPage(nextPage, { scrollToTop: true, syncRoute: true, shimmer: true });
+        },
+        onPageSizeChange: (nextSize) => {
+          local.pageSize = nextSize;
+          goToItemsPage(1, { scrollToTop: true, syncRoute: true, shimmer: true });
+        },
       });
 
       root.addEventListener('click', (e) => {
@@ -1341,9 +1776,16 @@
         const filterBtn = e.target.closest('[data-aex-filter]');
         if (filterBtn) {
           local.filterCategory = filterBtn.dataset.aexFilter || 'all';
+          local.page = 1;
           if (local.currentNote) {
             renderCategoryFilters(local.currentNote);
-            renderItems(local.currentNote);
+            const activePill = document.querySelector(
+              `#aex-category-filters [data-aex-filter="${CSS.escape(local.filterCategory)}"]`,
+            );
+            centerFilterPillHorizontally(activePill);
+            renderItems(local.currentNote, { animate: true });
+            syncDetailRoute(true);
+            scrollToItemsStart({ onlyIfStuck: true, force: true });
           }
           return;
         }
@@ -1351,9 +1793,22 @@
         const jumpPip = e.target.closest('[data-aex-jump-index]');
         if (jumpPip) {
           const targetIdx = jumpPip.dataset.aexJumpIndex;
-          const targetCard = document.querySelector(`#aex-items-list .aex-item[data-aex-index="${CSS.escape(targetIdx)}"]`);
+          let targetCard = document.querySelector(`#aex-items-list .aex-item[data-aex-index="${CSS.escape(targetIdx)}"]`);
+          if (!targetCard && local.currentNote) {
+            const filtered = getFilteredItems(local.currentNote);
+            const filteredPos = filtered.findIndex((item) => String(item.index) === String(targetIdx));
+            if (filteredPos >= 0) {
+              const targetPage = Math.floor(filteredPos / local.pageSize) + 1;
+              if (targetPage !== local.page) {
+                local.page = targetPage;
+                renderItems(local.currentNote, { animate: false });
+                syncDetailRoute(true);
+                targetCard = document.querySelector(`#aex-items-list .aex-item[data-aex-index="${CSS.escape(targetIdx)}"]`);
+              }
+            }
+          }
           if (targetCard) {
-            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            scrollCardIntoViewBelowDock(targetCard);
             targetCard.classList.remove('is-jump-highlight');
             void targetCard.offsetWidth;
             targetCard.classList.add('is-jump-highlight');
@@ -1422,6 +1877,7 @@
       if (local.mounted) return;
       local.mounted = true;
       bindEvents();
+      scrollRestorer.bindLifecycle();
 
       local.unsubs.push(
         store.subscribe('note:deleted', ({ id }) => {
@@ -1436,10 +1892,14 @@
     function onDeactivate() {
       setSourceInfoOpen(false);
       local.mediaPlayer?.pause?.();
+      disconnectStickyDock();
     }
 
     function clearCurrent() {
+      clearTimeout(local.pageTimer);
       local.currentNote = null;
+      disconnectStickyDock();
+      pager.hide();
       local.mediaPlayer?.destroy?.();
       teardownBindings();
     }

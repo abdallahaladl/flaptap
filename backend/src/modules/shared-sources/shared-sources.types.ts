@@ -78,20 +78,10 @@ export interface LinkedExtractorNoteSummary {
   createdAt: string;
 }
 
-export interface LinkedTechLexiconSummary {
-  id: string;
-  title: string;
-  extractionMode: string;
-  vocabCount: number;
-  idiomsCount: number;
-  createdAt: string;
-}
-
 export interface SharedSourceLinks {
   source: SharedSourceSummary | null;
   lesson: LinkedLessonSummary | null;
   extractorNotes: LinkedExtractorNoteSummary[];
-  techLexiconNotes: LinkedTechLexiconSummary[];
 }
 
 export interface UpsertSharedSourceInput {
