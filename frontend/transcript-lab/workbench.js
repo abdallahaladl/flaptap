@@ -125,31 +125,39 @@
       return candidate;
     }
 
-    function ensureWordLookupConfigured() {
-      if (state.wordLookupReady || !global.FlaptapWordLookup) return;
-      state.wordLookupReady = true;
-    }
-
     function triggerWordLookup(wordText, sentenceText, sentenceIndex, startMs, anchorEl) {
-      ensureWordLookupConfigured();
-      if (!global.FlaptapWordLookup || !state.doc) return;
+      if (!global.FlaptapWordLookup?.open || !state.doc) return;
       const ws = global.FlaptapWorkspace;
       const user = ws?.getUser?.();
       const lang = user?.nativeLanguage || 'ar';
-      global.FlaptapWordLookup.configure({
-        getLanguage: () => lang,
-        fetchDefinition: async ({ word, sentenceIndex: sIdx, lookupScope }) => {
-          const res = await api.lookupWord({
-            docId: state.doc.id,
-            word,
-            contextSentence: sentenceText || word,
-            language: lang,
-            lookupScope,
-          });
-          return { ...res, sentenceIndex: sIdx || sentenceIndex, timestampSec: (startMs || 0) / 1000 };
+      const endMs = state.selectedWord?.endMs || (Number(startMs) || 0) + 320;
+
+      global.FlaptapWordLookup.open({
+        word: wordText,
+        sourceEl: anchorEl || undefined,
+        contextSentence: sentenceText || wordText,
+        sentenceIndex: sentenceIndex || 1,
+        endpoint: '/api/transcript-lab/lookup-word',
+        payload: {
+          docId: state.doc.id,
+          word: wordText,
+          contextSentence: sentenceText || wordText,
+          language: lang,
+          lookupScope: 'word',
         },
+        fetcher: ws?.apiFetch || ((url, opts) => api.lookupWord(JSON.parse(opts.body))),
+        canPlay: Boolean(state.doc.media?.hasAudio),
+        playLabel: 'Hear word',
+        onPlay: () => {
+          state.engine?.playWord(
+            { word: wordText, startMs: Number(startMs) || 0, endMs },
+            { sentenceIndex: sentenceIndex || 1 },
+          );
+        },
+        canSpeak: true,
+        canSave: true,
         isSaved: (term) => (ws?.isVocabularySaved ? ws.isVocabularySaved(term) : false),
-        onSaveWord: async (def) => {
+        onSave: async (def) => {
           await ws.apiFetch('/api/vocabulary', {
             method: 'POST',
             body: JSON.stringify({
@@ -161,16 +169,12 @@
               translation: def.translation || '',
               contextSentence: sentenceText || def.contextSentence || '',
               lessonTitle: state.doc?.title || 'Transcript Lab',
-              timestampSec: (startMs || 0) / 1000,
+              timestampSec: (Number(startMs) || 0) / 1000,
             }),
           });
           if (ws?.refreshVocabulary) await ws.refreshVocabulary();
           toast(`Saved "${def.term}" to Vocabulary Vault.`);
         },
-      });
-      global.FlaptapWordLookup.openForElement(anchorEl, {
-        word: wordText,
-        sentenceIndex: sentenceIndex || 1,
       });
     }
 
@@ -1281,6 +1285,19 @@
         triggerWordLookup(wordText, sentObj?.text || wordText, sentIdx, startMs, wordEl);
       });
 
+      // Manual scroll pauses live auto-scroll tracking and shows floating Resume pill
+      if (state.scrollHandler) global.removeEventListener('scroll', state.scrollHandler);
+      state.scrollHandler = () => {
+        if (!state.doc || !state.engine?.getState?.().playing) return;
+        if (Date.now() - state.lastProgrammaticScrollAt < 650) return;
+        if (!state.autoScrollPaused) {
+          state.autoScrollPaused = true;
+          const resumeBtn = state.rootEl?.querySelector('#tlab-resume-scroll');
+          if (resumeBtn) resumeBtn.hidden = false;
+        }
+      };
+      global.addEventListener('scroll', state.scrollHandler, { passive: true });
+
       // Resume auto-scroll pill
       state.rootEl.querySelector('#tlab-resume-scroll')?.addEventListener('click', (e) => {
         state.autoScrollPaused = false;
@@ -1326,8 +1343,8 @@
     }
 
     function copyToClipboard(text, message) {
-      if (global.FlaptapCopy?.write) {
-        global.FlaptapCopy.write(text).then(() => toast(message)).catch(() => toast(message));
+      if (global.FlaptapCopy?.writeClipboard) {
+        global.FlaptapCopy.writeClipboard(text).then(() => toast(message)).catch(() => toast(message));
       } else if (navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(text).then(() => toast(message)).catch(() => {});
       }
@@ -1467,6 +1484,7 @@
       state.engine?.destroy?.();
       if (state.keydownHandler) document.removeEventListener('keydown', state.keydownHandler);
       if (state.docClickHandler) document.removeEventListener('click', state.docClickHandler);
+      if (state.scrollHandler) global.removeEventListener('scroll', state.scrollHandler);
       state.doc = null;
     }
 

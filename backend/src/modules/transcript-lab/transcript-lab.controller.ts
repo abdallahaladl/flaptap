@@ -141,7 +141,19 @@ export class TranscriptLabController {
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const identity = requireAuthenticatedUser(req, this.authService);
+    let identity: ReturnType<typeof requireAuthenticatedUser>;
+    try {
+      identity = requireAuthenticatedUser(req, this.authService);
+    } catch (authErr: any) {
+      const status =
+        authErr instanceof HttpException ? authErr.getStatus() : HttpStatus.UNAUTHORIZED;
+      const payload =
+        authErr instanceof HttpException
+          ? authErr.getResponse()
+          : { code: 'auth_required', message: 'Authentication required.' };
+      res.status(status).json(payload);
+      return;
+    }
 
     res.status(HttpStatus.OK);
     res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
@@ -152,15 +164,15 @@ export class TranscriptLabController {
 
     const ac = new AbortController();
     let closed = false;
-    req.on('close', () => {
+    res.on('close', () => {
       if (!res.writableEnded) {
         closed = true;
-        ac.abort();
+        ac.abort(new Error('Client closed stream connection.'));
       }
     });
 
     const emit = (event: string, payload: unknown) => {
-      if (closed || res.writableEnded) return;
+      if (closed || res.writableEnded || res.destroyed) return;
       res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
     };
 
@@ -231,20 +243,43 @@ export class TranscriptLabController {
     @Req() req?: Request,
     @Res() res?: Response,
   ) {
-    const identity = requireAuthenticatedUser(req!, this.authService);
-    const result = this.service.exportDoc(identity.userId, id, {
-      view,
-      format,
-      includeTimestamps: timestamps !== '0' && timestamps !== 'false',
-      includeSpeakers: speakers !== '0' && speakers !== 'false',
-    });
+    let identity: ReturnType<typeof requireAuthenticatedUser>;
+    try {
+      identity = requireAuthenticatedUser(req!, this.authService);
+    } catch (authErr: any) {
+      const status =
+        authErr instanceof HttpException ? authErr.getStatus() : HttpStatus.UNAUTHORIZED;
+      const payload =
+        authErr instanceof HttpException
+          ? authErr.getResponse()
+          : { code: 'auth_required', message: 'Authentication required.' };
+      res!.status(status).json(payload);
+      return;
+    }
 
-    res!.setHeader('Content-Type', result.mimeType);
-    res!.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${result.filename.replace(/"/g, '')}"`,
-    );
-    res!.status(HttpStatus.OK).send(result.content);
+    try {
+      const result = this.service.exportDoc(identity.userId, id, {
+        view,
+        format,
+        includeTimestamps: timestamps !== '0' && timestamps !== 'false',
+        includeSpeakers: speakers !== '0' && speakers !== 'false',
+      });
+
+      res!.setHeader('Content-Type', result.mimeType);
+      res!.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${result.filename.replace(/"/g, '')}"`,
+      );
+      res!.status(HttpStatus.OK).send(result.content);
+    } catch (err: any) {
+      const status =
+        err instanceof HttpException ? err.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
+      const payload =
+        err instanceof HttpException
+          ? err.getResponse()
+          : { message: err?.message || 'Export failed.' };
+      res!.status(status).json(payload);
+    }
   }
 
   @Post('lookup-word')

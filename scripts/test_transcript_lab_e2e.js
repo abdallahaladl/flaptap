@@ -119,7 +119,14 @@ async function run() {
     body: JSON.stringify({ url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }),
   });
   assert.strictEqual(unauthIngest.status, 401);
-  ok('Zero Benefit Before Sign-In enforced (401 on protected routes)');
+  const unauthStream = await api('/api/transcript-lab/docs/tr_fake/review/stream', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+  assert.strictEqual(unauthStream.status, 401);
+  const unauthExport = await api('/api/transcript-lab/docs/tr_fake/export?view=sentences&format=txt');
+  assert.strictEqual(unauthExport.status, 401);
+  ok('Zero Benefit Before Sign-In enforced (401 on docs, ingest, SSE review stream, and export)');
 
   // 3. Register User A and User B
   const regA = await api('/api/auth/register', {
@@ -184,37 +191,59 @@ async function run() {
   assert.strictEqual(expRaw.status, 200);
   ok('All 7 export formats + raw original export verified via HTTP');
 
-  // 8. Real AI Review pass if system AI key exists
+  // 8. Real Live SSE Streaming Review (POST /review/stream) if system AI key exists
   if (cfg.json.aiConfigured) {
-    console.log('⏳ Running real AI Review & millisecond alignment pass...');
-    const rev = await api(
-      `/api/transcript-lab/docs/${doc.id}/review`,
-      { method: 'POST', body: JSON.stringify({ force: true }) },
+    console.log('⏳ Running real live SSE AI Review & millisecond alignment stream...');
+    const sseRes = await fetch(`${BASE}/api/transcript-lab/docs/${doc.id}/review/stream`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${tokenA}`,
+        'Content-Type': 'application/json',
+        Accept: 'text/event-stream',
+      },
+      body: JSON.stringify({ force: true }),
+    });
+    assert.strictEqual(sseRes.status, 200, `SSE review failed with status ${sseRes.status}`);
+    const sseText = await sseRes.text();
+    assert.ok(sseText.includes('event: progress'), 'SSE stream must emit progress events');
+    assert.ok(sseText.includes('event: done'), `SSE stream must emit done event, got: ${sseText.slice(0, 300)}`);
+
+    const refreshed = await api(`/api/transcript-lab/docs/${doc.id}`, {}, tokenA);
+    assert.strictEqual(refreshed.status, 200);
+    const r = refreshed.json?.data?.reviewed;
+    assert.ok(r && r.sentences.length > 0, 'Reviewed sentences persisted from SSE stream');
+    assert.ok(r.ideas.length > 0, 'Reviewed ideas present');
+    assert.ok(r.speakers.length > 0, 'Reviewed speakers present');
+    assert.ok(r.sentences[0].words.length > 0, 'Millisecond words aligned on reviewed sentences');
+    ok(
+      `Real SSE AI Review succeeded (${r.quality.verbatimScore}% verbatim, ${r.sentences.length} sentences, ${r.ideas.length} ideas, ${r.speakers.length} speaker(s))`,
+    );
+
+    // Test speaker rename via HTTP
+    const spkId = r.speakers[0].id;
+    const spkRes = await api(
+      `/api/transcript-lab/docs/${doc.id}/speakers`,
+      { method: 'PATCH', body: JSON.stringify({ speakers: { [spkId]: 'Samantha Host' } }) },
       tokenA,
     );
-    if (rev.status === 201 && rev.json?.data?.reviewed) {
-      const r = rev.json.data.reviewed;
-      assert.ok(r.sentences.length > 0, 'Reviewed sentences present');
-      assert.ok(r.ideas.length > 0, 'Reviewed ideas present');
-      assert.ok(r.speakers.length > 0, 'Reviewed speakers present');
-      assert.ok(r.sentences[0].words.length > 0, 'Millisecond words aligned on reviewed sentences');
-      ok(
-        `Real AI Review succeeded (${r.quality.verbatimScore}% verbatim, ${r.sentences.length} sentences, ${r.ideas.length} ideas, ${r.speakers.length} speaker(s))`,
-      );
+    assert.strictEqual(spkRes.status, 200);
+    assert.strictEqual(spkRes.json.data.reviewed.sentences[0].speaker, 'Samantha Host');
+    ok('Speaker renaming persisted & propagated across all views');
+  }
 
-      // Test speaker rename via HTTP
-      const spkId = r.speakers[0].id;
-      const spkRes = await api(
-        `/api/transcript-lab/docs/${doc.id}/speakers`,
-        { method: 'PATCH', body: JSON.stringify({ speakers: { [spkId]: 'Samantha Host' } }) },
-        tokenA,
-      );
-      assert.strictEqual(spkRes.status, 200);
-      assert.strictEqual(spkRes.json.data.reviewed.sentences[0].speaker, 'Samantha Host');
-      ok('Speaker renaming persisted & propagated across all views');
-    } else {
-      console.log(`ℹ️ AI Review returned ${rev.status} (${rev.json?.message || 'provider unavailable'}) — continuing browser verification on playable raw doc.`);
-    }
+  // 8b. Real YouTube URL Fast-Path Ingestion (JSON3 millisecond word timings)
+  const ytIngest = await api(
+    '/api/transcript-lab/ingest',
+    { method: 'POST', body: JSON.stringify({ url: 'https://www.youtube.com/watch?v=Ka0p5tUUmgg' }) },
+    tokenA,
+  );
+  if (ytIngest.status === 201 && ytIngest.json?.data?.raw?.words?.length > 0) {
+    const ytDoc = ytIngest.json.data;
+    assert.strictEqual(ytDoc.platform, 'YouTube');
+    assert.strictEqual(ytDoc.media.mediaKind, 'youtube');
+    ok(`Real YouTube URL ingested cleanly: "${ytDoc.title}" (${ytDoc.raw.words.length} millisecond words)`);
+  } else {
+    console.log(`ℹ️ Live YouTube caption probe skipped/throttled (${ytIngest.status}) — audio upload path already verified.`);
   }
 
   // 9. Rename & Derived Completion via HTTP
@@ -265,6 +294,18 @@ async function run() {
     }, tokenA);
     await page.setCookie({ name: 'flaptap_session', value: tokenA, url: BASE });
 
+    // Verify shared FlaptapAiSelector initialized live keys on /transcripts
+    await page.goto(`${BASE}/transcripts`, { waitUntil: 'networkidle0' });
+    await page.waitForSelector('#tlab-aisel-key-select', { timeout: 8000 });
+    await page.waitForFunction(
+      () => {
+        const sel = document.getElementById('tlab-aisel-key-select');
+        return sel && sel.options.length > 0 && !sel.options[0].textContent.includes('Detecting');
+      },
+      { timeout: 10000 },
+    );
+    ok('Shared FlaptapAiSelector hydrated live API keys & models on /transcripts');
+
     // Navigate directly to our new Transcript Workbench URL & verify hard refresh!
     await page.goto(`${BASE}/transcripts/${doc.id}`, { waitUntil: 'networkidle0' });
     await page.waitForSelector('.tlab-workbench', { timeout: 10000 });
@@ -281,6 +322,23 @@ async function run() {
     assert.ok(hasSpeakingWord, 'Clicked word must receive .is-speaking highlight');
     assert.ok(clipLabel.includes('Word:'), `Expected active clip readout to show Word, got "${clipLabel}"`);
     ok(`Browser word-click millisecond playback verified (${clipLabel})`);
+
+    // Click Define pill -> verify shared FlaptapWordLookup popover opens cleanly!
+    const defineVisible = await page.$eval('#tlab-define-active-btn', (el) => !el.hidden);
+    assert.ok(defineVisible, 'Define active word pill should appear after clicking a word');
+    await page.click('#tlab-define-active-btn');
+    await page.waitForSelector('#word-lookup-popover:not([hidden])', { timeout: 6000 });
+    await page.keyboard.press('Escape');
+    ok('Shared FlaptapWordLookup dictionary popover opened cleanly from clicked word');
+
+    // Click a sentence check button -> verify live derived completion toggle in DOM!
+    await page.click('[data-tlab-check="2"]');
+    await new Promise((r) => setTimeout(r, 300));
+    const sent2Done = await page.$eval('.tlab-sentence-row[data-sent-idx="2"]', (el) =>
+      el.classList.contains('is-completed'),
+    );
+    assert.ok(sent2Done, 'Clicking sentence check button should mark sentence #2 completed');
+    ok('Live sentence check button toggles Real Derived Completion cleanly in DOM');
 
     // Switch through all 5 top view tabs!
     for (const viewId of ['paragraphs', 'ideas', 'speakers', 'raw', 'sentences']) {

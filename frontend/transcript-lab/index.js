@@ -627,7 +627,7 @@
     if (!state.initialized) {
       state.initialized = true;
 
-      // Mount the ONE shared FlaptapAiSelector (Constitutional Law!)
+      // Mount & initialize the ONE shared FlaptapAiSelector (Constitutional Law!)
       const aiMount = el('tlab-ai-selector-mount');
       if (aiMount && global.FlaptapAiSelector?.create) {
         state.aiSelector = global.FlaptapAiSelector.create({
@@ -652,7 +652,10 @@
       state.workbench.mount(el('tlab-workbench-root'));
 
       bindEvents();
-      await loadLibrary(1, { silent: true });
+      await Promise.all([
+        state.aiSelector?.init ? state.aiSelector.init().catch(() => {}) : Promise.resolve(),
+        loadLibrary(1, { silent: true }),
+      ]);
     }
 
     if (routeState) {
