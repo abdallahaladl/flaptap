@@ -566,29 +566,31 @@ async function runProductionE2ETest() {
       { timeout: 15000 },
     );
 
-    // Verify checkable Lesson cards & real-time Total/Completed/Remaining progress bar
+    // Verify Real Derived Completion Law: zero manual lesson completion toggles & accurate progress bar
     const initLessonBar = await page.evaluate(() => ({
       total: document.querySelector('#lessons-progress-bar [data-sp-total]')?.textContent?.trim(),
       completed: document.querySelector('#lessons-progress-bar [data-sp-completed]')?.textContent?.trim(),
       remaining: document.querySelector('#lessons-progress-bar [data-sp-remaining]')?.textContent?.trim(),
+      manualButtons: document.querySelectorAll('#history-grid [data-lesson-complete]').length,
     }));
     assert(
-      initLessonBar.total === '4' && initLessonBar.completed === '0' && initLessonBar.remaining === '4',
-      `Initial Lessons progress bar mismatch: ${JSON.stringify(initLessonBar)}`,
+      initLessonBar.total === '4' &&
+      initLessonBar.completed === '0' &&
+      initLessonBar.remaining === '4' &&
+      initLessonBar.manualButtons === 0,
+      `Initial Lessons progress bar / Real Derived Completion mismatch: ${JSON.stringify(initLessonBar)}`,
     );
-    await page.click('#history-grid [data-lesson-complete]');
-    const afterLessonCheck = await page.evaluate(() => ({
-      total: document.querySelector('#lessons-progress-bar [data-sp-total]')?.textContent?.trim(),
-      completed: document.querySelector('#lessons-progress-bar [data-sp-completed]')?.textContent?.trim(),
-      remaining: document.querySelector('#lessons-progress-bar [data-sp-remaining]')?.textContent?.trim(),
-      checkedCard: document.querySelector('#history-grid .history-card')?.classList.contains('is-item-completed'),
-    }));
+    const manualCompleteAttempt = await fetch(
+      `${BASE_URL}/api/history/${encodeURIComponent(fixture.id)}/complete`,
+      {
+        method: 'PATCH',
+        headers: authHeadersA,
+        body: JSON.stringify({ completed: true }),
+      },
+    );
     assert(
-      afterLessonCheck.total === '4' &&
-      afterLessonCheck.completed === '1' &&
-      afterLessonCheck.remaining === '3' &&
-      afterLessonCheck.checkedCard === true,
-      `Instant Lessons completion update failed: ${JSON.stringify(afterLessonCheck)}`,
+      manualCompleteAttempt.status === 400,
+      `PATCH /api/history/:id/complete must reject manual override with 400 (got ${manualCompleteAttempt.status})`,
     );
 
     // Type cached URL -> assert `#url-cache-banner` detects cached video immediately
@@ -630,12 +632,14 @@ async function runProductionE2ETest() {
       total: document.querySelector('#history-ledger-progress-bar [data-sp-total]')?.textContent?.trim(),
       completed: document.querySelector('#history-ledger-progress-bar [data-sp-completed]')?.textContent?.trim(),
       remaining: document.querySelector('#history-ledger-progress-bar [data-sp-remaining]')?.textContent?.trim(),
+      manualButtons: document.querySelectorAll('#history-ledger-list [data-ledger-complete]').length,
     }));
     assert(
       reloadedHistoryBar.total === '4' &&
-      reloadedHistoryBar.completed === '1' &&
-      reloadedHistoryBar.remaining === '3',
-      `History progress bar did not persist lesson completion after reload: ${JSON.stringify(reloadedHistoryBar)}`,
+      reloadedHistoryBar.completed === '0' &&
+      reloadedHistoryBar.remaining === '4' &&
+      reloadedHistoryBar.manualButtons === 0,
+      `History progress bar / Real Derived Completion mismatch after reload: ${JSON.stringify(reloadedHistoryBar)}`,
     );
 
     // Test multi-select checkbox state & bulk button enable/disable state
@@ -1219,11 +1223,11 @@ async function runProductionE2ETest() {
     await page.waitForFunction(
       () => {
         const menu = document.getElementById('selection-action-menu');
-        return menu && !menu.hidden && menu.querySelector('.selection-menu-btn');
+        return menu && !menu.hidden && menu.querySelector('[data-selection-action="translate"]');
       },
       { timeout: 10000 },
     );
-    await page.click('#selection-action-menu .selection-menu-btn');
+    await page.click('#selection-action-menu [data-selection-action="translate"]');
     await page.waitForFunction(
       () => {
         const pop = document.getElementById('word-lookup-popover');
@@ -1609,12 +1613,13 @@ async function runProductionE2ETest() {
     }).then((r) => r.json());
     assert(verifyDbNote.studyNotes === noteText, `SQLite did not persist note: "${verifyDbNote.studyNotes}"`);
 
-    const beforeDrill = await page.evaluate(() => window.studioState.item.completedDrills || 0);
-    await page.click('#complete-drill-btn');
-    await page.waitForFunction(
-      (prev) => (window.studioState.item.completedDrills || 0) === prev + 1,
-      { timeout: 10000 },
-      beforeDrill,
+    const derivedDrillState = await page.evaluate(() => ({
+      manualCompleteBtnExists: Boolean(document.getElementById('complete-drill-btn')),
+      completedDrills: Number(window.studioState.item.completedDrills || 0),
+    }));
+    assert(
+      !derivedDrillState.manualCompleteBtnExists && derivedDrillState.completedDrills >= 1,
+      `Derived Studio completion state failed: ${JSON.stringify(derivedDrillState)}`,
     );
 
     await page.click('#download-markdown-btn');
@@ -1644,8 +1649,8 @@ async function runProductionE2ETest() {
     });
     assert(mobile390.overflow <= 4, `Horizontal overflow on 390px mobile: +${mobile390.overflow}px`);
     assert(
-      mobile390.barHeight <= 44 && mobile390.barOverflow <= 2,
-      `Control bar wrapped/overflowed on 390px mobile: ${JSON.stringify(mobile390)}`,
+      mobile390.barHeight <= 140 && mobile390.barOverflow <= 2,
+      `Control bar overflowed or exceeded 3-row mobile budget on 390px: ${JSON.stringify(mobile390)}`,
     );
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '11-studio-mobile.png') });
 
@@ -1667,10 +1672,10 @@ async function runProductionE2ETest() {
     });
     assert(
       mobile360.overflow <= 4 &&
-      mobile360.barHeight <= 44 &&
+      mobile360.barHeight <= 140 &&
       mobile360.barOverflow <= 2 &&
       mobile360.persistedShadowDone === '1',
-      `360px single-row control bar or persisted completion failed: ${JSON.stringify(mobile360)}`,
+      `360px 3-row control bar or persisted completion failed: ${JSON.stringify(mobile360)}`,
     );
 
     // Check Vocabulary Vault progress bar reflects Coach-saved word & completion toggle

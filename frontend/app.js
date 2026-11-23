@@ -1230,6 +1230,10 @@
     if (cardBtn) {
       setCheckButtonState(cardBtn, next, { animate: true });
       cardEl?.classList.toggle('is-item-completed', next);
+      renderSubjectProgressBar('vocab-progress-bar', {
+        total: state.vocabItems.length,
+        completed: state.vocabItems.filter((v) => v.isCompleted).length,
+      });
     } else {
       renderVocabulary();
     }
