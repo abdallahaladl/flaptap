@@ -1,6 +1,7 @@
 export type SharedSourceType =
   | 'youtube'
   | 'social_video'
+  | 'podcast'
   | 'audio'
   | 'video'
   | 'article'

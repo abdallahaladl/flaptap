@@ -6,20 +6,37 @@ import * as path from 'path';
 import { promisify } from 'util';
 import { getPythonBinaryPath, getSkillScriptPath } from '../../../core/config/paths';
 import { isBlockedNetworkHost } from '../../../core/media/media-url';
+import { TimedWord, TranscriptCue } from '../../tracks/shadowing/transcript.service';
 import { assertPublicHttpUrl } from '../utils/url-guard.util';
 
 const execFileAsync = promisify(execFile);
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const MAX_MEDIA_SECONDS = 1800;
 
+export interface TranscribeMediaOptions {
+  title?: string;
+  creator?: string;
+  wordTimestamps?: boolean;
+  persistMediaDir?: string;
+  mediaId?: string;
+  force?: boolean;
+}
+
 export interface MediaTranscript {
   title: string;
   creator: string;
+  thumbnailUrl?: string;
   text: string;
   engine: string;
   model: string;
   durationSeconds: number;
   segments: Array<{ start: number; end: number; text: string }>;
+  cues?: TranscriptCue[];
+  timedWords?: TimedWord[];
+  mediaFile?: string;
+  hasAudio?: boolean;
+  hasVideo?: boolean;
+  mimeType?: string;
   truncated: boolean;
   warnings: string[];
   cached: boolean;
@@ -43,18 +60,24 @@ export class MediaTranscriptionService {
 
   async transcribeUrl(
     url: string,
-    options: { title?: string; creator?: string } = {},
+    options: TranscribeMediaOptions = {},
   ): Promise<MediaTranscript> {
     const parsed = await assertPublicHttpUrl(url);
     if (isBlockedNetworkHost(parsed.hostname)) {
       throw new Error('That media URL is not publicly reachable.');
     }
-    return this.transcribeWithCache(`url:${parsed.toString()}`, parsed.toString(), options);
+    const modeTag = options.wordTimestamps ? ':words' : '';
+    const persistTag = options.persistMediaDir ? ':persisted' : '';
+    return this.transcribeWithCache(
+      `url:${parsed.toString()}${modeTag}${persistTag}`,
+      parsed.toString(),
+      options,
+    );
   }
 
   async transcribeFile(
     filePath: string,
-    options: { title?: string; creator?: string } = {},
+    options: TranscribeMediaOptions = {},
   ): Promise<MediaTranscript> {
     try {
       const stat = fs.statSync(filePath);
@@ -62,7 +85,8 @@ export class MediaTranscriptionService {
         throw new Error('The uploaded media file is empty.');
       }
       const digest = await hashFile(filePath);
-      return await this.transcribeWithCache(`file:${digest}`, filePath, options);
+      const modeTag = options.wordTimestamps ? ':words' : '';
+      return await this.transcribeWithCache(`file:${digest}${modeTag}`, filePath, options);
     } catch (error: any) {
       if (/Media processing|uploaded media|transcrib|speech|download|model/i.test(error?.message || '')) {
         throw error;
@@ -74,20 +98,27 @@ export class MediaTranscriptionService {
   private async transcribeWithCache(
     cacheKeySource: string,
     sourcePath: string,
-    options: { title?: string; creator?: string },
+    options: TranscribeMediaOptions,
   ): Promise<MediaTranscript> {
     const cacheKey = createHash('sha1').update(cacheKeySource).digest('hex');
-    const cached = this.readCache(cacheKey);
-    if (cached) {
-      return {
-        ...cached,
-        title: options.title || cached.title,
-        creator: options.creator || cached.creator,
-        cached: true,
-      };
+    if (!options.force) {
+      const cached = this.readCache(cacheKey);
+      const mediaStillExists =
+        !options.persistMediaDir ||
+        !cached?.mediaFile ||
+        fs.existsSync(path.join(options.persistMediaDir, path.basename(cached.mediaFile)));
+      const hasNeededWords = !options.wordTimestamps || Boolean(cached?.timedWords?.length);
+      if (cached && mediaStillExists && hasNeededWords) {
+        return {
+          ...cached,
+          title: options.title || cached.title,
+          creator: options.creator || cached.creator,
+          cached: true,
+        };
+      }
     }
 
-    const task = this.queue.then(() => this.runHelper(sourcePath));
+    const task = this.queue.then(() => this.runHelper(sourcePath, options));
     this.queue = task.catch(() => undefined);
     const result = await task;
 
@@ -101,7 +132,10 @@ export class MediaTranscriptionService {
     return payload;
   }
 
-  private async runHelper(sourcePath: string): Promise<Omit<MediaTranscript, 'cached'>> {
+  private async runHelper(
+    sourcePath: string,
+    options: TranscribeMediaOptions = {},
+  ): Promise<Omit<MediaTranscript, 'cached'>> {
     const scriptPath = this.resolveHelperPath();
     const pythonBin = getPythonBinaryPath();
     const pythonDir = path.dirname(pythonBin);
@@ -110,19 +144,26 @@ export class MediaTranscriptionService {
         ? `${pythonDir}${path.delimiter}${process.env.PATH || ''}`
         : process.env.PATH || '';
 
+    const cliArgs = [scriptPath, sourcePath, '--max-seconds', String(MAX_MEDIA_SECONDS)];
+    if (options.wordTimestamps) {
+      cliArgs.push('--word-timestamps');
+    }
+    if (options.persistMediaDir) {
+      cliArgs.push('--persist-media-dir', options.persistMediaDir);
+      if (options.mediaId) {
+        cliArgs.push('--media-id', options.mediaId);
+      }
+    }
+
     const startedAt = Date.now();
     let stdout = '';
     let stderr = '';
     try {
-      const result = await execFileAsync(
-        pythonBin,
-        [scriptPath, sourcePath, '--max-seconds', String(MAX_MEDIA_SECONDS)],
-        {
-          maxBuffer: 32 * 1024 * 1024,
-          timeout: 600000,
-          env: { ...process.env, PATH: enhancedPath, PYTHONWARNINGS: 'ignore' },
-        },
-      );
+      const result = await execFileAsync(pythonBin, cliArgs, {
+        maxBuffer: 64 * 1024 * 1024,
+        timeout: 600000,
+        env: { ...process.env, PATH: enhancedPath, PYTHONWARNINGS: 'ignore' },
+      });
       stdout = result.stdout;
       stderr = result.stderr;
     } catch (error: any) {
@@ -161,19 +202,29 @@ export class MediaTranscriptionService {
       throw new Error('No English speech was detected in that media.');
     }
 
+    const timedWords: TimedWord[] = Array.isArray(parsed?.timed_words) ? parsed.timed_words : [];
+    const cues: TranscriptCue[] = Array.isArray(parsed?.cues) ? parsed.cues : [];
+
     this.logger.log(
       `Media transcribed in ${Date.now() - startedAt}ms via ${parsed?.engine || 'unknown'} ` +
-        `(${text.length} chars)`,
+        `(${text.length} chars, ${timedWords.length} timed words)`,
     );
 
     return {
       title: String(parsed?.title || '').trim(),
       creator: String(parsed?.creator || '').trim(),
+      thumbnailUrl: String(parsed?.thumbnail_url || '').trim(),
       text,
       engine: String(parsed?.engine || '').trim(),
       model: String(parsed?.model || '').trim(),
       durationSeconds: Number(parsed?.duration_seconds) || 0,
-      segments: Array.isArray(parsed?.segments) ? parsed.segments.slice(0, 2000) : [],
+      segments: Array.isArray(parsed?.segments) ? parsed.segments.slice(0, 4000) : [],
+      cues,
+      timedWords,
+      mediaFile: String(parsed?.media_file || '').trim() || undefined,
+      hasAudio: parsed?.has_audio !== undefined ? Boolean(parsed.has_audio) : undefined,
+      hasVideo: parsed?.has_video !== undefined ? Boolean(parsed.has_video) : undefined,
+      mimeType: String(parsed?.mime_type || '').trim() || undefined,
       truncated: Boolean(parsed?.truncated),
       warnings: Array.isArray(parsed?.warnings)
         ? parsed.warnings.map((value: any) => String(value)).filter(Boolean).slice(0, 4)

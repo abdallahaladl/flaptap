@@ -97,7 +97,15 @@ export function detectPlatformLabel(hostname: string, pathLower = ''): string {
   if (host.includes('linkedin.com')) return 'LinkedIn';
   if (host.includes('threads.net')) return 'Threads';
   if (host.includes('bsky.app')) return 'Bluesky';
-  if (/\.(mp4|webm|m4a|mp3|mov|wav)$/.test(pathLower)) return 'Direct Media';
+  if (host.includes('podcasts.apple.com')) return 'Apple Podcasts';
+  if (host.includes('open.spotify.com') || host.includes('spotify.com')) return 'Spotify';
+  if (host.includes('soundcloud.com')) return 'SoundCloud';
+  if (host.includes('pocketcasts.com') || host.includes('pca.st')) return 'Pocket Casts';
+  if (host.includes('overcast.fm')) return 'Overcast';
+  if (host.includes('transistor.fm') || host.includes('buzzsprout.com') || host.includes('podbean.com') || host.includes('captivate.fm') || host.includes('anchor.fm') || host.includes('megaphone.fm') || host.includes('simplecast.com') || host.includes('libsyn.com') || host.includes('fireside.fm') || host.includes('castbox.fm')) return 'Podcast';
+  if (host.includes('substack.com')) return 'Substack';
+  if (/\.(rss|xml)(?:$|\?)/.test(pathLower) || /\/(rss|feed)(\/|$)/.test(pathLower)) return 'Podcast RSS';
+  if (/\.(mp4|webm|m4a|mp3|mov|wav|ogg|opus|aac|flac|mkv)(?:$|\?)/.test(pathLower)) return 'Direct Media';
   return 'Web Video';
 }
 

@@ -97,6 +97,11 @@ export class SharedSourcesService {
     private readonly sqlite: SqliteService,
   ) {}
 
+  getMediaDir(): string {
+    fs.mkdirSync(this.mediaDir, { recursive: true });
+    return this.mediaDir;
+  }
+
   findById(userId: string, id: string): SharedSourceRecord | null {
     return this.repository.findById(userId, id);
   }

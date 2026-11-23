@@ -1,24 +1,19 @@
-import { SharedMediaKind, SourceSegment } from '../shared-sources/shared-sources.types';
+import {
+  SharedMediaKind,
+  SharedSourceType,
+  SourceSegment,
+} from '../shared-sources/shared-sources.types';
 
 /**
  * Anything to Phrases (American English Extractor) — shared backend contracts.
  *
- * One extraction guide is a resolved source (YouTube, video, audio, social clip,
- * article, PDF, text/Markdown, image OCR, saved lesson, or shared Flaptap source)
- * plus the source-grounded American English items extracted and validated for it.
+ * One extraction guide is a resolved source (YouTube, video, audio, podcast,
+ * social clip, article, PDF, text/Markdown, image OCR, saved lesson, or shared
+ * Flaptap source) plus the source-grounded American English items extracted and
+ * validated for it.
  */
 
-export type ExtractorSourceType =
-  | 'youtube'
-  | 'social_video'
-  | 'audio'
-  | 'video'
-  | 'article'
-  | 'pdf'
-  | 'text'
-  | 'markdown'
-  | 'image'
-  | 'lesson';
+export type ExtractorSourceType = SharedSourceType;
 
 export type ExtractorInputKind = 'url' | 'text' | 'upload' | 'lesson' | 'source';
 
