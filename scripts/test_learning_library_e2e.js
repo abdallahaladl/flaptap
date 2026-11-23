@@ -205,9 +205,28 @@ async function runE2E() {
           sampleItem?.variations?.length >= 1 &&
           sampleItem?.combinations?.length >= 1 &&
           sampleItem?.usagePatterns?.length >= 1 &&
-          sampleItem?.examples?.length >= 2,
+          sampleItem?.examples?.length >= 2 &&
+          sampleItem.examples.some((ex) => Boolean(ex?.translation)),
       ),
-      `Generated item "${sampleItem?.expression}" includes full depth (variations=${sampleItem?.variations?.length}, combinations=${sampleItem?.combinations?.length}, patterns=${sampleItem?.usagePatterns?.length}, examples=${sampleItem?.examples?.length})`,
+      `Generated item "${sampleItem?.expression}" includes full depth + idiomatic example translations (cefr=${sampleItem?.cefr || 'n/a'}, variations=${sampleItem?.variations?.length}, examples=${sampleItem?.examples?.length})`,
+    );
+
+    // Test single-item GET + on-demand translation endpoint
+    const singleItemRes = await fetch(`${BASE_URL}/api/learning-library/items/${sampleItem.id}`, {
+      headers: authA,
+    });
+    assert(singleItemRes.ok, `GET /api/learning-library/items/:id returned ${singleItemRes.status}`);
+    const translateItemRes = await fetch(
+      `${BASE_URL}/api/learning-library/items/${sampleItem.id}/translate`,
+      {
+        method: 'POST',
+        headers: authA,
+        body: JSON.stringify({ targetLanguage: 'ar', force: false }),
+      },
+    );
+    assert(
+      translateItemRes.ok,
+      `POST /api/learning-library/items/:id/translate returned ${translateItemRes.status}`,
     );
 
     const hasBasic = (gen1.items || []).some((i) => BASIC_FORBIDDEN.has(i.expression.toLowerCase()));
@@ -418,8 +437,9 @@ async function runE2E() {
         `Compact Dynamic AI Selector mounted cleanly ("${selectorLiveStatus}", zero CLI bloat)`,
       );
 
-      // Select count = 3 and category = 'fillers_hesitation'
+      // Select count = 3, expand Fine-tune, and select category = 'fillers_hesitation'
       await page.click('.ll-count-pill[data-ll-count="3"]');
+      await page.click('#ll-options-toggle');
       await page.select('#ll-gen-category-select', 'fillers_hesitation');
       const runLabel = await page.$eval('#ll-generate-btn-label', (el) => el.textContent.trim());
       assert(
@@ -524,35 +544,37 @@ async function runE2E() {
       assert(maskedAfterReveal === 2, 'Clicking Reveal Meaning unmasked targeted card');
       await page.click('#ll-recall-toggle-btn');
 
-      // Test checkable completion & instant Total/Completed/Remaining bar + Telemetry sync across Cards & Compact Table
+      // Test checkable completion & instant Botanical Emerald Progress Dock sync across List & Cards views
       const llBarBefore = await page.evaluate(() => ({
         total: document.querySelector('#ll-browse-progress-bar [data-sp-total]')?.textContent?.trim(),
         completed: document.querySelector('#ll-browse-progress-bar [data-sp-completed]')?.textContent?.trim(),
         remaining: document.querySelector('#ll-browse-progress-bar [data-sp-remaining]')?.textContent?.trim(),
+        pips: document.querySelectorAll('#ll-browse-progress-bar .ft-pip').length,
       }));
       assert(
-        llBarBefore.total === '3' && llBarBefore.completed === '0' && llBarBefore.remaining === '3',
-        `Browse progress bar initializes cleanly (${JSON.stringify(llBarBefore)})`,
+        llBarBefore.total === '3' &&
+          llBarBefore.completed === '0' &&
+          llBarBefore.remaining === '3' &&
+          llBarBefore.pips === 3,
+        `Sticky Botanical Emerald Progress Dock initializes cleanly with 3 pips (${JSON.stringify(llBarBefore)})`,
       );
       await page.click('#ll-browse-items-container [data-ll-toggle-complete]');
       await page.waitForFunction(
-        () => document.getElementById('ll-stat-completed')?.textContent?.trim() === '1',
+        () => document.querySelector('#ll-browse-progress-bar [data-sp-completed]')?.textContent?.trim() === '1',
         { timeout: 5000 },
       );
       const llBarAfter = await page.evaluate(() => ({
         total: document.querySelector('#ll-browse-progress-bar [data-sp-total]')?.textContent?.trim(),
         completed: document.querySelector('#ll-browse-progress-bar [data-sp-completed]')?.textContent?.trim(),
         remaining: document.querySelector('#ll-browse-progress-bar [data-sp-remaining]')?.textContent?.trim(),
-        statCompleted: document.getElementById('ll-stat-completed')?.textContent?.trim(),
-        statProgress: document.getElementById('ll-stat-progress')?.textContent?.trim(),
+        ringPct: document.querySelector('#ll-browse-progress-bar .ft-ring-pct')?.textContent?.trim(),
       }));
       assert(
         llBarAfter.total === '3' &&
           llBarAfter.completed === '1' &&
           llBarAfter.remaining === '2' &&
-          llBarAfter.statCompleted === '1' &&
-          llBarAfter.statProgress === '33%',
-        `Card check updates progress bar & telemetry strip in lockstep (${JSON.stringify(llBarAfter)})`,
+          llBarAfter.ringPct === '33%',
+        `Card check updates Botanical Emerald Progress Ring & pips in lockstep (${JSON.stringify(llBarAfter)})`,
       );
 
       // Test View Mode toggle: switch to Cards mode, then back to Table mode
@@ -612,11 +634,11 @@ async function runE2E() {
       );
       assert(true, 'Hard page.reload() on /library/browse keeps user in Learning Library with all 3 items');
 
-      // Test Pro Pagination in Browser with User A's 28-item account
+      // Test Pro Pagination in Browser with User A's 28-item account on /library/browse
       await page.evaluate((tok) => {
         localStorage.setItem('flaptap_auth_token', tok);
       }, tokenA);
-      await page.goto(`${BASE_URL}/library`, { waitUntil: 'networkidle2', timeout: 20000 });
+      await page.goto(`${BASE_URL}/library/browse`, { waitUntil: 'networkidle2', timeout: 20000 });
       await page.waitForFunction(
         () => {
           const rows = document.querySelectorAll('#ll-browse-items-container .ll-table tbody tr, #ll-browse-items-container .ll-card').length;
