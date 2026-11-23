@@ -34,6 +34,14 @@
       i18nKey: 'navPronunciation',
       group: 'Studio',
     },
+    'transcript-lab': {
+      section: 'transcript-lab',
+      path: '/transcripts',
+      aliases: ['/transcript-lab'],
+      title: 'Transcript Lab',
+      i18nKey: 'navTranscriptLab',
+      group: 'Studio',
+    },
     'learning-library': {
       section: 'learning-library',
       path: '/library',
@@ -90,6 +98,13 @@
     ) {
       return 'american-extractor';
     }
+    if (
+      val === 'transcripts' ||
+      val === 'transcript-lab' ||
+      val === 'transcribe'
+    ) {
+      return 'transcript-lab';
+    }
     if (ROUTE_TABLE[val]) return val;
     return null;
   }
@@ -140,6 +155,33 @@
         subview: noteId ? 'detail' : 'library',
         domainId: '',
         noteId,
+        searchParams: params,
+        canonicalizedFromQuery: false,
+      };
+    }
+
+    // Sub-routes: Transcript Lab (/transcripts, /transcripts/library, /transcripts/:id)
+    if (pathname === '/transcripts/library' || pathname === '/transcript-lab/library') {
+      return {
+        section: 'transcript-lab',
+        subview: 'library',
+        domainId: '',
+        noteId: '',
+        docId: '',
+        searchParams: params,
+        canonicalizedFromQuery: false,
+      };
+    }
+    if (pathname.startsWith('/transcripts/') || pathname.startsWith('/transcript-lab/')) {
+      const parts = pathname.split('/').filter(Boolean);
+      const last = decodeURIComponent(parts[parts.length - 1] || '');
+      const docId = last && last !== 'view' && last !== 'library' ? last : '';
+      return {
+        section: 'transcript-lab',
+        subview: docId ? 'view' : 'library',
+        domainId: '',
+        noteId: '',
+        docId,
         searchParams: params,
         canonicalizedFromQuery: false,
       };
@@ -214,6 +256,17 @@
       } else {
         pathname = '/extractor';
       }
+    } else if (section === 'transcript-lab') {
+      if (options.subview === 'library') {
+        pathname = '/transcripts/library';
+      } else if (options.subview === 'view' && options.docId) {
+        pathname = `/transcripts/${encodeURIComponent(options.docId)}`;
+        if (options.view && options.view !== 'sentences') {
+          nextParams.set('view', options.view);
+        }
+      } else {
+        pathname = '/transcripts';
+      }
     } else if (section === 'vocabulary') {
       if (options.subview === 'flashcards') {
         nextParams.set('view', 'flashcards');
@@ -250,6 +303,11 @@
     if (route.section === 'american-extractor') {
       if (route.subview === 'library') return 'Library';
       if (route.subview === 'detail' || route.subview === 'note') return 'Study Guide';
+      return '';
+    }
+    if (route.section === 'transcript-lab') {
+      if (route.subview === 'library') return 'Library';
+      if (route.subview === 'view') return 'Workbench';
       return '';
     }
     if (route.section === 'vocabulary') {
@@ -388,7 +446,8 @@
       normalizePath(global.location.pathname) === '/learning-library' ||
       normalizePath(global.location.pathname) === '/american-extractor' ||
       normalizePath(global.location.pathname) === '/american-english' ||
-      normalizePath(global.location.pathname) === '/phrases'
+      normalizePath(global.location.pathname) === '/phrases' ||
+      normalizePath(global.location.pathname) === '/transcript-lab'
     ) {
       const clean = buildUrl(parsed.section, {
         subview: parsed.subview,

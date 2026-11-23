@@ -25,6 +25,9 @@
 
   let ytApiPromise = null;
   function ensureYouTubeApi() {
+    if (global.FlaptapMediaEngine?.ensureYouTubeApi) {
+      return global.FlaptapMediaEngine.ensureYouTubeApi();
+    }
     if (global.YT && global.YT.Player) return Promise.resolve(global.YT);
     if (ytApiPromise) return ytApiPromise;
     ytApiPromise = new Promise((resolve, reject) => {

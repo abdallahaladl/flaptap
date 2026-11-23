@@ -16,6 +16,7 @@
       navLessons: 'Lessons',
       navDialogue: 'Dialogue',
       navPronunciation: 'Pronunciation',
+      navTranscriptLab: 'Transcript Lab',
       navVocabulary: 'Vocabulary',
       navHistory: 'History & Usage',
       navLearningLibrary: 'Generate Phrases',
@@ -172,6 +173,7 @@
       navLessons: 'الدروس',
       navDialogue: 'المحادثات',
       navPronunciation: 'النطق',
+      navTranscriptLab: 'Transcript Lab',
       navVocabulary: 'المفردات',
       navHistory: 'السجل والاستخدام',
       navLearningLibrary: 'Generate Phrases',
@@ -549,6 +551,14 @@
       return;
     }
 
+    if (act.type === 'tlab_ingest_url' && act.payload) {
+      switchSection('transcript-lab');
+      if (window.FlaptapTranscriptLab?.resumePending) {
+        await window.FlaptapTranscriptLab.resumePending(act.payload);
+      }
+      return;
+    }
+
     if (act.type === 'section' && act.section) {
       switchSection(act.section);
     }
@@ -616,7 +626,18 @@
 
   function activateSectionPanel(section, opts = {}) {
     if (section === 'library') section = 'learning-library';
-    if (!['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'american-extractor', 'learning-library'].includes(section)) {
+    if (section === 'transcripts') section = 'transcript-lab';
+    const validSections = [
+      'lessons',
+      'dialogue',
+      'pronunciation',
+      'transcript-lab',
+      'vocabulary',
+      'history',
+      'american-extractor',
+      'learning-library',
+    ];
+    if (!validSections.includes(section)) {
       section = 'lessons';
     }
     const changed = state.section !== section;
@@ -624,7 +645,7 @@
     document.body.dataset.activeSection = section;
     document.body.classList.toggle('is-lessons-view', section === 'lessons');
     document.body.classList.toggle('is-extractor-view', section === 'american-extractor');
-    ['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'american-extractor', 'learning-library'].forEach((name) => {
+    validSections.forEach((name) => {
       const panel = document.getElementById(`section-${name}`);
       if (panel) panel.hidden = name !== section;
     });
@@ -687,6 +708,8 @@
       await window.FlaptapAmericanExtractor?.init?.(routeState);
     } else if (resolved === 'learning-library') {
       await window.FlaptapLearningLibrary?.init?.(routeState);
+    } else if (resolved === 'transcript-lab') {
+      await window.FlaptapTranscriptLab?.init?.(routeState);
     }
   }
 

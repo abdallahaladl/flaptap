@@ -489,12 +489,13 @@ async function runProductionE2ETest() {
             'lessons',
             'dialogue',
             'pronunciation',
+            'transcript-lab',
             'learning-library',
             'american-extractor',
             'vocabulary',
             'history',
           ]),
-      `Expected all 7 primary links inside Left Sidebar (0 topbar tabs), got ${JSON.stringify(signedOutHome.navTabs)}`,
+      `Expected all 8 primary links inside Left Sidebar (0 topbar tabs), got ${JSON.stringify(signedOutHome.navTabs)}`,
     );
     assert(signedOutHome.cardsLeaked === 0 && signedOutHome.gateVisible, 'Signed-out visitor leaked library cards!');
     assert(signedOutHome.startBtnEnabled, 'Start Lesson button must remain clickable for signed-out visitor.');
