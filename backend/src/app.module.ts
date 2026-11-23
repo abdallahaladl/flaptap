@@ -23,6 +23,7 @@ import { AiProvidersModule } from './modules/ai-providers/ai-providers.module';
 import { LearningLibraryModule } from './modules/learning-library/learning-library.module';
 import { AmericanExtractorModule } from './modules/american-extractor/american-extractor.module';
 import { SharedSourcesModule } from './modules/shared-sources/shared-sources.module';
+import { TranscriptLabModule } from './modules/transcript-lab/transcript-lab.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { SharedSourcesModule } from './modules/shared-sources/shared-sources.mod
     AiProvidersModule,
     LearningLibraryModule,
     AmericanExtractorModule,
+    TranscriptLabModule,
   ],
   controllers: [
     HealthController,

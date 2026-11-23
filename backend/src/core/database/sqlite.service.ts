@@ -296,6 +296,46 @@ export class SqliteService implements OnModuleDestroy {
         ON user_ai_keys(user_id, created_at DESC);
       CREATE UNIQUE INDEX IF NOT EXISTS idx_user_ai_keys_unique_fp
         ON user_ai_keys(user_id, key_fingerprint);
+
+      CREATE TABLE IF NOT EXISTS transcript_lab_docs (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        source_id TEXT NOT NULL DEFAULT '',
+        source_key TEXT NOT NULL DEFAULT '',
+        source_url TEXT NOT NULL DEFAULT '',
+        source_type TEXT NOT NULL DEFAULT 'youtube',
+        platform TEXT NOT NULL DEFAULT 'YouTube',
+        title TEXT NOT NULL,
+        creator TEXT NOT NULL DEFAULT '',
+        thumbnail_url TEXT NOT NULL DEFAULT '',
+        duration_seconds REAL NOT NULL DEFAULT 0,
+        has_audio INTEGER NOT NULL DEFAULT 1,
+        has_video INTEGER NOT NULL DEFAULT 0,
+        media_kind TEXT NOT NULL DEFAULT 'none',
+        media_id TEXT NOT NULL DEFAULT '',
+        mime_type TEXT NOT NULL DEFAULT '',
+        provider_engine TEXT NOT NULL DEFAULT '',
+        raw_json TEXT NOT NULL DEFAULT '{}',
+        reviewed_json TEXT NOT NULL DEFAULT '{}',
+        review_status TEXT NOT NULL DEFAULT 'pending',
+        review_error TEXT NOT NULL DEFAULT '',
+        speaker_overrides_json TEXT NOT NULL DEFAULT '{}',
+        completion_json TEXT NOT NULL DEFAULT '{}',
+        sentence_count INTEGER NOT NULL DEFAULT 0,
+        word_count INTEGER NOT NULL DEFAULT 0,
+        speaker_count INTEGER NOT NULL DEFAULT 1,
+        repair_count INTEGER NOT NULL DEFAULT 0,
+        is_completed INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_tlab_user_updated
+        ON transcript_lab_docs(user_id, updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_tlab_user_source_key
+        ON transcript_lab_docs(user_id, source_key);
+      CREATE INDEX IF NOT EXISTS idx_tlab_user_source_id
+        ON transcript_lab_docs(user_id, source_id);
     `);
 
     // Idempotent schema migrations for pre-existing databases
