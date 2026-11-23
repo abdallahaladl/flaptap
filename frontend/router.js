@@ -113,13 +113,25 @@
     const pathname = normalizePath(loc.pathname);
     const params = new URLSearchParams(loc.search || '');
 
-    // Sub-routes: Learning Library
+    // Sub-routes: Learning Library (/library, /library/browse, /library/item/:id)
     if (pathname === '/library/browse' || pathname === '/learning-library/browse') {
       return {
         section: 'learning-library',
         subview: 'browse',
         domainId: params.get('domain') || '',
         noteId: '',
+        searchParams: params,
+        canonicalizedFromQuery: false,
+      };
+    }
+    if (pathname.startsWith('/library/item/') || pathname.startsWith('/learning-library/item/')) {
+      const parts = pathname.split('/');
+      const itemId = decodeURIComponent(parts[parts.length - 1] || '');
+      return {
+        section: 'learning-library',
+        subview: 'browse',
+        domainId: params.get('domain') || '',
+        noteId: itemId,
         searchParams: params,
         canonicalizedFromQuery: false,
       };

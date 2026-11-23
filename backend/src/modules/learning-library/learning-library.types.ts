@@ -4,6 +4,7 @@ export interface LearningUsagePattern {
   pattern: string;
   meaning: string;
   example: string;
+  exampleTranslation?: string;
 }
 
 /** One interchangeable filler inside a reusable expression frame. */
@@ -19,6 +20,7 @@ export interface LearningPatternSlot {
 export interface LearningExampleItem {
   speakerContext: string;
   sentence: string;
+  translation?: string;
   explanation: string;
 }
 
@@ -66,6 +68,8 @@ export interface LearningGenerationContext {
   angleHint?: string;
   focusTopic: string;
   preferredRegister: string;
+  level?: string;
+  studyGoal?: string;
   targetLanguageCode: string;
   targetLanguageName: string;
   targetLanguageNative: string;
@@ -85,6 +89,7 @@ export interface GeneratedLearningCandidate {
   register: string;
   tone: string;
   level: string;
+  cefr: string;
   ipa: string;
   spokenForm: string;
   phoneticBreakdown: string;
@@ -156,6 +161,8 @@ export interface GenerateLibraryItemsDto {
   categoryId?: string;
   focusTopic?: string;
   register?: string;
+  level?: string;
+  studyGoal?: string;
   targetLanguage?: string;
   keyId?: string;
   agentId?: string;
@@ -172,6 +179,7 @@ export interface ListLibraryItemsQuery {
   favoritesOnly?: boolean;
   batchId?: string;
   register?: string;
+  level?: string;
   q?: string;
   sort?: 'newest' | 'alphabetical' | 'mastery' | 'most_reviewed';
   page?: number;

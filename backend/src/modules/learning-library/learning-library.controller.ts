@@ -16,6 +16,7 @@ import {
 import { Request, Response } from 'express';
 import { requireAuthenticatedUser } from '../auth/auth.request';
 import { AuthService } from '../auth/auth.service';
+import { LearningLibraryTranslationService } from './learning-library-translation.service';
 import { LearningLibraryService } from './learning-library.service';
 import {
   GenerateLibraryItemsDto,
@@ -30,10 +31,22 @@ interface DefineLibraryWordDto {
   language?: string;
 }
 
+interface TranslateLibraryItemDto {
+  targetLanguage?: string;
+  force?: boolean;
+  keyId?: string;
+  model?: string;
+}
+
+interface TranslateLibraryBatchDto extends TranslateLibraryItemDto {
+  itemIds: string[];
+}
+
 @Controller('api/learning-library')
 export class LearningLibraryController {
   constructor(
     private readonly learningLibrary: LearningLibraryService,
+    private readonly translationService: LearningLibraryTranslationService,
     private readonly authService: AuthService,
   ) {}
 
@@ -43,12 +56,15 @@ export class LearningLibraryController {
    */
   @Get('domains')
   listDomains() {
-    const { defaultDomainId, domains, aiEngine } = this.learningLibrary.listDomains();
+    const { defaultDomainId, domains, levels, studyGoals, aiEngine } =
+      this.learningLibrary.listDomains();
     return {
       success: true,
       defaultDomainId,
       count: domains.length,
       domains,
+      levels,
+      studyGoals,
       aiEngine,
     };
   }
@@ -62,6 +78,7 @@ export class LearningLibraryController {
     @Query('favoritesOnly') favoritesOnly?: string,
     @Query('batchId') batchId?: string,
     @Query('register') register?: string,
+    @Query('level') level?: string,
     @Query('q') q?: string,
     @Query('sort') sort?: string,
     @Query('page') page?: string,
@@ -77,6 +94,7 @@ export class LearningLibraryController {
       favoritesOnly: favoritesOnly === 'true' || favoritesOnly === '1',
       batchId,
       register,
+      level,
       q,
       sort:
         sort === 'alphabetical' || sort === 'mastery' || sort === 'most_reviewed'
@@ -89,6 +107,16 @@ export class LearningLibraryController {
     return {
       success: true,
       ...this.learningLibrary.listLibrary(identity.userId, query),
+    };
+  }
+
+  @Get('items/:id')
+  getItem(@Param('id') id: string, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    const item = this.learningLibrary.getItemById(identity.userId, id);
+    return {
+      success: true,
+      item,
     };
   }
 
@@ -224,6 +252,42 @@ export class LearningLibraryController {
       contextSentence: dto.contextSentence,
       language: dto.language || identity.user.nativeLanguage,
     });
+  }
+
+  @Post('items/:id/translate')
+  async translateItem(
+    @Param('id') id: string,
+    @Body() dto: TranslateLibraryItemDto,
+    @Req() req: Request,
+  ) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    const res = await this.translationService.translateItems(identity.userId, [id], {
+      targetLanguage: dto?.targetLanguage || identity.user.nativeLanguage,
+      force: Boolean(dto?.force),
+      keyId: dto?.keyId,
+      model: dto?.model,
+    });
+    return {
+      success: true,
+      item: res.items[0] || null,
+      translatedCount: res.translatedCount,
+      targetLanguage: res.targetLanguage,
+    };
+  }
+
+  @Post('translate-batch')
+  async translateBatch(@Body() dto: TranslateLibraryBatchDto, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    const res = await this.translationService.translateItems(identity.userId, dto?.itemIds || [], {
+      targetLanguage: dto?.targetLanguage || identity.user.nativeLanguage,
+      force: Boolean(dto?.force),
+      keyId: dto?.keyId,
+      model: dto?.model,
+    });
+    return {
+      success: true,
+      ...res,
+    };
   }
 
   @Patch('items/:id')

@@ -1,5 +1,9 @@
 import { getLanguage, LanguageOption } from '../../core/ai/languages';
 import {
+  buildSentenceTranslationGuidance,
+  buildTermTranslationGuidance,
+} from '../../core/ai/translation-rules.util';
+import {
   ExtractionCategoryMetadata,
   ExtractionFocusOption,
   ExtractorItemCategory,
@@ -718,15 +722,16 @@ export function buildExtractionPrompts(params: {
 
   const translationLine = isEnglishTarget
     ? '- Target language: English only (no translation fields needed).'
-    : isArabicTarget
-      ? [
-          '- Standalone term meanings ("localizedMeaning"): Translate ONLY the extracted "term" itself (whether idiom, expression, single word, verb, phrasal verb, collocation, slang, or pattern) into its general everyday Egyptian Arabic (عامية مصرية مهذبة وطبيعية) meaning(s) across all common usages — NEVER explain the source sentence, NEVER add an example, and NEVER write context commentary like "هنا معناها..." or "في السياق ده...". When the item has multiple common meanings/senses in English, list ALL of its core general meanings separated by commas (،) — e.g. for "sound": "صوت، سليم، موثوق، متين، يبدو"; for "put the onus on someone": "يحمّل المسؤولية لحد، يرمي العبء على حد"; for "shift left": "تقديم الاختبار والأمان لمراحل التطوير بدري، البدء بالأمان والاختبار مبكرًا". Keep it concise, natural, and strictly standalone.',
-          '- True intended sentence translations ("contextTranslation" & "exampleTranslation"): Translate the exact SOURCE TEXT sentence containing "surface" into "contextTranslation", and translate your "example" sentence into "exampleTranslation". Both MUST be natural, idiomatic Egyptian Arabic (عامية مصرية مهذبة وطبيعية) conveying the true intended meaning of the full English sentence and idiom — NEVER stiff, robotic, or literal word-for-word translation. Keep proper names and English technical terms in Latin script.',
-        ].join('\n')
-      : [
-          `- Standalone term meanings ("localizedMeaning"): Translate ONLY the extracted "term" itself (whether idiom, expression, single word, verb, phrasal verb, collocation, slang, or pattern) into its general ${language.name} (${language.native}) meaning(s) across all common usages — NEVER explain the source sentence, NEVER add an example, and NEVER write context commentary like "here it means..." or "in this context...". When the item has multiple common meanings/senses in English, list ALL of its core general meanings separated by commas (,). Keep it concise, natural, and strictly standalone.`,
-          `- True intended sentence translations ("contextTranslation" & "exampleTranslation"): Translate the exact SOURCE TEXT sentence containing "surface" into "contextTranslation", and translate your "example" sentence into "exampleTranslation". Both MUST be natural, idiomatic ${language.name} (${language.native}) conveying the true intended meaning of the full English sentence and idiom — NEVER stiff, robotic, or literal word-for-word translation. Keep proper names and English technical terms in Latin script.`,
-        ].join('\n');
+    : [
+        `- Standalone term meanings ("localizedMeaning"): ${buildTermTranslationGuidance(language, {
+          preserveSlots: false,
+          multiSense: true,
+        })}`,
+        `- True intended sentence translations ("contextTranslation" & "exampleTranslation"): ${buildSentenceTranslationGuidance(
+          language,
+          ['contextTranslation', 'exampleTranslation'],
+        )}`,
+      ].join('\n');
 
   const needsContextualTitle = Boolean(
     params.source.needsContextualTitle || params.source.sourceType === 'image',
