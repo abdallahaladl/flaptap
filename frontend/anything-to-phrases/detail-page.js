@@ -1058,73 +1058,23 @@
         bar.hidden = stats.total === 0;
         bar.classList.toggle('is-all-done', stats.tone === 'done');
 
-        const radius = 17;
-        const circumference = 2 * Math.PI * radius;
-        const displayPct = stats.tone === 'done' ? 100 : stats.pct;
-        const dashOffset = circumference * (1 - displayPct / 100);
-
-        const ringSvg =
-          stats.tone === 'done'
-            ? `<div class="aex-ring-badge is-done" aria-hidden="true">
-                 ${
-                   global.FlaptapCheck?.ICON_SVG ||
-                   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.2 12.75 L9.55 17.1 Q10.1 17.65 10.65 17.05 L18.9 7.35"></path></svg>'
-                 }
-               </div>`
-            : `<div class="aex-ring-badge is-${stats.tone}" aria-hidden="true">
-                 <svg class="aex-ring-svg" viewBox="0 0 42 42">
-                   <circle class="aex-ring-bg" cx="21" cy="21" r="${radius}"></circle>
-                   <circle class="aex-ring-fg" cx="21" cy="21" r="${radius}" stroke-dasharray="${circumference.toFixed(
-                     2,
-                   )}" stroke-dashoffset="${dashOffset.toFixed(2)}"></circle>
-                 </svg>
-                 <span class="aex-ring-pct ltr-num">${displayPct}%</span>
-               </div>`;
-
-        const trackHtml =
-          items.length > 0 && items.length <= 32
-            ? `<div class="aex-pip-track" role="list" aria-label="Phrase completion map">
-                 ${items
-                   .map((item) => {
-                     const idx = Number(item.index);
-                     const itemDone = completedSet.has(idx);
-                     return `<button type="button" class="aex-pip${itemDone ? ' is-done' : ''}" data-aex-jump-index="${escapeHtml(
-                       idx,
-                     )}" title="#${idx + 1} · ${escapeHtml(item.term)} (${
-                       itemDone ? 'Studied' : 'Remaining'
-                     })" aria-label="Jump to #${idx + 1} ${escapeHtml(item.term)} (${
-                       itemDone ? 'Studied' : 'Remaining'
-                     })"></button>`;
-                   })
-                   .join('')}
-               </div>`
-            : `<div class="subject-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${stats.total}" aria-valuenow="${stats.done}">
-                 <div class="subject-progress-fill" style="width: ${displayPct}%"></div>
-               </div>`;
-
-        const headline =
-          stats.tone === 'done'
-            ? 'Guide completed'
-            : stats.tone === 'progress'
-              ? `${stats.remaining} phrase${stats.remaining === 1 ? '' : 's'} left to master`
-              : 'Ready to study';
-
-        bar.innerHTML = `
-          <div class="aex-progress-deck">
-            ${ringSvg}
-            <div class="aex-progress-main">
-              <div class="aex-progress-top-line">
-                <span class="sp-state sp-state--${stats.tone}">${escapeHtml(stats.label)}</span>
-                <span class="aex-progress-headline">${escapeHtml(headline)}</span>
-                <span class="aex-progress-fraction ltr-num">
-                  <strong data-sp-completed>${stats.done}</strong>/<span data-sp-total>${stats.total}</span>
-                  <span class="visually-hidden"> (<span data-sp-remaining>${stats.remaining}</span> remaining)</span>
-                </span>
-              </div>
-              ${trackHtml}
-            </div>
-          </div>
-        `;
+        if (global.FlaptapStudyDock?.renderProgressDeckHtml) {
+          bar.innerHTML = global.FlaptapStudyDock.renderProgressDeckHtml({
+            total: stats.total,
+            done: stats.done,
+            singular: 'phrase',
+            plural: 'phrases',
+            doneHeadline: 'Guide completed',
+            readyHeadline: 'Ready to study',
+            pipAttr: 'data-aex-jump-index',
+            pips: items.map((item) => ({
+              id: Number(item.index),
+              displayNumber: Number(item.index) + 1,
+              label: item.term,
+              done: completedSet.has(Number(item.index)),
+            })),
+          });
+        }
       }
 
       const scopeBtn = el('aex-note-scope');

@@ -673,8 +673,8 @@
   -moz-appearance: none !important;
   width: 100%;
   height: auto;
-  min-height: 38px;
-  padding: 8px 40px 8px 12px;
+  min-height: 36px;
+  padding: 6px 38px 6px 12px;
   border-radius: 11px;
   border: 1px solid var(--ll-border);
   background-color: var(--ll-surface-inset);
@@ -2976,5 +2976,804 @@
   #section-learning-library .ll-skeleton-card {
     padding: 16px;
     border-radius: 18px;
+  }
+}
+
+
+/* ==========================================================================
+   14. GENERATE PHRASES — 2-PAGE PARITY & SHARED DOCK POLISH
+       (1:1 Visual Harmony with Anything to Phrases)
+   ========================================================================== */
+
+body.is-library-view .workspace-main,
+body:has(#section-learning-library:not([hidden])) .workspace-main {
+  padding-top: 12px;
+}
+
+#section-learning-library .editorial-desk.ll-desk,
+#section-learning-library .ll-desk {
+  gap: 14px;
+  padding: 0 0 44px;
+  overflow: visible;
+  animation: none;
+}
+
+#section-learning-library .editorial-desk.ll-desk::before {
+  display: none;
+}
+
+/* Unified Borderless Page Header Row (Matches .aex-shell-bar 1:1) */
+#section-learning-library .ll-shell-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 20px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  animation: none;
+}
+
+#section-learning-library .ll-desk[data-ll-active="browse"] .ll-shell-bar {
+  justify-content: flex-end;
+}
+
+#section-learning-library .ll-desk[data-ll-active="browse"] .ll-extract-hero {
+  display: none;
+}
+
+#section-learning-library .ll-extract-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: start;
+  gap: 3px;
+  padding: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+#section-learning-library .ll-extract-hero .ll-headline {
+  font-size: clamp(1.42rem, 2.1vw, 1.76rem);
+  line-height: 1.14;
+  letter-spacing: -0.03em;
+}
+
+#section-learning-library .ll-extract-hero .ll-subcopy {
+  max-width: none;
+  font-size: 0.865rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+#section-learning-library .ll-view-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Top Generate | Library Segmented Switcher */
+#section-learning-library .ll-top-view-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 980px;
+  background: var(--ll-fill);
+  border: 1px solid var(--ll-border);
+  flex-shrink: 0;
+}
+
+#section-learning-library .ll-top-view-nav .lexicon-view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 980px;
+  background: transparent;
+  color: var(--ll-text-secondary);
+  font-family: var(--ll-font-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+#section-learning-library .ll-top-view-nav .lexicon-view-tab:hover {
+  color: var(--ll-text-primary);
+}
+
+#section-learning-library .ll-top-view-nav .lexicon-view-tab.active {
+  background: var(--ll-surface);
+  color: var(--ll-text-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+[data-theme="dark"] #section-learning-library .ll-top-view-nav .lexicon-view-tab.active {
+  background: var(--ll-surface-2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+#section-learning-library .ll-top-view-nav .lexicon-view-tab.active svg {
+  color: var(--ll-blue);
+}
+
+/* Page 1: Studio Card Domain Tabs in Topbar (Mirrors .aex-source-tabs) */
+#section-learning-library .ll-source-tabs {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--ll-fill);
+  border: 1px solid var(--ll-border);
+}
+
+#section-learning-library .ll-source-tabs .linguist-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ll-text-secondary);
+  font-family: var(--ll-font-text);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
+}
+
+#section-learning-library .ll-source-tabs .linguist-tab-btn:hover {
+  color: var(--ll-text-primary);
+}
+
+#section-learning-library .ll-source-tabs .linguist-tab-btn.active {
+  background: var(--ll-surface);
+  color: var(--ll-text-primary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10);
+}
+
+[data-theme="dark"] #section-learning-library .ll-source-tabs .linguist-tab-btn.active {
+  background: var(--ll-surface-2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+#section-learning-library .ll-source-tabs .linguist-tab-btn.active svg {
+  color: var(--ll-blue);
+}
+
+/* Page 1: Focus Input, Clear Button & Batch Size Row */
+#section-learning-library .ll-generate-form {
+  display: flex;
+  flex-direction: column;
+}
+
+#section-learning-library .ll-focus-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#section-learning-library .ll-input-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--ll-fill);
+  color: var(--ll-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+#section-learning-library .ll-input-clear-btn:hover {
+  background: var(--ll-fill-hover);
+  color: var(--ll-text-primary);
+}
+
+#section-learning-library .ll-batch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  padding-top: 2px;
+}
+
+/* Page 1: Study Preferences + Collapsible Fine-Tune Disclosure */
+#section-learning-library .ll-options-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#section-learning-library .ll-options-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#section-learning-library .ll-reset-options-btn {
+  border: none;
+  background: transparent;
+  color: var(--ll-blue-ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+}
+
+#section-learning-library .ll-reset-options-btn:hover {
+  background: var(--ll-blue-wash);
+}
+
+#section-learning-library .ll-customize-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 980px;
+  border: 1px solid var(--ll-border);
+  background: var(--ll-surface-2);
+  color: var(--ll-text-secondary);
+  font-family: var(--ll-font-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease;
+}
+
+#section-learning-library .ll-customize-toggle:hover,
+#section-learning-library .ll-customize-toggle[aria-expanded="true"] {
+  color: var(--ll-text-primary);
+  border-color: var(--ll-border-strong);
+  background: var(--ll-fill-subtle);
+}
+
+#section-learning-library .ll-customize-toggle .ll-chevron {
+  transition: transform 0.2s var(--ll-ease);
+}
+
+#section-learning-library .ll-customize-toggle[aria-expanded="true"] .ll-chevron {
+  transform: rotate(180deg);
+}
+
+#section-learning-library .ll-custom-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 980px;
+  background: var(--ll-blue);
+  color: #FFFFFF;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+#section-learning-library .ll-options-primary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+#section-learning-library .ll-advanced-options {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.24s var(--ll-ease), opacity 0.2s ease, margin-top 0.2s ease;
+}
+
+#section-learning-library .ll-advanced-options.is-open {
+  grid-template-rows: 1fr;
+  opacity: 1;
+  margin-top: 12px;
+}
+
+#section-learning-library .ll-advanced-options-inner {
+  overflow: hidden;
+  padding-top: 12px;
+  border-top: 1px dashed var(--ll-border);
+}
+
+#section-learning-library .ll-options-secondary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+/* Page 1: Studio Card Footer CTA Bar (Matches Anything to Phrases) */
+#section-learning-library .ll-source-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 14px 22px;
+  border-top: 1px solid var(--ll-border);
+  background: var(--ll-surface-2);
+}
+
+#section-learning-library .ll-footer-hint {
+  font-size: 0.78rem;
+  color: var(--ll-text-tertiary);
+}
+
+#section-learning-library .ll-source-footer .ll-generate-btn {
+  height: 40px;
+  padding: 0 20px;
+  border-radius: 980px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  gap: 8px;
+}
+
+/* 4-Stage Progress Steps */
+#section-learning-library .ll-progress-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 4px;
+}
+
+#section-learning-library .ll-pstep {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: var(--ll-fill-subtle);
+  border: 1px solid transparent;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--ll-text-tertiary);
+  transition: background-color 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+
+#section-learning-library .ll-pstep-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ll-fill);
+  font-size: 0.68rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+#section-learning-library .ll-pstep.is-active {
+  background: var(--ll-blue-wash);
+  border-color: rgba(0, 113, 227, 0.25);
+  color: var(--ll-blue-ink);
+}
+
+#section-learning-library .ll-pstep.is-active .ll-pstep-num {
+  background: var(--ll-blue);
+  color: #FFFFFF;
+}
+
+#section-learning-library .ll-pstep.is-done {
+  background: var(--ll-done-wash);
+  border-color: var(--ll-done-border);
+  color: var(--ll-done);
+}
+
+#section-learning-library .ll-pstep.is-done .ll-pstep-num {
+  background: var(--ll-done-solid);
+  color: #FFFFFF;
+}
+
+/* Page 1: Recent Expressions Shelf (Mirrors .aex-recent-shelf) */
+#section-learning-library .ll-recent-shelf {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+#section-learning-library .ll-section-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ll-text-secondary);
+  letter-spacing: -0.01em;
+}
+
+#section-learning-library .ll-recent-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+#section-learning-library .ll-recent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 15px 16px;
+  border-radius: 18px;
+  background: var(--ll-surface);
+  border: 1px solid var(--ll-border);
+  border-top: 3px solid var(--ll-border);
+  box-shadow: var(--ll-shadow-card);
+  cursor: pointer;
+  transition: transform 0.16s var(--ll-spring), box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+#section-learning-library .ll-recent-card[data-state="done"] {
+  border-top-color: var(--ll-done-track);
+}
+
+#section-learning-library .ll-recent-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--ll-shadow-hover);
+  border-color: var(--ll-border-strong);
+}
+
+#section-learning-library .ll-recent-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#section-learning-library .ll-recent-card-title {
+  margin: 0;
+  font-family: var(--ll-font-display);
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--ll-text-primary);
+}
+
+#section-learning-library .ll-recent-card-trans {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ll-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+#section-learning-library .ll-recent-card-trans[dir="rtl"] {
+  text-align: right;
+  unicode-bidi: plaintext;
+}
+
+#section-learning-library .ll-recent-card-meaning {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--ll-text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+#section-learning-library .ll-recent-card-foot {
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid var(--ll-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.74rem;
+}
+
+#section-learning-library .ll-recent-ipa {
+  font-family: var(--ll-font-mono);
+  color: var(--ll-text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#section-learning-library .ll-recent-cta {
+  font-weight: 600;
+  color: var(--ll-blue-ink);
+  flex-shrink: 0;
+}
+
+#section-learning-library .ll-empty-recent {
+  padding: 20px;
+  border-radius: 16px;
+  border: 1px dashed var(--ll-border-strong);
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--ll-text-tertiary);
+}
+
+#section-learning-library .ll-empty-recent p {
+  margin: 0;
+}
+
+/* Page 2: Library Header Domain Switcher & Translate Missing Button */
+#section-learning-library .ll-lib-domain-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-top: 2px;
+}
+
+#section-learning-library .ll-lib-domain-pills .filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 980px;
+  font-size: 0.79rem;
+}
+
+#section-learning-library .ll-translate-batch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ll-blue-ink);
+  border-color: rgba(0, 113, 227, 0.25);
+  background: var(--ll-blue-wash);
+}
+
+#section-learning-library .ll-translate-batch-btn:hover:not(:disabled) {
+  border-color: rgba(0, 113, 227, 0.42);
+}
+
+#section-learning-library .ll-tr-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 980px;
+  background: var(--ll-blue);
+  color: #FFFFFF;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+/* Page 2: Sticky Dock Category Filter Rail Dots & Compact Selects */
+#section-learning-library .ll-items-root {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+#section-learning-library .ll-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+#section-learning-library #ll-category-filters .filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 980px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+#section-learning-library .ll-rail-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ll-blue);
+  flex-shrink: 0;
+}
+
+#section-learning-library [data-cat-tone="orange"] .ll-rail-dot { background: var(--ll-orange); }
+#section-learning-library [data-cat-tone="teal"] .ll-rail-dot { background: var(--ll-teal); }
+#section-learning-library [data-cat-tone="indigo"] .ll-rail-dot { background: var(--ll-indigo); }
+#section-learning-library [data-cat-tone="green"] .ll-rail-dot { background: var(--ll-green-solid); }
+
+#section-learning-library .ll-filter-count {
+  font-size: 0.72rem;
+  opacity: 0.72;
+}
+
+#section-learning-library .ll-dock-select {
+  height: auto;
+  min-height: 32px;
+  padding: 5px 32px 5px 11px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  border-radius: 10px;
+  width: auto;
+  min-width: 112px;
+  max-width: 165px;
+  flex: 0 1 auto;
+}
+
+[dir="rtl"] #section-learning-library .ll-dock-select {
+  padding: 5px 11px 5px 32px;
+}
+
+#section-learning-library .ll-sticky-dock .ft-dock-toolbar {
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+#section-learning-library .ll-sticky-dock .ft-filter-rail-wrap {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+#section-learning-library .ll-sticky-dock .ft-dock-toolbar-right {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+#section-learning-library .ll-sticky-dock .ll-item-search {
+  height: 32px;
+  min-height: 32px;
+  flex: 1 1 180px;
+  min-width: 165px;
+  max-width: 280px;
+  margin-inline-start: auto;
+  padding: 0 11px;
+  border-radius: 10px;
+}
+
+/* Phrase Card Polish: Crisp RTL/LTR Alignment Matching Anything to Phrases + Zero-Clutter Cards Header */
+#section-learning-library .ll-item-line-2 {
+  width: fit-content;
+  max-width: 100%;
+}
+
+#section-learning-library .ll-item-line-2.is-rtl {
+  justify-content: flex-start;
+}
+
+#section-learning-library .ll-head-translation[dir="rtl"] {
+  text-align: start;
+  unicode-bidi: plaintext;
+  font-family: system-ui, -apple-system, 'SF Arabic', 'Geeza Pro', 'Segoe UI', sans-serif;
+}
+
+#section-learning-library .ll-card .ll-item-line-2.is-rtl {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+#section-learning-library .ll-card .ll-head-translation[dir="rtl"] {
+  width: 100%;
+  text-align: right;
+}
+
+#section-learning-library .ll-card .ll-item-head--card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+#section-learning-library .ll-card-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--ll-border);
+}
+
+#section-learning-library .ll-card .ll-card-topbar .ll-item-index {
+  order: 0;
+  margin-top: 0;
+}
+
+#section-learning-library .ll-card .ll-card-topbar .ll-item-actions {
+  order: 0;
+  margin-inline-start: auto;
+}
+
+#section-learning-library .ll-card .ll-item-head--card .ll-item-heading {
+  order: 0;
+  flex: none;
+  width: 100%;
+}
+
+#section-learning-library .ll-empty-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 960px) {
+  #section-learning-library .ll-recent-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #section-learning-library .ll-options-secondary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  #section-learning-library .ll-progress-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  #section-learning-library .ll-shell-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  #section-learning-library .ll-top-view-nav {
+    width: 100%;
+  }
+
+  #section-learning-library .ll-top-view-nav .lexicon-view-tab {
+    flex: 1 1 0%;
+    justify-content: center;
+  }
+
+  #section-learning-library .ll-options-primary,
+  #section-learning-library .ll-options-secondary,
+  #section-learning-library .ll-recent-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #section-learning-library .ll-source-footer {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px 16px;
+  }
+
+  #section-learning-library .ll-source-footer .ll-generate-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  #section-learning-library .ll-sticky-dock .ll-item-search {
+    max-width: none;
+    flex: 1 1 160px;
+  }
+
+  #section-learning-library .ll-dock-select {
+    max-width: none;
+    flex: 1 1 120px;
   }
 }

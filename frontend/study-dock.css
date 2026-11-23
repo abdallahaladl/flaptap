@@ -1,0 +1,585 @@
+/* ==========================================================================
+   FLAPTAP SHARED STICKY STUDY DOCK, BOTANICAL EMERALD PROGRESS DECK &
+   SENTENCE TRANSLATION STYLES (study-dock.css)
+   Shared across BOTH Anything to Phrases (#section-american-extractor)
+   and Generate Phrases (#section-learning-library).
+   ========================================================================== */
+
+:root {
+  --ft-done: #12784D;
+  --ft-done-solid: #138050;
+  --ft-done-solid-hover: #0F6D44;
+  --ft-done-track: #16A36A;
+  --ft-done-on-solid: #FFFFFF;
+  --ft-done-surface: #F3FAF6;
+  --ft-done-border: rgba(22, 163, 106, 0.30);
+  --ft-done-wash: rgba(22, 163, 106, 0.12);
+  --ft-done-glow: rgba(22, 163, 106, 0.08);
+  --ft-sticky-top: 55px;
+  --ft-scroll-clearance: 188px;
+}
+
+[data-theme="dark"] {
+  --ft-done: #34D399;
+  --ft-done-solid: #136B46;
+  --ft-done-solid-hover: #177F53;
+  --ft-done-track: #22C57E;
+  --ft-done-on-solid: #FFFFFF;
+  --ft-done-surface: #131E19;
+  --ft-done-border: rgba(52, 211, 153, 0.28);
+  --ft-done-wash: rgba(52, 211, 153, 0.15);
+  --ft-done-glow: rgba(34, 197, 126, 0.12);
+}
+
+/* --------------------------------------------------------------------------
+   1. SHARED STICKY STUDY DOCK (Zero-Peek Topbar Bridge)
+   -------------------------------------------------------------------------- */
+
+.ft-sticky-sentinel {
+  height: 1px;
+  margin-bottom: -17px;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.ft-sticky-dock {
+  position: sticky;
+  top: var(--ft-sticky-top, 55px);
+  z-index: 35;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 22px;
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-border);
+  box-shadow: var(--ap-shadow-card), var(--ap-specular);
+  transition:
+    border-radius 0.22s var(--ap-ease),
+    background-color 0.22s ease,
+    border-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+
+/* Zero-peek frosted top bridge so scrolled card text never peeks between topbar & dock */
+.ft-sticky-dock.is-stuck {
+  border-radius: 0 0 20px 20px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: saturate(180%) blur(22px);
+  -webkit-backdrop-filter: saturate(180%) blur(22px);
+  border-color: var(--ap-border-strong);
+  border-top-color: transparent;
+  box-shadow:
+    0 14px 34px -14px rgba(0, 0, 0, 0.16),
+    0 3px 10px -2px rgba(0, 0, 0, 0.06),
+    var(--ap-specular);
+}
+
+.ft-sticky-dock.is-stuck::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -16px;
+  height: 16px;
+  background: var(--ap-canvas);
+  pointer-events: none;
+  z-index: -1;
+}
+
+[data-theme="dark"] .ft-sticky-dock.is-stuck {
+  background: rgba(24, 24, 27, 0.94);
+  border-color: rgba(255, 255, 255, 0.14);
+  border-top-color: transparent;
+  box-shadow:
+    0 18px 40px -12px rgba(0, 0, 0, 0.78),
+    0 4px 12px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+[data-guide-state="done"] .ft-sticky-dock {
+  border-color: var(--ft-done-border);
+  background: linear-gradient(180deg, var(--ft-done-wash) 0%, var(--ap-surface) 70%);
+}
+
+[data-guide-state="done"] .ft-sticky-dock.is-stuck {
+  background: rgba(243, 250, 246, 0.95);
+  border-color: var(--ft-done-border);
+  border-top-color: transparent;
+}
+
+[data-theme="dark"] [data-guide-state="done"] .ft-sticky-dock.is-stuck {
+  background: rgba(19, 30, 25, 0.94);
+  border-color: var(--ft-done-border);
+  border-top-color: transparent;
+}
+
+/* --------------------------------------------------------------------------
+   2. BOTANICAL EMERALD PROGRESS RING & CLICKABLE PIPS
+   -------------------------------------------------------------------------- */
+
+.ft-dock-progress-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+}
+
+.ft-dock-progress-slot {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.ft-sticky-dock .subject-progress-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.ft-progress-deck {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.ft-ring-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.ft-ring-badge.is-done {
+  background: var(--ft-done-solid);
+  color: var(--ft-done-on-solid);
+  box-shadow: 0 0 0 4px var(--ft-done-wash);
+}
+
+.ft-ring-badge.is-done svg {
+  width: 18px;
+  height: 18px;
+}
+
+.ft-ring-svg {
+  width: 38px;
+  height: 38px;
+  transform: rotate(-90deg);
+}
+
+.ft-ring-bg {
+  fill: none;
+  stroke: var(--ap-fill);
+  stroke-width: 3.6;
+}
+
+.ft-ring-fg {
+  fill: none;
+  stroke: var(--ap-blue);
+  stroke-width: 3.6;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.45s var(--ap-spring), stroke 0.25s ease;
+}
+
+.ft-ring-badge.is-new .ft-ring-fg {
+  stroke: var(--ap-text-tertiary);
+}
+
+.ft-ring-pct {
+  position: absolute;
+  font-family: var(--ap-font-mono);
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--ap-text-primary);
+}
+
+.ft-progress-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ft-progress-top-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ft-progress-headline {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ap-text-primary);
+}
+
+.ft-progress-fraction {
+  margin-inline-start: auto;
+  font-family: var(--ap-font-mono);
+  font-size: 0.78rem;
+  color: var(--ap-text-secondary);
+}
+
+.ft-progress-fraction strong {
+  color: var(--ap-text-primary);
+}
+
+[data-guide-state="done"] .ft-progress-fraction strong {
+  color: var(--ft-done);
+}
+
+.ft-pip-track {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.ft-pip {
+  flex: 1 1 0%;
+  height: 7px;
+  padding: 0;
+  border: none;
+  border-radius: 980px;
+  background: var(--ap-fill);
+  cursor: pointer;
+  transition:
+    background-color 0.22s ease,
+    transform 0.16s var(--ap-bounce),
+    opacity 0.16s ease;
+}
+
+.ft-pip:hover {
+  transform: scaleY(1.45);
+  background: var(--ap-blue);
+}
+
+.ft-pip.is-done {
+  background: var(--ft-done-track);
+}
+
+.ft-pip.is-done:hover {
+  background: var(--ft-done);
+}
+
+.ft-dock-toggles {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ft-scope-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 980px;
+  border: 1px solid var(--ap-border);
+  background: var(--ap-surface-secondary);
+  color: var(--ap-text-secondary);
+  font-family: var(--ap-font-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.14s var(--ap-bounce);
+}
+
+.ft-scope-toggle:hover {
+  color: var(--ap-text-primary);
+  border-color: var(--ap-border-strong);
+  background: var(--ap-fill-subtle);
+}
+
+.ft-scope-toggle.is-active,
+.ft-scope-toggle[aria-pressed="true"] {
+  background: var(--ap-blue-wash);
+  border-color: rgba(0, 113, 227, 0.32);
+  color: var(--ap-blue);
+  box-shadow: 0 1px 4px rgba(0, 113, 227, 0.14);
+}
+
+[data-theme="dark"] .ft-scope-toggle.is-active,
+[data-theme="dark"] .ft-scope-toggle[aria-pressed="true"] {
+  color: #64B5FF;
+}
+
+.ft-scope-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 19px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 980px;
+  background: var(--ap-fill);
+  color: var(--ap-text-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.ft-scope-toggle.is-active .ft-scope-count,
+.ft-scope-toggle[aria-pressed="true"] .ft-scope-count {
+  background: var(--ap-blue);
+  color: #FFFFFF;
+}
+
+/* --------------------------------------------------------------------------
+   3. HORIZONTAL SCROLLABLE FILTER RAIL WITH FADES & ARROWS
+   -------------------------------------------------------------------------- */
+
+.ft-dock-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ap-border);
+}
+
+.ft-filter-rail-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.ft-filter-rail {
+  display: flex;
+  flex: none;
+  width: 100%;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  padding: 2px;
+}
+
+.ft-filter-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.ft-filter-rail-wrap.can-scroll-right:not(.can-scroll-left) .ft-filter-rail {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 42px), transparent 100%);
+  mask-image: linear-gradient(to right, #000 calc(100% - 42px), transparent 100%);
+}
+
+.ft-filter-rail-wrap.can-scroll-left:not(.can-scroll-right) .ft-filter-rail {
+  -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 42px), transparent 100%);
+  mask-image: linear-gradient(to left, #000 calc(100% - 42px), transparent 100%);
+}
+
+.ft-filter-rail-wrap.can-scroll-left.can-scroll-right .ft-filter-rail {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 38px,
+    #000 calc(100% - 38px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 38px,
+    #000 calc(100% - 38px),
+    transparent 100%
+  );
+}
+
+.ft-rail-scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--ap-border-strong);
+  background: var(--ap-surface);
+  color: var(--ap-text-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.16s ease,
+    transform 0.14s var(--ap-bounce),
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.ft-rail-scroll-btn:hover {
+  background: var(--ap-blue-wash);
+  border-color: rgba(0, 113, 227, 0.30);
+  color: var(--ap-blue);
+}
+
+.ft-rail-scroll-btn--prev {
+  inset-inline-start: 2px;
+}
+
+.ft-rail-scroll-btn--next {
+  inset-inline-end: 2px;
+}
+
+[dir="rtl"] .ft-rail-scroll-btn svg {
+  transform: scaleX(-1);
+}
+
+.ft-filter-rail-wrap.can-scroll-left .ft-rail-scroll-btn--prev,
+.ft-filter-rail-wrap.can-scroll-right .ft-rail-scroll-btn--next {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ft-dock-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.ft-clear-filters-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 980px;
+  border: 1px solid var(--ap-border);
+  background: var(--ap-surface-secondary);
+  color: var(--ap-text-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.ft-clear-filters-btn:hover {
+  background: var(--ap-red-wash);
+  border-color: rgba(255, 59, 48, 0.28);
+  color: var(--ap-red);
+}
+
+/* --------------------------------------------------------------------------
+   4. SHARED IDIOMATIC SENTENCE TRANSLATION & BIDI ALIGNMENT
+   -------------------------------------------------------------------------- */
+
+.ft-quote-translation {
+  margin: 8px 0 0;
+  padding-top: 7px;
+  border-top: 1px dashed var(--ap-border);
+  font-size: 0.88rem;
+  font-weight: 500;
+  line-height: 1.55;
+  color: var(--ap-text-secondary);
+  text-align: start;
+  unicode-bidi: plaintext;
+}
+
+[data-theme="dark"] .ft-quote-translation {
+  color: rgba(235, 235, 245, 0.80);
+}
+
+.ft-quote-translation[dir="rtl"] {
+  text-align: right;
+  font-family: system-ui, -apple-system, 'SF Arabic', 'Geeza Pro', 'Segoe UI', sans-serif;
+}
+
+.is-recall-masked .ft-quote-translation {
+  filter: blur(7px);
+  user-select: none;
+  pointer-events: none;
+}
+
+.ft-inline-translate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 4px 10px;
+  border-radius: 980px;
+  border: 1px dashed var(--ap-border-strong);
+  background: transparent;
+  color: var(--ap-blue);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.ft-inline-translate-btn:hover:not(:disabled) {
+  background: var(--ap-blue-wash);
+  border-style: solid;
+  border-color: rgba(0, 113, 227, 0.30);
+}
+
+.ft-inline-translate-btn:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+[data-theme="dark"] .ft-inline-translate-btn {
+  color: #64B5FF;
+}
+
+/* --------------------------------------------------------------------------
+   5. RESPONSIVE DOCK BREAKPOINTS
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 860px) {
+  .ft-dock-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .ft-filter-rail-wrap {
+    flex-basis: 100%;
+  }
+
+  .ft-dock-toolbar-right {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .ft-sticky-dock {
+    padding: 10px 12px;
+    border-radius: 18px;
+  }
+
+  .ft-dock-progress-row {
+    gap: 8px;
+  }
+}

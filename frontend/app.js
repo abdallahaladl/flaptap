@@ -624,6 +624,7 @@
     document.body.dataset.activeSection = section;
     document.body.classList.toggle('is-lessons-view', section === 'lessons');
     document.body.classList.toggle('is-extractor-view', section === 'american-extractor');
+    document.body.classList.toggle('is-library-view', section === 'learning-library');
     ['lessons', 'dialogue', 'pronunciation', 'vocabulary', 'history', 'american-extractor', 'learning-library'].forEach((name) => {
       const panel = document.getElementById(`section-${name}`);
       if (panel) panel.hidden = name !== section;

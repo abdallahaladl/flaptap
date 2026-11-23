@@ -610,6 +610,9 @@
   }
 
   function studyState({ total, done }) {
+    if (global.FlaptapPhraseUtils?.computeStudyState) {
+      return global.FlaptapPhraseUtils.computeStudyState({ total, done });
+    }
     const safeTotal = Math.max(0, Number(total) || 0);
     const safeDone = Math.max(0, Math.min(safeTotal, Number(done) || 0));
     const tone =
@@ -756,38 +759,10 @@
   }
 
   function highlightTerm(sentence, term, surface) {
-    const escapeHtml = global.FlaptapUtils.escapeHtml;
-    const text = String(sentence || '');
-    if (!text) return '';
-    const candidates = [surface, term].map((s) => String(s || '').trim()).filter(Boolean);
-    if (candidates.length === 0) return escapeHtml(text);
-
-    for (const candidate of candidates) {
-      const escaped = candidate.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/['’]/g, "['’]");
-      let regex;
-      try {
-        regex = new RegExp(
-          `(?<![\\p{L}\\p{N}_])(${escaped}(?:['’]?s|es|ed|d|ing|er|ers)?)(?![\\p{L}\\p{N}_])`,
-          'giu',
-        );
-      } catch {
-        continue;
-      }
-      const matches = Array.from(text.matchAll(regex));
-      if (matches.length === 0) continue;
-
-      let output = '';
-      let lastIndex = 0;
-      for (const match of matches) {
-        const index = match.index ?? 0;
-        output += escapeHtml(text.slice(lastIndex, index));
-        output += `<mark class="lexicon-highlight">${escapeHtml(match[1])}</mark>`;
-        lastIndex = index + match[0].length;
-      }
-      output += escapeHtml(text.slice(lastIndex));
-      return output;
+    if (global.FlaptapPhraseUtils?.highlightTermInSentence) {
+      return global.FlaptapPhraseUtils.highlightTermInSentence(sentence, [surface, term]);
     }
-    return escapeHtml(text);
+    return global.FlaptapUtils.escapeHtml(String(sentence || ''));
   }
 
   function safeLocalGet(key) {

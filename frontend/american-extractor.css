@@ -4856,7 +4856,7 @@ body:has(#section-american-extractor:not([hidden])) .workspace-main {
 
 #section-american-extractor .aex-sticky-dock.is-stuck {
   border-radius: 0 0 20px 20px;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.94);
   backdrop-filter: saturate(180%) blur(22px);
   -webkit-backdrop-filter: saturate(180%) blur(22px);
   border-color: var(--aex-border-strong);
@@ -4865,6 +4865,18 @@ body:has(#section-american-extractor:not([hidden])) .workspace-main {
     0 14px 34px -14px rgba(0, 0, 0, 0.16),
     0 3px 10px -2px rgba(0, 0, 0, 0.06),
     var(--aex-specular);
+}
+
+#section-american-extractor .aex-sticky-dock.is-stuck::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: -16px;
+  height: 16px;
+  background: var(--aex-canvas);
+  pointer-events: none;
+  z-index: -1;
 }
 
 [data-theme="dark"] #section-american-extractor .aex-sticky-dock.is-stuck {
