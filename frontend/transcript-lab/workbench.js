@@ -842,6 +842,7 @@
         if (jumpBtn) jumpBtn.hidden = total === 0 || done >= total;
         compactProg.title = `${done} of ${total} sentences mastered (${pct}%) — click to expand/collapse details`;
       }
+      if (state.isStuck) syncDeckCollapseState();
     }
 
     function renderExportMenu() {
@@ -888,9 +889,19 @@
 
     function syncDeckCollapseState() {
       const deck = state.rootEl?.querySelector('#tlab-command-deck');
+      const spacer = state.rootEl?.querySelector('#tlab-deck-spacer');
+      const drawerInner = state.rootEl?.querySelector('.tlab-deck-drawer-inner');
       const btn = state.rootEl?.querySelector('#tlab-deck-collapse-btn');
       if (!deck) return;
       const collapsed = state.isStuck ? !state.stuckExpanded : state.topCollapsed;
+      if (spacer) {
+        if (collapsed && drawerInner) {
+          const h = Math.max(0, Math.round(drawerInner.scrollHeight));
+          spacer.style.height = `${h}px`;
+        } else {
+          spacer.style.height = '0px';
+        }
+      }
       deck.classList.toggle('is-stuck', state.isStuck);
       deck.classList.toggle('is-collapsed', collapsed);
       if (btn) {
@@ -932,7 +943,9 @@
 
       const updateStuck = () => {
         const offset = syncStickyOffset();
-        const nextStuck = sentinel.getBoundingClientRect().top <= offset + 2;
+        const top = sentinel.getBoundingClientRect().top;
+        // 28px hysteresis deadband prevents boundary flicker while scrolling
+        const nextStuck = state.isStuck ? top <= offset + 28 : top <= offset;
         if (nextStuck !== state.isStuck) {
           state.isStuck = nextStuck;
           if (!nextStuck) state.stuckExpanded = false;
@@ -940,16 +953,8 @@
         }
       };
 
-      const offset = syncStickyOffset();
+      syncStickyOffset();
       updateStuck();
-
-      if (typeof global.IntersectionObserver === 'function') {
-        state.deckObserver = new global.IntersectionObserver(
-          () => updateStuck(),
-          { root: null, rootMargin: `-${offset + 2}px 0px 0px 0px`, threshold: [0, 1] },
-        );
-        state.deckObserver.observe(sentinel);
-      }
 
       let raf = 0;
       state.deckScrollHandler = () => {
@@ -1276,6 +1281,7 @@
               </div>
             </div>
           </section>
+          <div class="tlab-deck-spacer" id="tlab-deck-spacer" aria-hidden="true"></div>
 
           <!-- SPEAKER FILTER & RENAME BAR -->
           <div class="tlab-speaker-bar" id="tlab-speaker-bar" hidden></div>

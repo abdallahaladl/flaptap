@@ -804,6 +804,13 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   pointer-events: none;
 }
 
+.tlab-deck-spacer {
+  height: 0px;
+  width: 100%;
+  pointer-events: none;
+  transition: height 240ms var(--ap-spring);
+}
+
 .tlab-command-deck {
   position: sticky;
   top: var(--tlab-sticky-top, 56px);

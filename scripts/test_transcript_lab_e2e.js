@@ -341,7 +341,28 @@ async function run() {
     assert.ok(collapsedState.compactFrac?.includes('/'), 'Compact progress fraction should stay visible');
     await page.click('#tlab-deck-collapse-btn');
     await new Promise((r) => setTimeout(r, 150));
-    ok('Docked Workbench nav, 0.5x playback speed, and collapsible Command Deck verified');
+
+    // Scroll to bottom and verify sticky Command Deck never oscillates/flashes
+    const scrollFlashes = await page.evaluate(async () => {
+      const deck = document.getElementById('tlab-command-deck');
+      if (!deck) return 99;
+      let transitions = 0;
+      const mo = new MutationObserver(() => { transitions += 1; });
+      mo.observe(deck, { attributes: true, attributeFilter: ['class'] });
+      const maxY = document.documentElement.scrollHeight - window.innerHeight;
+      for (let y = 0; y <= maxY; y += 80) {
+        window.scrollTo(0, y);
+        await new Promise((r) => setTimeout(r, 25));
+      }
+      window.scrollTo(0, maxY);
+      await new Promise((r) => setTimeout(r, 300));
+      mo.disconnect();
+      window.scrollTo(0, 0);
+      await new Promise((r) => setTimeout(r, 120));
+      return transitions;
+    });
+    assert.ok(scrollFlashes <= 1, `Sticky Command Deck should not flash when scrolling to bottom (saw ${scrollFlashes} transitions)`);
+    ok('Docked Workbench nav, 0.5x playback speed, and flash-free sticky Command Deck verified');
 
     // Click an individual word -> verify instant millisecond playback highlight & clip label update!
     await page.click('.tlab-word');
