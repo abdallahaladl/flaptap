@@ -889,19 +889,10 @@
 
     function syncDeckCollapseState() {
       const deck = state.rootEl?.querySelector('#tlab-command-deck');
-      const spacer = state.rootEl?.querySelector('#tlab-deck-spacer');
-      const drawerInner = state.rootEl?.querySelector('.tlab-deck-drawer-inner');
       const btn = state.rootEl?.querySelector('#tlab-deck-collapse-btn');
       if (!deck) return;
       const collapsed = state.isStuck ? !state.stuckExpanded : state.topCollapsed;
-      if (spacer) {
-        if (collapsed && drawerInner) {
-          const h = Math.max(0, Math.round(drawerInner.scrollHeight));
-          spacer.style.height = `${h}px`;
-        } else {
-          spacer.style.height = '0px';
-        }
-      }
+      deck.classList.toggle('is-fixed', state.isStuck);
       deck.classList.toggle('is-stuck', state.isStuck);
       deck.classList.toggle('is-collapsed', collapsed);
       if (btn) {
@@ -925,9 +916,11 @@
 
     function setupDeckObserver() {
       teardownDeckObserver();
-      const sentinel = state.rootEl?.querySelector('#tlab-deck-sentinel');
+      const slot = state.rootEl?.querySelector('#tlab-deck-slot');
       const deck = state.rootEl?.querySelector('#tlab-command-deck');
-      if (!sentinel || !deck) return;
+      const coreBar = state.rootEl?.querySelector('.tlab-core-bar');
+      const scrubBar = state.rootEl?.querySelector('#tlab-player-progress-track');
+      if (!slot || !deck) return;
 
       const measureTop = () => {
         const topbar = document.querySelector('.workspace-topbar');
@@ -935,26 +928,46 @@
         return h && h > 0 ? Math.round(h) : 56;
       };
 
-      const syncStickyOffset = () => {
+      const syncSlotMetrics = () => {
         const offset = measureTop();
+        const rect = slot.getBoundingClientRect();
         deck.style.setProperty('--tlab-sticky-top', `${offset}px`);
-        return offset;
+        deck.style.setProperty('--tlab-fixed-left', `${Math.round(rect.left)}px`);
+        deck.style.setProperty('--tlab-fixed-width', `${Math.round(rect.width)}px`);
+        return { offset, rect };
       };
 
       const updateStuck = () => {
-        const offset = syncStickyOffset();
-        const top = sentinel.getBoundingClientRect().top;
-        // 28px hysteresis deadband prevents boundary flicker while scrolling
-        const nextStuck = state.isStuck ? top <= offset + 28 : top <= offset;
+        const { offset, rect } = syncSlotMetrics();
+        const collapsedH = (coreBar?.offsetHeight || 50) + (scrubBar?.hidden ? 0 : scrubBar?.offsetHeight || 5) + 2;
+        const triggerBottom = offset + collapsedH;
+        // Enter fixed-collapsed only once the bottom of the in-flow deck reaches the collapsed bar edge (zero gap!)
+        const nextStuck = state.isStuck ? rect.bottom <= triggerBottom + 28 : rect.bottom <= triggerBottom;
         if (nextStuck !== state.isStuck) {
+          if (nextStuck) {
+            slot.style.height = `${Math.round(rect.height)}px`;
+            deck.classList.add('is-snapping-fixed');
+            global.requestAnimationFrame(() => {
+              global.requestAnimationFrame(() => deck.classList.remove('is-snapping-fixed'));
+            });
+          } else {
+            slot.style.height = '';
+            state.stuckExpanded = false;
+          }
           state.isStuck = nextStuck;
-          if (!nextStuck) state.stuckExpanded = false;
           syncDeckCollapseState();
         }
       };
 
-      syncStickyOffset();
+      syncSlotMetrics();
       updateStuck();
+
+      if (typeof global.ResizeObserver === 'function') {
+        state.deckObserver = new global.ResizeObserver(() => {
+          syncSlotMetrics();
+        });
+        state.deckObserver.observe(slot);
+      }
 
       let raf = 0;
       state.deckScrollHandler = () => {
@@ -1088,10 +1101,8 @@
             <div class="tlab-review-track"><div class="tlab-review-fill" id="tlab-review-fill" style="width:${state.reviewProgress.percent || 5}%"></div></div>
           </div>
 
-          <!-- STICKY SENTINEL -->
-          <div class="tlab-deck-sentinel" id="tlab-deck-sentinel" aria-hidden="true"></div>
-
-          <!-- UNIFIED STICKY COMMAND DECK (Always-visible Core Bar + Scrub Track + Collapsible Drawer) -->
+          <!-- UNIFIED STICKY COMMAND DECK (In-flow slot + Fixed floating bar on scroll) -->
+          <div class="tlab-deck-slot" id="tlab-deck-slot">
           <section class="tlab-command-deck" id="tlab-command-deck" aria-label="Transcript playback, progress and view controls">
             <div class="tlab-video-stage ${state.videoExpanded && canVideo ? 'is-open' : 'is-audio-hidden'}" id="tlab-video-stage" ${doc.media?.hasAudio ? '' : 'hidden'}>
               <div class="tlab-media-slot" id="tlab-media-slot"></div>
@@ -1184,6 +1195,7 @@
             <!-- COLLAPSIBLE SECONDARY DRAWER (Progress Map + Speed/Loop/Pad/Follow + View Tabs & Search) -->
             <div class="tlab-deck-drawer" id="tlab-deck-drawer">
               <div class="tlab-deck-drawer-inner">
+                <div class="tlab-deck-drawer-content">
                 <div class="tlab-doc-progress" id="tlab-doc-progress"></div>
 
                 <div class="tlab-controls-strip" ${doc.media?.hasAudio ? '' : 'hidden'}>
@@ -1278,10 +1290,11 @@
                     </button>
                   </div>
                 </div>
+                </div>
               </div>
             </div>
           </section>
-          <div class="tlab-deck-spacer" id="tlab-deck-spacer" aria-hidden="true"></div>
+          </div>
 
           <!-- SPEAKER FILTER & RENAME BAR -->
           <div class="tlab-speaker-bar" id="tlab-speaker-bar" hidden></div>

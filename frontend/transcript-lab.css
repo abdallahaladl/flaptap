@@ -797,23 +797,24 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
    UNIFIED STICKY COMMAND DECK (Core Bar + Interactive Scrub + Collapsible Drawer)
    ========================================================================== */
 
-.tlab-deck-sentinel {
-  height: 1px;
+.tlab-deck-slot {
   width: 100%;
-  margin-top: -1px;
-  pointer-events: none;
+  margin-bottom: 14px;
 }
 
-.tlab-deck-spacer {
-  height: 0px;
-  width: 100%;
-  pointer-events: none;
-  transition: height 240ms var(--ap-spring);
+@keyframes tlabDockFloatIn {
+  from {
+    opacity: 0.72;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .tlab-command-deck {
-  position: sticky;
-  top: var(--tlab-sticky-top, 56px);
+  position: relative;
   z-index: 32;
   background: var(--ap-glass-popover);
   backdrop-filter: saturate(190%) blur(22px);
@@ -821,21 +822,54 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   border: 1px solid var(--ap-border-strong);
   border-radius: var(--ap-radius-lg);
   box-shadow: var(--ap-shadow-card);
-  margin-bottom: 14px;
   overflow: visible;
-  transition: box-shadow 200ms ease, border-color 200ms ease, border-radius 200ms ease;
+  transition: box-shadow 220ms ease, border-color 220ms ease, border-radius 220ms ease;
 }
 
-.tlab-command-deck.is-stuck {
+.tlab-command-deck.is-fixed {
+  position: fixed;
+  top: var(--tlab-sticky-top, 56px);
+  left: var(--tlab-fixed-left, 0px);
+  width: var(--tlab-fixed-width, 100%);
+  z-index: 36;
   box-shadow: var(--ap-shadow-popover);
   border-color: var(--ap-blue-ring);
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+  animation: tlabDockFloatIn 240ms var(--ap-spring) both;
+}
+
+.tlab-command-deck.is-snapping-fixed .tlab-deck-drawer,
+.tlab-command-deck.is-snapping-fixed .tlab-deck-drawer-content {
+  transition: none !important;
+}
+
+.tlab-command-deck.is-fixed .tlab-video-stage.is-open {
+  max-height: 240px;
+}
+
+.tlab-command-deck .tlab-compact-progress,
+.tlab-command-deck .tlab-compact-speed {
+  transition:
+    opacity 220ms ease,
+    transform 240ms var(--ap-spring),
+    max-width 240ms var(--ap-spring),
+    padding 240ms var(--ap-spring),
+    border-width 200ms ease;
+  overflow: hidden;
+  max-width: 180px;
 }
 
 .tlab-command-deck:not(.is-collapsed) .tlab-compact-progress,
 .tlab-command-deck:not(.is-collapsed) .tlab-compact-speed {
-  display: none;
+  opacity: 0;
+  transform: scale(0.92);
+  max-width: 0;
+  padding-left: 0;
+  padding-right: 0;
+  border-width: 0;
+  pointer-events: none;
+  margin-inline: -3px;
 }
 
 .tlab-video-stage {
@@ -1202,33 +1236,37 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   box-shadow: var(--ap-shadow-pill);
 }
 
-/* Collapsible Secondary Drawer */
+/* Collapsible Secondary Drawer — smooth GPU-friendly height & fade */
 .tlab-deck-drawer {
   display: grid;
   grid-template-rows: 1fr;
-  transition: grid-template-rows 240ms var(--ap-spring), opacity 200ms ease;
-  opacity: 1;
+  transition: grid-template-rows 300ms var(--ap-spring);
 }
 
 .tlab-deck-drawer-inner {
   overflow: hidden;
+  min-height: 0;
+}
+
+.tlab-deck-drawer-content {
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 10px 12px 12px;
   border-top: 1px solid var(--ap-border);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 220ms ease, transform 280ms var(--ap-spring);
 }
 
 .tlab-command-deck.is-collapsed .tlab-deck-drawer {
   grid-template-rows: 0fr;
-  opacity: 0;
   pointer-events: none;
 }
 
-.tlab-command-deck.is-collapsed .tlab-deck-drawer-inner {
-  padding-top: 0;
-  padding-bottom: 0;
-  border-top-color: transparent;
+.tlab-command-deck.is-collapsed .tlab-deck-drawer-content {
+  opacity: 0;
+  transform: translateY(-6px);
 }
 
 .tlab-deck-drawer .tlab-doc-progress {
