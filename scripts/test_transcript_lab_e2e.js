@@ -314,6 +314,35 @@ async function run() {
     const titleText = await page.$eval('#tlab-doc-title', (el) => el.textContent.trim());
     assert.strictEqual(titleText, 'American AI Demo Talk');
 
+    // Verify docked nav inside Workbench header, 0.5x speed control, and collapsible sticky Command Deck
+    const deckInit = await page.evaluate(() => ({
+      navDocked: Boolean(document.querySelector('#tlab-wb-nav-slot #tlab-view-nav')),
+      hasHalfSpeed: Boolean(document.querySelector('[data-tlab-speed="0.5"]')),
+      hasCollapseBtn: Boolean(document.getElementById('tlab-deck-collapse-btn')),
+    }));
+    assert.ok(deckInit.navDocked, 'Top nav pill should dock inside Workbench header');
+    assert.ok(deckInit.hasHalfSpeed, 'Playback speed controls must include 0.5x');
+    assert.ok(deckInit.hasCollapseBtn, 'Command Deck must expose collapse/expand toggle');
+
+    await page.click('[data-tlab-speed="0.5"]');
+    await new Promise((r) => setTimeout(r, 80));
+    const speedIsHalf = await page.$eval('[data-tlab-speed="0.5"]', (el) => el.classList.contains('is-active'));
+    assert.ok(speedIsHalf, '0.5x speed button must become active');
+
+    await page.click('#tlab-deck-collapse-btn');
+    await new Promise((r) => setTimeout(r, 150));
+    const collapsedState = await page.evaluate(() => ({
+      collapsed: document.getElementById('tlab-command-deck')?.classList.contains('is-collapsed'),
+      compactSpeed: document.getElementById('tlab-compact-speed')?.textContent?.trim(),
+      compactFrac: document.getElementById('tlab-compact-prog-frac')?.textContent?.trim(),
+    }));
+    assert.ok(collapsedState.collapsed, 'Clicking collapse toggle should collapse secondary drawer');
+    assert.strictEqual(collapsedState.compactSpeed, '0.5x');
+    assert.ok(collapsedState.compactFrac?.includes('/'), 'Compact progress fraction should stay visible');
+    await page.click('#tlab-deck-collapse-btn');
+    await new Promise((r) => setTimeout(r, 150));
+    ok('Docked Workbench nav, 0.5x playback speed, and collapsible Command Deck verified');
+
     // Click an individual word -> verify instant millisecond playback highlight & clip label update!
     await page.click('.tlab-word');
     await new Promise((r) => setTimeout(r, 350));

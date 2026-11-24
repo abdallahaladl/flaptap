@@ -53,6 +53,7 @@
     const nav = deps.nav || {};
     const getAiSelection = typeof deps.getAiSelection === 'function' ? deps.getAiSelection : () => ({});
     const onDocUpdated = typeof deps.onDocUpdated === 'function' ? deps.onDocUpdated : () => {};
+    const onShellRendered = typeof deps.onShellRendered === 'function' ? deps.onShellRendered : () => {};
 
     const state = {
       rootEl: null,
@@ -82,6 +83,13 @@
       wordLookupReady: false,
       keydownHandler: null,
       docClickHandler: null,
+      scrollHandler: null,
+      deckObserver: null,
+      deckScrollHandler: null,
+      isStuck: false,
+      topCollapsed: false,
+      stuckExpanded: false,
+      scrubbing: false,
       infoCloseTimer: null,
       infoPopoverState: { open: false, pinned: false, kind: '', sentIdx: 0, anchorEl: null },
       editingTitle: false,
@@ -206,14 +214,15 @@
 
     function handlePlaybackTick(nowMs, activeRange) {
       if (!state.rootEl || !state.doc) return;
-      const clockEl = state.rootEl.querySelector('#tlab-clock-now');
-      if (clockEl) clockEl.textContent = global.FlaptapMediaEngine.formatMs(nowMs);
+      if (!state.scrubbing) {
+        const clockEl = state.rootEl.querySelector('#tlab-clock-now');
+        if (clockEl) clockEl.textContent = global.FlaptapMediaEngine.formatMs(nowMs);
 
-      const durMs = state.engine?.getState?.().durationMs || (state.doc.durationSeconds || 0) * 1000;
-      const progFill = state.rootEl.querySelector('#tlab-player-progress-fill');
-      if (progFill && durMs > 0) {
-        const pct = Math.max(0, Math.min(100, (nowMs / durMs) * 100));
-        progFill.style.width = `${pct.toFixed(2)}%`;
+        const durMs = state.engine?.getState?.().durationMs || (state.doc.durationSeconds || 0) * 1000;
+        if (durMs > 0) {
+          const pct = Math.max(0, Math.min(100, (nowMs / durMs) * 100));
+          updateScrubVisuals(pct);
+        }
       }
 
       const words = activeWordStream();
@@ -227,6 +236,14 @@
       if (idx !== state.activeWordIndex) {
         highlightActiveWord(idx, words[idx]?.sentenceIndex || -1);
       }
+    }
+
+    function updateScrubVisuals(pct) {
+      const clamped = Math.max(0, Math.min(100, Number(pct) || 0));
+      const progFill = state.rootEl?.querySelector('#tlab-player-progress-fill');
+      const thumb = state.rootEl?.querySelector('#tlab-scrub-thumb');
+      if (progFill) progFill.style.width = `${clamped.toFixed(2)}%`;
+      if (thumb) thumb.style.left = `${clamped.toFixed(2)}%`;
     }
 
     function highlightActiveWord(wordIdx, sentIdx) {
@@ -338,8 +355,24 @@
       if (defineBtn) {
         defineBtn.hidden = !state.selectedWord;
         if (state.selectedWord) {
-          defineBtn.querySelector('span').textContent = `Define "${state.selectedWord.word}"`;
+          defineBtn.title = `Define "${state.selectedWord.word}"`;
+          defineBtn.setAttribute('aria-label', `Define "${state.selectedWord.word}"`);
+          const span = defineBtn.querySelector('span');
+          if (span) span.textContent = state.selectedWord.word;
         }
+      }
+
+      const compactSpeed = state.rootEl.querySelector('#tlab-compact-speed');
+      if (compactSpeed) {
+        compactSpeed.textContent = `${pState.speed}x`;
+        compactSpeed.classList.toggle('is-modified', Math.abs(pState.speed - 1) > 0.01);
+      }
+
+      const followBtn = state.rootEl.querySelector('#tlab-follow-toggle');
+      if (followBtn) {
+        const following = !state.autoScrollPaused;
+        followBtn.classList.toggle('is-active', following);
+        followBtn.setAttribute('aria-pressed', following ? 'true' : 'false');
       }
 
       state.rootEl.querySelectorAll('[data-tlab-speed]').forEach((b) => {
@@ -357,8 +390,13 @@
       const padBtn = state.rootEl.querySelector('#tlab-pad-toggle');
       if (padBtn) {
         const isExact = pState.wordPadMode === 'exact';
-        padBtn.textContent = isExact ? 'Pad: Exact' : 'Pad: Natural';
+        const padLabel = padBtn.querySelector('.tlab-pad-label');
+        if (padLabel) padLabel.textContent = isExact ? 'Exact' : 'Natural';
+        padBtn.title = isExact
+          ? 'Exact 0ms bounds (click for natural -25ms/+55ms cushion)'
+          : 'Natural consonant cushion -25ms/+55ms (click for exact 0ms)';
         padBtn.classList.toggle('is-active', isExact);
+        padBtn.setAttribute('aria-pressed', isExact ? 'true' : 'false');
       }
     }
 
@@ -734,41 +772,76 @@
 
     function syncProgressBar() {
       const bar = state.rootEl?.querySelector('#tlab-doc-progress');
-      if (!bar || !state.doc) return;
+      if (!state.doc) return;
       const total = state.doc.sentenceCount || 0;
       const done = state.doc.completedCount || 0;
+      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+      const isDone = Boolean(state.doc.isCompleted);
+      const tone = total > 0 && done >= total ? 'done' : done > 0 ? 'progress' : 'new';
       const completedSet = new Set(state.doc.completion?.items || []);
       const sents = activeSentences();
 
-      if (global.FlaptapStudyDock?.renderProgressDeckHtml) {
-        bar.innerHTML = global.FlaptapStudyDock.renderProgressDeckHtml({
-          total,
-          done,
-          singular: 'sentence',
-          plural: 'sentences',
-          doneHeadline: 'Transcript mastered',
-          readyHeadline: 'Ready to master',
-          pipAttr: 'data-tlab-jump-sent',
-          pips: sents.map((s) => ({
-            id: s.index,
-            displayNumber: s.index,
-            label: (s.text || '').slice(0, 48),
-            done: completedSet.has(s.index),
-          })),
-        });
-      } else {
-        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-        bar.innerHTML = `
-          <div class="tlab-progress-meta">
-            <span>Mastered <strong>${done} / ${total}</strong> sentences</span>
-            <span class="ltr-num">${pct}%${state.doc.isCompleted ? ' · Completed' : ''}</span>
-          </div>
-          <div class="tlab-progress-track"><div class="tlab-progress-fill" style="width:${pct}%"></div></div>
-        `;
+      if (bar) {
+        if (global.FlaptapStudyDock?.renderProgressDeckHtml) {
+          bar.innerHTML = global.FlaptapStudyDock.renderProgressDeckHtml({
+            total,
+            done,
+            singular: 'sentence',
+            plural: 'sentences',
+            doneHeadline: 'Transcript mastered',
+            readyHeadline: 'Ready to master',
+            pipAttr: 'data-tlab-jump-sent',
+            pips: sents.map((s) => ({
+              id: s.index,
+              displayNumber: s.index,
+              label: (s.text || '').slice(0, 48),
+              done: completedSet.has(s.index),
+            })),
+          });
+        } else {
+          bar.innerHTML = `
+            <div class="tlab-progress-meta">
+              <span>Mastered <strong>${done} / ${total}</strong> sentences</span>
+              <span class="ltr-num">${pct}%${isDone ? ' · Completed' : ''}</span>
+            </div>
+            <div class="tlab-progress-track"><div class="tlab-progress-fill" style="width:${pct}%"></div></div>
+          `;
+        }
+        bar.classList.toggle('is-done', isDone);
+        bar.classList.toggle('is-all-done', isDone);
+        bar.setAttribute('data-guide-state', isDone ? 'done' : done > 0 ? 'progress' : 'new');
       }
-      bar.classList.toggle('is-done', Boolean(state.doc.isCompleted));
-      bar.classList.toggle('is-all-done', Boolean(state.doc.isCompleted));
-      bar.setAttribute('data-guide-state', state.doc.isCompleted ? 'done' : done > 0 ? 'progress' : 'new');
+
+      // Sync compact always-visible progress capsule in the Core Bar
+      const compactProg = state.rootEl?.querySelector('#tlab-compact-progress');
+      if (compactProg) {
+        compactProg.dataset.tone = tone;
+        const r = 11;
+        const c = 2 * Math.PI * r;
+        const offset = c * (1 - (tone === 'done' ? 100 : pct) / 100);
+        const ringEl = compactProg.querySelector('#tlab-compact-ring-slot');
+        if (ringEl) {
+          ringEl.innerHTML =
+            tone === 'done'
+              ? `<span class="tlab-mini-ring is-done" aria-hidden="true">
+                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5.2 12.75 L9.55 17.1 Q10.1 17.65 10.65 17.05 L18.9 7.35"></path></svg>
+                 </span>`
+              : `<span class="tlab-mini-ring is-${tone}" aria-hidden="true">
+                   <svg width="26" height="26" viewBox="0 0 28 28">
+                     <circle class="tlab-mini-ring-bg" cx="14" cy="14" r="${r}"></circle>
+                     <circle class="tlab-mini-ring-fg" cx="14" cy="14" r="${r}" stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"></circle>
+                   </svg>
+                   <span class="tlab-mini-ring-pct ltr-num">${pct}</span>
+                 </span>`;
+        }
+        const fracEl = compactProg.querySelector('#tlab-compact-prog-frac');
+        if (fracEl) fracEl.textContent = `${done}/${total}`;
+        const fillEl = compactProg.querySelector('#tlab-compact-prog-fill');
+        if (fillEl) fillEl.style.width = `${tone === 'done' ? 100 : pct}%`;
+        const jumpBtn = compactProg.querySelector('#tlab-jump-next-btn');
+        if (jumpBtn) jumpBtn.hidden = total === 0 || done >= total;
+        compactProg.title = `${done} of ${total} sentences mastered (${pct}%) — click to expand/collapse details`;
+      }
     }
 
     function renderExportMenu() {
@@ -813,8 +886,93 @@
       `;
     }
 
+    function syncDeckCollapseState() {
+      const deck = state.rootEl?.querySelector('#tlab-command-deck');
+      const btn = state.rootEl?.querySelector('#tlab-deck-collapse-btn');
+      if (!deck) return;
+      const collapsed = state.isStuck ? !state.stuckExpanded : state.topCollapsed;
+      deck.classList.toggle('is-stuck', state.isStuck);
+      deck.classList.toggle('is-collapsed', collapsed);
+      if (btn) {
+        btn.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        btn.title = collapsed ? 'Expand controls, speed & views' : 'Collapse secondary controls';
+        btn.setAttribute('aria-label', btn.title);
+      }
+    }
+
+    function teardownDeckObserver() {
+      if (state.deckObserver) {
+        try { state.deckObserver.disconnect(); } catch {}
+        state.deckObserver = null;
+      }
+      if (state.deckScrollHandler) {
+        global.removeEventListener('scroll', state.deckScrollHandler);
+        global.removeEventListener('resize', state.deckScrollHandler);
+        state.deckScrollHandler = null;
+      }
+    }
+
+    function setupDeckObserver() {
+      teardownDeckObserver();
+      const sentinel = state.rootEl?.querySelector('#tlab-deck-sentinel');
+      const deck = state.rootEl?.querySelector('#tlab-command-deck');
+      if (!sentinel || !deck) return;
+
+      const measureTop = () => {
+        const topbar = document.querySelector('.workspace-topbar');
+        const h = topbar?.getBoundingClientRect()?.height;
+        return h && h > 0 ? Math.round(h) : 56;
+      };
+
+      const syncStickyOffset = () => {
+        const offset = measureTop();
+        deck.style.setProperty('--tlab-sticky-top', `${offset}px`);
+        return offset;
+      };
+
+      const updateStuck = () => {
+        const offset = syncStickyOffset();
+        const nextStuck = sentinel.getBoundingClientRect().top <= offset + 2;
+        if (nextStuck !== state.isStuck) {
+          state.isStuck = nextStuck;
+          if (!nextStuck) state.stuckExpanded = false;
+          syncDeckCollapseState();
+        }
+      };
+
+      const offset = syncStickyOffset();
+      updateStuck();
+
+      if (typeof global.IntersectionObserver === 'function') {
+        state.deckObserver = new global.IntersectionObserver(
+          () => updateStuck(),
+          { root: null, rootMargin: `-${offset + 2}px 0px 0px 0px`, threshold: [0, 1] },
+        );
+        state.deckObserver.observe(sentinel);
+      }
+
+      let raf = 0;
+      state.deckScrollHandler = () => {
+        if (raf) return;
+        raf = global.requestAnimationFrame(() => {
+          raf = 0;
+          updateStuck();
+        });
+      };
+      global.addEventListener('scroll', state.deckScrollHandler, { passive: true });
+      global.addEventListener('resize', state.deckScrollHandler, { passive: true });
+    }
+
     function renderShell() {
       if (!state.rootEl || !state.doc) return;
+
+      // Preserve the shared top nav pill before replacing workbench DOM
+      const viewNav = document.getElementById('tlab-view-nav');
+      const shellBar = document.getElementById('tlab-shell-bar');
+      if (viewNav && state.rootEl.contains(viewNav) && shellBar) {
+        shellBar.appendChild(viewNav);
+      }
+
       const doc = state.doc;
       const reviewed = doc.reviewed;
       const quality = reviewed?.quality;
@@ -824,6 +982,14 @@
       const repairedCount = reviewed
         ? (reviewed.sentences || []).filter((s) => s.repaired).length
         : 0;
+
+      const viewIcons = {
+        sentences: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>',
+        paragraphs: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 4v16"></path><path d="M17 4v16"></path><path d="M19 4H9.5a4.5 4.5 0 0 0 0 9H13"></path></svg>',
+        ideas: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"></path><path d="M10 22h4"></path><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"></path></svg>',
+        speakers: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+        raw: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>',
+      };
 
       const statusBadge =
         state.reviewing
@@ -844,36 +1010,33 @@
         metaParts.push(`<span class="tlab-meta-model">${escapeHtml(reviewed.modelName)}</span>`);
       }
 
+      const speeds = global.FlaptapMediaEngine?.SPEED_OPTIONS || [0.5, 0.75, 0.85, 1, 1.25, 1.5];
+
       state.rootEl.innerHTML = `
         <div class="tlab-workbench">
-          <!-- TOP HEADER -->
+          <!-- COMPACT DOCUMENT HEADER (scrolls out smoothly while Command Deck pins) -->
           <header class="tlab-wb-header">
             <div class="tlab-wb-nav-row">
               <div class="tlab-wb-nav-left">
-                <button type="button" class="btn-secondary btn-xs" id="tlab-back-library">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                  <span>Library</span>
-                </button>
+                <div class="tlab-wb-nav-slot" id="tlab-wb-nav-slot"></div>
                 <span class="tlab-platform-badge">${escapeHtml(doc.platform)}</span>
                 ${statusBadge}
               </div>
               <div class="tlab-wb-head-actions">
                 ${
                   doc.sourceUrl
-                    ? `<button type="button" class="btn-secondary btn-xs" id="tlab-send-phrases" title="Extract American idioms & phrases from this source">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"></path></svg>
-                        <span>Extract Phrases</span>
+                    ? `<button type="button" class="tlab-icon-action-btn" id="tlab-send-phrases" title="Extract American idioms & phrases from this source" aria-label="Extract Phrases">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"></path><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"></path></svg>
                       </button>`
                     : ''
                 }
-                <button type="button" class="btn-secondary btn-xs" id="tlab-rerun-review-btn" ${state.reviewing ? 'disabled' : ''}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
-                  <span>${state.reviewing ? 'Reviewing…' : reviewed ? 'Re-Review AI' : 'Run AI Review'}</span>
+                <button type="button" class="tlab-icon-action-btn ${state.reviewing ? 'is-spinning' : ''}" id="tlab-rerun-review-btn" ${state.reviewing ? 'disabled' : ''} title="${state.reviewing ? 'AI Review running…' : reviewed ? 'Re-Run AI Verbatim Review' : 'Run AI Verbatim Review'}" aria-label="${reviewed ? 'Re-Review AI' : 'Run AI Review'}">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
                 </button>
                 <div class="tlab-export-anchor">
-                  <button type="button" class="btn-primary btn-xs" id="tlab-export-btn" aria-expanded="false">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    <span>Download</span>
+                  <button type="button" class="btn-primary tlab-export-icon-btn" id="tlab-export-btn" aria-expanded="false" title="Download / Export transcript (7 formats)" aria-label="Download transcript">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    <svg class="tlab-export-caret" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
                   </button>
                   <div class="tlab-export-popover" id="tlab-export-popover" hidden></div>
                 </div>
@@ -884,8 +1047,12 @@
               <h2 class="tlab-wb-title" id="tlab-doc-title">${escapeHtml(doc.title)}</h2>
               <div class="tlab-title-edit-wrap" id="tlab-title-edit-wrap" hidden>
                 <input type="text" class="tlab-title-input" id="tlab-title-input" value="${escapeHtml(doc.title)}" maxlength="160" aria-label="Transcript title" />
-                <button type="button" class="btn-primary btn-xs" id="tlab-title-save-btn">Save</button>
-                <button type="button" class="btn-secondary btn-xs" id="tlab-title-cancel-btn">Cancel</button>
+                <button type="button" class="btn-primary btn-xs" id="tlab-title-save-btn" title="Save title" aria-label="Save title">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                </button>
+                <button type="button" class="btn-secondary btn-xs" id="tlab-title-cancel-btn" title="Cancel rename" aria-label="Cancel rename">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
               </div>
               <button type="button" class="tlab-mini-icon-btn" id="tlab-rename-btn" title="Rename transcript" aria-label="Rename transcript">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
@@ -905,8 +1072,6 @@
                   : ''
               }
             </div>
-
-            <div class="tlab-doc-progress" id="tlab-doc-progress"></div>
           </header>
 
           <!-- LIVE AI REVIEW PROGRESS RIBBON -->
@@ -918,20 +1083,29 @@
             <div class="tlab-review-track"><div class="tlab-review-fill" id="tlab-review-fill" style="width:${state.reviewProgress.percent || 5}%"></div></div>
           </div>
 
-          <!-- STICKY PRECISION PLAYER DOCK -->
-          <section class="tlab-player-dock" id="tlab-player-dock" ${doc.media?.hasAudio ? '' : 'hidden'}>
-            <div class="tlab-video-stage ${state.videoExpanded && canVideo ? 'is-open' : 'is-audio-hidden'}" id="tlab-video-stage">
+          <!-- STICKY SENTINEL -->
+          <div class="tlab-deck-sentinel" id="tlab-deck-sentinel" aria-hidden="true"></div>
+
+          <!-- UNIFIED STICKY COMMAND DECK (Always-visible Core Bar + Scrub Track + Collapsible Drawer) -->
+          <section class="tlab-command-deck" id="tlab-command-deck" aria-label="Transcript playback, progress and view controls">
+            <div class="tlab-video-stage ${state.videoExpanded && canVideo ? 'is-open' : 'is-audio-hidden'}" id="tlab-video-stage" ${doc.media?.hasAudio ? '' : 'hidden'}>
               <div class="tlab-media-slot" id="tlab-media-slot"></div>
             </div>
+
             <div class="tlab-shadow-pause-bar" id="tlab-shadow-pause-bar" hidden>
               <div class="tlab-shadow-meta">
                 <span class="tlab-shadow-countdown">Speak now…</span>
-                <button type="button" class="tlab-pill-xs" id="tlab-skip-pause">Skip Pause</button>
+                <button type="button" class="tlab-pill-xs" id="tlab-skip-pause" title="Skip speaking pause and replay now">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                  <span>Skip</span>
+                </button>
               </div>
               <div class="tlab-shadow-track"><div class="tlab-shadow-fill" style="width:0%"></div></div>
             </div>
-            <div class="tlab-player-bar">
-              <div class="tlab-player-transport">
+
+            <!-- CORE ALWAYS-VISIBLE BAR (stays compact ~52px when stuck & collapsed) -->
+            <div class="tlab-core-bar">
+              <div class="tlab-core-transport" ${doc.media?.hasAudio ? '' : 'hidden'}>
                 <button type="button" class="tlab-play-btn" id="tlab-play-toggle" aria-label="Play or pause" title="Play / Pause (Space)">
                   <svg class="tlab-ico-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.8v14.4a.9.9 0 0 0 1.38.76l11.2-7.2a.9.9 0 0 0 0-1.52l-11.2-7.2a.9.9 0 0 0-1.38.76Z"></path></svg>
                   <svg class="tlab-ico-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" hidden><rect x="6" y="4.5" width="4" height="15" rx="1.2"></rect><rect x="14" y="4.5" width="4" height="15" rx="1.2"></rect></svg>
@@ -955,84 +1129,153 @@
                     <span id="tlab-clock-total">${global.FlaptapMediaEngine.formatMs((doc.durationSeconds || 0) * 1000)}</span>
                   </div>
                 </div>
-                <button type="button" class="tlab-pill-xs tlab-define-pill" id="tlab-define-active-btn" hidden>
+                <button type="button" class="tlab-pill-xs tlab-define-pill" id="tlab-define-active-btn" title="Define selected word" hidden>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-                  <span>Define word</span>
+                  <span>Define</span>
                 </button>
               </div>
 
-              <div class="tlab-player-controls">
-                <div class="tlab-seg-group" role="group" aria-label="Playback speed">
-                  ${[0.75, 0.85, 1, 1.25]
-                    .map(
-                      (sp) =>
-                        `<button type="button" class="tlab-pill-xs ${sp === 1 ? 'is-active' : ''}" data-tlab-speed="${sp}">${sp}x</button>`,
-                    )
-                    .join('')}
+              <div class="tlab-core-right">
+                <div class="tlab-compact-progress" id="tlab-compact-progress" role="button" tabindex="0" aria-label="Mastery progress summary">
+                  <span id="tlab-compact-ring-slot"></span>
+                  <div class="tlab-compact-prog-meta">
+                    <span class="tlab-compact-prog-frac ltr-num" id="tlab-compact-prog-frac">0/0</span>
+                    <div class="tlab-compact-prog-track"><div class="tlab-compact-prog-fill" id="tlab-compact-prog-fill"></div></div>
+                  </div>
+                  <button type="button" class="tlab-jump-next-btn" id="tlab-jump-next-btn" title="Jump to next unstudied sentence" aria-label="Jump to next unstudied sentence" hidden>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </button>
                 </div>
-                <div class="tlab-seg-group" role="group" aria-label="Loop and shadow mode">
-                  <button type="button" class="tlab-pill-xs is-active" data-tlab-loop="off" title="Play once">Once</button>
-                  <button type="button" class="tlab-pill-xs" data-tlab-loop="word" title="Loop clicked word">Word ∞</button>
-                  <button type="button" class="tlab-pill-xs" data-tlab-loop="sentence" title="Loop active sentence">Sent ∞</button>
-                  <button type="button" class="tlab-pill-xs" data-tlab-loop="shadow" title="Shadow Gap: Play sentence, pause for you to speak, then repeat">Shadow</button>
-                </div>
-                <button type="button" class="tlab-pill-xs" id="tlab-pad-toggle" title="Toggle natural consonant cushion (-25ms/+55ms) vs exact 0ms bounds">Pad: Natural</button>
+
+                ${
+                  doc.media?.hasAudio
+                    ? `<button type="button" class="tlab-pill-xs tlab-compact-speed ltr-num" id="tlab-compact-speed" title="Playback speed (click to open speed controls)" aria-label="Playback speed">1x</button>`
+                    : ''
+                }
+
                 ${
                   canVideo
-                    ? `<button type="button" class="tlab-pill-xs tlab-video-btn ${state.videoExpanded ? 'is-active' : ''}" id="tlab-video-toggle" title="Toggle original video preview">
-                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
-                         <span>${state.videoExpanded ? 'Hide Video' : 'Show Video'}</span>
+                    ? `<button type="button" class="tlab-icon-action-btn tlab-video-btn ${state.videoExpanded ? 'is-active' : ''}" id="tlab-video-toggle" title="${state.videoExpanded ? 'Hide original video' : 'Show original video'}" aria-label="Toggle original video preview" aria-pressed="${state.videoExpanded ? 'true' : 'false'}">
+                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
                        </button>`
                     : ''
                 }
+
+                <button type="button" class="tlab-icon-action-btn tlab-deck-collapse-btn" id="tlab-deck-collapse-btn" aria-expanded="true" title="Collapse secondary controls" aria-label="Toggle controls drawer">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                </button>
               </div>
             </div>
-            <div class="tlab-player-progress-track" id="tlab-player-progress-track" title="Playback position">
+
+            <!-- INTERACTIVE SCRUBBABLE TIMELINE (Always visible, click or drag) -->
+            <div class="tlab-player-progress-track" id="tlab-player-progress-track" title="Click or drag to seek" role="slider" aria-label="Playback timeline" ${doc.media?.hasAudio ? '' : 'hidden'}>
               <div class="tlab-player-progress-fill" id="tlab-player-progress-fill"></div>
+              <div class="tlab-scrub-thumb" id="tlab-scrub-thumb" aria-hidden="true"></div>
+              <div class="tlab-scrub-tooltip ltr-num" id="tlab-scrub-tooltip" hidden>00:00.000</div>
             </div>
+
             <div class="tlab-media-error" id="tlab-media-error" hidden></div>
-          </section>
 
-          <!-- TOP VIEW MODE SWITCHER & TOOLBAR -->
-          <div class="tlab-toolbar">
-            <nav class="tlab-view-tabs" role="tablist" aria-label="Transcript display views">
-              ${VIEW_DEFS.map(
-                (v) => `
-                <button type="button" class="tlab-view-tab ${state.activeView === v.id ? 'is-active' : ''}" data-tlab-view="${v.id}" role="tab" aria-selected="${state.activeView === v.id ? 'true' : 'false'}" title="${escapeHtml(v.label)} (${v.shortcut})">
-                  <span>${escapeHtml(v.label)}</span>
-                </button>`,
-              ).join('')}
-            </nav>
+            <!-- COLLAPSIBLE SECONDARY DRAWER (Progress Map + Speed/Loop/Pad/Follow + View Tabs & Search) -->
+            <div class="tlab-deck-drawer" id="tlab-deck-drawer">
+              <div class="tlab-deck-drawer-inner">
+                <div class="tlab-doc-progress" id="tlab-doc-progress"></div>
 
-            <div class="tlab-toolbar-right">
-              <div class="tlab-click-mode-switch" role="group" aria-label="Word click behavior">
-                <button type="button" class="tlab-pill-xs ${state.clickMode === 'word' ? 'is-active' : ''}" data-click-mode="word" title="Clicking a word plays only that exact word">Word</button>
-                <button type="button" class="tlab-pill-xs ${state.clickMode === 'from-here' ? 'is-active' : ''}" data-click-mode="from-here" title="Clicking a word plays continuously from that word">From Here</button>
+                <div class="tlab-controls-strip" ${doc.media?.hasAudio ? '' : 'hidden'}>
+                  <div class="tlab-control-group">
+                    <span class="tlab-ctrl-icon-label" title="Playback speed">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"></path><path d="M3.34 19a10 10 0 1 1 17.32 0"></path></svg>
+                    </span>
+                    <div class="tlab-seg-group" role="group" aria-label="Playback speed">
+                      ${speeds
+                        .map(
+                          (sp) =>
+                            `<button type="button" class="tlab-pill-xs ltr-num ${sp === 1 ? 'is-active' : ''}" data-tlab-speed="${sp}" title="Play at ${sp}x speed">${sp}x</button>`,
+                        )
+                        .join('')}
+                    </div>
+                  </div>
+
+                  <div class="tlab-control-group">
+                    <div class="tlab-seg-group" role="group" aria-label="Loop and shadow mode">
+                      <button type="button" class="tlab-pill-xs is-active" data-tlab-loop="off" title="Play once and pause">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
+                        <span>Once</span>
+                      </button>
+                      <button type="button" class="tlab-pill-xs" data-tlab-loop="word" title="Loop clicked word continuously">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                        <span>Word</span>
+                      </button>
+                      <button type="button" class="tlab-pill-xs" data-tlab-loop="sentence" title="Loop active sentence continuously">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"></path><path d="M3 11v-1a4 4 0 0 1 4-4h14"></path><path d="M7 22l-4-4 4-4"></path><path d="M21 13v1a4 4 0 0 1-4 4H3"></path></svg>
+                        <span>Sent</span>
+                      </button>
+                      <button type="button" class="tlab-pill-xs" data-tlab-loop="shadow" title="Shadow Gap: Play sentence, pause for you to speak, then repeat">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line></svg>
+                        <span>Shadow</span>
+                      </button>
+                    </div>
+
+                    <button type="button" class="tlab-pill-xs" id="tlab-pad-toggle" title="Natural consonant cushion (-25ms/+55ms) vs Exact 0ms bounds">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"></path><path d="M16 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"></path></svg>
+                      <span class="tlab-pad-label">Natural</span>
+                    </button>
+
+                    <button type="button" class="tlab-icon-action-btn is-active" id="tlab-follow-toggle" title="Auto-follow active sentence while playing" aria-label="Toggle live auto-scroll tracking" aria-pressed="true">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3"></path><path d="M12 19v3"></path><path d="M2 12h3"></path><path d="M19 12h3"></path></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="tlab-toolbar">
+                  <nav class="tlab-view-tabs" role="tablist" aria-label="Transcript display views">
+                    ${VIEW_DEFS.map(
+                      (v) => `
+                      <button type="button" class="tlab-view-tab ${state.activeView === v.id ? 'is-active' : ''}" data-tlab-view="${v.id}" role="tab" aria-selected="${state.activeView === v.id ? 'true' : 'false'}" title="${escapeHtml(v.label)} (Shortcut ${v.shortcut})">
+                        ${viewIcons[v.id] || ''}
+                        <span>${escapeHtml(v.label)}</span>
+                      </button>`,
+                    ).join('')}
+                  </nav>
+
+                  <div class="tlab-toolbar-right">
+                    <div class="tlab-click-mode-switch" role="group" aria-label="Word click behavior">
+                      <button type="button" class="tlab-pill-xs ${state.clickMode === 'word' ? 'is-active' : ''}" data-click-mode="word" title="Clicking a word plays only that exact word">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7V4h16v3"></path><path d="M9 20h6"></path><path d="M12 4v16"></path></svg>
+                        <span>Word</span>
+                      </button>
+                      <button type="button" class="tlab-pill-xs ${state.clickMode === 'from-here' ? 'is-active' : ''}" data-click-mode="from-here" title="Clicking a word plays continuously from that word">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon><line x1="20" y1="4" x2="20" y2="20"></line></svg>
+                        <span>From Here</span>
+                      </button>
+                    </div>
+                    <button type="button" class="tlab-pill-xs tlab-repairs-toggle ${state.showRepairs ? 'is-active' : ''}" id="tlab-toggle-repairs" title="Highlight words and sentences repaired from raw captions">
+                      <span class="tlab-repair-dot" aria-hidden="true"></span>
+                      <span>${repairedCount > 0 ? repairedCount : 'Repairs'}</span>
+                    </button>
+                    <div class="tlab-search-box">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      <input type="search" id="tlab-search-input" placeholder="Search…" value="${escapeHtml(state.searchQuery)}" aria-label="Search transcript words" />
+                      <span class="tlab-search-count ltr-num" id="tlab-search-count" hidden></span>
+                      <button type="button" class="tlab-search-nav-btn" id="tlab-search-prev" title="Previous match (Shift+Enter)" aria-label="Previous match" hidden>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                      </button>
+                      <button type="button" class="tlab-search-nav-btn" id="tlab-search-next" title="Next match (Enter)" aria-label="Next match" hidden>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                      </button>
+                      <button type="button" class="tlab-search-nav-btn" id="tlab-search-clear" title="Clear search" aria-label="Clear search" hidden>
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                      </button>
+                    </div>
+                    <button type="button" class="tlab-icon-action-btn tlab-copy-icon-btn" id="tlab-copy-view-btn" title="Copy active view text" aria-label="Copy active view text">
+                      <svg class="tlab-ico-copy" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                      <svg class="tlab-ico-copied" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </button>
+                  </div>
+                </div>
               </div>
-              <button type="button" class="tlab-pill-xs tlab-repairs-toggle ${state.showRepairs ? 'is-active' : ''}" id="tlab-toggle-repairs" title="Highlight words and sentences repaired from raw captions">
-                <span class="tlab-repair-dot" aria-hidden="true"></span>
-                <span>Repairs${repairedCount > 0 ? ` (${repairedCount})` : ''}</span>
-              </button>
-              <div class="tlab-search-box">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="search" id="tlab-search-input" placeholder="Search…" value="${escapeHtml(state.searchQuery)}" aria-label="Search transcript words" />
-                <span class="tlab-search-count ltr-num" id="tlab-search-count" hidden></span>
-                <button type="button" class="tlab-search-nav-btn" id="tlab-search-prev" title="Previous match (Shift+Enter)" aria-label="Previous match" hidden>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                </button>
-                <button type="button" class="tlab-search-nav-btn" id="tlab-search-next" title="Next match (Enter)" aria-label="Next match" hidden>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                </button>
-                <button type="button" class="tlab-search-nav-btn" id="tlab-search-clear" title="Clear search" aria-label="Clear search" hidden>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                </button>
-              </div>
-              <button type="button" class="btn-secondary btn-xs" id="tlab-copy-view-btn" title="Copy active view text">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-                <span>Copy</span>
-              </button>
             </div>
-          </div>
+          </section>
 
           <!-- SPEAKER FILTER & RENAME BAR -->
           <div class="tlab-speaker-bar" id="tlab-speaker-bar" hidden></div>
@@ -1055,8 +1298,11 @@
         state.engine.mount(slot, doc.media);
       }
 
+      onShellRendered();
       bindWorkbenchEvents();
       syncProgressBar();
+      setupDeckObserver();
+      syncDeckCollapseState();
       renderViewContent();
       renderExportMenu();
     }
@@ -1227,15 +1473,74 @@
         flashCopiedBtn(e.currentTarget);
       });
 
-      // Click progress scrubber bar to play continuously from that position
-      state.rootEl.querySelector('#tlab-player-progress-track')?.addEventListener('click', (e) => {
-        const durMs = state.engine?.getState?.().durationMs || (state.doc?.durationSeconds || 0) * 1000;
-        if (!durMs) return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / Math.max(1, rect.width)));
-        const seekMs = Math.round(ratio * durMs);
-        state.engine?.playContinuousFrom?.(seekMs, global.FlaptapMediaEngine.formatShort(seekMs));
-      });
+      // Click or drag interactive scrub timeline
+      const scrubTrack = state.rootEl.querySelector('#tlab-player-progress-track');
+      const scrubTip = state.rootEl.querySelector('#tlab-scrub-tooltip');
+      if (scrubTrack) {
+        const calcScrub = (clientX) => {
+          const durMs = state.engine?.getState?.().durationMs || (state.doc?.durationSeconds || 0) * 1000;
+          if (!durMs) return null;
+          const rect = scrubTrack.getBoundingClientRect();
+          const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / Math.max(1, rect.width)));
+          return { ratio, ms: Math.round(ratio * durMs), durMs };
+        };
+
+        const showScrubHover = (clientX) => {
+          const info = calcScrub(clientX);
+          if (!info || !scrubTip) return;
+          scrubTip.hidden = false;
+          scrubTip.textContent = global.FlaptapMediaEngine.formatMs(info.ms);
+          scrubTip.style.left = `${(info.ratio * 100).toFixed(2)}%`;
+        };
+
+        scrubTrack.addEventListener('pointermove', (e) => {
+          showScrubHover(e.clientX);
+          if (state.scrubbing) {
+            const info = calcScrub(e.clientX);
+            if (info) {
+              updateScrubVisuals(info.ratio * 100);
+              const clockEl = state.rootEl.querySelector('#tlab-clock-now');
+              if (clockEl) clockEl.textContent = global.FlaptapMediaEngine.formatMs(info.ms);
+            }
+          }
+        });
+
+        scrubTrack.addEventListener('pointerleave', () => {
+          if (!state.scrubbing && scrubTip) scrubTip.hidden = true;
+        });
+
+        scrubTrack.addEventListener('pointerdown', (e) => {
+          const info = calcScrub(e.clientX);
+          if (!info) return;
+          state.scrubbing = true;
+          scrubTrack.classList.add('is-scrubbing');
+          try { scrubTrack.setPointerCapture(e.pointerId); } catch {}
+          updateScrubVisuals(info.ratio * 100);
+          showScrubHover(e.clientX);
+        });
+
+        const finishScrub = (e) => {
+          if (!state.scrubbing) return;
+          state.scrubbing = false;
+          scrubTrack.classList.remove('is-scrubbing');
+          if (scrubTip) scrubTip.hidden = true;
+          const info = calcScrub(e.clientX);
+          if (info) {
+            if (state.engine?.getState?.().playing) {
+              state.engine.seek(info.ms);
+            } else {
+              state.engine?.playContinuousFrom?.(info.ms, global.FlaptapMediaEngine.formatShort(info.ms));
+            }
+          }
+        };
+
+        scrubTrack.addEventListener('pointerup', finishScrub);
+        scrubTrack.addEventListener('pointercancel', () => {
+          state.scrubbing = false;
+          scrubTrack.classList.remove('is-scrubbing');
+          if (scrubTip) scrubTip.hidden = true;
+        });
+      }
 
       // Search input + Prev / Next match navigation + Clear
       const searchInput = state.rootEl.querySelector('#tlab-search-input');
@@ -1325,8 +1630,61 @@
           stage.classList.toggle('is-audio-hidden', !state.videoExpanded);
         }
         e.currentTarget.classList.toggle('is-active', state.videoExpanded);
-        e.currentTarget.querySelector('span').textContent = state.videoExpanded ? 'Hide Video' : 'Show Video';
+        e.currentTarget.setAttribute('aria-pressed', state.videoExpanded ? 'true' : 'false');
+        e.currentTarget.title = state.videoExpanded ? 'Hide original video' : 'Show original video';
         if (state.videoExpanded) state.engine?.ensureReady?.().catch(() => {});
+      });
+
+      // Collapse / expand sticky Command Deck secondary drawer
+      const toggleDeckCollapse = () => {
+        if (state.isStuck) {
+          state.stuckExpanded = !state.stuckExpanded;
+        } else {
+          state.topCollapsed = !state.topCollapsed;
+        }
+        syncDeckCollapseState();
+      };
+
+      state.rootEl.querySelector('#tlab-deck-collapse-btn')?.addEventListener('click', toggleDeckCollapse);
+
+      state.rootEl.querySelector('#tlab-compact-speed')?.addEventListener('click', () => {
+        if (state.isStuck && !state.stuckExpanded) {
+          state.stuckExpanded = true;
+          syncDeckCollapseState();
+        } else if (!state.isStuck && state.topCollapsed) {
+          state.topCollapsed = false;
+          syncDeckCollapseState();
+        } else {
+          toggleDeckCollapse();
+        }
+      });
+
+      state.rootEl.querySelector('#tlab-compact-progress')?.addEventListener('click', (e) => {
+        const jumpBtn = e.target.closest('#tlab-jump-next-btn');
+        if (jumpBtn && state.doc) {
+          e.stopPropagation();
+          const completedSet = new Set(state.doc.completion?.items || []);
+          const nextSent = activeSentences().find((s) => !completedSet.has(s.index));
+          if (nextSent) {
+            const row = state.rootEl.querySelector(`.tlab-sentence-row[data-sent-idx="${nextSent.index}"]`);
+            if (row) {
+              setActiveSentenceHighlight(nextSent.index);
+              row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+          return;
+        }
+        toggleDeckCollapse();
+      });
+
+      state.rootEl.querySelector('#tlab-follow-toggle')?.addEventListener('click', (e) => {
+        state.autoScrollPaused = !state.autoScrollPaused;
+        const following = !state.autoScrollPaused;
+        e.currentTarget.classList.toggle('is-active', following);
+        e.currentTarget.setAttribute('aria-pressed', following ? 'true' : 'false');
+        const resumeBtn = state.rootEl?.querySelector('#tlab-resume-scroll');
+        if (resumeBtn) resumeBtn.hidden = following;
+        toast(following ? 'Auto-follow enabled.' : 'Auto-follow paused.');
       });
 
       state.rootEl.querySelector('#tlab-define-active-btn')?.addEventListener('click', (e) => {
@@ -1654,6 +2012,11 @@
           state.autoScrollPaused = true;
           const resumeBtn = state.rootEl?.querySelector('#tlab-resume-scroll');
           if (resumeBtn) resumeBtn.hidden = false;
+          const followBtn = state.rootEl?.querySelector('#tlab-follow-toggle');
+          if (followBtn) {
+            followBtn.classList.remove('is-active');
+            followBtn.setAttribute('aria-pressed', 'false');
+          }
         }
       };
       global.addEventListener('scroll', state.scrollHandler, { passive: true });
@@ -1662,6 +2025,11 @@
       state.rootEl.querySelector('#tlab-resume-scroll')?.addEventListener('click', (e) => {
         state.autoScrollPaused = false;
         e.currentTarget.hidden = true;
+        const followBtn = state.rootEl?.querySelector('#tlab-follow-toggle');
+        if (followBtn) {
+          followBtn.classList.add('is-active');
+          followBtn.setAttribute('aria-pressed', 'true');
+        }
       });
 
       // Close export menu & info popover on outside click / Escape
@@ -1778,7 +2146,8 @@
       const btn = state.rootEl?.querySelector('#tlab-rerun-review-btn');
       if (btn) {
         btn.disabled = true;
-        btn.textContent = 'Reviewing…';
+        btn.classList.add('is-spinning');
+        btn.title = 'AI Review running…';
       }
 
       if (state.reviewAbort) state.reviewAbort.abort();
@@ -1835,6 +2204,10 @@
       state.activeWordIndex = -1;
       state.activeSentenceIndex = -1;
       state.autoScrollPaused = false;
+      state.isStuck = false;
+      state.topCollapsed = false;
+      state.stuckExpanded = false;
+      state.scrubbing = false;
       const initialView = opts.view && VIEW_DEFS.some((v) => v.id === opts.view) ? opts.view : 'sentences';
       state.activeView = initialView;
       renderShell();
@@ -1846,10 +2219,17 @@
     }
 
     function deactivate() {
+      teardownDeckObserver();
       state.engine?.pause?.();
       if (state.reviewAbort) {
         state.reviewAbort.abort();
         state.reviewAbort = null;
+      }
+      const viewNav = document.getElementById('tlab-view-nav');
+      const shellBar = document.getElementById('tlab-shell-bar');
+      if (viewNav && state.rootEl?.contains(viewNav) && shellBar) {
+        shellBar.appendChild(viewNav);
+        viewNav.classList.remove('is-docked-in-wb');
       }
     }
 

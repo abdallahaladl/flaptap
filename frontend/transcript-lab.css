@@ -33,15 +33,39 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   flex-wrap: wrap;
 }
 
-.tlab-desk[data-tlab-active="library"] .tlab-shell-bar,
-.tlab-desk[data-tlab-active="view"] .tlab-shell-bar {
-  justify-content: flex-end;
-  margin-bottom: 10px;
+.tlab-desk[data-tlab-active="library"] .tlab-shell-bar {
+  margin-bottom: 14px;
 }
 
-.tlab-desk[data-tlab-active="library"] .aex-extract-hero,
-.tlab-desk[data-tlab-active="view"] .aex-extract-hero {
+.tlab-desk[data-tlab-active="library"] .aex-headline {
+  font-size: clamp(1.22rem, 1.8vw, 1.48rem);
+}
+
+.tlab-desk[data-tlab-active="view"] .tlab-shell-bar {
   display: none;
+}
+
+.tlab-wb-nav-slot {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tlab-view-nav.is-docked-in-wb {
+  padding: 2px;
+  gap: 2px;
+  border-radius: 10px;
+}
+
+.tlab-view-nav.is-docked-in-wb .lexicon-view-tab {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 8px;
+  gap: 5px;
+}
+
+.tlab-view-nav.is-docked-in-wb .lexicon-badge-pill {
+  font-size: 10.5px;
+  padding: 1px 6px;
 }
 
 .tlab-desk .aex-extract-hero {
@@ -500,11 +524,96 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   gap: 7px;
 }
 
-.tlab-wb-head-actions .btn-xs,
-.tlab-wb-nav-left .btn-xs {
+.tlab-icon-action-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--ap-border-strong);
+  background: var(--ap-surface-secondary);
+  color: var(--ap-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    transform 150ms var(--ap-bounce),
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+}
+
+.tlab-icon-action-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  color: var(--ap-text-primary);
+  background: var(--ap-fill);
+  border-color: var(--ap-border-strong);
+}
+
+.tlab-icon-action-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.tlab-icon-action-btn.is-active {
+  background: var(--ap-blue-wash);
+  border-color: var(--ap-blue-ring);
+  color: var(--ap-blue);
+}
+
+.tlab-icon-action-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@keyframes tlabSpin360 {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.tlab-icon-action-btn.is-spinning svg {
+  animation: tlabSpin360 1s linear infinite;
+  color: var(--ap-blue);
+}
+
+.tlab-export-icon-btn {
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 10px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  transition: transform 150ms var(--ap-bounce), filter 150ms ease;
+}
+
+.tlab-export-icon-btn:hover {
+  transform: translateY(-1px);
+}
+
+.tlab-export-icon-btn .tlab-export-caret {
+  opacity: 0.85;
+  transition: transform 160ms ease;
+}
+
+.tlab-export-icon-btn[aria-expanded="true"] .tlab-export-caret {
+  transform: rotate(180deg);
+}
+
+.tlab-copy-icon-btn .tlab-ico-copied {
+  display: none;
+}
+
+.tlab-copy-icon-btn.is-copied {
+  background: var(--ap-green-wash);
+  border-color: rgba(52, 199, 89, 0.45);
+  color: var(--ap-green);
+}
+
+.tlab-copy-icon-btn.is-copied .tlab-ico-copy {
+  display: none;
+}
+
+.tlab-copy-icon-btn.is-copied .tlab-ico-copied {
+  display: inline-block;
 }
 
 .tlab-wb-title-row {
@@ -685,28 +794,51 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
 }
 
 /* ==========================================================================
-   STICKY MILLISECOND PLAYER DOCK
+   UNIFIED STICKY COMMAND DECK (Core Bar + Interactive Scrub + Collapsible Drawer)
    ========================================================================== */
 
-.tlab-player-dock {
+.tlab-deck-sentinel {
+  height: 1px;
+  width: 100%;
+  margin-top: -1px;
+  pointer-events: none;
+}
+
+.tlab-command-deck {
   position: sticky;
-  top: 64px;
-  z-index: 30;
+  top: var(--tlab-sticky-top, 56px);
+  z-index: 32;
   background: var(--ap-glass-popover);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(190%) blur(22px);
+  -webkit-backdrop-filter: saturate(190%) blur(22px);
   border: 1px solid var(--ap-border-strong);
-  border-radius: var(--ap-radius-md);
+  border-radius: var(--ap-radius-lg);
   box-shadow: var(--ap-shadow-card);
-  margin-bottom: 12px;
-  overflow: hidden;
+  margin-bottom: 14px;
+  overflow: visible;
+  transition: box-shadow 200ms ease, border-color 200ms ease, border-radius 200ms ease;
+}
+
+.tlab-command-deck.is-stuck {
+  box-shadow: var(--ap-shadow-popover);
+  border-color: var(--ap-blue-ring);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.tlab-command-deck:not(.is-collapsed) .tlab-compact-progress,
+.tlab-command-deck:not(.is-collapsed) .tlab-compact-speed {
+  display: none;
 }
 
 .tlab-video-stage {
   background: #0B0B0D;
   width: 100%;
   aspect-ratio: 16 / 9;
-  max-height: 360px;
+  max-height: 340px;
+  border-top-left-radius: calc(var(--ap-radius-lg) - 1px);
+  border-top-right-radius: calc(var(--ap-radius-lg) - 1px);
+  overflow: hidden;
 }
 
 .tlab-video-stage.is-audio-hidden {
@@ -732,7 +864,7 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
 }
 
 .tlab-shadow-pause-bar {
-  background: rgba(255, 240, 75, 0.22);
+  background: rgba(255, 240, 75, 0.16);
   padding: 8px 14px;
   border-bottom: 1px solid var(--ap-border);
 }
@@ -758,21 +890,29 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   background: var(--ap-blue);
 }
 
-.tlab-player-bar {
+/* Always-visible Core Row */
+.tlab-core-bar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px 14px;
-  padding: 9px 14px;
+  gap: 12px;
+  padding: 8px 12px;
+  min-height: 50px;
 }
 
-.tlab-player-transport {
+.tlab-core-transport {
   display: flex;
   align-items: center;
   gap: 8px;
   min-width: 0;
-  flex: 1 1 340px;
+  flex: 1 1 auto;
+}
+
+.tlab-core-right {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-shrink: 0;
 }
 
 .tlab-transport-step-group {
@@ -797,11 +937,15 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 140ms ease, background 140ms ease;
+  transition: transform 150ms var(--ap-bounce), background-color 150ms ease;
 }
 
 .tlab-play-btn:hover {
-  transform: scale(1.05);
+  transform: scale(1.06);
+}
+
+.tlab-play-btn:active {
+  transform: scale(0.95);
 }
 
 .tlab-play-btn.is-playing {
@@ -811,7 +955,7 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
 
 .tlab-player-readout {
   min-width: 0;
-  flex: 1;
+  flex: 1 1 auto;
 }
 
 .tlab-active-clip-label {
@@ -831,11 +975,280 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   gap: 4px;
 }
 
-.tlab-player-controls {
+/* Compact Always-Visible Progress Capsule inside Core Row */
+.tlab-compact-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px 4px 5px;
+  border-radius: 980px;
+  background: var(--ap-surface-secondary);
+  border: 1px solid var(--ap-border);
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.tlab-compact-progress:hover {
+  border-color: var(--ap-border-strong);
+  background: var(--ap-fill-subtle);
+}
+
+.tlab-compact-progress[data-tone="done"] {
+  border-color: var(--ft-done-border);
+  background: var(--ft-done-wash);
+}
+
+.tlab-mini-ring {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.tlab-mini-ring svg {
+  transform: rotate(-90deg);
+}
+
+.tlab-mini-ring-bg {
+  fill: none;
+  stroke: var(--ap-fill);
+  stroke-width: 3;
+}
+
+.tlab-mini-ring-fg {
+  fill: none;
+  stroke: var(--ap-blue);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 320ms var(--ap-spring);
+}
+
+.tlab-mini-ring.is-new .tlab-mini-ring-fg {
+  stroke: var(--ap-text-tertiary);
+}
+
+.tlab-mini-ring.is-done {
+  border-radius: 50%;
+  background: var(--ft-done-solid);
+  color: var(--ft-done-on-solid);
+}
+
+.tlab-mini-ring.is-done svg {
+  transform: none;
+}
+
+.tlab-mini-ring-pct {
+  position: absolute;
+  font-family: var(--ap-font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--ap-text-primary);
+}
+
+.tlab-compact-prog-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 44px;
+}
+
+.tlab-compact-prog-frac {
+  font-family: var(--ap-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--ap-text-primary);
+}
+
+.tlab-compact-prog-track {
+  width: 48px;
+  height: 4px;
+  border-radius: 99px;
+  background: var(--ap-fill);
+  overflow: hidden;
+}
+
+.tlab-compact-prog-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 99px;
+  background: var(--ap-blue);
+  transition: width 260ms var(--ap-spring);
+}
+
+.tlab-compact-progress[data-tone="done"] .tlab-compact-prog-fill {
+  background: var(--ft-done-track, var(--ap-green-solid));
+}
+
+.tlab-jump-next-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: var(--ap-fill);
+  color: var(--ap-text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.tlab-jump-next-btn:hover {
+  background: var(--ap-blue);
+  color: #FFFFFF;
+}
+
+.tlab-compact-speed {
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--ap-border);
+  background: var(--ap-surface-secondary);
+  color: var(--ap-text-secondary);
+  font-family: var(--ap-font-mono);
+}
+
+.tlab-compact-speed.is-modified {
+  background: var(--ap-blue-wash);
+  border-color: var(--ap-blue-ring);
+  color: var(--ap-blue);
+}
+
+.tlab-deck-collapse-btn svg {
+  transition: transform 220ms var(--ap-spring);
+}
+
+.tlab-command-deck.is-collapsed .tlab-deck-collapse-btn svg {
+  transform: rotate(180deg);
+}
+
+/* Interactive Scrubbable Timeline */
+.tlab-player-progress-track {
+  height: 5px;
+  width: 100%;
+  background: var(--ap-fill);
+  cursor: pointer;
+  position: relative;
+  touch-action: none;
+  transition: height 140ms ease;
+}
+
+.tlab-player-progress-track:hover,
+.tlab-player-progress-track.is-scrubbing {
+  height: 8px;
+}
+
+.tlab-command-deck.is-collapsed .tlab-player-progress-track {
+  border-bottom-left-radius: calc(var(--ap-radius-lg) - 1px);
+  border-bottom-right-radius: calc(var(--ap-radius-lg) - 1px);
+}
+
+.tlab-player-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--ap-blue);
+  pointer-events: none;
+  transition: width 80ms linear;
+}
+
+.tlab-player-progress-track.is-scrubbing .tlab-player-progress-fill {
+  transition: none;
+}
+
+.tlab-scrub-thumb {
+  position: absolute;
+  top: 50%;
+  left: 0%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 2.5px solid var(--ap-blue);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  transform: translate(-50%, -50%) scale(0);
+  pointer-events: none;
+  transition: transform 140ms var(--ap-bounce);
+}
+
+.tlab-player-progress-track:hover .tlab-scrub-thumb,
+.tlab-player-progress-track.is-scrubbing .tlab-scrub-thumb {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.tlab-scrub-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--ap-text-primary);
+  color: var(--ap-surface);
+  font-family: var(--ap-font-mono);
+  font-size: 10.5px;
+  font-weight: 600;
+  pointer-events: none;
+  white-space: nowrap;
+  box-shadow: var(--ap-shadow-pill);
+}
+
+/* Collapsible Secondary Drawer */
+.tlab-deck-drawer {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 240ms var(--ap-spring), opacity 200ms ease;
+  opacity: 1;
+}
+
+.tlab-deck-drawer-inner {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--ap-border);
+}
+
+.tlab-command-deck.is-collapsed .tlab-deck-drawer {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tlab-command-deck.is-collapsed .tlab-deck-drawer-inner {
+  padding-top: 0;
+  padding-bottom: 0;
+  border-top-color: transparent;
+}
+
+.tlab-deck-drawer .tlab-doc-progress {
+  margin-top: 0;
+}
+
+.tlab-controls-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.tlab-control-group {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+}
+
+.tlab-ctrl-icon-label {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ap-text-tertiary);
+  padding-inline: 2px;
 }
 
 .tlab-seg-group {
@@ -859,7 +1272,7 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   border-radius: 7px;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 140ms ease, color 140ms ease;
+  transition: background 140ms ease, color 140ms ease, transform 120ms ease;
 }
 
 .tlab-pill-xs:hover {
@@ -886,26 +1299,6 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   color: var(--ap-blue);
 }
 
-.tlab-player-progress-track {
-  height: 4px;
-  width: 100%;
-  background: var(--ap-fill);
-  cursor: pointer;
-  position: relative;
-  transition: height 140ms ease;
-}
-
-.tlab-player-progress-track:hover {
-  height: 6px;
-}
-
-.tlab-player-progress-fill {
-  height: 100%;
-  width: 0%;
-  background: var(--ap-blue);
-  transition: width 80ms linear;
-}
-
 .tlab-media-error {
   padding: 8px 14px;
   font-size: 12.5px;
@@ -915,7 +1308,7 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
 }
 
 /* ==========================================================================
-   VIEW MODE TABS & TOOLBAR
+   VIEW MODE TABS & TOOLBAR (Integrated inside Command Deck Drawer)
    ========================================================================== */
 
 .tlab-toolbar {
@@ -924,7 +1317,9 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   align-items: center;
   justify-content: space-between;
   gap: 8px 12px;
-  margin-bottom: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ap-border);
+  margin-bottom: 0;
 }
 
 .tlab-view-tabs {
@@ -938,12 +1333,15 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
 }
 
 .tlab-view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   border: none;
   background: transparent;
   color: var(--ap-text-secondary);
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 5px 11px;
+  padding: 5px 10px;
   border-radius: var(--ap-radius-sm);
   cursor: pointer;
   transition: background 140ms ease, color 140ms ease;
@@ -1722,8 +2120,13 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   .tlab-recent-grid {
     grid-template-columns: 1fr;
   }
-  .tlab-player-dock {
-    top: 56px;
+  .tlab-core-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .tlab-core-right {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 
@@ -1743,11 +2146,17 @@ body:has(#section-transcript-lab:not([hidden])) .workspace-main {
   .tlab-sent-actions {
     justify-content: flex-end;
   }
+  .tlab-core-transport {
+    width: 100%;
+  }
+  .tlab-compact-prog-track {
+    width: 34px;
+  }
   .tlab-toolbar-right {
     width: 100%;
   }
   .tlab-search-box {
-    flex: 1 1 160px;
+    flex: 1 1 140px;
   }
   .tlab-search-box input,
   .tlab-search-box:focus-within input {

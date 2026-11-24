@@ -12,7 +12,7 @@
 (function (global) {
   'use strict';
 
-  const SPEED_OPTIONS = [0.6, 0.75, 0.85, 1, 1.25, 1.5];
+  const SPEED_OPTIONS = [0.5, 0.75, 0.85, 1, 1.25, 1.5];
 
   let ytApiPromise = null;
   function ensureYouTubeApi() {
@@ -626,6 +626,14 @@
       notifyState();
     }
 
+    function seek(targetMs) {
+      const clamped = Math.max(0, Math.round(Number(targetMs) || 0));
+      cancelShadowPause();
+      seekEngine(clamped, state.playing);
+      onTimeUpdate(clamped, state.activeRange);
+      notifyState();
+    }
+
     function destroy() {
       state.destroyed = true;
       cancelShadowPause();
@@ -664,6 +672,7 @@
       setSpeed,
       setLoopMode,
       setWordPadMode,
+      seek,
       destroy,
       getState: () => ({ ...state }),
       hasPlayableMedia,

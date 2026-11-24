@@ -85,6 +85,43 @@
     const desk = document.querySelector('#section-transcript-lab .tlab-desk');
     if (desk) desk.dataset.tlabActive = next;
 
+    const shellBar = el('tlab-shell-bar');
+    const viewNav = el('tlab-view-nav');
+    const headlineEl = el('tlab-shell-headline');
+    const subcopyEl = el('tlab-shell-subcopy');
+    const extractLabelEl = el('tlab-tab-extract-label');
+
+    if (next === 'library') {
+      if (headlineEl) headlineEl.textContent = 'Transcript Library';
+      if (subcopyEl) {
+        subcopyEl.textContent =
+          'Browse your saved videos, podcasts, and audio files — every word aligned to milliseconds.';
+      }
+    } else if (next === 'extract') {
+      if (headlineEl) headlineEl.textContent = 'Transcripts';
+      if (subcopyEl) {
+        subcopyEl.textContent =
+          'Turn any YouTube video, podcast, social clip, or audio file into a verbatim, AI-reviewed transcript — switch views instantly and click any word to hear exact millisecond pronunciation.';
+      }
+    }
+
+    if (viewNav) {
+      if (next === 'view') {
+        const wbSlot = el('tlab-wb-nav-slot');
+        if (wbSlot && viewNav.parentElement !== wbSlot) {
+          wbSlot.appendChild(viewNav);
+        }
+        viewNav.classList.add('is-docked-in-wb');
+        if (extractLabelEl) extractLabelEl.textContent = 'New';
+      } else {
+        if (shellBar && viewNav.parentElement !== shellBar) {
+          shellBar.appendChild(viewNav);
+        }
+        viewNav.classList.remove('is-docked-in-wb');
+        if (extractLabelEl) extractLabelEl.textContent = 'Transcribe';
+      }
+    }
+
     const tabExtract = el('tlab-tab-extract');
     const tabLibrary = el('tlab-tab-library');
     if (tabExtract) {
@@ -670,6 +707,16 @@
         nav,
         getAiSelection: () => state.aiSelector?.getSelection?.() || {},
         onDocUpdated: () => loadLibrary(state.page, { silent: true }),
+        onShellRendered: () => {
+          const viewNav = el('tlab-view-nav');
+          const wbSlot = el('tlab-wb-nav-slot');
+          const extractLabelEl = el('tlab-tab-extract-label');
+          if (state.activePage === 'view' && viewNav && wbSlot && viewNav.parentElement !== wbSlot) {
+            wbSlot.appendChild(viewNav);
+            viewNav.classList.add('is-docked-in-wb');
+            if (extractLabelEl) extractLabelEl.textContent = 'New';
+          }
+        },
       });
       state.workbench.mount(el('tlab-workbench-root'));
 

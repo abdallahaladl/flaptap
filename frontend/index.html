@@ -2161,19 +2161,19 @@
     <!-- SECTION 9: TRANSCRIPTS (/transcripts, /transcripts/library, /transcripts/:id) -->
     <section id="section-transcript-lab" hidden>
       <div class="editorial-desk tlab-desk">
-        <header class="aex-shell-bar tlab-shell-bar">
+        <header class="aex-shell-bar tlab-shell-bar" id="tlab-shell-bar">
           <div class="aex-extract-hero">
-            <h1 class="aex-headline">Transcripts</h1>
-            <p class="aex-subcopy">
+            <h1 class="aex-headline" id="tlab-shell-headline">Transcripts</h1>
+            <p class="aex-subcopy" id="tlab-shell-subcopy">
               Turn any YouTube video, podcast, social clip, or audio file into a verbatim, AI-reviewed transcript — switch views instantly and click any word to hear exact millisecond pronunciation.
             </p>
           </div>
-          <nav class="lexicon-view-nav tlab-view-nav" role="tablist" aria-label="Transcripts pages">
-            <button type="button" class="lexicon-view-tab active" id="tlab-tab-extract" role="tab" aria-selected="true">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-              <span>Transcribe</span>
+          <nav class="lexicon-view-nav tlab-view-nav" id="tlab-view-nav" role="tablist" aria-label="Transcripts pages">
+            <button type="button" class="lexicon-view-tab active" id="tlab-tab-extract" role="tab" aria-selected="true" title="Transcribe new media">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+              <span id="tlab-tab-extract-label">Transcribe</span>
             </button>
-            <button type="button" class="lexicon-view-tab" id="tlab-tab-library" role="tab" aria-selected="false">
+            <button type="button" class="lexicon-view-tab" id="tlab-tab-library" role="tab" aria-selected="false" title="Open saved transcript library">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
               <span>Library</span>
               <span class="lexicon-badge-pill ltr-num" id="tlab-library-count">0</span>
