@@ -681,6 +681,8 @@
     if (changed && !opts.preserveScroll) {
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
+    if (section !== 'lessons') lessonsStickyDock?.disconnect?.();
+    if (section !== 'vocabulary') vocabStickyDock?.disconnect?.();
     return section;
   }
 
@@ -1179,7 +1181,17 @@
 
   function renderSubjectProgressBar(
     targetElOrId,
-    { total = 0, completed = 0, state: stateChip = null } = {},
+    {
+      total = 0,
+      completed = 0,
+      state: stateChip = null,
+      singular = 'item',
+      plural = 'items',
+      doneHeadline = 'Completed',
+      readyHeadline = 'Ready to study',
+      pips = [],
+      pipAttr = 'data-ft-jump-id',
+    } = {},
   ) {
     const el = typeof targetElOrId === 'string' ? document.getElementById(targetElOrId) : targetElOrId;
     if (!el) return;
@@ -1188,25 +1200,44 @@
     if (safeTotal === 0) {
       el.hidden = true;
       el.classList.remove('is-all-done');
+      el.removeAttribute('data-guide-state');
       el.innerHTML = '';
       return;
     }
 
     const safeCompleted = Math.max(0, Math.min(safeTotal, Number(completed) || 0));
     const remaining = Math.max(0, safeTotal - safeCompleted);
+    const chipTone = ['new', 'progress', 'done'].includes(stateChip?.tone) ? stateChip.tone : '';
+    const isAllDone = remaining === 0 || chipTone === 'done';
+
+    el.hidden = false;
+    el.classList.toggle('is-all-done', isAllDone);
+    el.setAttribute('data-guide-state', isAllDone ? 'done' : safeCompleted > 0 ? 'progress' : 'new');
+
+    if (window.FlaptapStudyDock?.renderProgressDeckHtml) {
+      el.innerHTML = window.FlaptapStudyDock.renderProgressDeckHtml({
+        total: safeTotal,
+        done: safeCompleted,
+        singular,
+        plural,
+        doneHeadline,
+        readyHeadline,
+        pips,
+        pipAttr,
+      });
+      return;
+    }
+
     const pct = Math.round((safeCompleted / safeTotal) * 100);
     const isAr = (state?.uiLang || document.documentElement.lang) === 'ar';
     const totalLabel = isAr ? 'الإجمالي' : 'Total';
     const doneLabel = isAr ? 'مكتمل' : 'Completed';
     const remLabel = isAr ? 'المتبقي' : 'Remaining';
-    const chipTone = ['new', 'progress', 'done'].includes(stateChip?.tone) ? stateChip.tone : '';
     const chipHtml =
       stateChip?.label && chipTone
         ? `<span class="sp-state sp-state--${chipTone}">${escapeHtml(stateChip.label)}</span><span class="sp-sep" aria-hidden="true"></span>`
         : '';
 
-    el.hidden = false;
-    el.classList.toggle('is-all-done', remaining === 0 || chipTone === 'done');
     el.innerHTML = `
       <div class="subject-progress-stats">
         ${chipHtml}
@@ -1379,9 +1410,21 @@
 
     const filtered = state.lessons.filter((item) => item.track === trackName);
     if (countEl) countEl.textContent = String(filtered.length);
+    const isDialogue = trackName === 'street_talk';
     renderSubjectProgressBar(progressId, {
       total: filtered.length,
       completed: filtered.filter((i) => i.isCompleted).length,
+      singular: isDialogue ? 'dialogue' : 'workout',
+      plural: isDialogue ? 'dialogues' : 'workouts',
+      doneHeadline: isDialogue ? 'Dialogues completed' : 'Workouts completed',
+      readyHeadline: isDialogue ? 'Ready to practice' : 'Ready to drill',
+      pipAttr: 'data-ft-jump-lesson',
+      pips: filtered.map((item, idx) => ({
+        id: item.id,
+        displayNumber: idx + 1,
+        label: item.title || (isDialogue ? 'Dialogue' : 'Workout'),
+        done: Boolean(item.isCompleted),
+      })),
     });
     if (filtered.length === 0) {
       grid.innerHTML = '';
@@ -1391,6 +1434,24 @@
     if (empty) empty.hidden = true;
     grid.innerHTML = filtered.map(buildLessonCardHtml).join('');
   }
+
+  const lessonsStickyDock = window.FlaptapStudyDock?.createController
+    ? window.FlaptapStudyDock.createController({
+        sentinelId: 'lessons-sticky-sentinel',
+        dockId: 'lessons-sticky-dock',
+        rootId: 'lessons-items-root',
+        isActive: () => state.section === 'lessons',
+      })
+    : null;
+
+  const vocabStickyDock = window.FlaptapStudyDock?.createController
+    ? window.FlaptapStudyDock.createController({
+        sentinelId: 'vocab-sticky-sentinel',
+        dockId: 'vocab-sticky-dock',
+        rootId: 'vocab-items-root',
+        isActive: () => state.section === 'vocabulary',
+      })
+    : null;
 
   function renderLibrary() {
     renderTrackShelf(
@@ -1413,6 +1474,7 @@
     const gateCard = document.getElementById('library-auth-gate-card');
     const clearBtn = document.getElementById('clear-library-btn');
     const countLabel = document.getElementById('library-count-label');
+    const lessonsDock = document.getElementById('lessons-sticky-dock');
     if (!grid) return;
 
     if (!state.user) {
@@ -1421,7 +1483,9 @@
       if (clearBtn) clearBtn.hidden = true;
       if (countLabel) countLabel.textContent = '0';
       if (gateCard) gateCard.hidden = false;
+      if (lessonsDock) lessonsDock.hidden = true;
       renderSubjectProgressBar('lessons-progress-bar', { total: 0, completed: 0 });
+      lessonsStickyDock?.disconnect?.();
       return;
     }
 
@@ -1439,10 +1503,31 @@
 
     if (countLabel) countLabel.textContent = String(filtered.length);
     if (clearBtn) clearBtn.hidden = state.lessons.length === 0;
+    const hasFilterOrLessons =
+      state.lessons.length > 0 || state.libraryFilter !== 'all' || Boolean(query);
+    if (lessonsDock) lessonsDock.hidden = !hasFilterOrLessons;
+
     renderSubjectProgressBar('lessons-progress-bar', {
       total: filtered.length,
       completed: filtered.filter((i) => i.isCompleted).length,
+      singular: 'lesson',
+      plural: 'lessons',
+      doneHeadline: 'Library completed',
+      readyHeadline: 'Ready to practice',
+      pipAttr: 'data-ft-jump-lesson',
+      pips: filtered.map((item, idx) => ({
+        id: item.id,
+        displayNumber: idx + 1,
+        label: item.title || 'Lesson',
+        done: Boolean(item.isCompleted),
+      })),
     });
+
+    if (state.section === 'lessons' && hasFilterOrLessons) {
+      lessonsStickyDock?.setup?.();
+    } else {
+      lessonsStickyDock?.disconnect?.();
+    }
 
     if (filtered.length === 0) {
       grid.innerHTML = '';
@@ -1607,6 +1692,17 @@
     renderSubjectProgressBar('history-ledger-progress-bar', {
       total: visible.length,
       completed: visible.filter((i) => i.isCompleted).length,
+      singular: 'lesson',
+      plural: 'lessons',
+      doneHeadline: 'All lessons completed',
+      readyHeadline: 'Lesson ledger',
+      pipAttr: 'data-ft-jump-ledger',
+      pips: visible.map((item, idx) => ({
+        id: item.id,
+        displayNumber: idx + 1,
+        label: item.title || 'Lesson',
+        done: Boolean(item.isCompleted),
+      })),
     });
 
     if (visible.length === 0) {
@@ -1789,6 +1885,7 @@
     const empty = document.getElementById('vocab-empty-state');
     const gateCard = document.getElementById('vocab-auth-gate-card');
     const stage = document.getElementById('flashcard-stage');
+    const vocabDock = document.getElementById('vocab-sticky-dock');
     if (!grid) return;
 
     syncFlashcardButtonDom();
@@ -1798,16 +1895,39 @@
       if (empty) empty.hidden = true;
       if (stage) stage.hidden = true;
       if (gateCard) gateCard.hidden = false;
+      if (vocabDock) vocabDock.hidden = true;
       renderSubjectProgressBar('vocab-progress-bar', { total: 0, completed: 0 });
+      vocabStickyDock?.disconnect?.();
       return;
     }
 
     if (gateCard) gateCard.hidden = true;
 
+    const hasVocabOrFilter =
+      state.vocabItems.length > 0 || state.vocabFilter !== 'all' || Boolean(state.vocabSearch.trim());
+    if (vocabDock) vocabDock.hidden = !hasVocabOrFilter;
+
     renderSubjectProgressBar('vocab-progress-bar', {
       total: state.vocabItems.length,
       completed: state.vocabItems.filter((v) => v.isCompleted).length,
+      singular: 'word',
+      plural: 'words',
+      doneHeadline: 'Deck mastered',
+      readyHeadline: 'Ready to review',
+      pipAttr: 'data-ft-jump-vocab',
+      pips: state.vocabItems.map((v, idx) => ({
+        id: v.id,
+        displayNumber: idx + 1,
+        label: v.term || 'Word',
+        done: Boolean(v.isCompleted),
+      })),
     });
+
+    if (state.section === 'vocabulary' && hasVocabOrFilter) {
+      vocabStickyDock?.setup?.();
+    } else {
+      vocabStickyDock?.disconnect?.();
+    }
 
     if (state.vocabItems.length === 0) {
       grid.innerHTML = '';
@@ -1979,6 +2099,46 @@
     // Global AI Provider Keys button in Sidebar Footer
     document.getElementById('sidebar-ai-keys-btn')?.addEventListener('click', () => {
       window.FlaptapAiSelector?.openKeysManager?.(apiFetch);
+    });
+
+    // Bind sticky dock scroll/resize observers + clickable progress pips
+    lessonsStickyDock?.bind?.();
+    vocabStickyDock?.bind?.();
+
+    document.addEventListener('click', (e) => {
+      const lessonPip = e.target.closest('[data-ft-jump-lesson]');
+      if (lessonPip) {
+        const id = lessonPip.getAttribute('data-ft-jump-lesson');
+        const card = id ? document.querySelector(`.history-card[data-lesson-id="${CSS.escape(id)}"]`) : null;
+        if (card) {
+          if (state.section === 'lessons' && lessonsStickyDock?.scrollCardIntoView) {
+            lessonsStickyDock.scrollCardIntoView(card);
+          } else {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+        return;
+      }
+
+      const vocabPip = e.target.closest('[data-ft-jump-vocab]');
+      if (vocabPip) {
+        const id = vocabPip.getAttribute('data-ft-jump-vocab');
+        const card = id
+          ? document.querySelector(`#vocab-grid [data-vocab-complete="${CSS.escape(id)}"]`)?.closest('.vocab-card')
+          : null;
+        if (card) {
+          if (vocabStickyDock?.scrollCardIntoView) vocabStickyDock.scrollCardIntoView(card);
+          else card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        return;
+      }
+
+      const ledgerPip = e.target.closest('[data-ft-jump-ledger]');
+      if (ledgerPip) {
+        const id = ledgerPip.getAttribute('data-ft-jump-ledger');
+        const row = id ? document.querySelector(`[data-ledger-row="${CSS.escape(id)}"]`) : null;
+        row?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     });
 
     // Gate Card Sign-In / Create Account CTA Buttons

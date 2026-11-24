@@ -3,33 +3,64 @@
    Light & Dark Mode Native · Zero External Fonts · Millisecond Word Playback
    ========================================================================== */
 
+body:has(#section-transcript-lab:not([hidden])) .workspace-main {
+  padding-top: 14px;
+}
+
+#section-transcript-lab .editorial-desk.tlab-desk,
 .tlab-desk {
   max-width: 1120px;
   margin: 0 auto;
-  padding-bottom: 72px;
+  padding: 0 0 64px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+  animation: none;
+}
+
+#section-transcript-lab .editorial-desk.tlab-desk::before {
+  display: none;
 }
 
 .tlab-shell-bar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  margin-bottom: 22px;
+  gap: 16px;
+  margin-bottom: 18px;
   flex-wrap: wrap;
 }
 
+.tlab-desk[data-tlab-active="library"] .tlab-shell-bar,
 .tlab-desk[data-tlab-active="view"] .tlab-shell-bar {
-  margin-bottom: 12px;
-  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: 10px;
 }
 
-.tlab-desk[data-tlab-active="view"] .aex-subcopy {
+.tlab-desk[data-tlab-active="library"] .aex-extract-hero,
+.tlab-desk[data-tlab-active="view"] .aex-extract-hero {
   display: none;
 }
 
-.tlab-desk[data-tlab-active="view"] .aex-headline {
-  font-size: 22px;
+.tlab-desk .aex-extract-hero {
+  flex: 1 1 360px;
+  min-width: 0;
+}
+
+.tlab-desk .aex-headline {
+  font-size: clamp(1.42rem, 2.1vw, 1.76rem);
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin: 0 0 4px;
+}
+
+.tlab-desk .aex-subcopy {
   margin: 0;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--ap-text-secondary);
 }
 
 .tlab-input-card {
@@ -153,34 +184,42 @@
 .tlab-capabilities-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-  margin: 20px 0 26px;
+  gap: 10px;
+  margin: 18px 0 0;
 }
 
 .tlab-cap-item {
   background: var(--ap-surface);
   border: 1px solid var(--ap-border);
   border-radius: var(--ap-radius-md);
-  padding: 14px 16px;
+  padding: 13px 14px;
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.tlab-cap-item strong {
-  font-size: 13.5px;
+.tlab-cap-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ap-blue);
+}
+
+.tlab-cap-head strong {
+  font-size: 13px;
+  font-weight: 650;
   color: var(--ap-text-primary);
 }
 
 .tlab-cap-item span {
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.45;
   color: var(--ap-text-secondary);
 }
 
 /* Recent Strip */
 .tlab-recent-strip {
-  margin-top: 8px;
+  margin: 4px 0 18px;
 }
 
 .tlab-recent-head {
@@ -260,13 +299,24 @@
 .tlab-lib-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  font-size: 13px;
+  gap: 8px;
+  font-size: 12.5px;
   color: var(--ap-text-secondary);
+}
+
+.tlab-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--ap-radius-pill);
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-border);
 }
 
 .tlab-lib-stats strong {
   color: var(--ap-text-primary);
+  font-weight: 650;
 }
 
 .tlab-lib-filters {
@@ -343,10 +393,32 @@
   color: var(--ap-text-secondary);
 }
 
+.tlab-lib-progress-track {
+  margin-top: 8px;
+  height: 3px;
+  border-radius: 99px;
+  background: var(--ap-fill);
+  overflow: hidden;
+  max-width: 260px;
+}
+
+.tlab-lib-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--ap-green-solid);
+  transition: width 200ms ease;
+}
+
 .tlab-lib-actions {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 6px;
   flex-shrink: 0;
+}
+
+.tlab-mini-icon-btn.is-danger:hover {
+  background: var(--ap-red-wash);
+  color: var(--ap-red);
 }
 
 /* Badges & Pills */
@@ -406,8 +478,9 @@
   background: var(--ap-surface);
   border: 1px solid var(--ap-border);
   border-radius: var(--ap-radius-lg);
-  padding: 18px 20px;
-  margin-bottom: 14px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  box-shadow: var(--ap-shadow-card);
 }
 
 .tlab-wb-nav-row {
@@ -415,48 +488,145 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 8px 12px;
+  margin-bottom: 10px;
 }
 
-.tlab-wb-meta-badges,
+.tlab-wb-nav-left,
 .tlab-wb-head-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
+}
+
+.tlab-wb-head-actions .btn-xs,
+.tlab-wb-nav-left .btn-xs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .tlab-wb-title-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-height: 30px;
 }
 
 .tlab-wb-title {
   margin: 0;
-  font-size: 22px;
+  font-size: 21px;
   font-weight: 700;
   letter-spacing: -0.02em;
+  line-height: 1.25;
   color: var(--ap-text-primary);
 }
 
-.tlab-wb-creator {
-  margin-top: 4px;
-  font-size: 13px;
+.tlab-title-edit-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tlab-title-input {
+  flex: 1;
+  min-width: 180px;
+  max-width: 560px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--ap-radius-xs);
+  border: 1px solid var(--ap-blue);
+  background: var(--ap-surface-secondary);
+  color: var(--ap-text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  outline: none;
+}
+
+.tlab-wb-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+  font-size: 12.5px;
   color: var(--ap-text-secondary);
 }
 
-.tlab-wb-creator code {
+.tlab-meta-sep {
+  opacity: 0.45;
+}
+
+.tlab-meta-model {
   font-family: var(--ap-font-mono);
-  font-size: 11.5px;
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 6px;
   background: var(--ap-fill-subtle);
-  padding: 1px 6px;
-  border-radius: 5px;
+  color: var(--ap-text-secondary);
+}
+
+.tlab-inline-spk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: var(--ap-radius-pill);
+  border: 1px solid var(--ap-border);
+  background: var(--ap-fill-subtle);
+  color: var(--ap-text-primary);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.tlab-inline-spk-btn:hover {
+  border-color: var(--ap-border-strong);
+  background: var(--ap-fill);
+}
+
+.tlab-spk-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  padding: 0 !important;
 }
 
 .tlab-doc-progress {
-  margin-top: 12px;
+  margin-top: 10px;
+  padding: 9px 13px;
+  border-radius: 13px;
+  background: var(--ap-surface-secondary);
+  border: 1px solid var(--ap-border);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.tlab-doc-progress.is-done {
+  background: var(--ft-done-wash);
+  border-color: var(--ft-done-border);
+}
+
+.tlab-doc-progress .subject-progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ap-fill);
+  overflow: hidden;
+}
+
+.tlab-doc-progress .subject-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ap-blue);
+  transition: width 220ms ease, background-color 220ms ease;
+}
+
+.tlab-doc-progress.is-done .subject-progress-fill {
+  background: var(--ft-done-track);
 }
 
 .tlab-progress-meta {
@@ -517,15 +687,15 @@
 
 .tlab-player-dock {
   position: sticky;
-  top: 66px;
-  z-index: 25;
+  top: 64px;
+  z-index: 30;
   background: var(--ap-glass-popover);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
   border: 1px solid var(--ap-border-strong);
   border-radius: var(--ap-radius-md);
   box-shadow: var(--ap-shadow-card);
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   overflow: hidden;
 }
 
@@ -590,8 +760,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px 14px;
-  padding: 10px 14px;
+  gap: 8px 14px;
+  padding: 9px 14px;
 }
 
 .tlab-player-transport {
@@ -599,12 +769,22 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  flex: 1 1 280px;
+  flex: 1 1 340px;
+}
+
+.tlab-transport-step-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--ap-radius-sm);
+  background: var(--ap-fill-subtle);
+  flex-shrink: 0;
 }
 
 .tlab-play-btn {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   border: none;
   background: var(--ap-text-primary);
@@ -618,7 +798,7 @@
 }
 
 .tlab-play-btn:hover {
-  transform: scale(1.04);
+  transform: scale(1.05);
 }
 
 .tlab-play-btn.is-playing {
@@ -642,10 +822,10 @@
 
 .tlab-clock-row {
   font-family: var(--ap-font-mono);
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--ap-text-secondary);
   display: flex;
-  gap: 5px;
+  gap: 4px;
 }
 
 .tlab-player-controls {
@@ -664,6 +844,9 @@
 }
 
 .tlab-pill-xs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   border: 1px solid transparent;
   background: transparent;
   color: var(--ap-text-secondary);
@@ -672,6 +855,7 @@
   padding: 4px 8px;
   border-radius: 7px;
   cursor: pointer;
+  white-space: nowrap;
   transition: background 140ms ease, color 140ms ease;
 }
 
@@ -691,6 +875,27 @@
   background: var(--ap-blue-wash);
   color: var(--ap-blue);
   border-color: var(--ap-blue-ring);
+  flex-shrink: 0;
+}
+
+.tlab-define-pill:hover {
+  background: var(--ap-blue-wash-strong);
+  color: var(--ap-blue);
+}
+
+.tlab-player-progress-track {
+  height: 3px;
+  width: 100%;
+  background: var(--ap-fill-subtle);
+  cursor: pointer;
+  position: relative;
+}
+
+.tlab-player-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--ap-blue);
+  transition: width 80ms linear;
 }
 
 .tlab-media-error {
@@ -710,16 +915,16 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 8px 12px;
+  margin-bottom: 10px;
 }
 
 .tlab-view-tabs {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 3px;
   background: var(--ap-fill-subtle);
-  padding: 4px;
+  padding: 3px;
   border-radius: var(--ap-radius-md);
   border: 1px solid var(--ap-border);
 }
@@ -728,9 +933,9 @@
   border: none;
   background: transparent;
   color: var(--ap-text-secondary);
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
-  padding: 6px 13px;
+  padding: 5px 11px;
   border-radius: var(--ap-radius-sm);
   cursor: pointer;
   transition: background 140ms ease, color 140ms ease;
@@ -753,6 +958,12 @@
   gap: 6px;
 }
 
+.tlab-toolbar-right .btn-xs {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .tlab-click-mode-switch {
   display: inline-flex;
   background: var(--ap-fill-subtle);
@@ -761,16 +972,34 @@
   gap: 2px;
 }
 
+.tlab-repair-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ap-orange);
+  opacity: 0.45;
+  transition: opacity 140ms ease;
+}
+
+.tlab-repairs-toggle.is-active .tlab-repair-dot {
+  opacity: 1;
+}
+
 .tlab-search-box {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   height: 30px;
-  padding: 0 10px;
+  padding: 0 8px;
   border-radius: var(--ap-radius-sm);
   border: 1px solid var(--ap-border-strong);
   background: var(--ap-surface);
   color: var(--ap-text-secondary);
+  transition: border-color 140ms ease;
+}
+
+.tlab-search-box:focus-within {
+  border-color: var(--ap-blue);
 }
 
 .tlab-search-box input {
@@ -779,13 +1008,38 @@
   background: transparent;
   color: var(--ap-text-primary);
   font-size: 12.5px;
-  width: 130px;
+  width: 140px;
+  transition: width 160ms ease;
+}
+
+.tlab-search-box:focus-within input {
+  width: 175px;
 }
 
 .tlab-search-count {
   font-size: 11px;
   font-weight: 700;
   color: var(--ap-blue);
+  white-space: nowrap;
+}
+
+.tlab-search-nav-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: var(--ap-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.tlab-search-nav-btn:hover {
+  background: var(--ap-fill);
+  color: var(--ap-text-primary);
 }
 
 /* ==========================================================================
@@ -931,8 +1185,9 @@
 }
 
 .tlab-spk-filter-btn.is-active {
-  outline: 2px solid var(--ap-blue);
-  outline-offset: 1px;
+  border-color: var(--ap-blue);
+  background: var(--ap-blue-wash);
+  color: var(--ap-blue);
 }
 
 .tlab-spk-count {
@@ -1016,7 +1271,7 @@
   background: var(--ap-surface);
   border: 1px solid var(--ap-border);
   border-radius: var(--ap-radius-md);
-  padding: 12px 14px;
+  padding: 11px 14px;
   transition: border-color 140ms ease, background 140ms ease;
 }
 
@@ -1037,7 +1292,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  padding-top: 3px;
+  padding-top: 2px;
   flex-shrink: 0;
 }
 
@@ -1066,7 +1321,7 @@
   font-family: var(--ap-font-mono);
   font-size: 11.5px;
   color: var(--ap-text-tertiary);
-  min-width: 26px;
+  min-width: 24px;
 }
 
 .tlab-sent-ts {
@@ -1076,46 +1331,28 @@
   direction: ltr;
   unicode-bidi: isolate;
   font-variant-numeric: tabular-nums;
+  min-width: 38px;
+  text-align: right;
 }
 
-.tlab-sent-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 5px;
-}
-
-.tlab-tag {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 1px 7px;
-  border-radius: 99px;
-}
-
-.tlab-tag-repair {
-  background: rgba(255, 149, 0, 0.14);
-  color: var(--ap-orange);
-}
-
-.tlab-tag-overlap {
-  background: var(--ap-pink-wash);
-  color: var(--ap-pink);
+.tlab-sent-speaker-inline {
+  vertical-align: 1px;
+  margin-inline-end: 6px;
 }
 
 .tlab-sent-text,
 .tlab-para-text,
 .tlab-turn-text {
   margin: 0;
-  font-size: 16.5px;
-  line-height: 1.7;
+  font-size: 16px;
+  line-height: 1.65;
   color: var(--ap-text-primary);
 }
 
 .tlab-sent-actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   flex-shrink: 0;
 }
 
@@ -1130,11 +1367,139 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: background 130ms ease, color 130ms ease, border-color 130ms ease;
 }
 
 .tlab-mini-icon-btn:hover {
   background: var(--ap-fill);
   color: var(--ap-text-primary);
+}
+
+.tlab-mini-icon-btn.is-copied,
+.btn-secondary.is-copied {
+  color: var(--ap-green) !important;
+  background: var(--ap-green-wash) !important;
+  border-color: rgba(52, 199, 89, 0.3) !important;
+}
+
+/* Icon-Only Repair & Overlap Indicators + Floating Detail Popover */
+.tlab-indicator-btn {
+  position: relative;
+}
+
+.tlab-indicator-btn.is-repair {
+  color: var(--ap-orange);
+  background: rgba(255, 149, 0, 0.11);
+}
+
+.tlab-indicator-btn.is-repair:hover,
+.tlab-indicator-btn.is-repair.is-popover-open {
+  background: rgba(255, 149, 0, 0.22);
+  border-color: rgba(255, 149, 0, 0.42);
+  color: var(--ap-orange);
+}
+
+.tlab-indicator-btn.is-overlap {
+  color: var(--ap-pink);
+  background: var(--ap-pink-wash);
+}
+
+.tlab-indicator-btn.is-overlap:hover,
+.tlab-indicator-btn.is-overlap.is-popover-open {
+  border-color: rgba(255, 45, 85, 0.42);
+  color: var(--ap-pink);
+}
+
+.tlab-info-popover {
+  position: fixed;
+  z-index: 140;
+  width: 276px;
+  max-width: calc(100vw - 24px);
+  background: var(--ap-glass-popover);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid var(--ap-border-strong);
+  border-radius: var(--ap-radius-md);
+  box-shadow: var(--ap-shadow-popover);
+  padding: 11px 13px;
+  color: var(--ap-text-primary);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.tlab-info-pop-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 7px;
+  font-size: 12.5px;
+}
+
+.tlab-info-pop-head.is-repair {
+  color: var(--ap-orange);
+}
+
+.tlab-info-pop-head.is-overlap {
+  color: var(--ap-pink);
+}
+
+.tlab-info-pop-head strong {
+  color: var(--ap-text-primary);
+  font-weight: 650;
+}
+
+.tlab-info-badge {
+  margin-inline-start: auto;
+  padding: 1px 7px;
+  border-radius: var(--ap-radius-pill);
+  background: var(--ap-orange-wash);
+  color: var(--ap-orange);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.tlab-info-diff-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.tlab-info-diff-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  background: var(--ap-fill-subtle);
+  font-size: 12px;
+}
+
+.tlab-diff-old {
+  color: var(--ap-text-tertiary);
+  text-decoration: line-through;
+}
+
+.tlab-diff-arrow {
+  color: var(--ap-text-tertiary);
+}
+
+.tlab-diff-new {
+  color: var(--ap-orange);
+  font-weight: 650;
+}
+
+.tlab-info-pop-note {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--ap-text-primary);
+}
+
+.tlab-info-pop-foot {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--ap-text-secondary);
 }
 
 /* Interactive Millisecond Word Token */
@@ -1167,6 +1532,12 @@
 .tlab-word.is-search-hit {
   background: rgba(255, 149, 0, 0.28);
   border-radius: 4px;
+}
+
+.tlab-word.is-search-hit.is-search-current {
+  background: var(--ap-orange);
+  color: #FFFFFF;
+  box-shadow: 0 0 0 2px rgba(255, 149, 0, 0.35);
 }
 
 /* Paragraphs, Ideas, Speakers Cards */
@@ -1252,6 +1623,28 @@
   gap: 8px;
 }
 
+.tlab-idea-play-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--ap-border-strong);
+  background: var(--ap-fill-subtle);
+  color: var(--ap-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  align-self: center;
+  transition: background 130ms ease, color 130ms ease;
+}
+
+.tlab-idea-play-btn:hover {
+  background: var(--ap-blue);
+  border-color: var(--ap-blue);
+  color: #FFFFFF;
+}
+
 /* Raw Original Banner & Empty States */
 .tlab-raw-banner {
   display: flex;
@@ -1331,11 +1724,27 @@
     grid-template-columns: 1fr;
   }
   .tlab-sentence-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr auto;
     gap: 8px;
+    padding: 10px 12px;
+  }
+  .tlab-sent-body {
+    grid-column: 1 / -1;
+    grid-row: 2;
   }
   .tlab-sent-actions {
     justify-content: flex-end;
+  }
+  .tlab-toolbar-right {
+    width: 100%;
+  }
+  .tlab-search-box {
+    flex: 1 1 160px;
+  }
+  .tlab-search-box input,
+  .tlab-search-box:focus-within input {
+    width: 100%;
+    min-width: 0;
   }
   .tlab-lib-card {
     flex-direction: column;

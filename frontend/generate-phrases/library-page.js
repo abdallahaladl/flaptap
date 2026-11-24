@@ -448,13 +448,16 @@
       const domain = store.getActiveDomain();
 
       const levelSel = el('ll-browse-level-select');
+      const levelField = el('ll-popover-field-level');
       if (levelSel) {
         const levels = Object.keys(store.state.cefrCounts || {}).sort();
         if (levels.length === 0) {
           levelSel.hidden = true;
+          if (levelField) levelField.hidden = true;
           levelSel.value = 'all';
         } else {
           levelSel.hidden = false;
+          if (levelField) levelField.hidden = false;
           levelSel.innerHTML =
             '<option value="all">All CEFR</option>' +
             levels
@@ -470,11 +473,13 @@
       }
 
       const regSel = el('ll-browse-register-select');
+      const regField = el('ll-popover-field-register');
       if (regSel && domain) {
         const regs = Array.from(
           new Set([...(domain.registers || []), ...Object.keys(store.state.registerCounts || {})]),
         ).filter((r) => (store.state.registerCounts[r] || 0) > 0 || store.state.browseRegister === r);
         regSel.hidden = regs.length === 0;
+        if (regField) regField.hidden = regs.length === 0;
         regSel.innerHTML =
           '<option value="all">All Registers</option>' +
           regs
@@ -508,7 +513,25 @@
 
     function syncResetFiltersButton() {
       const btn = el('ll-clear-filters-btn');
-      if (btn) btn.hidden = !store.hasActiveBrowseFilters();
+      const hasAny = store.hasActiveBrowseFilters();
+      if (btn) btn.hidden = !hasAny;
+
+      const s = store.state;
+      let popoverActiveCount = 0;
+      if (s.browseLevel && s.browseLevel !== 'all') popoverActiveCount += 1;
+      if (s.browseRegister && s.browseRegister !== 'all') popoverActiveCount += 1;
+      if (s.browseMastery && s.browseMastery !== 'all') popoverActiveCount += 1;
+      if (s.browseSort && s.browseSort !== 'newest') popoverActiveCount += 1;
+
+      const trigger = el('ll-filters-popover-btn');
+      const badge = el('ll-filters-active-count');
+      const popReset = el('ll-popover-reset-btn');
+      if (trigger) trigger.classList.toggle('is-active', popoverActiveCount > 0);
+      if (badge) {
+        badge.textContent = String(popoverActiveCount);
+        badge.hidden = popoverActiveCount === 0;
+      }
+      if (popReset) popReset.hidden = popoverActiveCount === 0;
     }
 
     function syncViewModeButtons() {
@@ -1363,7 +1386,46 @@
         loadLibraryItems({ showSkeleton: true, animate: true });
       });
 
-      // Secondary selects & search
+      // Secondary selects & search + Filters popover toggle
+      const setFiltersPopoverOpen = (open) => {
+        const pop = el('ll-filters-popover');
+        const btn = el('ll-filters-popover-btn');
+        if (!pop || !btn) return;
+        pop.hidden = !open;
+        btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      };
+
+      el('ll-filters-popover-btn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const pop = el('ll-filters-popover');
+        setFiltersPopoverOpen(Boolean(pop?.hidden));
+      });
+
+      el('ll-popover-reset-btn')?.addEventListener('click', () => {
+        store.state.browseLevel = 'all';
+        store.state.browseRegister = 'all';
+        store.state.browseMastery = 'all';
+        store.state.browseSort = 'newest';
+        store.state.page = 1;
+        syncRoute(true);
+        loadLibraryItems({ showSkeleton: true, animate: true });
+      });
+
+      document.addEventListener('click', (e) => {
+        const pop = el('ll-filters-popover');
+        if (!pop || pop.hidden) return;
+        if (!e.target.closest('#ll-filters-popover-wrap')) {
+          setFiltersPopoverOpen(false);
+        }
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          const pop = el('ll-filters-popover');
+          if (pop && !pop.hidden) setFiltersPopoverOpen(false);
+        }
+      });
+
       el('ll-browse-level-select')?.addEventListener('change', (e) => {
         store.state.browseLevel = e.target.value || 'all';
         store.state.page = 1;

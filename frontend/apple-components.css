@@ -1508,14 +1508,70 @@ html[data-sidebar="collapsed"] .sidebar-header .icon-btn.sidebar-collapse-btn:ho
   color: var(--ap-text-tertiary);
 }
 
-/* Subject Progress Bar */
+/* Subject Progress Bar (Botanical Emerald Deck & Unified Shelf Sticky Docks) */
 .subject-progress-bar {
   background: var(--ap-surface);
   border: 1px solid var(--ap-border);
-  border-radius: 16px;
-  padding: 12px 18px;
-  margin-bottom: 20px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  border-radius: 18px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  box-shadow: var(--ap-shadow-card), var(--ap-specular);
+  transition: background-color 0.22s ease, border-color 0.22s ease;
+}
+
+.subject-progress-bar:has(.ft-progress-deck) {
+  display: block;
+}
+
+.subject-progress-bar.is-all-done:has(.ft-progress-deck) {
+  border-color: var(--ft-done-border);
+  background: linear-gradient(180deg, var(--ft-done-wash) 0%, var(--ap-surface) 80%);
+}
+
+.ft-sticky-dock .subject-progress-bar {
+  box-shadow: none;
+}
+
+.ft-items-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.ft-shelf-dock .ft-dock-toolbar {
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+
+.ft-shelf-dock .filter-pills {
+  flex: 0 1 auto;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.ft-shelf-dock .ft-dock-search {
+  width: 220px;
+  min-width: 170px;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 980px;
+}
+
+@media (max-width: 860px) {
+  .ft-shelf-dock .ft-dock-toolbar {
+    flex-wrap: wrap;
+  }
+
+  .ft-shelf-dock .ft-dock-toolbar-right {
+    width: 100%;
+  }
+
+  .ft-shelf-dock .ft-dock-search {
+    width: 100%;
+    flex: 1 1 100%;
+  }
 }
 
 .subject-progress-stats {
@@ -1547,7 +1603,7 @@ html[data-sidebar="collapsed"] .sidebar-header .icon-btn.sidebar-collapse-btn:ho
 }
 
 .subject-progress-bar.is-all-done .subject-progress-fill {
-  background: var(--ap-green-solid);
+  background: var(--ft-done-track, var(--ap-green-solid));
 }
 
 .subject-progress-pct {

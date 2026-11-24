@@ -521,46 +521,56 @@
         </div>
 
         <div class="library-controls">
-          <div class="filter-pills" role="tablist" aria-label="Filter library">
-            <button type="button" class="filter-pill active" data-filter="all" aria-selected="true">
-              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#layers"></use></svg>
-              <span data-i18n="filterAll">All</span>
-            </button>
-            <button type="button" class="filter-pill" data-filter="shadowing" aria-selected="false">
-              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#monitor"></use></svg>
-              <span data-i18n="filterVideos">Videos</span>
-            </button>
-            <button type="button" class="filter-pill" data-filter="street_talk" aria-selected="false">
-              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#message-square"></use></svg>
-              <span data-i18n="filterDialogues">Dialogues</span>
-            </button>
-            <button type="button" class="filter-pill" data-filter="phonetics" aria-selected="false">
-              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#audio-lines"></use></svg>
-              <span data-i18n="filterPronunciation">Pronunciation</span>
-            </button>
-          </div>
-
-          <label class="search-box">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input
-              type="search"
-              id="library-search-input"
-              placeholder="Search lessons..."
-              data-i18n-placeholder="searchLessonsPlaceholder"
-            />
-          </label>
-
           <button type="button" class="icon-action" id="clear-library-btn" hidden aria-label="Clear library" title="Clear library">
             <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
           </button>
         </div>
       </div>
 
-      <div id="lessons-progress-bar" class="subject-progress-bar" hidden></div>
-      <div id="history-grid" class="history-grid"></div>
+      <div class="ft-items-root" id="lessons-items-root">
+        <div class="ft-sticky-sentinel" id="lessons-sticky-sentinel" aria-hidden="true"></div>
+        <div class="ft-sticky-dock ft-shelf-dock" id="lessons-sticky-dock" role="region" aria-label="Lesson library progress and filters" hidden>
+          <div class="ft-dock-progress-row">
+            <div id="lessons-progress-bar" class="ft-dock-progress-slot subject-progress-bar" hidden></div>
+          </div>
+          <div class="ft-dock-toolbar">
+            <div class="filter-pills" role="tablist" aria-label="Filter library">
+              <button type="button" class="filter-pill active" data-filter="all" aria-selected="true">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#layers"></use></svg>
+                <span data-i18n="filterAll">All</span>
+              </button>
+              <button type="button" class="filter-pill" data-filter="shadowing" aria-selected="false">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#monitor"></use></svg>
+                <span data-i18n="filterVideos">Videos</span>
+              </button>
+              <button type="button" class="filter-pill" data-filter="street_talk" aria-selected="false">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#message-square"></use></svg>
+                <span data-i18n="filterDialogues">Dialogues</span>
+              </button>
+              <button type="button" class="filter-pill" data-filter="phonetics" aria-selected="false">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#audio-lines"></use></svg>
+                <span data-i18n="filterPronunciation">Pronunciation</span>
+              </button>
+            </div>
+
+            <div class="ft-dock-toolbar-right">
+              <label class="search-box ft-dock-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input
+                  type="search"
+                  id="library-search-input"
+                  placeholder="Search lessons..."
+                  data-i18n-placeholder="searchLessonsPlaceholder"
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+        <div id="history-grid" class="history-grid"></div>
+      </div>
       <div id="library-empty-state" class="empty-ledger" hidden>
         <div class="apple-empty-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -745,29 +755,6 @@
         </div>
 
         <div class="library-controls">
-          <div class="filter-pills" role="tablist">
-            <button type="button" class="filter-pill active" data-vocab-filter="all" aria-selected="true">
-              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#layers"></use></svg>
-              <span data-i18n="vocabFilterAll">All</span>
-            </button>
-            <button type="button" class="filter-pill" data-vocab-filter="due" aria-selected="false">
-              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#clock"></use></svg>
-              <span data-i18n="vocabFilterDue">Due for Review</span>
-            </button>
-            <button type="button" class="filter-pill" data-vocab-filter="mastered" aria-selected="false">
-              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#target"></use></svg>
-              <span data-i18n="vocabFilterMastered">Mastered</span>
-            </button>
-          </div>
-
-          <label class="search-box">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="search" id="vocab-search-input" placeholder="Search saved words..." data-i18n-placeholder="vocabSearchPlaceholder" />
-          </label>
-
           <button type="button" class="btn-vox btn-flashcards-trigger" id="toggle-flashcards-btn" aria-expanded="false">
             <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#sparkles"></use></svg>
             <span data-i18n="practiceFlashcardsBtn">Practice Flashcards</span>
@@ -813,8 +800,41 @@
         </div>
       </div>
 
-      <div id="vocab-progress-bar" class="subject-progress-bar" hidden></div>
-      <div id="vocab-grid" class="vocab-grid"></div>
+      <div class="ft-items-root" id="vocab-items-root">
+        <div class="ft-sticky-sentinel" id="vocab-sticky-sentinel" aria-hidden="true"></div>
+        <div class="ft-sticky-dock ft-shelf-dock" id="vocab-sticky-dock" role="region" aria-label="Vocabulary progress and filters" hidden>
+          <div class="ft-dock-progress-row">
+            <div id="vocab-progress-bar" class="ft-dock-progress-slot subject-progress-bar" hidden></div>
+          </div>
+          <div class="ft-dock-toolbar">
+            <div class="filter-pills" role="tablist">
+              <button type="button" class="filter-pill active" data-vocab-filter="all" aria-selected="true">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#layers"></use></svg>
+                <span data-i18n="vocabFilterAll">All</span>
+              </button>
+              <button type="button" class="filter-pill" data-vocab-filter="due" aria-selected="false">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#clock"></use></svg>
+                <span data-i18n="vocabFilterDue">Due for Review</span>
+              </button>
+              <button type="button" class="filter-pill" data-vocab-filter="mastered" aria-selected="false">
+                <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#target"></use></svg>
+                <span data-i18n="vocabFilterMastered">Mastered</span>
+              </button>
+            </div>
+
+            <div class="ft-dock-toolbar-right">
+              <label class="search-box ft-dock-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="search" id="vocab-search-input" placeholder="Search saved words..." data-i18n-placeholder="vocabSearchPlaceholder" />
+              </label>
+            </div>
+          </div>
+        </div>
+        <div id="vocab-grid" class="vocab-grid"></div>
+      </div>
       <div id="vocab-empty-state" class="empty-ledger" hidden>
         <div class="apple-empty-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -2013,7 +2033,7 @@
                 </div>
               </div>
 
-              <!-- Tier 2: Horizontal Scrollable Category Filter Rail + CEFR + Register + Sort + Search + Reset -->
+              <!-- Tier 2: Combined Category Rail + Filters Popover + Search + Reset -->
               <div class="ft-dock-toolbar">
                 <div class="ft-filter-rail-wrap" id="ll-filter-rail-wrap">
                   <button type="button" class="ft-rail-scroll-btn ft-rail-scroll-btn--prev" id="ll-filter-scroll-left" aria-label="Scroll categories left" tabindex="-1">
@@ -2025,22 +2045,54 @@
                   </button>
                 </div>
 
+                <span class="ll-dock-toolbar-sep" aria-hidden="true"></span>
+
                 <div class="ft-dock-toolbar-right">
-                  <select id="ll-browse-level-select" class="ll-select ll-dock-select" aria-label="Filter by CEFR level" hidden></select>
-                  <select id="ll-browse-register-select" class="ll-select ll-dock-select" aria-label="Filter by register">
-                    <option value="all">All Registers</option>
-                  </select>
-                  <select id="ll-browse-status-select" class="ll-select ll-dock-select" aria-label="Filter by status">
-                    <option value="all">All status</option>
-                    <option value="pending">To Study</option>
-                    <option value="completed">Completed</option>
-                    <option value="favorites">Favorites</option>
-                  </select>
-                  <select id="ll-browse-sort-select" class="ll-select ll-dock-select" aria-label="Sort library">
-                    <option value="newest">Newest first</option>
-                    <option value="alphabetical">A–Z</option>
-                    <option value="mastery">To Study First</option>
-                  </select>
+                  <div class="ll-filters-popover-wrap" id="ll-filters-popover-wrap">
+                    <button type="button" class="ft-scope-toggle ll-filters-trigger" id="ll-filters-popover-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="ll-filters-popover" title="Filter by CEFR level, register, status, or sort order">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                      <span>Filters</span>
+                      <span class="ft-scope-count ltr-num" id="ll-filters-active-count" hidden>0</span>
+                      <svg class="ll-filters-chevron" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                    </button>
+
+                    <div class="ll-filters-popover" id="ll-filters-popover" role="dialog" aria-label="Library filters and sorting" hidden>
+                      <div class="ll-filters-popover-head">
+                        <span class="ll-filters-popover-title">Filters &amp; Sort</span>
+                        <button type="button" class="ll-popover-reset-btn" id="ll-popover-reset-btn" hidden>Reset</button>
+                      </div>
+                      <div class="ll-filters-popover-grid">
+                        <label class="ll-popover-field" id="ll-popover-field-level" hidden>
+                          <span class="ll-popover-label">CEFR Level</span>
+                          <select id="ll-browse-level-select" class="ll-select ll-dock-select" aria-label="Filter by CEFR level" hidden></select>
+                        </label>
+                        <label class="ll-popover-field" id="ll-popover-field-register">
+                          <span class="ll-popover-label">Register</span>
+                          <select id="ll-browse-register-select" class="ll-select ll-dock-select" aria-label="Filter by register">
+                            <option value="all">All Registers</option>
+                          </select>
+                        </label>
+                        <label class="ll-popover-field">
+                          <span class="ll-popover-label">Status</span>
+                          <select id="ll-browse-status-select" class="ll-select ll-dock-select" aria-label="Filter by status">
+                            <option value="all">All status</option>
+                            <option value="pending">To Study</option>
+                            <option value="completed">Completed</option>
+                            <option value="favorites">Favorites</option>
+                          </select>
+                        </label>
+                        <label class="ll-popover-field">
+                          <span class="ll-popover-label">Sort by</span>
+                          <select id="ll-browse-sort-select" class="ll-select ll-dock-select" aria-label="Sort library">
+                            <option value="newest">Newest first</option>
+                            <option value="alphabetical">A–Z</option>
+                            <option value="mastery">To Study First</option>
+                          </select>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
                   <div class="ll-item-search">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                     <input type="search" id="ll-browse-search-input" placeholder="Filter expressions..." aria-label="Filter expressions" autocomplete="off" />
@@ -2205,26 +2257,38 @@
             </div>
           </div>
 
+          <div id="tlab-recent-strip" class="tlab-recent-strip" hidden></div>
+
           <div class="tlab-capabilities-strip">
             <div class="tlab-cap-item">
-              <strong>Verbatim Priority + AI Repair</strong>
-              <span>Keeps the speaker's exact American voice while fixing misheard terms and multi-speaker overlaps.</span>
+              <div class="tlab-cap-head">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                <strong>Verbatim + AI Repair</strong>
+              </div>
+              <span>Preserves the speaker's exact voice while fixing misheard terms and multi-speaker overlaps.</span>
             </div>
             <div class="tlab-cap-item">
-              <strong>5 Instant Views + Raw Backup</strong>
-              <span>Switch between Sentences, Paragraphs, Ideas, Speakers, and the untouched Raw Provider copy.</span>
+              <div class="tlab-cap-head">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
+                <strong>5 Instant Views</strong>
+              </div>
+              <span>Switch across Sentences, Paragraphs, Ideas, Speakers, and the untouched Raw Original.</span>
             </div>
             <div class="tlab-cap-item">
-              <strong>Millisecond Word Playback</strong>
-              <span>Click any word to hear its exact native pronunciation from the original media, loop it, or shadow with gaps.</span>
+              <div class="tlab-cap-head">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+                <strong>Millisecond Playback</strong>
+              </div>
+              <span>Click any word to hear its exact native timing, loop it, or shadow with speaking gaps.</span>
             </div>
             <div class="tlab-cap-item">
-              <strong>Export in 7 Formats</strong>
+              <div class="tlab-cap-head">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <strong>7 Export Formats</strong>
+              </div>
               <span>Download any view as TXT, Markdown, SRT, VTT, JSON, CSV, or a printable HTML study sheet.</span>
             </div>
           </div>
-
-          <div id="tlab-recent-strip" class="tlab-recent-strip" hidden></div>
         </div>
 
         <!-- PAGE 2: LIBRARY (/transcripts/library) -->

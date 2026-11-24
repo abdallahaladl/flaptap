@@ -82,6 +82,9 @@
       wordLookupReady: false,
       keydownHandler: null,
       docClickHandler: null,
+      infoCloseTimer: null,
+      infoPopoverState: { open: false, pinned: false, kind: '', sentIdx: 0, anchorEl: null },
+      editingTitle: false,
     };
 
     function activeSentences() {
@@ -205,6 +208,13 @@
       if (!state.rootEl || !state.doc) return;
       const clockEl = state.rootEl.querySelector('#tlab-clock-now');
       if (clockEl) clockEl.textContent = global.FlaptapMediaEngine.formatMs(nowMs);
+
+      const durMs = state.engine?.getState?.().durationMs || (state.doc.durationSeconds || 0) * 1000;
+      const progFill = state.rootEl.querySelector('#tlab-player-progress-fill');
+      if (progFill && durMs > 0) {
+        const pct = Math.max(0, Math.min(100, (nowMs / durMs) * 100));
+        progFill.style.width = `${pct.toFixed(2)}%`;
+      }
 
       const words = activeWordStream();
       let idx = -1;
@@ -347,7 +357,7 @@
       const padBtn = state.rootEl.querySelector('#tlab-pad-toggle');
       if (padBtn) {
         const isExact = pState.wordPadMode === 'exact';
-        padBtn.textContent = isExact ? 'Pad: Exact ms' : 'Pad: Natural';
+        padBtn.textContent = isExact ? 'Pad: Exact' : 'Pad: Natural';
         padBtn.classList.toggle('is-active', isExact);
       }
     }
@@ -413,10 +423,10 @@
       const multiSpeaker = Boolean(reviewed && reviewed.speakers.length > 1);
       const spkFilter = state.speakerFilter;
 
-      // Sync speaker filter bar visibility
+      // Sync speaker filter bar visibility: only show bar for multi-speaker docs or when editing speaker names
       const spkBar = state.rootEl.querySelector('#tlab-speaker-bar');
       if (spkBar) {
-        if (reviewed && reviewed.speakers.length > 0 && view !== 'raw') {
+        if (reviewed && reviewed.speakers.length > 0 && view !== 'raw' && (reviewed.speakers.length > 1 || state.speakerEditorOpen)) {
           spkBar.hidden = false;
           renderSpeakerBar(spkBar, reviewed.speakers);
         } else {
@@ -450,6 +460,11 @@
                 <div class="tlab-sent-body">
                   <p class="tlab-sent-text">${renderWordTokensHtml(s.words, s.index)}</p>
                 </div>
+                <div class="tlab-sent-actions">
+                  <button type="button" class="tlab-mini-icon-btn" data-copy-sent="${s.index}" title="Copy cue" aria-label="Copy raw cue ${s.index}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  </button>
+                </div>
               </article>`,
               )
               .join('')}
@@ -482,6 +497,21 @@
                       size: 'sm',
                     })
                   : `<input type="checkbox" data-tlab-check="${s.index}" ${isDone ? 'checked' : ''} />`;
+                const repairIconBtn =
+                  state.showRepairs && s.repaired
+                    ? `<button type="button" class="tlab-mini-icon-btn tlab-indicator-btn is-repair" data-tlab-info="repair" data-sent-idx="${s.index}" aria-label="ASR caption repaired — hover or click for details">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"></path><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"></path></svg>
+                      </button>`
+                    : '';
+                const overlapIconBtn =
+                  state.showRepairs && s.isOverlap
+                    ? `<button type="button" class="tlab-mini-icon-btn tlab-indicator-btn is-overlap" data-tlab-info="overlap" data-sent-idx="${s.index}" aria-label="Overlapping speech separated — hover or click for details">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"></path><path d="M4 20L21 3"></path><path d="M21 16v5h-5"></path><path d="M15 15l6 6"></path><path d="M4 4l5 5"></path></svg>
+                      </button>`
+                    : '';
+                const inlineSpeaker = multiSpeaker
+                  ? `<span class="tlab-speaker-pill tlab-spk-c${getSpeakerColor(s.speakerId) % 6} tlab-sent-speaker-inline">${escapeHtml(s.speaker)}</span> `
+                  : '';
                 return `
               <article class="tlab-sentence-row ${isDone ? 'is-completed' : ''} ${s.index === state.activeSentenceIndex ? 'is-active' : ''}" data-sent-idx="${s.index}">
                 <div class="tlab-sent-rail">
@@ -492,18 +522,11 @@
                   <span class="tlab-sent-ts ltr-num">${global.FlaptapMediaEngine.formatShort(s.startMs)}</span>
                 </div>
                 <div class="tlab-sent-body">
-                  ${
-                    multiSpeaker || (state.showRepairs && (s.isOverlap || s.repaired))
-                      ? `<div class="tlab-sent-meta">
-                          ${multiSpeaker ? speakerBadgeHtml(s.speaker, getSpeakerColor(s.speakerId)) : ''}
-                          ${state.showRepairs && s.isOverlap ? `<span class="tlab-tag tlab-tag-overlap">Overlap separated</span>` : ''}
-                          ${state.showRepairs && s.repaired ? `<span class="tlab-tag tlab-tag-repair" title="${escapeHtml(s.repairNote || 'ASR repaired')}">Repaired</span>` : ''}
-                        </div>`
-                      : ''
-                  }
-                  <p class="tlab-sent-text">${renderWordTokensHtml(s.words, s.index)}</p>
+                  <p class="tlab-sent-text">${inlineSpeaker}${renderWordTokensHtml(s.words, s.index)}</p>
                 </div>
                 <div class="tlab-sent-actions">
+                  ${overlapIconBtn}
+                  ${repairIconBtn}
                   <button type="button" class="tlab-mini-icon-btn" data-copy-sent="${s.index}" title="Copy sentence" aria-label="Copy sentence ${s.index}">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                   </button>
@@ -604,6 +627,9 @@
                     .map(
                       (s) => `
                     <div class="tlab-idea-sent-line" data-sent-idx="${s.index}">
+                      <button type="button" class="tlab-idea-play-btn" data-play-sent="${s.index}" title="Play sentence #${s.index}" aria-label="Play sentence ${s.index}">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.8v14.4a.9.9 0 0 0 1.38.76l11.2-7.2a.9.9 0 0 0 0-1.52l-11.2-7.2a.9.9 0 0 0-1.38.76Z"></path></svg>
+                      </button>
                       <span class="tlab-sent-ts ltr-num">${global.FlaptapMediaEngine.formatShort(s.startMs)}</span>
                       ${multiSpeaker ? speakerBadgeHtml(s.speaker, getSpeakerColor(s.speakerId)) : ''}
                       <span class="tlab-sent-text">${renderWordTokensHtml(s.words, s.index)}</span>
@@ -711,15 +737,38 @@
       if (!bar || !state.doc) return;
       const total = state.doc.sentenceCount || 0;
       const done = state.doc.completedCount || 0;
-      const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-      bar.innerHTML = `
-        <div class="tlab-progress-meta">
-          <span>Mastered <strong>${done} / ${total}</strong> sentences</span>
-          <span class="ltr-num">${pct}%${state.doc.isCompleted ? ' · Completed' : ''}</span>
-        </div>
-        <div class="tlab-progress-track"><div class="tlab-progress-fill" style="width:${pct}%"></div></div>
-      `;
+      const completedSet = new Set(state.doc.completion?.items || []);
+      const sents = activeSentences();
+
+      if (global.FlaptapStudyDock?.renderProgressDeckHtml) {
+        bar.innerHTML = global.FlaptapStudyDock.renderProgressDeckHtml({
+          total,
+          done,
+          singular: 'sentence',
+          plural: 'sentences',
+          doneHeadline: 'Transcript mastered',
+          readyHeadline: 'Ready to master',
+          pipAttr: 'data-tlab-jump-sent',
+          pips: sents.map((s) => ({
+            id: s.index,
+            displayNumber: s.index,
+            label: (s.text || '').slice(0, 48),
+            done: completedSet.has(s.index),
+          })),
+        });
+      } else {
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+        bar.innerHTML = `
+          <div class="tlab-progress-meta">
+            <span>Mastered <strong>${done} / ${total}</strong> sentences</span>
+            <span class="ltr-num">${pct}%${state.doc.isCompleted ? ' · Completed' : ''}</span>
+          </div>
+          <div class="tlab-progress-track"><div class="tlab-progress-fill" style="width:${pct}%"></div></div>
+        `;
+      }
       bar.classList.toggle('is-done', Boolean(state.doc.isCompleted));
+      bar.classList.toggle('is-all-done', Boolean(state.doc.isCompleted));
+      bar.setAttribute('data-guide-state', state.doc.isCompleted ? 'done' : done > 0 ? 'progress' : 'new');
     }
 
     function renderExportMenu() {
@@ -770,6 +819,11 @@
       const reviewed = doc.reviewed;
       const quality = reviewed?.quality;
       const canVideo = Boolean(doc.media?.hasVideo);
+      const speakers = reviewed?.speakers || [];
+      const singleSpeaker = speakers.length === 1 ? speakers[0] : null;
+      const repairedCount = reviewed
+        ? (reviewed.sentences || []).filter((s) => s.repaired).length
+        : 0;
 
       const statusBadge =
         state.reviewing
@@ -780,29 +834,41 @@
               ? `<span class="tlab-status-pill is-warn" title="${escapeHtml(doc.reviewError || '')}">Raw Ready · AI Review Paused</span>`
               : `<span class="tlab-status-pill">Raw Ready · Pending AI Review</span>`;
 
+      const metaParts = [];
+      if (doc.creator) metaParts.push(`<span>${escapeHtml(doc.creator)}</span>`);
+      if (doc.durationSeconds > 0) {
+        metaParts.push(`<span class="ltr-num">${global.FlaptapMediaEngine.formatShort(doc.durationSeconds * 1000)}</span>`);
+      }
+      metaParts.push(`<span class="ltr-num">${doc.wordCount.toLocaleString()} words</span>`);
+      if (reviewed?.modelName) {
+        metaParts.push(`<span class="tlab-meta-model">${escapeHtml(reviewed.modelName)}</span>`);
+      }
+
       state.rootEl.innerHTML = `
         <div class="tlab-workbench">
           <!-- TOP HEADER -->
           <header class="tlab-wb-header">
             <div class="tlab-wb-nav-row">
-              <button type="button" class="btn-secondary btn-xs" id="tlab-back-library">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"></polyline></svg>
-                <span>Library</span>
-              </button>
-              <div class="tlab-wb-meta-badges">
+              <div class="tlab-wb-nav-left">
+                <button type="button" class="btn-secondary btn-xs" id="tlab-back-library">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                  <span>Library</span>
+                </button>
                 <span class="tlab-platform-badge">${escapeHtml(doc.platform)}</span>
-                ${doc.durationSeconds > 0 ? `<span class="tlab-meta-chip ltr-num">${global.FlaptapMediaEngine.formatShort(doc.durationSeconds * 1000)}</span>` : ''}
-                <span class="tlab-meta-chip ltr-num">${doc.wordCount.toLocaleString()} words</span>
                 ${statusBadge}
               </div>
               <div class="tlab-wb-head-actions">
                 ${
                   doc.sourceUrl
-                    ? `<button type="button" class="btn-secondary btn-xs" id="tlab-send-phrases" title="Extract American idioms & phrases from this source">Extract Phrases</button>`
+                    ? `<button type="button" class="btn-secondary btn-xs" id="tlab-send-phrases" title="Extract American idioms & phrases from this source">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"></path></svg>
+                        <span>Extract Phrases</span>
+                      </button>`
                     : ''
                 }
                 <button type="button" class="btn-secondary btn-xs" id="tlab-rerun-review-btn" ${state.reviewing ? 'disabled' : ''}>
-                  ${state.reviewing ? 'Reviewing…' : reviewed ? 'Re-Review AI' : 'Run AI Review'}
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                  <span>${state.reviewing ? 'Reviewing…' : reviewed ? 'Re-Review AI' : 'Run AI Review'}</span>
                 </button>
                 <div class="tlab-export-anchor">
                   <button type="button" class="btn-primary btn-xs" id="tlab-export-btn" aria-expanded="false">
@@ -815,12 +881,31 @@
             </div>
 
             <div class="tlab-wb-title-row">
-              <h2 class="tlab-wb-title" id="tlab-doc-title" contenteditable="false" title="Click Edit to rename">${escapeHtml(doc.title)}</h2>
+              <h2 class="tlab-wb-title" id="tlab-doc-title">${escapeHtml(doc.title)}</h2>
+              <div class="tlab-title-edit-wrap" id="tlab-title-edit-wrap" hidden>
+                <input type="text" class="tlab-title-input" id="tlab-title-input" value="${escapeHtml(doc.title)}" maxlength="160" aria-label="Transcript title" />
+                <button type="button" class="btn-primary btn-xs" id="tlab-title-save-btn">Save</button>
+                <button type="button" class="btn-secondary btn-xs" id="tlab-title-cancel-btn">Cancel</button>
+              </div>
               <button type="button" class="tlab-mini-icon-btn" id="tlab-rename-btn" title="Rename transcript" aria-label="Rename transcript">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
               </button>
             </div>
-            ${doc.creator ? `<div class="tlab-wb-creator">${escapeHtml(doc.creator)}${reviewed?.modelName ? ` · Reviewed with <code>${escapeHtml(reviewed.modelName)}</code>` : ''}</div>` : ''}
+
+            <div class="tlab-wb-meta-line">
+              ${metaParts.join('<span class="tlab-meta-sep" aria-hidden="true">·</span>')}
+              ${
+                singleSpeaker
+                  ? `<span class="tlab-meta-sep" aria-hidden="true">·</span>
+                     <button type="button" class="tlab-inline-spk-btn" id="tlab-single-spk-btn" title="Rename speaker">
+                       <span class="tlab-spk-dot tlab-spk-c${singleSpeaker.colorIndex % 6}"></span>
+                       <span>${escapeHtml(singleSpeaker.name)}</span>
+                       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                     </button>`
+                  : ''
+              }
+            </div>
+
             <div class="tlab-doc-progress" id="tlab-doc-progress"></div>
           </header>
 
@@ -848,18 +933,20 @@
             <div class="tlab-player-bar">
               <div class="tlab-player-transport">
                 <button type="button" class="tlab-play-btn" id="tlab-play-toggle" aria-label="Play or pause" title="Play / Pause (Space)">
-                  <svg class="tlab-ico-play" width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.8v14.4a.9.9 0 0 0 1.38.76l11.2-7.2a.9.9 0 0 0 0-1.52l-11.2-7.2a.9.9 0 0 0-1.38.76Z"></path></svg>
-                  <svg class="tlab-ico-pause" width="15" height="15" viewBox="0 0 24 24" fill="currentColor" hidden><rect x="6" y="4.5" width="4" height="15" rx="1.2"></rect><rect x="14" y="4.5" width="4" height="15" rx="1.2"></rect></svg>
+                  <svg class="tlab-ico-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7.5 4.8v14.4a.9.9 0 0 0 1.38.76l11.2-7.2a.9.9 0 0 0 0-1.52l-11.2-7.2a.9.9 0 0 0-1.38.76Z"></path></svg>
+                  <svg class="tlab-ico-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" hidden><rect x="6" y="4.5" width="4" height="15" rx="1.2"></rect><rect x="14" y="4.5" width="4" height="15" rx="1.2"></rect></svg>
                 </button>
-                <button type="button" class="tlab-mini-icon-btn" id="tlab-prev-sent" title="Previous sentence (J)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
-                </button>
-                <button type="button" class="tlab-mini-icon-btn" id="tlab-replay-btn" title="Replay active word or sentence (R)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
-                </button>
-                <button type="button" class="tlab-mini-icon-btn" id="tlab-next-sent" title="Next sentence (K)">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
-                </button>
+                <div class="tlab-transport-step-group">
+                  <button type="button" class="tlab-mini-icon-btn" id="tlab-prev-sent" title="Previous sentence (J)" aria-label="Previous sentence">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="19 20 9 12 19 4 19 20"></polygon><line x1="5" y1="19" x2="5" y2="5"></line></svg>
+                  </button>
+                  <button type="button" class="tlab-mini-icon-btn" id="tlab-replay-btn" title="Replay active word or sentence (R)" aria-label="Replay">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                  </button>
+                  <button type="button" class="tlab-mini-icon-btn" id="tlab-next-sent" title="Next sentence (K)" aria-label="Next sentence">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"></polygon><line x1="19" y1="5" x2="19" y2="19"></line></svg>
+                  </button>
+                </div>
                 <div class="tlab-player-readout">
                   <div class="tlab-active-clip-label" id="tlab-active-clip-label">Click any word to hear exact millisecond pronunciation</div>
                   <div class="tlab-clock-row ltr-num">
@@ -868,12 +955,13 @@
                     <span id="tlab-clock-total">${global.FlaptapMediaEngine.formatMs((doc.durationSeconds || 0) * 1000)}</span>
                   </div>
                 </div>
+                <button type="button" class="tlab-pill-xs tlab-define-pill" id="tlab-define-active-btn" hidden>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+                  <span>Define word</span>
+                </button>
               </div>
 
               <div class="tlab-player-controls">
-                <button type="button" class="tlab-pill-xs tlab-define-pill" id="tlab-define-active-btn" hidden>
-                  <span>Define word</span>
-                </button>
                 <div class="tlab-seg-group" role="group" aria-label="Playback speed">
                   ${[0.75, 0.85, 1, 1.25]
                     .map(
@@ -883,20 +971,24 @@
                     .join('')}
                 </div>
                 <div class="tlab-seg-group" role="group" aria-label="Loop and shadow mode">
-                  <button type="button" class="tlab-pill-xs is-active" data-tlab-loop="off" title="No loop">Once</button>
+                  <button type="button" class="tlab-pill-xs is-active" data-tlab-loop="off" title="Play once">Once</button>
                   <button type="button" class="tlab-pill-xs" data-tlab-loop="word" title="Loop clicked word">Word ∞</button>
                   <button type="button" class="tlab-pill-xs" data-tlab-loop="sentence" title="Loop active sentence">Sent ∞</button>
-                  <button type="button" class="tlab-pill-xs" data-tlab-loop="shadow" title="Play sentence, pause for you to speak, then repeat">Shadow Gap</button>
+                  <button type="button" class="tlab-pill-xs" data-tlab-loop="shadow" title="Shadow Gap: Play sentence, pause for you to speak, then repeat">Shadow</button>
                 </div>
                 <button type="button" class="tlab-pill-xs" id="tlab-pad-toggle" title="Toggle natural consonant cushion (-25ms/+55ms) vs exact 0ms bounds">Pad: Natural</button>
                 ${
                   canVideo
-                    ? `<button type="button" class="tlab-pill-xs ${state.videoExpanded ? 'is-active' : ''}" id="tlab-video-toggle">
+                    ? `<button type="button" class="tlab-pill-xs tlab-video-btn ${state.videoExpanded ? 'is-active' : ''}" id="tlab-video-toggle" title="Toggle original video preview">
+                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
                          <span>${state.videoExpanded ? 'Hide Video' : 'Show Video'}</span>
                        </button>`
                     : ''
                 }
               </div>
+            </div>
+            <div class="tlab-player-progress-track" id="tlab-player-progress-track" title="Playback position">
+              <div class="tlab-player-progress-fill" id="tlab-player-progress-fill"></div>
             </div>
             <div class="tlab-media-error" id="tlab-media-error" hidden></div>
           </section>
@@ -906,7 +998,7 @@
             <nav class="tlab-view-tabs" role="tablist" aria-label="Transcript display views">
               ${VIEW_DEFS.map(
                 (v) => `
-                <button type="button" class="tlab-view-tab ${state.activeView === v.id ? 'is-active' : ''}" data-tlab-view="${v.id}" role="tab" aria-selected="${state.activeView === v.id ? 'true' : 'false'}">
+                <button type="button" class="tlab-view-tab ${state.activeView === v.id ? 'is-active' : ''}" data-tlab-view="${v.id}" role="tab" aria-selected="${state.activeView === v.id ? 'true' : 'false'}" title="${escapeHtml(v.label)} (${v.shortcut})">
                   <span>${escapeHtml(v.label)}</span>
                 </button>`,
               ).join('')}
@@ -914,16 +1006,31 @@
 
             <div class="tlab-toolbar-right">
               <div class="tlab-click-mode-switch" role="group" aria-label="Word click behavior">
-                <button type="button" class="tlab-pill-xs ${state.clickMode === 'word' ? 'is-active' : ''}" data-click-mode="word" title="Clicking a word plays only that exact word">Click: Word</button>
-                <button type="button" class="tlab-pill-xs ${state.clickMode === 'from-here' ? 'is-active' : ''}" data-click-mode="from-here" title="Clicking a word plays continuously from that word">Click: From Here</button>
+                <button type="button" class="tlab-pill-xs ${state.clickMode === 'word' ? 'is-active' : ''}" data-click-mode="word" title="Clicking a word plays only that exact word">Word</button>
+                <button type="button" class="tlab-pill-xs ${state.clickMode === 'from-here' ? 'is-active' : ''}" data-click-mode="from-here" title="Clicking a word plays continuously from that word">From Here</button>
               </div>
-              <button type="button" class="tlab-pill-xs ${state.showRepairs ? 'is-active' : ''}" id="tlab-toggle-repairs" title="Highlight words repaired from raw captions">Repairs</button>
-              <label class="tlab-search-box">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="search" id="tlab-search-input" placeholder="Search words…" value="${escapeHtml(state.searchQuery)}" />
+              <button type="button" class="tlab-pill-xs tlab-repairs-toggle ${state.showRepairs ? 'is-active' : ''}" id="tlab-toggle-repairs" title="Highlight words and sentences repaired from raw captions">
+                <span class="tlab-repair-dot" aria-hidden="true"></span>
+                <span>Repairs${repairedCount > 0 ? ` (${repairedCount})` : ''}</span>
+              </button>
+              <div class="tlab-search-box">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="search" id="tlab-search-input" placeholder="Search…" value="${escapeHtml(state.searchQuery)}" aria-label="Search transcript words" />
                 <span class="tlab-search-count ltr-num" id="tlab-search-count" hidden></span>
-              </label>
-              <button type="button" class="btn-secondary btn-xs" id="tlab-copy-view-btn" title="Copy active view text">Copy</button>
+                <button type="button" class="tlab-search-nav-btn" id="tlab-search-prev" title="Previous match (Shift+Enter)" aria-label="Previous match" hidden>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                </button>
+                <button type="button" class="tlab-search-nav-btn" id="tlab-search-next" title="Next match (Enter)" aria-label="Next match" hidden>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+                <button type="button" class="tlab-search-nav-btn" id="tlab-search-clear" title="Clear search" aria-label="Clear search" hidden>
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+              </div>
+              <button type="button" class="btn-secondary btn-xs" id="tlab-copy-view-btn" title="Copy active view text">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                <span>Copy</span>
+              </button>
             </div>
           </div>
 
@@ -935,6 +1042,9 @@
 
           <!-- MAIN TRANSCRIPT CANVAS -->
           <div class="tlab-transcript-canvas" id="tlab-transcript-canvas"></div>
+
+          <!-- FLOATING HOVER / CLICK DETAIL POPOVER -->
+          <div class="tlab-info-popover" id="tlab-info-popover" role="tooltip" hidden></div>
         </div>
       `;
 
@@ -953,6 +1063,19 @@
 
     function bindWorkbenchEvents() {
       if (!state.rootEl) return;
+
+      // Progress pip click -> jump & highlight sentence
+      state.rootEl.querySelector('#tlab-doc-progress')?.addEventListener('click', (e) => {
+        const pip = e.target.closest('[data-tlab-jump-sent]');
+        if (!pip) return;
+        const idx = Number(pip.getAttribute('data-tlab-jump-sent'));
+        if (!Number.isFinite(idx)) return;
+        const row = state.rootEl.querySelector(`.tlab-sentence-row[data-sent-idx="${idx}"]`);
+        if (row) {
+          setActiveSentenceHighlight(idx);
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
 
       // View switcher
       state.rootEl.querySelectorAll('[data-tlab-view]').forEach((btn) => {
@@ -995,20 +1118,62 @@
         runReview({ force: true });
       });
 
-      // Rename document inline
-      state.rootEl.querySelector('#tlab-rename-btn')?.addEventListener('click', async () => {
-        if (!state.doc) return;
-        const nextTitle = global.prompt('Rename transcript title:', state.doc.title);
-        if (!nextTitle || nextTitle.trim() === state.doc.title) return;
+      // Rename document inline (zero window.prompt)
+      const titleEl = state.rootEl.querySelector('#tlab-doc-title');
+      const editWrap = state.rootEl.querySelector('#tlab-title-edit-wrap');
+      const titleInput = state.rootEl.querySelector('#tlab-title-input');
+      const renameBtn = state.rootEl.querySelector('#tlab-rename-btn');
+
+      const setTitleEditMode = (editing) => {
+        state.editingTitle = editing;
+        if (titleEl) titleEl.hidden = editing;
+        if (renameBtn) renameBtn.hidden = editing;
+        if (editWrap) editWrap.hidden = !editing;
+        if (editing && titleInput && state.doc) {
+          titleInput.value = state.doc.title;
+          titleInput.focus();
+          titleInput.select();
+        }
+      };
+
+      const saveInlineTitle = async () => {
+        if (!state.doc || !titleInput) return setTitleEditMode(false);
+        const nextTitle = titleInput.value.trim();
+        if (!nextTitle || nextTitle === state.doc.title) {
+          setTitleEditMode(false);
+          return;
+        }
         try {
-          const res = await api.renameDoc(state.doc.id, nextTitle.trim());
+          const res = await api.renameDoc(state.doc.id, nextTitle);
           state.doc = res.data;
-          const titleEl = state.rootEl.querySelector('#tlab-doc-title');
           if (titleEl) titleEl.textContent = state.doc.title;
           onDocUpdated(state.doc);
+          setTitleEditMode(false);
           toast('Transcript renamed.');
         } catch (err) {
           toast(err?.message || 'Could not rename transcript.');
+        }
+      };
+
+      renameBtn?.addEventListener('click', () => setTitleEditMode(true));
+      state.rootEl.querySelector('#tlab-title-save-btn')?.addEventListener('click', saveInlineTitle);
+      state.rootEl.querySelector('#tlab-title-cancel-btn')?.addEventListener('click', () => setTitleEditMode(false));
+      titleInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          saveInlineTitle();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          setTitleEditMode(false);
+        }
+      });
+
+      // Single-speaker rename button in header meta line
+      state.rootEl.querySelector('#tlab-single-spk-btn')?.addEventListener('click', () => {
+        state.speakerEditorOpen = !state.speakerEditorOpen;
+        renderViewContent();
+        if (state.speakerEditorOpen) {
+          state.rootEl.querySelector('.tlab-spk-input')?.focus();
         }
       });
 
@@ -1057,26 +1222,82 @@
       });
 
       // Copy entire active view
-      state.rootEl.querySelector('#tlab-copy-view-btn')?.addEventListener('click', () => {
+      state.rootEl.querySelector('#tlab-copy-view-btn')?.addEventListener('click', (e) => {
         copyActiveViewText();
+        flashCopiedBtn(e.currentTarget);
       });
 
-      // Search input
+      // Click progress scrubber bar to play continuously from that position
+      state.rootEl.querySelector('#tlab-player-progress-track')?.addEventListener('click', (e) => {
+        const durMs = state.engine?.getState?.().durationMs || (state.doc?.durationSeconds || 0) * 1000;
+        if (!durMs) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / Math.max(1, rect.width)));
+        const seekMs = Math.round(ratio * durMs);
+        state.engine?.playContinuousFrom?.(seekMs, global.FlaptapMediaEngine.formatShort(seekMs));
+      });
+
+      // Search input + Prev / Next match navigation + Clear
       const searchInput = state.rootEl.querySelector('#tlab-search-input');
+      const searchCountEl = state.rootEl.querySelector('#tlab-search-count');
+      const searchPrevBtn = state.rootEl.querySelector('#tlab-search-prev');
+      const searchNextBtn = state.rootEl.querySelector('#tlab-search-next');
+      const searchClearBtn = state.rootEl.querySelector('#tlab-search-clear');
+
+      const focusSearchHit = (idx) => {
+        const hits = Array.from(state.rootEl.querySelectorAll('.tlab-word.is-search-hit'));
+        hits.forEach((h) => h.classList.remove('is-search-current'));
+        if (!hits.length) {
+          state.searchMatchIdx = 0;
+          if (searchCountEl && state.searchQuery.trim()) searchCountEl.textContent = '0';
+          return;
+        }
+        const safeIdx = ((idx % hits.length) + hits.length) % hits.length;
+        state.searchMatchIdx = safeIdx;
+        hits[safeIdx].classList.add('is-search-current');
+        if (searchCountEl) searchCountEl.textContent = `${safeIdx + 1}/${hits.length}`;
+        hits[safeIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      };
+
+      const syncSearchUi = () => {
+        const hasQuery = Boolean(state.searchQuery.trim());
+        const hits = state.rootEl.querySelectorAll('.tlab-word.is-search-hit');
+        if (searchCountEl) searchCountEl.hidden = !hasQuery;
+        if (searchPrevBtn) searchPrevBtn.hidden = !hasQuery || hits.length === 0;
+        if (searchNextBtn) searchNextBtn.hidden = !hasQuery || hits.length === 0;
+        if (searchClearBtn) searchClearBtn.hidden = !hasQuery;
+        if (hasQuery) {
+          focusSearchHit(0);
+        }
+      };
+
       searchInput?.addEventListener('input', () => {
         state.searchQuery = searchInput.value || '';
         renderViewContent();
-        const hits = state.rootEl.querySelectorAll('.tlab-word.is-search-hit');
-        const countEl = state.rootEl.querySelector('#tlab-search-count');
-        if (countEl) {
-          if (state.searchQuery.trim()) {
-            countEl.hidden = false;
-            countEl.textContent = String(hits.length);
-            if (hits[0]) hits[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-          } else {
-            countEl.hidden = true;
-          }
+        syncSearchUi();
+      });
+      searchInput?.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          focusSearchHit(state.searchMatchIdx + (e.shiftKey ? -1 : 1));
+        } else if (e.key === 'Escape' && state.searchQuery) {
+          e.preventDefault();
+          state.searchQuery = '';
+          searchInput.value = '';
+          renderViewContent();
+          syncSearchUi();
         }
+      });
+      searchPrevBtn?.addEventListener('click', () => focusSearchHit(state.searchMatchIdx - 1));
+      searchNextBtn?.addEventListener('click', () => focusSearchHit(state.searchMatchIdx + 1));
+      searchClearBtn?.addEventListener('click', () => {
+        state.searchQuery = '';
+        if (searchInput) {
+          searchInput.value = '';
+          searchInput.focus();
+        }
+        renderViewContent();
+        syncSearchUi();
       });
 
       // Player controls
@@ -1264,14 +1485,153 @@
         if (copySentBtn) {
           const sIdx = Number(copySentBtn.dataset.copySent);
           const sObj = activeSentences().find((s) => s.index === sIdx);
-          if (sObj) copyToClipboard(sObj.text, `Copied sentence #${sObj.index}.`);
+          if (sObj) {
+            copyToClipboard(sObj.text, `Copied sentence #${sObj.index}.`);
+            flashCopiedBtn(copySentBtn);
+          }
           return;
         }
         const copyTextBtn = e.target.closest('[data-copy-text]');
         if (copyTextBtn) {
           copyToClipboard(copyTextBtn.dataset.copyText || '', 'Copied to clipboard.');
+          flashCopiedBtn(copyTextBtn);
         }
       });
+
+      // Repair / Overlap icon-only indicator hover & click rich popover
+      const infoPop = state.rootEl.querySelector('#tlab-info-popover');
+
+      const hideInfoPopover = (force = false) => {
+        if (state.infoCloseTimer) {
+          clearTimeout(state.infoCloseTimer);
+          state.infoCloseTimer = null;
+        }
+        if (!force && state.infoPopoverState.pinned) return;
+        state.infoPopoverState.open = false;
+        state.infoPopoverState.pinned = false;
+        state.infoPopoverState.anchorEl?.classList.remove('is-popover-open');
+        state.infoPopoverState.anchorEl = null;
+        if (infoPop) infoPop.hidden = true;
+      };
+
+      const scheduleHideInfoPopover = () => {
+        if (state.infoPopoverState.pinned) return;
+        if (state.infoCloseTimer) clearTimeout(state.infoCloseTimer);
+        state.infoCloseTimer = setTimeout(() => hideInfoPopover(false), 160);
+      };
+
+      const showInfoPopover = (btnEl, kind, sentIdx, pinned = false) => {
+        if (!infoPop || !btnEl || !state.doc) return;
+        if (state.infoCloseTimer) {
+          clearTimeout(state.infoCloseTimer);
+          state.infoCloseTimer = null;
+        }
+
+        const sent = activeSentences().find((s) => s.index === sentIdx);
+        if (!sent) return;
+
+        let html = '';
+        if (kind === 'repair') {
+          const diffs = (sent.words || []).filter((w) => w.repaired);
+          const diffRows = diffs.slice(0, 6)
+            .map(
+              (w) => `
+              <div class="tlab-info-diff-item">
+                <span class="tlab-diff-old">${escapeHtml(w.rawWord || '(inserted)')}</span>
+                <span class="tlab-diff-arrow" aria-hidden="true">→</span>
+                <span class="tlab-diff-new">${escapeHtml(w.word)}</span>
+              </div>`,
+            )
+            .join('');
+          html = `
+            <div class="tlab-info-pop-head is-repair">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z"></path></svg>
+              <strong>ASR Caption Repaired</strong>
+              <span class="tlab-info-badge">${diffs.length || 1} fix${diffs.length === 1 ? '' : 'es'}</span>
+            </div>
+            ${diffRows ? `<div class="tlab-info-diff-list">${diffRows}</div>` : ''}
+            ${sent.repairNote ? `<p class="tlab-info-pop-note">${escapeHtml(sent.repairNote)}</p>` : ''}
+            <p class="tlab-info-pop-foot">AI fixed misheard caption text while preserving exact millisecond timing.</p>
+          `;
+        } else {
+          html = `
+            <div class="tlab-info-pop-head is-overlap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"></path><path d="M4 20L21 3"></path><path d="M21 16v5h-5"></path><path d="M15 15l6 6"></path><path d="M4 4l5 5"></path></svg>
+              <strong>Overlapping Speech Separated</strong>
+            </div>
+            <p class="tlab-info-pop-foot">AI separated simultaneous speakers into clean turns while preserving millisecond boundaries.</p>
+          `;
+        }
+
+        state.infoPopoverState.anchorEl?.classList.remove('is-popover-open');
+        state.infoPopoverState = { open: true, pinned, kind, sentIdx, anchorEl: btnEl };
+        btnEl.classList.add('is-popover-open');
+
+        infoPop.innerHTML = html;
+        infoPop.hidden = false;
+
+        // Position anchored to button with viewport clamping
+        const rect = btnEl.getBoundingClientRect();
+        const popRect = infoPop.getBoundingClientRect();
+        const margin = 12;
+        const left = Math.max(
+          margin,
+          Math.min(global.innerWidth - popRect.width - margin, rect.right - popRect.width),
+        );
+        const fitsBelow = rect.bottom + 8 + popRect.height <= global.innerHeight - margin;
+        const top = fitsBelow ? rect.bottom + 8 : Math.max(margin, rect.top - popRect.height - 8);
+        infoPop.style.left = `${Math.round(left)}px`;
+        infoPop.style.top = `${Math.round(top)}px`;
+      };
+
+      canvas?.addEventListener('mouseover', (e) => {
+        const btn = e.target.closest('[data-tlab-info]');
+        if (!btn || state.infoPopoverState.pinned) return;
+        showInfoPopover(btn, btn.dataset.tlabInfo, Number(btn.dataset.sentIdx), false);
+      });
+      canvas?.addEventListener('mouseout', (e) => {
+        const btn = e.target.closest('[data-tlab-info]');
+        if (btn && !btn.contains(e.relatedTarget)) {
+          scheduleHideInfoPopover();
+        }
+      });
+      canvas?.addEventListener('focusin', (e) => {
+        const btn = e.target.closest('[data-tlab-info]');
+        if (btn && !state.infoPopoverState.pinned) {
+          showInfoPopover(btn, btn.dataset.tlabInfo, Number(btn.dataset.sentIdx), false);
+        }
+      });
+      canvas?.addEventListener('focusout', (e) => {
+        const btn = e.target.closest('[data-tlab-info]');
+        if (btn && !state.infoPopoverState.pinned) {
+          scheduleHideInfoPopover();
+        }
+      });
+      canvas?.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-tlab-info]');
+        if (!btn) return;
+        e.stopPropagation();
+        const sentIdx = Number(btn.dataset.sentIdx);
+        const kind = btn.dataset.tlabInfo;
+        const sameTarget =
+          state.infoPopoverState.open &&
+          state.infoPopoverState.pinned &&
+          state.infoPopoverState.sentIdx === sentIdx &&
+          state.infoPopoverState.kind === kind;
+        if (sameTarget) {
+          hideInfoPopover(true);
+        } else {
+          showInfoPopover(btn, kind, sentIdx, true);
+        }
+      });
+      infoPop?.addEventListener('mouseenter', () => {
+        if (state.infoCloseTimer) {
+          clearTimeout(state.infoCloseTimer);
+          state.infoCloseTimer = null;
+        }
+      });
+      infoPop?.addEventListener('mouseleave', () => scheduleHideInfoPopover());
+      infoPop?.addEventListener('click', (e) => e.stopPropagation());
 
       // Right-click any word -> Instant Contextual Dictionary & Vocabulary Save!
       canvas?.addEventListener('contextmenu', (e) => {
@@ -1304,20 +1664,27 @@
         e.currentTarget.hidden = true;
       });
 
-      // Close export menu on outside click
+      // Close export menu & info popover on outside click / Escape
       if (state.docClickHandler) document.removeEventListener('click', state.docClickHandler);
       state.docClickHandler = () => {
         if (state.exportMenuOpen) {
           state.exportMenuOpen = false;
           renderExportMenu();
         }
+        if (state.infoPopoverState.open) {
+          hideInfoPopover(true);
+        }
       };
       document.addEventListener('click', state.docClickHandler);
 
-      // Keyboard shortcuts (Space, R, J/K, 1-5, L)
+      // Keyboard shortcuts (Space, R, J/K, 1-5, Escape)
       if (state.keydownHandler) document.removeEventListener('keydown', state.keydownHandler);
       state.keydownHandler = (e) => {
         if (!state.doc || !state.rootEl || state.rootEl.closest('[hidden]')) return;
+        if (e.key === 'Escape' && state.infoPopoverState.open) {
+          hideInfoPopover(true);
+          return;
+        }
         const tag = (e.target?.tagName || '').toLowerCase();
         if (tag === 'input' || tag === 'textarea' || tag === 'select' || e.target?.isContentEditable) return;
         if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -1340,6 +1707,13 @@
         }
       };
       document.addEventListener('keydown', state.keydownHandler);
+    }
+
+    function flashCopiedBtn(btn) {
+      if (!btn) return;
+      btn.classList.add('is-copied');
+      clearTimeout(btn._copyFlashTimer);
+      btn._copyFlashTimer = setTimeout(() => btn.classList.remove('is-copied'), 1200);
     }
 
     function copyToClipboard(text, message) {

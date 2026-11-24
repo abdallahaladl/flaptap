@@ -323,20 +323,21 @@
       </div>
       <div class="tlab-recent-grid">
         ${recent
-          .map(
-            (item) => `
+          .map((item) => {
+            const dur = item.durationSeconds > 0 ? global.FlaptapMediaEngine.formatShort(item.durationSeconds * 1000) : '';
+            return `
           <button type="button" class="tlab-recent-card" data-open-doc="${escapeHtml(item.id)}">
             <div class="tlab-recent-meta">
               <span class="tlab-platform-badge">${escapeHtml(item.platform)}</span>
-              <span class="tlab-meta-chip ltr-num">${item.wordCount.toLocaleString()} words</span>
+              <span class="tlab-meta-chip ltr-num">${dur ? `${dur} · ` : ''}${item.wordCount.toLocaleString()} words</span>
             </div>
             <div class="tlab-recent-title">${escapeHtml(item.title)}</div>
             <div class="tlab-recent-foot">
               <span>${item.reviewStatus === 'ready' ? `AI Reviewed · ${item.speakerCount} spk` : 'Raw Ready'}</span>
               <span class="ltr-num">${item.completedCount}/${item.sentenceCount}</span>
             </div>
-          </button>`,
-          )
+          </button>`;
+          })
           .join('')}
       </div>
     `;
@@ -352,10 +353,10 @@
     const user = ws()?.getUser?.();
     if (statsEl) {
       statsEl.innerHTML = `
-        <span><strong>${state.stats.totalDocs}</strong> Transcripts</span>
-        <span><strong>${state.stats.reviewedDocs}</strong> AI Reviewed</span>
-        <span><strong>${state.stats.completedDocs}</strong> Mastered</span>
-        <span><strong>${state.stats.totalWords.toLocaleString()}</strong> Words</span>
+        <span class="tlab-stat-pill"><strong>${state.stats.totalDocs}</strong> Transcripts</span>
+        <span class="tlab-stat-pill"><strong>${state.stats.reviewedDocs}</strong> AI Reviewed</span>
+        <span class="tlab-stat-pill"><strong>${state.stats.completedDocs}</strong> Mastered</span>
+        <span class="tlab-stat-pill"><strong>${state.stats.totalWords.toLocaleString()}</strong> Words</span>
       `;
     }
 
@@ -399,10 +400,17 @@
               <span>${escapeHtml(item.creator || item.platform)}</span>
               <span class="ltr-num">${item.completedCount} / ${item.sentenceCount} sentences (${pct}%)</span>
             </div>
+            ${
+              item.sentenceCount > 0
+                ? `<div class="tlab-lib-progress-track"><div class="tlab-lib-progress-fill" style="width:${pct}%"></div></div>`
+                : ''
+            }
           </div>
           <div class="tlab-lib-actions">
             <button type="button" class="btn-primary btn-xs" data-open-doc="${escapeHtml(item.id)}">Open</button>
-            <button type="button" class="btn-secondary btn-xs is-danger" data-delete-doc="${escapeHtml(item.id)}" title="Delete transcript">Delete</button>
+            <button type="button" class="tlab-mini-icon-btn is-danger" data-delete-doc="${escapeHtml(item.id)}" title="Delete transcript" aria-label="Delete transcript">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
           </div>
         </article>`;
       })
@@ -510,6 +518,12 @@
       syncSelectedFileUi();
     });
     dropzone?.addEventListener('click', () => fileInput?.click());
+    dropzone?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        fileInput?.click();
+      }
+    });
     dropzone?.addEventListener('dragover', (e) => {
       e.preventDefault();
       dropzone.classList.add('is-dragover');
@@ -570,6 +584,14 @@
       }
       const openEl = e.target.closest('[data-open-doc]');
       if (openEl) nav.openDoc(openEl.dataset.openDoc);
+    });
+    el('tlab-library-list')?.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const openEl = e.target.closest('.tlab-lib-main[data-open-doc]');
+      if (openEl) {
+        e.preventDefault();
+        nav.openDoc(openEl.dataset.openDoc);
+      }
     });
 
     // Library search & filters
