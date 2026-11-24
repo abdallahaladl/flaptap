@@ -803,16 +803,6 @@
     set('stat-vocab-count', safeStats.vocabularyCount);
     set('stat-minutes-count', safeStats.practiceMinutes);
     set('header-streak-count', safeStats.streakDays);
-
-    const vocabBadge = document.getElementById('nav-vocab-badge');
-    if (vocabBadge) {
-      if (state.user && safeStats.vocabularyCount > 0) {
-        vocabBadge.textContent = String(safeStats.vocabularyCount);
-        vocabBadge.hidden = false;
-      } else {
-        vocabBadge.hidden = true;
-      }
-    }
   }
 
   async function handleAuthSuccess(res, toastMsg) {
