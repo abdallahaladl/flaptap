@@ -276,6 +276,30 @@
   background: var(--ft-done);
 }
 
+.ft-progress-main .subject-progress-track {
+  flex: 0 0 auto;
+  width: 100%;
+  height: 7px;
+  border: none;
+  border-radius: 980px;
+  background: var(--ap-fill);
+  overflow: hidden;
+}
+
+.ft-progress-main .subject-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 980px;
+  background: var(--ap-blue);
+  transition: width 0.45s var(--ap-spring), background-color 0.25s ease;
+}
+
+[data-guide-state="done"] .ft-progress-main .subject-progress-fill,
+.is-done .ft-progress-main .subject-progress-fill,
+.is-all-done .ft-progress-main .subject-progress-fill {
+  background: var(--ft-done-track, var(--ap-green-solid));
+}
+
 .ft-dock-toggles {
   display: inline-flex;
   align-items: center;
