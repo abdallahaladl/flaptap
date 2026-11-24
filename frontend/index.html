@@ -76,6 +76,31 @@
         var lang = localStorage.getItem('flaptap_ui_lang') || 'en';
         document.documentElement.setAttribute('lang', lang);
         document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+        if (localStorage.getItem('flaptap_sidebar_collapsed') === '1') {
+          document.documentElement.setAttribute('data-sidebar', 'collapsed');
+        }
+        var p = String(location.pathname || '/').split('?')[0].replace(/\/+$/, '') || '/';
+        var qs = new URLSearchParams(location.search || '');
+        var sec = 'lessons';
+        if (p === '/dialogue' || p === '/dialogues') sec = 'dialogue';
+        else if (p === '/pronunciation' || p === '/phonetics') sec = 'pronunciation';
+        else if (p === '/transcripts' || p === '/transcript-lab' || p.indexOf('/transcripts/') === 0 || p.indexOf('/transcript-lab/') === 0) sec = 'transcript-lab';
+        else if (p === '/extractor' || p === '/miner' || p === '/phrase-miner' || p === '/american-extractor' || p === '/american-english' || p === '/phrases' || p.indexOf('/extractor/') === 0 || p.indexOf('/miner/') === 0 || p.indexOf('/phrase-miner/') === 0 || p.indexOf('/american-extractor/') === 0 || p.indexOf('/phrases/') === 0) sec = 'american-extractor';
+        else if (p === '/library' || p === '/builder' || p === '/phrase-builder' || p === '/learning-library' || p.indexOf('/library/') === 0 || p.indexOf('/builder/') === 0 || p.indexOf('/phrase-builder/') === 0 || p.indexOf('/learning-library/') === 0) sec = 'learning-library';
+        else if (p === '/vocabulary') sec = 'vocabulary';
+        else if (p === '/history' || p === '/activity') sec = 'history';
+        else if (p === '/' && qs.has('section')) {
+          var q = (qs.get('section') || '').trim().toLowerCase();
+          if (q === 'dialogue' || q === 'dialogues') sec = 'dialogue';
+          else if (q === 'pronunciation' || q === 'phonetics') sec = 'pronunciation';
+          else if (q === 'transcripts' || q === 'transcript-lab' || q === 'transcribe') sec = 'transcript-lab';
+          else if (q === 'extractor' || q === 'miner' || q === 'phrase-miner' || q === 'american-extractor' || q === 'american-english' || q === 'phrases' || q === 'anything-to-phrases') sec = 'american-extractor';
+          else if (q === 'library' || q === 'builder' || q === 'phrase-builder' || q === 'learning-library') sec = 'learning-library';
+          else if (q === 'vocabulary') sec = 'vocabulary';
+          else if (q === 'history' || q === 'activity') sec = 'history';
+        }
+        window.__flaptapBootSection = sec;
+        document.documentElement.setAttribute('data-active-section', sec);
         if (!localStorage.getItem('flaptap_guest_token')) {
           var rand = 'guest_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
           localStorage.setItem('flaptap_guest_token', rand);
@@ -156,92 +181,128 @@
       </div>
 
       <nav class="sidebar-nav" aria-label="Workspace Sections">
-        <div class="sidebar-group">
-          <div class="sidebar-group-label">Studio</div>
-          <a href="/" class="sidebar-nav-link active" data-route-section="lessons" aria-current="page" title="Video Lessons">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="5 3 19 12 5 21 5 3"></polygon>
-            </svg>
-            <span class="sidebar-link-text" data-i18n="navLessons">Lessons</span>
+        <div class="sidebar-group" data-sidebar-group="studio">
+          <div class="sidebar-group-label" data-i18n="navGroupStudio">Studio</div>
+          <a href="/" class="sidebar-nav-link" data-route-section="lessons" data-tooltip="Shadowing" title="Shadowing — Video speaking lessons">
+            <span class="sidebar-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="6 4 20 12 6 20 6 4"></polygon>
+              </svg>
+            </span>
+            <span class="sidebar-link-text" data-i18n="navLessons">Shadowing</span>
           </a>
-          <a href="/dialogue" class="sidebar-nav-link" data-route-section="dialogue" title="Conversational Dialogue">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
-            <span class="sidebar-link-text" data-i18n="navDialogue">Dialogue</span>
+          <a href="/dialogue" class="sidebar-nav-link" data-route-section="dialogue" data-tooltip="Dialogues" title="Dialogues — Conversational roleplay">
+            <span class="sidebar-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </span>
+            <span class="sidebar-link-text" data-i18n="navDialogue">Dialogues</span>
           </a>
-          <a href="/pronunciation" class="sidebar-nav-link" data-route-section="pronunciation" title="Pronunciation Lab">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-              <line x1="12" x2="12" y1="19" y2="22"></line>
-            </svg>
-            <span class="sidebar-link-text" data-i18n="navPronunciation">Pronunciation</span>
-          </a>
-          <a href="/transcripts" class="sidebar-nav-link" data-route-section="transcript-lab" title="Transcript Lab">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 6h16"></path>
-              <path d="M4 12h10"></path>
-              <path d="M4 18h7"></path>
-              <polygon points="16 14 21 17 16 20 16 14"></polygon>
-            </svg>
-            <span class="sidebar-link-text" data-i18n="navTranscriptLab">Transcript Lab</span>
+          <a href="/pronunciation" class="sidebar-nav-link" data-route-section="pronunciation" data-tooltip="Phonetics" title="Phonetics — Mouth mechanics &amp; rhythm">
+            <span class="sidebar-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" x2="12" y1="19" y2="22"></line>
+              </svg>
+            </span>
+            <span class="sidebar-link-text" data-i18n="navPronunciation">Phonetics</span>
           </a>
         </div>
 
-        <div class="sidebar-group">
-          <div class="sidebar-group-label">Knowledge</div>
-          <a href="/library" class="sidebar-nav-link" data-route-section="learning-library" title="Generate Phrases">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
-              <path d="M8 7h8"></path>
-              <path d="M8 11h6"></path>
-            </svg>
-            <span class="sidebar-link-text" data-i18n="navLearningLibrary">Generate Phrases</span>
+        <div class="sidebar-group" data-sidebar-group="lab">
+          <div class="sidebar-group-label" data-i18n="navGroupLab">Lab</div>
+          <a href="/transcripts" class="sidebar-nav-link" data-route-section="transcript-lab" data-tooltip="Transcripts" title="Transcripts — Verbatim media workbench">
+            <span class="sidebar-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 6h16"></path>
+                <path d="M4 12h10"></path>
+                <path d="M4 18h7"></path>
+                <polygon points="16 14 21 17 16 20 16 14"></polygon>
+              </svg>
+            </span>
+            <span class="sidebar-link-text" data-i18n="navTranscriptLab">Transcripts</span>
           </a>
-          <a href="/extractor" class="sidebar-nav-link" data-route-section="american-extractor" title="Anything to Phrases">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 8V6a2 2 0 0 1 2-2h2"></path>
-              <path d="M4 16v2a2 2 0 0 0 2 2h2"></path>
-              <path d="M16 4h2a2 2 0 0 1 2 2v2"></path>
-              <path d="M16 20h2a2 2 0 0 0 2-2v-2"></path>
-              <circle cx="11.5" cy="11.5" r="3.2"></circle>
-              <path d="m14 14 2.5 2.5"></path>
-            </svg>
-            <span class="sidebar-link-text" data-i18n="navExtractor">Anything to Phrases</span>
+          <a href="/extractor" class="sidebar-nav-link" data-route-section="american-extractor" data-tooltip="Phrase Miner" title="Phrase Miner — Extract phrases from any source">
+            <span class="sidebar-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 8V6a2 2 0 0 1 2-2h2"></path>
+                <path d="M4 16v2a2 2 0 0 0 2 2h2"></path>
+                <path d="M16 4h2a2 2 0 0 1 2 2v2"></path>
+                <path d="M16 20h2a2 2 0 0 0 2-2v-2"></path>
+                <circle cx="11.5" cy="11.5" r="3.2"></circle>
+                <path d="m14 14 2.5 2.5"></path>
+              </svg>
+            </span>
+            <span class="sidebar-link-text" data-i18n="navExtractor">Phrase Miner</span>
           </a>
-          <a href="/vocabulary" class="sidebar-nav-link" data-route-section="vocabulary" title="Vocabulary Vault">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
-            </svg>
+          <a href="/library" class="sidebar-nav-link" data-route-section="learning-library" data-tooltip="Phrase Builder" title="Phrase Builder — Author phrases &amp; patterns by topic">
+            <span class="sidebar-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+                <path d="M8 7h8"></path>
+                <path d="M8 11h6"></path>
+              </svg>
+            </span>
+            <span class="sidebar-link-text" data-i18n="navLearningLibrary">Phrase Builder</span>
+          </a>
+        </div>
+
+        <div class="sidebar-group" data-sidebar-group="workspace">
+          <div class="sidebar-group-label" data-i18n="navGroupWorkspace">Workspace</div>
+          <a href="/vocabulary" class="sidebar-nav-link" data-route-section="vocabulary" data-tooltip="Vocabulary" title="Vocabulary — Saved words &amp; flashcards">
+            <span class="sidebar-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path>
+              </svg>
+            </span>
             <span class="sidebar-link-text" data-i18n="navVocabulary">Vocabulary</span>
             <span class="nav-count-pill" id="nav-vocab-badge" hidden>0</span>
           </a>
-        </div>
-
-        <div class="sidebar-group">
-          <div class="sidebar-group-label">Workspace</div>
-          <a href="/history" class="sidebar-nav-link" data-route-section="history" title="History & Usage">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-              <path d="M3 3v5h5"></path>
-              <path d="M12 7v5l4 2"></path>
-            </svg>
-            <span class="sidebar-link-text" data-i18n="navHistory">History &amp; Usage</span>
+          <a href="/history" class="sidebar-nav-link" data-route-section="history" data-tooltip="Activity" title="Activity — History, caches &amp; usage">
+            <span class="sidebar-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                <path d="M3 3v5h5"></path>
+                <path d="M12 7v5l4 2"></path>
+              </svg>
+            </span>
+            <span class="sidebar-link-text" data-i18n="navHistory">Activity</span>
           </a>
         </div>
       </nav>
 
       <div class="sidebar-footer">
-        <button type="button" class="sidebar-utility-btn" id="sidebar-ai-keys-btn" title="Configure AI Provider API Keys">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
-          </svg>
-          <span class="sidebar-link-text">AI Keys &amp; Models</span>
+        <button type="button" class="sidebar-utility-btn" id="sidebar-ai-keys-btn" data-tooltip="AI Models" title="Configure AI Provider API Keys &amp; Models">
+          <span class="sidebar-nav-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+            </svg>
+          </span>
+          <span class="sidebar-link-text" data-i18n="navAiModels">AI Models</span>
+          <span class="sidebar-utility-chevron" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          </span>
         </button>
-        <div class="sidebar-edition-note" data-i18n="brandEdition">Spoken English Studio</div>
+        <div class="sidebar-footer-meta">
+          <span class="sidebar-edition-note" data-i18n="brandEdition">Spoken English Studio</span>
+          <kbd class="sidebar-kbd-hint" title="Toggle sidebar">⌘B</kbd>
+        </div>
       </div>
     </aside>
+    <script>
+      (function () {
+        var sec = window.__flaptapBootSection || 'lessons';
+        var links = document.querySelectorAll('#app-sidebar .sidebar-nav-link[data-route-section]');
+        for (var i = 0; i < links.length; i++) {
+          var match = links[i].getAttribute('data-route-section') === sec;
+          links[i].classList.toggle('active', match);
+          if (match) links[i].setAttribute('aria-current', 'page');
+          else links[i].removeAttribute('aria-current');
+        }
+      })();
+    </script>
 
     <!-- Main Workspace Column -->
     <div class="app-main-column">
@@ -261,7 +322,7 @@
               <span class="crumb-sep" aria-hidden="true">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </span>
-              <span class="crumb-current">Lessons</span>
+              <span class="crumb-current">Shadowing</span>
             </nav>
           </div>
 
@@ -317,8 +378,8 @@
       </header>
 
       <main class="workspace-main">
-    <!-- SECTION 1: VIDEO LESSONS & LIBRARY -->
-    <section id="section-lessons">
+    <!-- SECTION 1: SHADOWING STUDIO & LIBRARY -->
+    <section id="section-lessons" hidden>
       <div class="editorial-desk apple-lessons-hero">
         <div class="desk-kicker">
           <span class="apple-kicker-dot" aria-hidden="true"></span>
@@ -764,8 +825,8 @@
         <h3 data-i18n="emptyVocabTitle">No saved words yet</h3>
         <p data-i18n="emptyVocabDesc">Click any word in Video Lessons, Anything to Phrases, or Generate Phrases to save contextual definitions and unlock spaced flashcards.</p>
         <div class="empty-ledger-actions">
-          <button type="button" class="btn-vox" data-route-section="lessons">Open Video Lessons</button>
-          <button type="button" class="btn-secondary" data-route-section="american-extractor">Open Anything to Phrases</button>
+          <button type="button" class="btn-vox" data-route-section="lessons">Open Shadowing</button>
+          <button type="button" class="btn-secondary" data-route-section="american-extractor">Open Phrase Miner</button>
         </div>
       </div>
       <div id="vocab-auth-gate-card" class="signed-out-gate-card" hidden>
@@ -1042,19 +1103,19 @@
       </div>
     </section>
 
-    <!-- SECTION 7: ANYTHING TO PHRASES (3 ISOLATED PAGES UNDER ONE FEATURE LAYOUT) -->
+    <!-- SECTION 7: PHRASE MINER (3 ISOLATED PAGES UNDER ONE FEATURE LAYOUT) -->
     <section id="section-american-extractor" hidden>
       <div class="editorial-desk aex-desk" data-aex-active="extract">
         <!-- Unified Page Header Row: Left Title & Subtitle + Right Extract/Library Switcher -->
         <header class="aex-shell-bar" id="aex-page-header">
           <div class="aex-extract-hero">
-            <h1 class="aex-headline">Anything to Phrases</h1>
+            <h1 class="aex-headline">Phrase Miner</h1>
             <p class="aex-subcopy">
               Drop any video, article, podcast, screenshot, or text for source-grounded American phrases &amp; IPA.
             </p>
           </div>
 
-          <nav class="lexicon-view-nav aex-view-nav" role="tablist" aria-label="Anything to Phrases pages">
+          <nav class="lexicon-view-nav aex-view-nav" role="tablist" aria-label="Phrase Miner pages">
             <button type="button" class="lexicon-view-tab active" id="aex-tab-extract" data-aex-view="extract" role="tab" aria-selected="true">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2"></path><path d="M4 16v2a2 2 0 0 0 2 2h2"></path><path d="M16 4h2a2 2 0 0 1 2 2v2"></path><path d="M16 20h2a2 2 0 0 0 2-2v-2"></path><circle cx="12" cy="12" r="3"></circle></svg>
               <span>Extract</span>
@@ -1622,19 +1683,19 @@
       </div>
     </section>
 
-    <!-- SECTION 8: GENERATE PHRASES (2-PAGE MODULAR WORKSPACE SYNCED WITH ANYTHING TO PHRASES) -->
+    <!-- SECTION 8: PHRASE BUILDER (2-PAGE MODULAR WORKSPACE SYNCED WITH PHRASE MINER) -->
     <section id="section-learning-library" hidden>
       <div class="editorial-desk ll-desk" data-ll-active="generate">
         <!-- Unified Page Header Row: Left Title & Subtitle + Right Generate/Library Switcher -->
         <header class="ll-shell-bar" id="ll-page-header">
           <div class="ll-extract-hero">
-            <h1 class="ll-headline" id="ll-domain-headline">Generate Phrases</h1>
+            <h1 class="ll-headline" id="ll-domain-headline">Phrase Builder</h1>
             <p class="ll-subcopy" id="ll-domain-subcopy">
               Author authentic American fillers, discourse markers, reductions, slang, and reusable patterns with IPA &amp; idiomatic sentence translations.
             </p>
           </div>
 
-          <nav class="lexicon-view-nav ll-top-view-nav" role="tablist" aria-label="Generate Phrases pages">
+          <nav class="lexicon-view-nav ll-top-view-nav" role="tablist" aria-label="Phrase Builder pages">
             <button type="button" class="lexicon-view-tab active" id="ll-tab-generate" data-ll-view="generate" role="tab" aria-selected="true">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
               <span>Generate</span>
@@ -2046,17 +2107,17 @@
       </div>
     </section>
 
-    <!-- SECTION 9: TRANSCRIPT LAB (/transcripts, /transcripts/library, /transcripts/:id) -->
+    <!-- SECTION 9: TRANSCRIPTS (/transcripts, /transcripts/library, /transcripts/:id) -->
     <section id="section-transcript-lab" hidden>
       <div class="editorial-desk tlab-desk">
         <header class="aex-shell-bar tlab-shell-bar">
           <div class="aex-extract-hero">
-            <h1 class="aex-headline">Transcript Lab</h1>
+            <h1 class="aex-headline">Transcripts</h1>
             <p class="aex-subcopy">
               Turn any YouTube video, podcast, social clip, or audio file into a verbatim, AI-reviewed transcript — switch views instantly and click any word to hear exact millisecond pronunciation.
             </p>
           </div>
-          <nav class="lexicon-view-nav tlab-view-nav" role="tablist" aria-label="Transcript Lab pages">
+          <nav class="lexicon-view-nav tlab-view-nav" role="tablist" aria-label="Transcripts pages">
             <button type="button" class="lexicon-view-tab active" id="tlab-tab-extract" role="tab" aria-selected="true">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
               <span>Transcribe</span>
@@ -2201,6 +2262,17 @@
       </div>
     </section>
   </main>
+  <script>
+    (function () {
+      var sec = window.__flaptapBootSection || 'lessons';
+      var panel = document.getElementById('section-' + sec) || document.getElementById('section-lessons');
+      if (panel) panel.hidden = false;
+      document.body.dataset.activeSection = sec;
+      document.body.classList.toggle('is-lessons-view', sec === 'lessons');
+      document.body.classList.toggle('is-extractor-view', sec === 'american-extractor');
+      document.body.classList.toggle('is-library-view', sec === 'learning-library');
+    })();
+  </script>
     </div>
   </div>
 

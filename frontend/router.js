@@ -13,66 +13,74 @@
     lessons: {
       section: 'lessons',
       path: '/',
-      aliases: ['/lessons', '/index.html'],
-      title: 'Video Lessons',
+      aliases: ['/lessons', '/shadowing', '/index.html'],
+      title: 'Shadowing',
       i18nKey: 'navLessons',
       group: 'Studio',
+      groupI18nKey: 'navGroupStudio',
     },
     dialogue: {
       section: 'dialogue',
       path: '/dialogue',
-      aliases: [],
-      title: 'Conversational Dialogue',
+      aliases: ['/dialogues'],
+      title: 'Dialogues',
       i18nKey: 'navDialogue',
       group: 'Studio',
+      groupI18nKey: 'navGroupStudio',
     },
     pronunciation: {
       section: 'pronunciation',
       path: '/pronunciation',
-      aliases: [],
-      title: 'Pronunciation Lab',
+      aliases: ['/phonetics'],
+      title: 'Phonetics',
       i18nKey: 'navPronunciation',
       group: 'Studio',
+      groupI18nKey: 'navGroupStudio',
     },
     'transcript-lab': {
       section: 'transcript-lab',
       path: '/transcripts',
       aliases: ['/transcript-lab'],
-      title: 'Transcript Lab',
+      title: 'Transcripts',
       i18nKey: 'navTranscriptLab',
-      group: 'Studio',
-    },
-    'learning-library': {
-      section: 'learning-library',
-      path: '/library',
-      aliases: ['/learning-library'],
-      title: 'Generate Phrases',
-      i18nKey: 'navLearningLibrary',
-      group: 'Knowledge',
+      group: 'Lab',
+      groupI18nKey: 'navGroupLab',
     },
     'american-extractor': {
       section: 'american-extractor',
       path: '/extractor',
-      aliases: ['/american-extractor', '/american-english', '/phrases'],
-      title: 'Anything to Phrases',
+      aliases: ['/miner', '/phrase-miner', '/american-extractor', '/american-english', '/phrases'],
+      title: 'Phrase Miner',
       i18nKey: 'navExtractor',
-      group: 'Knowledge',
+      group: 'Lab',
+      groupI18nKey: 'navGroupLab',
+    },
+    'learning-library': {
+      section: 'learning-library',
+      path: '/library',
+      aliases: ['/builder', '/phrase-builder', '/learning-library'],
+      title: 'Phrase Builder',
+      i18nKey: 'navLearningLibrary',
+      group: 'Lab',
+      groupI18nKey: 'navGroupLab',
     },
     vocabulary: {
       section: 'vocabulary',
       path: '/vocabulary',
       aliases: [],
-      title: 'Vocabulary Vault',
+      title: 'Vocabulary',
       i18nKey: 'navVocabulary',
-      group: 'Knowledge',
+      group: 'Workspace',
+      groupI18nKey: 'navGroupWorkspace',
     },
     history: {
       section: 'history',
       path: '/history',
-      aliases: [],
-      title: 'History & Usage',
+      aliases: ['/activity'],
+      title: 'Activity',
       i18nKey: 'navHistory',
       group: 'Workspace',
+      groupI18nKey: 'navGroupWorkspace',
     },
   };
 
@@ -88,9 +96,16 @@
 
   function normalizeSectionAlias(raw) {
     const val = String(raw || '').trim().toLowerCase();
-    if (val === 'library' || val === 'learning-library') return 'learning-library';
+    if (val === 'shadowing' || val === 'lessons') return 'lessons';
+    if (val === 'dialogue' || val === 'dialogues') return 'dialogue';
+    if (val === 'pronunciation' || val === 'phonetics') return 'pronunciation';
+    if (val === 'library' || val === 'builder' || val === 'phrase-builder' || val === 'learning-library') {
+      return 'learning-library';
+    }
     if (
       val === 'extractor' ||
+      val === 'miner' ||
+      val === 'phrase-miner' ||
       val === 'american-english' ||
       val === 'american-extractor' ||
       val === 'phrases' ||
@@ -105,6 +120,7 @@
     ) {
       return 'transcript-lab';
     }
+    if (val === 'activity' || val === 'history') return 'history';
     if (ROUTE_TABLE[val]) return val;
     return null;
   }
@@ -113,8 +129,13 @@
     const pathname = normalizePath(loc.pathname);
     const params = new URLSearchParams(loc.search || '');
 
-    // Sub-routes: Learning Library (/library, /library/browse, /library/item/:id)
-    if (pathname === '/library/browse' || pathname === '/learning-library/browse') {
+    // Sub-routes: Phrase Builder (/library, /library/browse, /library/item/:id)
+    if (
+      pathname === '/library/browse' ||
+      pathname === '/builder/browse' ||
+      pathname === '/phrase-builder/browse' ||
+      pathname === '/learning-library/browse'
+    ) {
       return {
         section: 'learning-library',
         subview: 'browse',
@@ -124,7 +145,12 @@
         canonicalizedFromQuery: false,
       };
     }
-    if (pathname.startsWith('/library/item/') || pathname.startsWith('/learning-library/item/')) {
+    if (
+      pathname.startsWith('/library/item/') ||
+      pathname.startsWith('/builder/item/') ||
+      pathname.startsWith('/phrase-builder/item/') ||
+      pathname.startsWith('/learning-library/item/')
+    ) {
       const parts = pathname.split('/');
       const itemId = decodeURIComponent(parts[parts.length - 1] || '');
       return {
@@ -137,9 +163,11 @@
       };
     }
 
-    // Sub-routes: Anything to Phrases (/extractor, /extractor/library, /extractor/library/:id)
+    // Sub-routes: Phrase Miner (/extractor, /extractor/library, /extractor/library/:id)
     if (
       pathname === '/extractor/library' ||
+      pathname === '/miner/library' ||
+      pathname === '/phrase-miner/library' ||
       pathname === '/american-extractor/library' ||
       pathname === '/phrases/library'
     ) {
@@ -154,9 +182,13 @@
     }
     if (
       pathname.startsWith('/extractor/library/') ||
+      pathname.startsWith('/miner/library/') ||
+      pathname.startsWith('/phrase-miner/library/') ||
       pathname.startsWith('/american-extractor/library/') ||
       pathname.startsWith('/phrases/library/') ||
       pathname.startsWith('/extractor/note/') ||
+      pathname.startsWith('/miner/note/') ||
+      pathname.startsWith('/phrase-miner/note/') ||
       pathname.startsWith('/american-extractor/note/') ||
       pathname.startsWith('/phrases/note/')
     ) {
@@ -172,7 +204,7 @@
       };
     }
 
-    // Sub-routes: Transcript Lab (/transcripts, /transcripts/library, /transcripts/:id)
+    // Sub-routes: Transcripts (/transcripts, /transcripts/library, /transcripts/:id)
     if (pathname === '/transcripts/library' || pathname === '/transcript-lab/library') {
       return {
         section: 'transcript-lab',
@@ -329,10 +361,14 @@
     return '';
   }
 
-  function updateDocumentAndChrome(route) {
+  function updateDocumentAndChrome(route, opts = {}) {
     const def = ROUTE_TABLE[route.section] || ROUTE_TABLE.lessons;
     const translatedTitle =
       typeof labelTranslator === 'function' ? labelTranslator(def.i18nKey) || def.title : def.title;
+    const translatedGroup =
+      typeof labelTranslator === 'function' && def.groupI18nKey
+        ? labelTranslator(def.groupI18nKey) || def.group
+        : def.group;
     const subLabel = getSubViewLabel(route);
 
     document.title = subLabel
@@ -341,16 +377,26 @@
         ? 'Flaptap — Spoken English Studio'
         : `${translatedTitle} — Flaptap`;
 
-    // Sync left primary sidebar active link & ARIA
+    document.documentElement.setAttribute('data-active-section', route.section);
+
+    // Sync left primary sidebar active link & ARIA without displacing focus
+    let activeLinkEl = null;
     document.querySelectorAll('.sidebar-nav-link[data-route-section]').forEach((link) => {
       const isAct = link.dataset.routeSection === route.section;
       link.classList.toggle('active', isAct);
       if (isAct) {
         link.setAttribute('aria-current', 'page');
+        activeLinkEl = link;
       } else {
         link.removeAttribute('aria-current');
       }
     });
+
+    if (opts.scrollActiveIntoView && activeLinkEl && typeof activeLinkEl.scrollIntoView === 'function') {
+      try {
+        activeLinkEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      } catch {}
+    }
 
     // Sync crisp contextual Apple path bar inside the topbar
     const crumbEl = document.getElementById('topbar-breadcrumb');
@@ -368,7 +414,7 @@
 
       const groupSpan = document.createElement('span');
       groupSpan.className = 'crumb-group';
-      groupSpan.textContent = def.group;
+      groupSpan.textContent = translatedGroup;
       crumbEl.appendChild(groupSpan);
       crumbEl.appendChild(makeChevron());
 
@@ -395,7 +441,7 @@
   }
 
   function emitRouteChange(route, meta = {}) {
-    updateDocumentAndChrome(route);
+    updateDocumentAndChrome(route, { scrollActiveIntoView: meta.source === 'popstate' });
     for (const fn of listeners) {
       try {
         fn(route, meta);
@@ -442,29 +488,34 @@
     return updated;
   }
 
+  const CANONICALIZABLE_ALIASES = new Set([
+    '/index.html',
+    '/lessons',
+    '/shadowing',
+    '/dialogues',
+    '/phonetics',
+    '/learning-library',
+    '/builder',
+    '/phrase-builder',
+    '/american-extractor',
+    '/miner',
+    '/phrase-miner',
+    '/american-english',
+    '/phrases',
+    '/transcript-lab',
+    '/activity',
+  ]);
+
   function canonicalizeInitialUrl() {
     const parsed = parseLocation(global.location);
-    if (parsed.canonicalizedFromQuery) {
+    const normPath = normalizePath(global.location.pathname);
+    if (parsed.canonicalizedFromQuery || CANONICALIZABLE_ALIASES.has(normPath)) {
       const clean = buildUrl(parsed.section, {
         subview: parsed.subview,
         domainId: parsed.domainId,
         noteId: parsed.noteId,
-        preserveAuthParams: true,
-      });
-      global.history.replaceState({ section: parsed.section }, '', clean);
-    } else if (
-      normalizePath(global.location.pathname) === '/index.html' ||
-      normalizePath(global.location.pathname) === '/lessons' ||
-      normalizePath(global.location.pathname) === '/learning-library' ||
-      normalizePath(global.location.pathname) === '/american-extractor' ||
-      normalizePath(global.location.pathname) === '/american-english' ||
-      normalizePath(global.location.pathname) === '/phrases' ||
-      normalizePath(global.location.pathname) === '/transcript-lab'
-    ) {
-      const clean = buildUrl(parsed.section, {
-        subview: parsed.subview,
-        domainId: parsed.domainId,
-        noteId: parsed.noteId,
+        docId: parsed.docId,
+        view: parsed.searchParams?.get('view') || '',
         preserveAuthParams: true,
       });
       global.history.replaceState({ section: parsed.section }, '', clean);
@@ -540,6 +591,22 @@
     document.getElementById('sidebar-close-btn')?.addEventListener('click', closeMobileDrawer);
     document.getElementById('sidebar-backdrop')?.addEventListener('click', closeMobileDrawer);
 
+    // Accessible ArrowUp / ArrowDown / Home / End navigation across sidebar items
+    document.querySelector('.sidebar-nav')?.addEventListener('keydown', (e) => {
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+      const links = [...document.querySelectorAll('.sidebar-nav .sidebar-nav-link[data-route-section]')];
+      if (!links.length) return;
+      const idx = links.indexOf(document.activeElement);
+      if (idx === -1) return;
+      e.preventDefault();
+      let nextIdx = idx;
+      if (e.key === 'ArrowDown') nextIdx = (idx + 1) % links.length;
+      else if (e.key === 'ArrowUp') nextIdx = (idx - 1 + links.length) % links.length;
+      else if (e.key === 'Home') nextIdx = 0;
+      else if (e.key === 'End') nextIdx = links.length - 1;
+      links[nextIdx]?.focus();
+    });
+
     document.addEventListener('keydown', (e) => {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'b') {
         const tag = (e.target?.tagName || '').toLowerCase();
@@ -569,7 +636,7 @@
     } catch {}
     bindChromeEvents();
     const initialRoute = canonicalizeInitialUrl();
-    updateDocumentAndChrome(initialRoute);
+    updateDocumentAndChrome(initialRoute, { scrollActiveIntoView: true });
     return initialRoute;
   }
 

@@ -2,119 +2,111 @@
 
 > **MANDATORY CONSTITUTIONAL LAW FOR FLAPTAP**
 >
-> Cognitive linguistic work is performed **only** by configured AI models reached directly over HTTPS APIs (`AiProvidersModule` / `backend/src/core/ai/ai.client.ts`). There is **no CLI agent layer** and **zero static regex wordlists** pretending to do linguistic extraction. Application code handles deterministic plumbing: caption extraction, full-sentence & cohesive-paragraph timing alignment, encrypted BYOK vaulting, modular client/server URL routing, relational SQLite persistence, authentication, and editorial rendering.
+> Cognitive linguistic work is executed **only** by configured AI models over direct HTTPS APIs (`AiProvidersModule` / `AiClient`) — never via CLI agent adapters or static regex wordlists. Application code handles deterministic plumbing: caption extraction, millisecond sentence/paragraph alignment, AES-256-GCM BYOK vaulting, clean URL routing, SQLite persistence, authentication, and UI rendering.
 
 ---
 
-## 1. AI Transport: Direct Multi-Provider APIs & Shared Selector
+## 1. AI Transport & Shared Provider Selector
 
-1. **Unified Direct API Transport (`AiProvidersModule` + `AiClient`)**
-   - AI-powered workspace generators (`LearningLibrary`, `TechLinguist`) execute through [`AiProvidersService`](file:///Users/abdallah/workspace/flaptap/backend/src/modules/ai-providers/ai-providers.service.ts), supporting live `/models` probing, `models.dev` capability enrichment, streaming SSE with intra-key transient `429`/timeout failover, and per-user AES-256-GCM BYOK keys alongside `.env` system keys (`OPENCODE_GO_API_KEY`, etc.).
-   - Studio sentence pipelines (`ShadowingAnalysisService`, `ShadowingTranslationService`, `StreetTalkService`, `PhoneticsService`, `WordLookupService`) use [`AiClient`](file:///Users/abdallah/workspace/flaptap/backend/src/core/ai/ai.client.ts) (`reasoning_effort: "none"` for sub-second interactive Studio responsiveness).
-   - `.env` and personal BYOK keys must never be committed or exposed in client-accessible responses outside authenticated masked previews (`sk-••••abcd`).
-2. **One Reusable Selector UI & Zero CLI Agent Bloat**
-   - Every AI-configurable feature MUST mount the single shared frontend module [`FlaptapAiSelector`](file:///Users/abdallah/workspace/flaptap/frontend/ai-provider-selector.js) rather than inventing a parallel provider/model picker.
-   - Never reintroduce slow/hanging CLI agent adapters (`opencode-cli`, `claude-cli`, `antigravity-cli`) or static regex wordlists.
-   - Connected speech, expressions/idioms, contextual vocabulary, prosody coaching, word lookup, translation, dialogue generation, and pronunciation workouts are 100% model-authored via engineered prompts.
+1. **Direct Multi-Provider APIs (`AiProvidersModule` + `AiClient`)**
+   - Workspace generators (`Phrase Builder` / `learning-library`, `Phrase Miner` / `american-extractor`, `Transcripts` / `transcript-lab`) run through [`AiProvidersService`](file:///Users/abdallah/workspace/flaptap/backend/src/modules/ai-providers/ai-providers.service.ts), supporting live `/models` probing, `models.dev` capability enrichment, streaming SSE with transient `429`/timeout failover, and per-user AES-256-GCM BYOK keys alongside `.env` system keys.
+   - Studio sentence pipelines (`ShadowingAnalysisService`, `ShadowingTranslationService`, `StreetTalkService`, `PhoneticsService`, `WordLookupService`) use [`AiClient`](file:///Users/abdallah/workspace/flaptap/backend/src/core/ai/ai.client.ts) (`reasoning_effort: "none"` for sub-second Studio responsiveness).
+   - Never commit `.env` or expose raw secrets outside authenticated masked previews (`sk-••••abcd`).
+2. **Single Shared Provider UI**
+   - Every AI-configurable feature MUST mount [`FlaptapAiSelector`](file:///Users/abdallah/workspace/flaptap/frontend/ai-provider-selector.js) rather than creating a parallel provider/model picker.
+   - Connected speech, idioms, contextual vocabulary, prosody coaching, translations, dialogues, and phonetics workouts must remain 100% model-authored via engineered prompts.
 
 ---
 
-## 2. Cognitive & Segmentation Contracts
+## 2. Cognitive, Segmentation & Playback Contracts
 
 | Feature | Owner | Contract |
 | :--- | :--- | :--- |
-| **Dynamic AI Coach & Word Lookup** | `ShadowingAnalysisService` | Universal genre-adaptive prompt extracting verbatim-grounded Connected Speech (with IPA & mouth mechanics), Expressions/Idioms, Key Vocabulary, Prosody Brief, and Contextual Word Definitions. |
-| **World-Language Translation** | `ShadowingTranslationService` | Translate spoken English into 170+ languages (Arabic `ar` default). Standard register, preserve names & technical terms in Latin script (`<bdi class="tech-loanword" dir="ltr">` for RTL). |
-| **Dialogue Generation** | `StreetTalkService` | Author realistic spoken American dialogues with dynamic connected speech, expressions, and vocabulary. |
-| **Pronunciation Workouts** | `PhoneticsService` | Author physical articulatory workouts with IPA, tongue/jaw mechanics, and spoken lines. |
-| **Caption Extraction & Timing** | `TranscriptService` + Python helper | Mechanical JSON3 word-offset ingestion, rolling-cue deduplication, and accurate failure taxonomy. |
-| **Full-Sentence & Paragraph Segmentation** | `segmentation.ts` | Punctuated transcripts cut strictly at true grammatical sentence endings (`.`, `?`, `!`), never mid-sentence on caption cues or commas. Unpunctuated ASR streams combine acoustic pause absorption with syntactic completeness. Paragraphs (`ChunkItem[]`) are strictly contiguous unions of complete sentences. |
+| **Dynamic AI Coach & Word Lookup** | `ShadowingAnalysisService` | Verbatim-grounded Connected Speech (IPA + mouth mechanics), Expressions/Idioms, Key Vocabulary, Prosody Brief, and Contextual Word Definitions. |
+| **World-Language Translation** | `ShadowingTranslationService` | Translate spoken English into 170+ languages (`ar` default). Standard register; preserve names and technical terms in Latin script (`<bdi class="tech-loanword" dir="ltr">` for RTL). |
+| **Dialogue Generation** | `StreetTalkService` | Author realistic spoken American dialogues with connected speech, expressions, and vocabulary. |
+| **Phonetics Workouts** | `PhoneticsService` | Author articulatory workouts with IPA, tongue/jaw mechanics, and spoken drill lines. |
+| **Caption Extraction & Timing** | `TranscriptService` + Python helper | JSON3 word-offset ingestion, rolling-cue deduplication, and explicit failure taxonomy. |
+| **Sentence & Paragraph Alignment** | `segmentation.ts` | Punctuated transcripts cut strictly at grammatical sentence endings (`.`, `?`, `!`), never mid-sentence. Unpunctuated ASR combines acoustic pause absorption with syntactic completeness. `ChunkItem[]` paragraphs are strictly contiguous unions of complete sentences. |
 
 ### Playback Boundary Law
 
-- Prefer YouTube JSON3 per-word `tOffsetMs` values over interpolation.
-- Store and compare start/end times at **millisecond precision** (3 decimals).
-- Ensure sentence `endSec` absorbs the natural spoken acoustic release and decay tail (up to +420ms into any inter-sentence pause) while strictly bounding at least 50ms before the subsequent sentence onset.
-- Play through the sentence's full acoustic decay without mid-syllable clipping or premature truncation.
+- Prefer YouTube JSON3 per-word `tOffsetMs` values over interpolation; store and compare timings at **millisecond precision** (3 decimals).
+- Absorb natural acoustic decay at sentence end (up to `+420ms` into inter-sentence pauses) while staying at least `50ms` before the next sentence onset — zero mid-syllable clipping.
 - Preserve verbatim text character-for-character across all `<mark>` highlights (`highlightsAreVerbatim`).
 
 ### Caption Failure Contract
 
-- `video_unavailable` (404) — removed, private, or region-restricted video (no retry button);
-- `no_captions` (422) — no English caption track (no retry button);
-- `rate_limited` (503) — YouTube temporary throttle (retry offered);
-- `timeout` (503) — time budget exceeded (retry offered).
+- `video_unavailable` (`404`, no retry) · `no_captions` (`422`, no retry) · `rate_limited` (`503`, retry offered) · `timeout` (`503`, retry offered).
 
 ---
 
-## 3. Relational Persistence, Authentication, Caching & Performance
+## 3. Persistence, Auth Gate & Performance
 
-1. **Built-in SQLite WAL Engine (`node:sqlite`) & Strict Account Isolation**
-   - `SqliteService` manages `data/flaptap.sqlite` (`users`, `auth_sessions`, `lessons`, `vocabulary_items`, `practice_logs`) using Node's native `node:sqlite` (`DatabaseSync`, zero native compilation dependencies).
-   - **Zero Benefit Before Sign-In:** All UI sections and inputs are browseable by visitors, but every value-producing action prompts the user to sign in or create an account **before execution** (preserving and auto-resuming their pending action) and every protected backend route enforces `requireAuthenticatedUser` (`401 auth_required`) with strict `WHERE user_id = ?` isolation.
-   - `AuthService` provides `scrypt` email/password accounts, `HttpOnly` session cookies + Bearer tokens, active session revocation, password management, and full account deletion.
-   - `HistoryRepository` & `VocabularyService` power the **History, Caching & Usage Control Center** (per-lesson & global cache clearing across transcripts/coach/translations, cache-bypass `force` re-extraction, progress reset, bulk operations, activity log controls, full JSON account export) and spaced active-recall flashcards (`mastery_level` 0–4).
+1. **Native SQLite WAL (`node:sqlite`) & Strict Isolation**
+   - `SqliteService` manages `data/flaptap.sqlite` using Node's native `DatabaseSync` (`node:sqlite`).
+   - **Zero Benefit Before Sign-In:** Visitors can browse all UI surfaces, but every value-producing action opens the auth gate before execution (saving and auto-resuming the pending action), and every protected route enforces `requireAuthenticatedUser` (`401 auth_required`) with `WHERE user_id = ?`.
+   - `AuthService` handles `scrypt` accounts, `HttpOnly` cookies + Bearer tokens, session revocation, and full account deletion.
+   - `HistoryRepository` & `VocabularyService` power the **Activity & Cache** control center (per-item & global cache clearing, `force` re-extraction, progress reset, bulk operations, JSON backup export) and SRS flashcards (`mastery_level` 0–4).
 2. **Instant Video Open Path**
-   - `POST /api/tracks/shadowing/process` performs caption extraction + deterministic full-sentence/paragraph segmentation + SQLite save and returns immediately.
-   - Dynamic AI Coach analysis (`POST /api/tracks/shadowing/analyze`) runs asynchronously once the Studio renders and caches permanently in SQLite.
+   - `POST /api/tracks/shadowing/process` extracts captions, segments sentences/paragraphs deterministically, saves to SQLite, and returns immediately; AI Coach (`POST /api/tracks/shadowing/analyze`) runs asynchronously afterward and caches in SQLite.
 3. **Zero External Font or Render-Blocking Assets**
-   - System editorial font stacks (`Iowan Old Style` / `Charter` / `Georgia` + system UI sans + monospace strictly for timestamps/IPA).
+   - Native system font stacks (`SF Pro Display`, `SF Pro Text`, `SF Mono` via `design-tokens.css` — zero Google Fonts or external font CDN requests).
 
 ---
 
-## 4. Paper & Vox Editorial Frontend Laws
+## 4. UI Architecture, Sidebar Governance & Brand System
 
-- Minimal, paper-tactile (`#F6F4EE` / `#FCFBF7` newsprint + `#141413` ink + `#FFF04B` Vox highlighter yellow) Light Mode and matte carbon (`#121210` / `#191916`) Dark Mode.
-- Authored 1.5px stroke SVG icons everywhere — zero emojis, zero static example chips under inputs, zero purple AI gradients.
-- English (`en`, LTR) default UI with multi-language support (`ar` RTL, `es`, `fr`, `de`, `tr`).
-- Flexible video docking: **Transcript** (35% Video Stage · 65% Sentence Learning Canvas) and **Theater** (65% Video Cinema Stage · 35% Compact Sentence Rail), and scalable primary Studio learning modes (`Shadow` | `Read` | `Listen` | `Coach` | `Notes`) switch in 0ms client-side without reloading the page or remounting the YouTube player.
-- Timestamp and IPA spans enforce `direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums`.
+- **Apple Liquid Glass & Tactile Design Tokens:** All styles consume [`design-tokens.css`](file:///Users/abdallah/workspace/flaptap/frontend/design-tokens.css) and [`apple-components.css`](file:///Users/abdallah/workspace/flaptap/frontend/apple-components.css) (`#F5F5F7` / `#FFFFFF` Light Mode, `#000000` / `#1C1C1E` OLED Dark Mode, `#0071E3` / `#0A84FF` accent).
+- **Editorial Polish:** 1.5–1.75px stroke SVG icons everywhere — zero emojis, zero demo chips under inputs, zero purple AI gradients.
+- **Localization & Bidi:** English (`en`, LTR) default UI with full `ar` (RTL), `es`, `fr`, `de`, `tr` support. Timestamp and IPA spans enforce `direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums`.
+- **Studio Docking & Modes:** **Transcript** (`35%` video / `65%` canvas) and **Theater** (`65%` video / `35%` rail) docking, plus 5 client-side modes (`Shadow` | `Read` | `Listen` | `Coach` | `Notes`) switching in `0ms` without remounting the player.
 
-### Modular Feature Architecture, Dedicated URL Routing & Primary Navigation Law (Mandatory)
+### Sidebar Taxonomy, Naming & Brand Governance Law (Mandatory & Scalable)
 
-1. **Dedicated Page URL & Refresh Persistence (No Home-URL Trapping)**
-   - Every top-level feature MUST own a dedicated clean URL route (`/feature`) and meaningful sub-routes (`/feature/subview`, `/feature/item/:id`) rather than toggling hidden DOM panels on `/`.
-   - Any new feature route MUST be registered in **both**:
-     1. Backend static/HTML route manifest (`backend/src/core/config/frontend-routes.ts`) so direct loads and hard refreshes (`Cmd+R` / `F5`) return `200 OK` while keeping `/api/*` strictly isolated.
-     2. Frontend History API router (`frontend/router.js`, `FlaptapRouter`) handling `pushState` / `replaceState`, `popstate` (Back/Forward), document `<title>`, breadcrumbs, and sub-route query/path restoration.
-   - Any multi-view feature (`LearningLibrary`, `TechLexicon`, `Vocabulary`, `History`) MUST synchronize sub-views/filters via `FlaptapRouter.updateSubroute(...)` so refreshing mid-workflow keeps the user on that exact view instead of snapping back to `/`.
-   - Always reference stylesheets and scripts in HTML templates with root-relative paths (`/styles.css`, `/feature.js`) so nested feature sub-routes resolve static assets accurately on hard refresh.
-2. **Modular Feature Encapsulation (Zero Monolith Dumping)**
-   - Every new feature MUST ship as an isolated backend module (`backend/src/modules/<feature>/`) AND isolated frontend module (`frontend/<feature>.js` + optional `frontend/<feature>.css`) interacting with the shell exclusively through `FlaptapWorkspace`, `FlaptapRouter`, `FlaptapAiSelector`, and `FlaptapWordLookup`.
-   - Future AI agents are forbidden from embedding large feature implementations inside `frontend/app.js` or creating duplicate settings/provider pickers.
-3. **Left Primary Sidebar Navigation & Minimal Topbar Law**
-   - Primary site navigation lives exclusively inside the Left Primary Sidebar Navigation Rail (`.app-sidebar`), organized by domain group (`Studio`, `Knowledge`, `Workspace`) with keyboard-accessible collapse (`Cmd+B`) and mobile off-canvas drawer (`<= 960px`).
-   - Future AI agents are strictly forbidden from adding horizontal navigation tabs back into the top bar (`.workspace-topbar`). The top bar is reserved exclusively for mobile menu trigger, contextual page breadcrumb, and global utilities (streak, UI language, light/dark toggle, install, account).
-   - Remove redundant jump links and legacy hidden DOM duplicates—each navigation action has one authoritative location.
+Every AI agent modifying, renaming, or adding any workspace feature MUST follow this taxonomy and naming system so the sidebar stays cohesive, memorable, and scalable as Flaptap grows:
 
-### Real Derived Completion Law (Website-Wide Invariant)
+1. **Three-Pillar Scalable Category Architecture**
+   - **Studio** *(Active Speaking & Drill Studios — sessions that open in `/studio`)*:
+     - `Shadowing` (`/`, `lessons`) · `Dialogues` (`/dialogue`, `dialogue`) · `Phonetics` (`/pronunciation`, `pronunciation`)
+   - **Lab** *(Media Capture, Extraction & Phrase Authoring Tools)*:
+     - `Transcripts` (`/transcripts`, `transcript-lab`) · `Phrase Miner` (`/extractor`, `american-extractor`) · `Phrase Builder` (`/library`, `learning-library`)
+   - **Workspace** *(Personal Memory, Progress, Cache & System Control)*:
+     - `Vocabulary` (`/vocabulary`, `vocabulary`) · `Activity` (`/history`, `history`)
+   - **Footer Control Dock:** Global system utilities (`AI Models` modal trigger + rail shortcut hint).
+   - **Scaling Rule:** Place any new feature into the pillar matching its **primary user job** (`Studio` = live speaking practice, `Lab` = media/text processing & generation, `Workspace` = personal data, recall & settings). Only create a new category if a pillar grows beyond 4–5 items OR a feature introduces a fundamentally distinct domain (e.g., `Community` or `Curriculum`) with at least 2 sibling items — **never create a 1-item orphan group**.
 
-- **Zero Fake Completion Controls:** Never add manual "Mark Complete" buttons or container-level completion toggle switches on any multi-item learning entity (Anything to Phrases Study Guides, Tech Lexicon notes, Shadowing/Dialogue/Pronunciation Lessons, History Ledger rows, or future multi-item features).
-- **Strict Derivation from Child Items:** A container entity is in the `Completed` (`done`) state **if and only if** every checkable item it contains is checked off (`totalItems > 0 && completedItems === totalItems`). If even one child item is unchecked, the container MUST NOT be marked completed (`progress` when `completedItems > 0`, `new` when `0`).
-- **Single Source of Truth:** Users check or uncheck individual atomic items (phrases, sentences, paragraphs, vocab terms, idioms, patterns, flashcards). Both backend repositories and frontend views MUST derive and persist parent completion strictly from those child item states—never trust or expose a manual container-level override.
+2. **Brand Naming Contract (Short, Expressive, Parallel)**
+   - **1–2 Words, ≤ 15 Characters:** Fits cleanly at `248px` desktop and `212px` tablet width without wrapping or truncation.
+   - **Noun-First Functional Clarity:** Use concrete, memorable studio/tool nouns (`Shadowing`, `Dialogues`, `Phonetics`, `Transcripts`, `Phrase Miner`, `Phrase Builder`, `Vocabulary`, `Activity`).
+   - **Forbidden Patterns:** Never use imperative CTA verbs (`Generate...`, `Create...`), marketing taglines (`Anything to...`), or ampersands (`X & Y`) in sidebar labels.
+   - **Cross-Surface Parity:** The sidebar label, topbar breadcrumb, `<title>`, section `<h1>`, `I18N` translations, and collapsed `data-tooltip` MUST all use the same canonical name.
 
-### Independent Dual-Pane Studio Scrolling Law (Strict Invariant)
+3. **Zero-FOUC Refresh & Sidebar State Integrity**
+   - **Pre-Paint Hydration:** Static HTML in [`index.html`](file:///Users/abdallah/workspace/flaptap/frontend/index.html) MUST NOT hardcode `.active` on the first nav link or leave `#section-lessons` unhidden. Synchronous `<head>` + inline shell scripts resolve `data-sidebar="collapsed"`, active `.sidebar-nav-link`, and visible `<section>` before first paint so hard refreshes (`Cmd+R` / `F5`) never flash or jump focus to item #1.
+   - **Focus & Scroll Preservation:** Route sync (`FlaptapRouter.updateDocumentAndChrome`) updates `.active` and `aria-current="page"` and calls `scrollIntoView({ block: 'nearest' })` on initial/popstate load without stealing `document.activeElement`. Keyboard navigation supports `ArrowUp`/`ArrowDown`/`Home`/`End` across links and `Cmd+B` rail toggle.
+   - **Clean URL & Sub-Route Preservation:** All routes and sub-routes (`/feature`, `/feature/subview`, `/feature/:id`) MUST be registered in both [`frontend-routes.ts`](file:///Users/abdallah/workspace/flaptap/backend/src/core/config/frontend-routes.ts) and [`router.js`](file:///Users/abdallah/workspace/flaptap/frontend/router.js), preserving `docId`, `noteId`, and query params across refreshes and canonicalization. Always use root-relative asset paths (`/styles.css`, `/feature.js`).
 
-- **Desktop Viewport Lock (> 768px):** Viewport is fixed (`html:has(.studio-body), .studio-body { height: 100dvh; overflow: hidden; }`). The topbar is fixed (`flex-shrink: 0`).
-- **Strict Dual-Pane Scroll Isolation:** Media Deck (`.studio-deck`) and Primary Learning Canvas (`.studio-canvas`) MUST scroll as completely isolated, independent scroll containers (`height: 100%; max-height: 100%; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain;`).
-- **Zero Cross-Pane Displacement:** Scrolling through sentences, transcripts, notes, or controls on either pane MUST NEVER scroll or displace the other pane or the outer window (`window.scrollY` remains 0 at all times).
-- **Mobile Graceful Degradation (<= 768px):** Viewport and workspace revert to standard document flow (`height: auto; overflow-y: auto;`) for native single-column phone ergonomics.
-- **Future AI Agent Invariant:** Future AI agents and developers are strictly forbidden from removing independent pane scrolling or reverting the Studio desktop workspace to window-level scrolling.
+4. **Modular Feature Encapsulation & Minimal Topbar**
+   - Every feature lives in an isolated backend module (`backend/src/modules/<feature>/`) and isolated frontend module (`frontend/<feature>/`) talking to the shell solely via `FlaptapWorkspace`, `FlaptapRouter`, `FlaptapAiSelector`, and `FlaptapWordLookup` — never dump large feature code into `frontend/app.js`.
+   - Primary navigation lives exclusively in `.app-sidebar`. Never add horizontal nav tabs into `.workspace-topbar` (reserved for mobile drawer trigger, contextual breadcrumb, and global utilities: streak, UI language, theme, install, account).
 
-### Theater Mode Under-Video Controller Symmetry Law
+### Real Derived Completion Law
 
-- In Theater mode (`data-layout="theater"` / `data-layout="focus"`), `.deck-controls-stack` MUST format as a 2-column balanced grid (`display: grid; grid-template-columns: 1fr 1fr; gap: 12px;`) to completely eliminate all blank void space beneath the video stage.
-- Row 1: `Master Transport` (Col 1) and `Playback Speed` (Col 2).
-- Row 2: `Voice Comparison` (Col 1) and `Sentence Flow` (Col 2).
-- Row 3: `Language Console` (`.translation-deck-panel`) spanning full width (`grid-column: 1 / -1`).
-- Row 4: `Shortcuts Strip` (`.shortcuts-strip`) spanning full width (`grid-column: 1 / -1`).
-- Future AI agents must never collapse controls into a single left-aligned column with an empty right-hand void in Theater mode.
+- **Zero Manual Completion Overrides:** Never add container-level "Mark Complete" buttons or toggles on multi-item learning entities (`Phrase Miner` guides, `Phrase Builder` items, `Transcripts`, `Shadowing`/`Dialogues`/`Phonetics` lessons, or `Activity` rows).
+- **Strict Child Derivation:** A container is `Completed` (`done`) **if and only if** `totalItems > 0 && completedItems === totalItems` (`progress` when `completedItems > 0`, `new` when `0`). Backend repositories and frontend views must compute completion strictly from checked child items.
+
+### Studio Layout Invariants
+
+- **Independent Dual-Pane Desktop Scrolling (`> 768px`):** `.studio-body` locks to `100dvh` (`overflow: hidden`); `.studio-deck` and `.studio-canvas` scroll independently (`overflow-y: auto; overscroll-behavior: contain`) with `window.scrollY === 0`. Mobile (`<= 768px`) reverts to single-column document flow.
+- **Theater Mode Grid Symmetry:** Under `data-layout="theater"` / `data-layout="focus"`, `.deck-controls-stack` uses a balanced 2-column grid (`grid-template-columns: 1fr 1fr; gap: 12px`): Row 1 (`Master Transport` + `Playback Speed`), Row 2 (`Voice Comparison` + `Sentence Flow`), Row 3 (`.translation-deck-panel`, `1 / -1`), Row 4 (`.shortcuts-strip`, `1 / -1`).
 
 ---
 
-## 5. Testing & Enforcement
+## 5. Verification & Hygiene
 
-- Build TypeScript: `npm run build` (`cd backend && npm run build`).
-- Offline timing unit suite: `npm run test:timing`.
-- Full production E2E suite (API + SQLite + Auth + Dynamic AI + Puppeteer Browser): `npm run test:e2e`.
+- Typecheck & build: `npm run build` (`cd backend && npm run build`)
+- Offline timing unit suite: `npm run test:timing`
+- Feature unit suites: `npm run test:extractor:unit` · `npm run test:transcript:unit`
+- Full production E2E suite: `npm run test:e2e`
 - Never commit `.env`, API keys, `data/*.sqlite*`, or temporary artifacts.

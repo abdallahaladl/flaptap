@@ -13,14 +13,18 @@
   const I18N = {
     en: {
       brandEdition: 'Spoken English Studio',
-      navLessons: 'Lessons',
-      navDialogue: 'Dialogue',
-      navPronunciation: 'Pronunciation',
-      navTranscriptLab: 'Transcript Lab',
+      navGroupStudio: 'Studio',
+      navGroupLab: 'Lab',
+      navGroupWorkspace: 'Workspace',
+      navLessons: 'Shadowing',
+      navDialogue: 'Dialogues',
+      navPronunciation: 'Phonetics',
+      navTranscriptLab: 'Transcripts',
+      navExtractor: 'Phrase Miner',
+      navLearningLibrary: 'Phrase Builder',
       navVocabulary: 'Vocabulary',
-      navHistory: 'History & Usage',
-      navLearningLibrary: 'Generate Phrases',
-      navExtractor: 'Anything to Phrases',
+      navHistory: 'Activity',
+      navAiModels: 'AI Models',
       streakUnit: 'day streak',
       signIn: 'Sign in',
       createAccount: 'Create account',
@@ -78,7 +82,7 @@
       practiceFlashcardsBtn: 'Practice Flashcards',
       hideFlashcardsBtn: 'Hide Flashcards',
       emptyVocabTitle: 'No saved words yet',
-      emptyVocabDesc: 'Click any word while studying a lesson or save expressions from the Coach tab to build your personal vocabulary deck.',
+      emptyVocabDesc: 'Click any word in Shadowing, Phrase Miner, or Phrase Builder to save contextual definitions and unlock spaced flashcards.',
       gateVocabTitle: 'Sign in to unlock your Vocabulary Vault & Spaced Flashcards',
       gateVocabDesc: 'Save contextual definitions, connected-speech expressions, and IPA pronunciations while studying—then review them with active-recall flashcards.',
       clickToReveal: 'Click to reveal meaning',
@@ -170,14 +174,18 @@
     },
     ar: {
       brandEdition: 'استوديو الإنجليزية المنطوقة',
-      navLessons: 'الدروس',
-      navDialogue: 'المحادثات',
-      navPronunciation: 'النطق',
-      navTranscriptLab: 'Transcript Lab',
+      navGroupStudio: 'الاستوديو',
+      navGroupLab: 'المختبر',
+      navGroupWorkspace: 'مساحة العمل',
+      navLessons: 'الترديد',
+      navDialogue: 'الحوارات',
+      navPronunciation: 'الصوتيات',
+      navTranscriptLab: 'النصوص',
+      navExtractor: 'استخراج العبارات',
+      navLearningLibrary: 'بناء العبارات',
       navVocabulary: 'المفردات',
-      navHistory: 'السجل والاستخدام',
-      navLearningLibrary: 'Generate Phrases',
-      navExtractor: 'Anything to Phrases',
+      navHistory: 'النشاط',
+      navAiModels: 'نماذج الذكاء',
       streakUnit: 'أيام متتالية',
       signIn: 'تسجيل الدخول',
       createAccount: 'إنشاء حساب',
@@ -271,13 +279,18 @@
     },
     es: {
       brandEdition: 'Estudio de Inglés Hablado',
-      navLessons: 'Lecciones',
-      navDialogue: 'Diálogo',
-      navPronunciation: 'Pronunciación',
+      navGroupStudio: 'Estudio',
+      navGroupLab: 'Laboratorio',
+      navGroupWorkspace: 'Espacio',
+      navLessons: 'Shadowing',
+      navDialogue: 'Diálogos',
+      navPronunciation: 'Fonética',
+      navTranscriptLab: 'Transcripciones',
+      navExtractor: 'Extractor',
+      navLearningLibrary: 'Creador',
       navVocabulary: 'Vocabulario',
-      navHistory: 'Historial y Uso',
-      navLearningLibrary: 'Generate Phrases',
-      navExtractor: 'Anything to Phrases',
+      navHistory: 'Actividad',
+      navAiModels: 'Modelos IA',
       streakUnit: 'días seguidos',
       signIn: 'Iniciar sesión',
       createAccount: 'Crear cuenta',
@@ -294,13 +307,18 @@
     },
     fr: {
       brandEdition: 'Studio d’Anglais Parlé',
-      navLessons: 'Leçons',
-      navDialogue: 'Dialogue',
-      navPronunciation: 'Prononciation',
+      navGroupStudio: 'Studio',
+      navGroupLab: 'Labo',
+      navGroupWorkspace: 'Espace',
+      navLessons: 'Shadowing',
+      navDialogue: 'Dialogues',
+      navPronunciation: 'Phonétique',
+      navTranscriptLab: 'Transcriptions',
+      navExtractor: 'Extracteur',
+      navLearningLibrary: 'Générateur',
       navVocabulary: 'Vocabulaire',
-      navHistory: 'Historique',
-      navLearningLibrary: 'Generate Phrases',
-      navExtractor: 'Anything to Phrases',
+      navHistory: 'Activité',
+      navAiModels: 'Modèles IA',
       streakUnit: 'jours de suite',
       signIn: 'Connexion',
       createAccount: 'Créer un compte',
@@ -317,13 +335,18 @@
     },
     de: {
       brandEdition: 'Studio für Gesprochenes Englisch',
-      navLessons: 'Lektionen',
-      navDialogue: 'Dialog',
-      navPronunciation: 'Aussprache',
+      navGroupStudio: 'Studio',
+      navGroupLab: 'Labor',
+      navGroupWorkspace: 'Arbeitsbereich',
+      navLessons: 'Shadowing',
+      navDialogue: 'Dialoge',
+      navPronunciation: 'Phonetik',
+      navTranscriptLab: 'Transkripte',
+      navExtractor: 'Phrase Miner',
+      navLearningLibrary: 'Phrase Builder',
       navVocabulary: 'Vokabeln',
-      navHistory: 'Verlauf & Cache',
-      navLearningLibrary: 'Generate Phrases',
-      navExtractor: 'Anything to Phrases',
+      navHistory: 'Aktivität',
+      navAiModels: 'KI-Modelle',
       streakUnit: 'Tage Serie',
       signIn: 'Anmelden',
       createAccount: 'Konto erstellen',
@@ -340,13 +363,18 @@
     },
     tr: {
       brandEdition: 'Konuşma İngilizcesi Stüdyosu',
-      navLessons: 'Dersler',
-      navDialogue: 'Diyalog',
-      navPronunciation: 'Telaffuz',
+      navGroupStudio: 'Stüdyo',
+      navGroupLab: 'Laboratuvar',
+      navGroupWorkspace: 'Çalışma Alanı',
+      navLessons: 'Gölgeleme',
+      navDialogue: 'Diyaloglar',
+      navPronunciation: 'Fonetik',
+      navTranscriptLab: 'Metinler',
+      navExtractor: 'İfade Çıkarıcı',
+      navLearningLibrary: 'İfade Üretici',
       navVocabulary: 'Kelimeler',
-      navHistory: 'Geçmiş ve Önbellek',
-      navLearningLibrary: 'Generate Phrases',
-      navExtractor: 'Anything to Phrases',
+      navHistory: 'Etkinlik',
+      navAiModels: 'YZ Modelleri',
       streakUnit: 'gün seri',
       signIn: 'Giriş yap',
       createAccount: 'Hesap oluştur',
@@ -3014,22 +3042,20 @@
      ======================================================================== */
 
   document.addEventListener('DOMContentLoaded', async () => {
-    applyTheme(state.theme);
-    applyUiLanguage(state.uiLang);
-    bindEvents();
-
     const params = new URLSearchParams(window.location.search);
-    const authRequired = params.get('auth') === 'required';
-    const nextHref = params.get('next');
-    const authError = params.get('auth_error');
-
     const initialRoute = window.FlaptapRouter
       ? window.FlaptapRouter.initShell({ translator: t })
       : { section: 'lessons', searchParams: params };
 
-    // Immediately show the route's panel before async session fetch while
-    // preserving the browser's restored scroll position on page refresh.
+    // Immediately ensure the active route's panel & chrome match before async tasks
     activateSectionPanel(initialRoute.section, { preserveScroll: true });
+    applyTheme(state.theme);
+    applyUiLanguage(state.uiLang);
+    bindEvents();
+
+    const authRequired = params.get('auth') === 'required';
+    const nextHref = params.get('next');
+    const authError = params.get('auth_error');
 
     if (window.FlaptapRouter) {
       window.FlaptapRouter.onRouteChange((route) => {
