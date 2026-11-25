@@ -138,6 +138,14 @@ const PRE_NOMINAL_MODIFIERS = new Set([
   'last', 'next', 'other', 'another', 'same', 'different', 'complete', 'huge', 'tiny',
   'little', 'big', 'small', 'long', 'short', 'programming', 'random', 'mental', 'useful',
   'basic', 'entire', 'specific', 'actual', 'dramatically', 'completely', 'especially',
+  'all', 'both', 'many', 'most', 'several', 'few', 'exponential', 'modern', 'natural',
+  'computer', 'social', 'human', 'public', 'private', 'total', 'average', 'main', 'major',
+]);
+
+/** Auxiliaries/copulas that must stay attached to their subject unless a comma/pause precedes them. */
+const AUX_VERBS_AFTER_SUBJECT = new Set([
+  'is', 'are', 'was', 'were', 'am', 'be', 'been', 'will', 'would', 'can', 'could', 'should',
+  'must', 'may', 'might', 'has', 'have', 'had', 'does', 'did', 'means', 'makes', 'gets',
 ]);
 
 export function formatSentenceText(rawText: string): string {
@@ -524,6 +532,14 @@ function splitLongSentence(
     }
     if (isModifierNounCut) {
       cost += 11; // Keep attributive modifier + noun ("new programming | language", "mental | model") together
+    }
+    if (
+      !hasPunctuation &&
+      effectivePause < 0.28 &&
+      AUX_VERBS_AFTER_SUBJECT.has(next.clean) &&
+      !NON_TERMINAL_WORDS.has(prev.clean)
+    ) {
+      cost += 9; // Keep subject + auxiliary together ("all encryption | is broken")
     }
     if (!hasPunctuation && effectivePause < 0.22 && RIGHT_ATTACHING_MODIFIERS.has(prev.clean)) {
       cost += 8; // Keep right-attaching modifiers glued to the word they modify
