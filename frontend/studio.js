@@ -1729,7 +1729,9 @@
     const revPill = document.getElementById('studio-review-status-pill');
     if (revPill) {
       revPill.hidden = !item.transcriptData;
-      revPill.textContent = isReviewed ? 'AI Reviewed' : 'Raw Ready';
+      const textSpan = revPill.querySelector('.studio-review-pill-text');
+      if (textSpan) textSpan.textContent = isReviewed ? 'AI Reviewed' : 'Raw Ready';
+      else revPill.textContent = isReviewed ? 'AI Reviewed' : 'Raw Ready';
       revPill.classList.toggle('is-reviewed', isReviewed);
     }
 
@@ -2877,6 +2879,7 @@
   }
 
   function updateActiveSentenceDom(index) {
+    clearActiveKaraokeWord();
     document.querySelectorAll('.sentence-driller-card.active-drilling').forEach((el) =>
       el.classList.remove('active-drilling'),
     );
@@ -2984,13 +2987,50 @@
       if (track) track.setAttribute('aria-valuenow', String(Math.round(pct)));
     }
 
-    const words = TT.getActiveWordStream(studioState.item, studioState.readView, studioState.mode);
-    if (!words.length) return;
+    // Never highlight a stale or previous sentence's word while a seek/loop restart is settling
+    if (studioState.pendingSeek) {
+      clearActiveKaraokeWord();
+      return;
+    }
+
+    const isRawView = studioState.mode === 'read' && studioState.readView === 'raw';
+    const activeSent = studioState.activeSentence;
+    const scopeToActiveSentence = Boolean(
+      !isRawView &&
+      activeSent &&
+      Array.isArray(activeSent.words) &&
+      activeSent.words.length > 0 &&
+      studioState.activeRange?.mode !== 'range',
+    );
+
+    const words = scopeToActiveSentence
+      ? activeSent.words
+      : TT.getActiveWordStream(studioState.item, studioState.readView, studioState.mode);
+    if (!words.length) {
+      clearActiveKaraokeWord();
+      return;
+    }
+
+    // Strict guard: never highlight words before the current sentence's first word or past its last word
+    if (scopeToActiveSentence) {
+      const firstStartMs = Number(words[0].startMs || 0);
+      const lastEndMs = Number(words[words.length - 1].endMs || 0);
+      if (nowMs < firstStartMs - 30 || nowMs > lastEndMs + 260) {
+        clearActiveKaraokeWord();
+        return;
+      }
+    }
+
     const hitIdx = TT.findWordAtTimeMs(words, nowMs);
-    if (hitIdx === studioState.activeWordIndex) return;
-    clearActiveKaraokeWord();
-    if (hitIdx < 0) return;
+    if (hitIdx < 0) {
+      clearActiveKaraokeWord();
+      return;
+    }
     const hitWord = words[hitIdx];
+    const hitWordKey = scopeToActiveSentence ? `${activeSent.index}:${hitWord.i}` : `all:${hitWord.i}`;
+    if (hitWordKey === studioState.activeWordIndex) return;
+    clearActiveKaraokeWord();
+
     const scopeSelector =
       studioState.mode === 'shadow'
         ? '#subview-sentences-list'
@@ -3001,11 +3041,12 @@
         : studioState.readView === 'raw'
         ? '#subview-raw-list'
         : '#subview-chunks-list';
-    const el = document.querySelector(`${scopeSelector} .studio-word[data-word-i="${hitWord.i}"]`);
+    const sentFilter = scopeToActiveSentence ? `[data-sent-index="${activeSent.index}"]` : '';
+    const el = document.querySelector(`${scopeSelector} .studio-word${sentFilter}[data-word-i="${hitWord.i}"]`);
     if (el) {
       el.classList.add('is-speaking');
       studioState.activeWordEl = el;
-      studioState.activeWordIndex = hitIdx;
+      studioState.activeWordIndex = hitWordKey;
     }
   }
 
@@ -3085,7 +3126,10 @@
     studioState.awaitingOnsetUnmute = true;
     studioState.lastSeekTime = Date.now();
     const clipLabel = document.getElementById('studio-active-clip-label');
-    if (clipLabel) clipLabel.textContent = opts.label || 'Playing clip';
+    if (clipLabel) {
+      clipLabel.textContent = opts.label || '';
+      clipLabel.hidden = !opts.label;
+    }
     try {
       if (typeof player.mute === 'function') player.mute();
       if (typeof player.setPlaybackRate === 'function') player.setPlaybackRate(studioState.speed);
@@ -3190,7 +3234,11 @@
     studioState.seekTargetStart = sentence.startSec;
     studioState.isPlaying = true;
     const clipLabel = document.getElementById('studio-active-clip-label');
-    if (clipLabel) clipLabel.textContent = `Line #${String(sentence.index).padStart(2, '0')}`;
+    if (clipLabel) {
+      clipLabel.textContent = '';
+      clipLabel.hidden = true;
+    }
+    clearActiveKaraokeWord();
     updateActiveSentenceDom(sentence.index);
     syncPlaybackButtonsDom();
 
@@ -3864,6 +3912,7 @@
           studioState.loopSentenceIndex === active.index || studioState.endAction === 'loop';
 
         if (shouldLoop) {
+          clearActiveKaraokeWord();
           studioState.pendingSeek = {
             targetSec: active.startSec,
             sentenceIndex: active.index,

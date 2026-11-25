@@ -78,8 +78,8 @@
         <div class="studio-title-block">
           <div class="studio-title-row" id="studio-title-row">
             <h1 id="studio-title" class="studio-title">Loading lesson...</h1>
-            <button type="button" class="icon-action icon-action--xs studio-rename-btn" id="studio-rename-btn" title="Rename lesson" aria-label="Rename lesson">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+            <button type="button" class="studio-rename-btn" id="studio-rename-btn" title="Rename lesson" aria-label="Rename lesson">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
             </button>
           </div>
           <div class="studio-title-edit-wrap" id="studio-title-edit-wrap" hidden>
@@ -89,14 +89,13 @@
           </div>
           <div class="studio-meta-line">
             <span id="studio-platform-badge" class="studio-platform-pill" hidden>YouTube</span>
-            <span id="studio-creator">—</span>
-            <button type="button" class="studio-inline-spk-btn" id="studio-single-spk-btn" hidden title="Rename speaker">Rename speaker</button>
-            <span aria-hidden="true">·</span>
-            <span id="studio-wpm" class="ltr-num">150 WPM</span>
-            <span aria-hidden="true">·</span>
-            <span id="studio-sentence-total" class="ltr-num">0 sentences</span>
+            <span id="studio-creator" class="studio-meta-creator">—</span>
+            <span class="studio-meta-sep" aria-hidden="true"></span>
+            <span id="studio-wpm" class="studio-meta-stat ltr-num">150 WPM</span>
+            <span class="studio-meta-dot" aria-hidden="true">·</span>
+            <span id="studio-sentence-total" class="studio-meta-stat ltr-num">0 sentences</span>
             <span id="studio-cefr-badge" class="cefr-pill ltr-num" hidden>B2</span>
-            <span id="studio-review-status-pill" class="studio-review-pill" hidden>Raw Ready</span>
+            <span id="studio-review-status-pill" class="studio-review-pill" hidden><span class="studio-status-dot" aria-hidden="true"></span><span class="studio-review-pill-text">Raw Ready</span></span>
           </div>
         </div>
       </div>
@@ -252,35 +251,39 @@
         </div>
       </div>
 
-      <!-- Millisecond Scrubbing Timeline, Live Clock & Quick Word Action -->
-      <div id="studio-timeline-bar" class="studio-timeline-bar" dir="ltr">
-        <div class="studio-timeline-top">
-          <span class="studio-clip-readout" id="studio-active-clip-label">Ready</span>
-          <div class="studio-timeline-right">
-            <button type="button" class="studio-define-pill" id="studio-define-word-btn" hidden>Define</button>
-            <button type="button" class="studio-video-toggle-pill" id="studio-video-toggle-btn" hidden title="Hide or show video frame (keeps audio playing)">Hide Video</button>
-            <span class="studio-ms-clock ltr-num"><span id="studio-clock-now">00:00.000</span> <span class="clock-sep">/</span> <span id="studio-clock-total">00:00.000</span></span>
+      <!-- Unified Apple Media Console (Timeline + Controls + Active Line + Live Status) -->
+      <div class="studio-media-console" id="studio-media-console">
+        <!-- Row 1: Precision Millisecond Timeline & Media View Toggle -->
+        <div id="studio-timeline-bar" class="studio-timeline-bar" dir="ltr">
+          <div class="studio-scrub-track" id="studio-scrub-track" role="slider" tabindex="0" aria-label="Millisecond playback timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="studio-scrub-fill" id="studio-scrub-fill" style="width: 0%;"></div>
+            <div class="studio-scrub-thumb" id="studio-scrub-thumb" style="left: 0%;"></div>
+            <div class="studio-scrub-tooltip ltr-num" id="studio-scrub-tooltip" hidden>00:00.000</div>
+          </div>
+          <div class="studio-timeline-top">
+            <div class="studio-timeline-left">
+              <span class="studio-ms-clock ltr-num"><span id="studio-clock-now">00:00.000</span> <span class="clock-sep">/</span> <span id="studio-clock-total">00:00.000</span></span>
+              <span class="studio-clip-readout" id="studio-active-clip-label" hidden></span>
+            </div>
+            <div class="studio-timeline-right">
+              <button type="button" class="studio-define-pill" id="studio-define-word-btn" hidden>Define</button>
+              <button type="button" class="studio-video-toggle-pill" id="studio-video-toggle-btn" hidden title="Hide or show video frame (keeps audio playing)">Hide Video</button>
+            </div>
           </div>
         </div>
-        <div class="studio-scrub-track" id="studio-scrub-track" role="slider" tabindex="0" aria-label="Millisecond playback timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
-          <div class="studio-scrub-fill" id="studio-scrub-fill" style="width: 0%;"></div>
-          <div class="studio-scrub-thumb" id="studio-scrub-thumb" style="left: 0%;"></div>
-          <div class="studio-scrub-tooltip ltr-num" id="studio-scrub-tooltip" hidden>00:00.000</div>
-        </div>
-      </div>
 
-      <!-- Shadow Pause Speaking Gap Countdown Bar -->
-      <div id="studio-shadow-pause-bar" class="studio-shadow-pause-bar" hidden>
-        <div class="studio-shadow-pause-top">
-          <span class="studio-shadow-countdown" id="studio-shadow-countdown">Speak now… 1.0s</span>
-          <button type="button" class="btn-secondary btn-xs" id="studio-skip-pause-btn">Skip Pause</button>
+        <!-- Shadow Pause Speaking Gap Countdown Bar -->
+        <div id="studio-shadow-pause-bar" class="studio-shadow-pause-bar" hidden>
+          <div class="studio-shadow-pause-top">
+            <span class="studio-shadow-countdown" id="studio-shadow-countdown">Speak now… 1.0s</span>
+            <button type="button" class="btn-secondary btn-xs" id="studio-skip-pause-btn">Skip Pause</button>
+          </div>
+          <div class="studio-shadow-track"><div class="studio-shadow-fill" id="studio-shadow-fill" style="width: 0%;"></div></div>
         </div>
-        <div class="studio-shadow-track"><div class="studio-shadow-fill" id="studio-shadow-fill" style="width: 0%;"></div></div>
-      </div>
 
-      <!-- Unified Apple Control Dock (Grouped by Category: Playback & Flow · Video Zoom & Focus · Speed · Tools) -->
-      <div class="studio-control-bar-host" dir="ltr">
-        <div id="studio-control-bar" class="studio-control-bar" role="toolbar" aria-label="Playback and study controls" dir="ltr">
+        <!-- Row 2: Unified Apple Control Bar (Playback & Flow · Framing & Zoom · Speed · Tools) -->
+        <div class="studio-control-bar-host" dir="ltr">
+          <div id="studio-control-bar" class="studio-control-bar" role="toolbar" aria-label="Playback and study controls" dir="ltr">
           <!-- Group 1: Playback Transport & Sentence Flow -->
           <div class="scb-pod scb-pod--primary">
             <div class="scb-cluster scb-cluster--playback" role="group" aria-label="Playback and sentence flow">
@@ -426,12 +429,13 @@
         <p class="deck-live-trans" id="deck-live-trans" dir="rtl" hidden></p>
       </div>
 
-      <!-- Compact Live Recording Strip (Visible ONLY while recording) -->
-      <div id="rec-live-floating" class="rec-live-floating" hidden>
-        <span class="rec-live-dot"></span>
-        <span class="rec-live-label" data-i18n="recRecording">Recording...</span>
-        <span id="rec-live-timer" class="rec-timer-badge ltr-num">00:00</span>
-        <div class="rec-vu-meter" style="flex: 1;"><div id="rec-live-vu-fill" class="rec-vu-fill" style="width: 0%;"></div></div>
+        <!-- Compact Live Recording Strip (Visible ONLY while recording) -->
+        <div id="rec-live-floating" class="rec-live-floating" hidden>
+          <span class="rec-live-dot"></span>
+          <span class="rec-live-label" data-i18n="recRecording">Recording...</span>
+          <span id="rec-live-timer" class="rec-timer-badge ltr-num">00:00</span>
+          <div class="rec-vu-meter" style="flex: 1;"><div id="rec-live-vu-fill" class="rec-vu-fill" style="width: 0%;"></div></div>
+        </div>
       </div>
     </aside>
 
@@ -508,6 +512,7 @@
                 <button type="button" class="studio-tool-pill" data-word-click-mode="from-here" aria-pressed="false" title="Click a word to play continuously from that millisecond (Shift+Click always plays from here)">From Here</button>
               </div>
               <button type="button" class="studio-tool-pill active" id="studio-toggle-repairs" hidden aria-pressed="true" title="Highlight AI ASR repairs">Repairs <span class="ltr-num" id="studio-repairs-count">0</span></button>
+              <button type="button" class="studio-tool-pill" id="studio-single-spk-btn" hidden title="Rename speaker">Speaker</button>
               <button type="button" class="studio-tool-pill" id="studio-copy-view-btn" title="Copy active view text">Copy View</button>
             </div>
           </div>
