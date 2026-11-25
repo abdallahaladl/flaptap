@@ -768,6 +768,22 @@ async function run() {
     assert.strictEqual(domSyncAudit.hitAtBusy, 5, 'Midpoint 1450ms resolves cleanly to busy.com/cody');
     ok('DOM word-timing decoration handles curly apostrophes, numbers, currency, times, URLs, acronyms & [ __ ] accurately');
 
+    const karaokeToggle = await page.evaluate(async () => {
+      const btn = document.getElementById('studio-toggle-karaoke');
+      if (!btn) return null;
+      const before = btn.getAttribute('aria-pressed');
+      btn.click();
+      const off = { pressed: btn.getAttribute('aria-pressed'), stored: localStorage.getItem('flaptap_karaoke') };
+      btn.click();
+      const on = { pressed: btn.getAttribute('aria-pressed'), stored: localStorage.getItem('flaptap_karaoke') };
+      return { before, off, on };
+    });
+    assert(karaokeToggle, 'Highlight toggle button exists');
+    assert.strictEqual(karaokeToggle.before, 'true');
+    assert.deepStrictEqual(karaokeToggle.off, { pressed: 'false', stored: 'off' });
+    assert.deepStrictEqual(karaokeToggle.on, { pressed: 'true', stored: 'on' });
+    ok('Live word Highlight toggle disables/enables and persists preference');
+
     ok('Zero uncaught browser errors across entire E2E flow');
 
     console.log('\n🎉 Consolidated Shadowing E2E Suite: ALL CHECKS PASSED!\n');

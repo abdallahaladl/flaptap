@@ -503,6 +503,7 @@
     wordClickMode: localStorage.getItem('flaptap_word_click_mode') || 'define', // 'define' | 'word' | 'from-here'
     wordCushion: localStorage.getItem('flaptap_word_cushion') || 'natural', // 'natural' | 'exact'
     showRepairs: true,
+    karaokeEnabled: localStorage.getItem('flaptap_karaoke') !== 'off',
     speakerFilter: 'all',
     speakerEditorOpen: false,
     searchQuery: '',
@@ -3091,6 +3092,12 @@
       if (fill) fill.style.width = `${pct.toFixed(2)}%`;
       if (thumb) thumb.style.left = `${pct.toFixed(2)}%`;
       if (track) track.setAttribute('aria-valuenow', String(Math.round(pct)));
+    }
+
+    // User preference: word-by-word live highlight can be switched off (timeline/clock still update)
+    if (!studioState.karaokeEnabled) {
+      clearActiveKaraokeWord();
+      return;
     }
 
     // Never highlight a stale or previous sentence's word while a seek/loop restart is settling
@@ -7001,6 +7008,24 @@
         nextPill.focus();
         switchStudioPacing(nextPill.dataset.pacing);
       }
+    });
+
+    const karaokeBtn = document.getElementById('studio-toggle-karaoke');
+    const syncKaraokeBtn = () => {
+      if (!karaokeBtn) return;
+      karaokeBtn.classList.toggle('active', studioState.karaokeEnabled);
+      karaokeBtn.setAttribute('aria-pressed', studioState.karaokeEnabled ? 'true' : 'false');
+      karaokeBtn.title = studioState.karaokeEnabled
+        ? 'Word-by-word live highlight is ON (click to turn off)'
+        : 'Word-by-word live highlight is OFF (click to turn on)';
+    };
+    syncKaraokeBtn();
+    karaokeBtn?.addEventListener('click', () => {
+      studioState.karaokeEnabled = !studioState.karaokeEnabled;
+      localStorage.setItem('flaptap_karaoke', studioState.karaokeEnabled ? 'on' : 'off');
+      if (!studioState.karaokeEnabled) clearActiveKaraokeWord();
+      syncKaraokeBtn();
+      showToast(studioState.karaokeEnabled ? 'Live word highlight on' : 'Live word highlight off');
     });
 
     document.getElementById('studio-toggle-repairs')?.addEventListener('click', () => {
