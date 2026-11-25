@@ -4,7 +4,11 @@ import * as path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { SqliteService } from './sqlite.service';
 import { escapeTranscriptHtml, highlightsAreVerbatim, sanitizeVerbatimHtml } from '../linguistics/highlights';
-import { segmentParagraphs, segmentSentences } from '../linguistics/segmentation';
+import {
+  segmentParagraphs,
+  segmentSentences,
+  ShadowingPacingMode,
+} from '../linguistics/segmentation';
 import type {
   ShadowingMediaPlayback,
   ShadowingTranscriptData,
@@ -159,7 +163,9 @@ export interface HistoryItem {
   };
   chunks?: ChunkItem[];
   sentences?: SentenceItem[];
+  pacingMode?: ShadowingPacingMode;
   translationsCache?: Record<string, Record<number, string>>;
+  translationsByText?: Record<string, Record<string, string>>;
   translationEngineVersion?: number;
   timingVersion?: number;
   segmentationVersion?: number;
@@ -216,6 +222,7 @@ export type HistorySummary = Omit<
   | 'sentences'
   | 'noteMarkdown'
   | 'translationsCache'
+  | 'translationsByText'
   | 'aiAnalysis'
   | 'completionProgress'
   | 'transcriptData'
@@ -934,6 +941,9 @@ export class HistoryRepository {
       if (!item.translationsCache && existing.translationsCache) {
         item.translationsCache = existing.translationsCache;
       }
+      if (!item.translationsByText && existing.translationsByText) {
+        item.translationsByText = existing.translationsByText;
+      }
       if (!item.coachGlosses && existing.coachGlosses) {
         item.coachGlosses = existing.coachGlosses;
       }
@@ -945,6 +955,14 @@ export class HistoryRepository {
     this.insertOrReplaceRow(item, scope);
     this.logger.log(`Stored new lesson in SQLite: ${item.title} (${item.id})`);
     return item;
+  }
+
+  saveItem(item: HistoryItem, scope?: RequestIdentityScope): HistoryItem {
+    this.insertOrReplaceRow(item, {
+      userId: item.userId ?? scope?.userId ?? null,
+      guestToken: item.guestToken ?? scope?.guestToken ?? null,
+    });
+    return this.findById(item.id, scope) || item;
   }
 
   update(id: string, updates: Partial<HistoryItem>, scope?: RequestIdentityScope): HistoryItem | undefined {
@@ -1041,6 +1059,7 @@ export class HistoryRepository {
 
     if (cacheScope === 'translations' || cacheScope === 'all') {
       item.translationsCache = {};
+      item.translationsByText = {};
       item.sentences = (item.sentences || []).map((s) => ({
         ...s,
         translations: {},

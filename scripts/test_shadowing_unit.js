@@ -25,6 +25,7 @@ const {
   assembleAlignedReviewedViews,
   applySpeakerOverridesToReviewed,
   buildRawTranscriptSnapshot,
+  regroupShadowingLessonByPacing,
 } = require(path.join(distRoot, 'modules/tracks/shadowing/utils/word-alignment.util.js'));
 
 const {
@@ -213,6 +214,140 @@ test('assembleAlignedReviewedViews automatically splits long 20+ word rambling s
   // Verify exact verbatim preservation across all split lines
   const rejoined = assembled.sentences.map((s) => s.text).join(' ');
   assert.strictEqual(rejoined, tokens.join(' '));
+});
+
+test('regroupShadowingLessonByPacing dynamically switches short <-> balanced <-> full with zero hard cuts, completion & translation preservation', () => {
+  const s1Tokens =
+    "But what I'm not going to do is repeat the past, where I envision myself living a completely different life and not creating a plan to take action on that.".split(
+      /\s+/,
+    );
+  const s2Tokens =
+    'And I think that this stems from me constantly living in this fight or flight experience with my career and with my life choices.'.split(
+      /\s+/,
+    );
+  const allTokens = [...s1Tokens, ...s2Tokens];
+  const rawWords = allTokens.map((word, i) => ({
+    i,
+    word,
+    clean: word.toLowerCase().replace(/[^a-z0-9']/g, ''),
+    startMs: i * 350,
+    endMs: i * 350 + 290,
+  }));
+
+  const reviewedParts = assembleAlignedReviewedViews({
+    rawWords,
+    draftSentences: [
+      { text: s1Tokens.join(' '), speaker: 'Miranda', paragraphIndex: 1, ideaIndex: 1 },
+      { text: s2Tokens.join(' '), speaker: 'Miranda', paragraphIndex: 1, ideaIndex: 1 },
+    ],
+    draftIdeas: [{ index: 1, title: 'Structure & Action', summary: 'Building a real plan.' }],
+    defaultSpeaker: 'Miranda',
+    pacingMode: 'short',
+  });
+
+  const lesson = {
+    id: 'lesson_pacing_unit',
+    track: 'shadowing',
+    trackTitle: 'Shadowing',
+    title: 'Dynamic Pacing Test',
+    creator: 'Miranda',
+    pacingMode: 'short',
+    sentences: reviewedParts.sentences.map((s) => ({
+      ...s,
+      timeRange: '00:00.000 - 00:01.000',
+      durationSec: Number(((s.endMs - s.startMs) / 1000).toFixed(3)),
+      highlightedHtml: s.text,
+    })),
+    chunks: reviewedParts.paragraphs.map((p) => ({
+      ...p,
+      timeRange: '00:00.000 - 00:05.000',
+      highlightedHtml: p.text,
+    })),
+    sentencesCount: reviewedParts.sentences.length,
+    chunksCount: reviewedParts.paragraphs.length,
+    completionProgress: { sentences: [], listen: [], paragraphs: [] },
+    translationsCache: { ar: {} },
+    transcriptData: {
+      sourceType: 'youtube',
+      platform: 'YouTube',
+      providerEngine: 'youtube_json3',
+      pacingMode: 'short',
+      raw: {
+        provider: 'youtube_json3',
+        model: 'json3',
+        fullText: allTokens.join(' '),
+        cues: [],
+        words: rawWords,
+        sentences: [],
+        paragraphs: [],
+        extractedAt: new Date().toISOString(),
+      },
+      reviewed: {
+        ...reviewedParts,
+        providerName: 'TestAI',
+        modelName: 'test-model',
+        reasoningLevel: 'none',
+        executionTimeMs: 120,
+        reviewedAt: new Date().toISOString(),
+      },
+      reviewStatus: 'ready',
+      reviewError: '',
+      speakerOverrides: {},
+    },
+    createdAt: new Date().toISOString(),
+  };
+
+  const shortCount = lesson.sentences.length;
+  assert.ok(shortCount >= 8, `Expected >=8 short lines across 54 words, got ${shortCount}`);
+  assert.ok(lesson.sentences.every((s) => s.words.length <= 8), 'Every short line must be <= 8 words');
+
+  // Seed translation for short line #1 and mark all short lines belonging to canonical sentence #1 complete
+  const firstShortText = lesson.sentences[0].text;
+  lesson.translationsCache.ar[1] = 'لكن ما لن أفعله';
+  lesson.sentences[0].translations = { ar: 'لكن ما لن أفعله' };
+  const s1MaxWordI = s1Tokens.length - 1;
+  lesson.completionProgress.sentences = lesson.sentences
+    .filter((s) => s.words.every((w) => w.i <= s1MaxWordI))
+    .map((s) => s.index);
+
+  // Switch short -> full
+  regroupShadowingLessonByPacing(lesson, 'full');
+  assert.strictEqual(lesson.pacingMode, 'full');
+  assert.ok(lesson.sentences.length <= 3, `Expected full mode to keep grammatical sentences (<=3), got ${lesson.sentences.length}`);
+  // Sentence #1 should remain completed under Real Derived Completion Law
+  assert.ok(lesson.completionProgress.sentences.includes(1), 'Full sentence #1 must remain completed when all constituent short bites were completed');
+  // Mismatched short translation must NOT leak onto full sentence #1
+  assert.strictEqual(lesson.translationsCache.ar?.[1], undefined, 'Mismatched short translation must not attach to different full sentence');
+  // 50ms Playback Boundary Law check
+  for (let i = 0; i < lesson.sentences.length - 1; i++) {
+    assert.ok(
+      lesson.sentences[i].endMs <= lesson.sentences[i + 1].startMs - 50,
+      `Full mode boundary violation between #${i + 1} and #${i + 2}`,
+    );
+  }
+
+  // Switch full -> balanced
+  regroupShadowingLessonByPacing(lesson, 'balanced');
+  assert.strictEqual(lesson.pacingMode, 'balanced');
+  assert.ok(lesson.sentences.length > 2 && lesson.sentences.length < shortCount, `Expected balanced count between full and short, got ${lesson.sentences.length}`);
+  assert.ok(lesson.sentences.every((s) => s.words.length <= 14), 'Every balanced line must be <= 14 words');
+
+  // Switch balanced -> short (round-trip)
+  regroupShadowingLessonByPacing(lesson, 'short');
+  assert.strictEqual(lesson.pacingMode, 'short');
+  assert.strictEqual(lesson.sentences.length, shortCount, 'Round-trip back to short must match exact short count');
+  assert.strictEqual(lesson.sentences[0].text, firstShortText);
+  // Cached translation for exact short line #1 restores in 0ms!
+  assert.strictEqual(lesson.translationsCache.ar[1], 'لكن ما لن أفعله', 'Exact-text translation must restore automatically on round-trip');
+  // Completion for all short bites of sentence #1 stays intact!
+  const restoredS1Shorts = lesson.sentences
+    .filter((s) => s.words.every((w) => w.i <= s1MaxWordI))
+    .map((s) => s.index);
+  for (const idx of restoredS1Shorts) {
+    assert.ok(lesson.completionProgress.sentences.includes(idx), `Short bite #${idx} completion lost on round-trip`);
+  }
+  // Exact verbatim text check across entire transcript
+  assert.strictEqual(lesson.sentences.map((s) => s.text).join(' '), allTokens.join(' '));
 });
 
 // 4. Universal 7-Format x 5-View Exporter

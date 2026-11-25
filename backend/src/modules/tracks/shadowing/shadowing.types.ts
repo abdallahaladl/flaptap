@@ -1,4 +1,7 @@
 import { SharedMediaKind, SharedSourceType } from '../../shared-sources/shared-sources.types';
+import type { ShadowingPacingMode } from '../../../core/linguistics/segmentation';
+
+export type { ShadowingPacingMode };
 
 export type TranscriptViewMode = 'sentences' | 'paragraphs' | 'ideas' | 'speakers' | 'raw';
 
@@ -123,6 +126,8 @@ export interface TranscriptQualityReport {
 }
 
 export interface ReviewedTranscriptSnapshot {
+  /** Pre-split canonical grammatical sentences aligned to millisecond raw words. */
+  canonicalSentences?: TranscriptSentence[];
   sentences: TranscriptSentence[];
   paragraphs: TranscriptParagraph[];
   ideas: TranscriptIdea[];
@@ -153,6 +158,7 @@ export interface ShadowingTranscriptData {
   sourceType: SharedSourceType;
   platform: string;
   providerEngine: string;
+  pacingMode?: ShadowingPacingMode;
   raw: RawTranscriptSnapshot;
   reviewed: ReviewedTranscriptSnapshot | null;
   reviewStatus: TranscriptReviewStatus;

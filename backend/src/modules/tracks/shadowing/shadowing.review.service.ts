@@ -11,7 +11,10 @@ import {
   escapeTranscriptHtml,
   HighlightAnnotation,
 } from '../../../core/linguistics/highlights';
-import { formatTimestampMs } from '../../../core/linguistics/segmentation';
+import {
+  formatTimestampMs,
+  normalizePacingMode,
+} from '../../../core/linguistics/segmentation';
 import { AiProvidersService } from '../../ai-providers/ai-providers.service';
 import {
   ReviewedTranscriptSnapshot,
@@ -24,6 +27,12 @@ import {
   buildTranscriptReviewUserPrompt,
   parseTranscriptReviewResponse,
 } from './shadowing-review.prompt';
+import {
+  captureCompletedCoverage,
+  remapCompletedIndices,
+  restoreExactTranslations,
+  snapshotTranslationsByText,
+} from './utils/pacing-regroup.util';
 import {
   applySpeakerOverridesToReviewed,
   assembleAlignedReviewedViews,
@@ -78,6 +87,7 @@ export class ShadowingReviewService {
         : [],
     );
 
+    const pacingMode = normalizePacingMode(lesson.pacingMode || lesson.transcriptData?.pacingMode);
     const raw = buildRawTranscriptSnapshot({
       provider: lesson.transcriptData?.providerEngine || (lesson.videoId ? 'youtube_captions' : 'lesson_text'),
       title: lesson.title || 'Lesson',
@@ -88,6 +98,7 @@ export class ShadowingReviewService {
       fullText: sentences.map((s) => s.text).join(' '),
       cues,
       timedWords: timedWords.length > 0 ? timedWords : undefined,
+      pacingMode,
     });
 
     const data: NonNullable<HistoryItem['transcriptData']> = {
@@ -96,6 +107,7 @@ export class ShadowingReviewService {
       sourceType: lesson.transcriptData?.sourceType || (lesson.videoId ? 'youtube' : 'text'),
       platform: lesson.platform || lesson.transcriptData?.platform || (lesson.videoId ? 'YouTube' : 'Studio'),
       providerEngine: lesson.transcriptData?.providerEngine || raw.provider,
+      pacingMode,
       raw,
       reviewed: lesson.transcriptData?.reviewed || null,
       reviewStatus: lesson.transcriptData?.reviewStatus || 'pending',
@@ -257,12 +269,14 @@ export class ShadowingReviewService {
         message: 'Aligning every reviewed word to exact millisecond audio timestamps…',
       });
 
+      const pacingMode = normalizePacingMode(lesson.pacingMode || td.pacingMode);
       const assembled = assembleAlignedReviewedViews({
         rawWords: td.raw.words,
         draftSentences: allSentences,
         draftIdeas: allIdeas,
         defaultSpeaker: lesson.creator || 'Speaker 1',
         speakerOverrides: td.speakerOverrides,
+        pacingMode,
       });
 
       const ratio = assembled.quality.totalWords / Math.max(1, td.raw.words.length);
@@ -382,10 +396,21 @@ export class ShadowingReviewService {
     lesson: HistoryItem,
     reviewed: ReviewedTranscriptSnapshot,
   ): Partial<HistoryItem> {
+    const pacingMode = normalizePacingMode(lesson.pacingMode || lesson.transcriptData?.pacingMode);
     const td = this.ensureTranscriptData(lesson);
     td.reviewed = reviewed;
     td.reviewStatus = 'ready';
     td.reviewError = '';
+    td.pacingMode = pacingMode;
+
+    const oldSentences = Array.isArray(lesson.sentences) ? lesson.sentences : [];
+    const oldProgress =
+      lesson.completionProgress && typeof lesson.completionProgress === 'object'
+        ? lesson.completionProgress
+        : {};
+    const shadowCoverage = captureCompletedCoverage(oldSentences, oldProgress.sentences);
+    const listenCoverage = captureCompletedCoverage(oldSentences, oldProgress.listen);
+    const translationsByText = snapshotTranslationsByText(lesson);
 
     const annotations = this.collectCoachAnnotations(lesson);
 
@@ -412,6 +437,13 @@ export class ShadowingReviewService {
         ? applyDynamicHighlights(s.text, annotations)
         : escapeTranscriptHtml(s.text),
     }));
+
+    const translationsCache = restoreExactTranslations(sentences, translationsByText);
+    const completionProgress = {
+      ...oldProgress,
+      sentences: remapCompletedIndices(shadowCoverage, sentences),
+      listen: remapCompletedIndices(listenCoverage, sentences),
+    };
 
     const chunks: ChunkItem[] = reviewed.paragraphs.map((p) => ({
       index: p.index,
@@ -442,11 +474,15 @@ export class ShadowingReviewService {
     );
 
     return {
+      pacingMode,
       transcriptData: td,
       sentences,
       chunks,
       sentencesCount: sentences.length,
       chunksCount: chunks.length,
+      translationsCache,
+      translationsByText,
+      completionProgress,
       noteMarkdown,
       stats: {
         totalWords,

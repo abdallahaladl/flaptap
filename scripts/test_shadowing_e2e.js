@@ -280,6 +280,105 @@ async function seedLessonViaSqlite(userId) {
   return saved;
 }
 
+async function seedLongPacingLessonViaSqlite(userId) {
+  const prevEnv = process.env.FLAPTAP_SQLITE_PATH;
+  process.env.FLAPTAP_SQLITE_PATH = DB_PATH;
+  const distDir = path.join(ROOT, 'backend/dist');
+  const { SqliteService } = require(path.join(distDir, 'core/database/sqlite.service.js'));
+  const { HistoryRepository } = require(path.join(distDir, 'core/database/history.repository.js'));
+  const { assembleAlignedReviewedViews } = require(path.join(distDir, 'modules/tracks/shadowing/utils/word-alignment.util.js'));
+
+  const sqlite = new SqliteService();
+  const repo = new HistoryRepository(sqlite);
+  const now = new Date().toISOString();
+  const longText =
+    "But what I'm not going to do is repeat the past, where I envision myself living a completely different life and not creating a plan to take action on that.";
+  const tokens = longText.split(/\s+/);
+  const rawWords = tokens.map((word, i) => ({
+    i,
+    word,
+    clean: word.toLowerCase().replace(/[^a-z0-9']/g, ''),
+    startMs: 100 + i * 350,
+    endMs: 100 + i * 350 + 290,
+  }));
+
+  const reviewedParts = assembleAlignedReviewedViews({
+    rawWords,
+    draftSentences: [
+      { text: longText, speaker: 'Miranda', paragraphIndex: 1, ideaIndex: 1 },
+    ],
+    draftIdeas: [{ index: 1, title: 'Action Plan', summary: 'Create a concrete plan.' }],
+    defaultSpeaker: 'Miranda',
+    pacingMode: 'short',
+  });
+
+  const saved = repo.create(
+    {
+      id: 'lesson_e2e_pacing',
+      track: 'shadowing',
+      trackTitle: 'Shadowing',
+      title: 'Dynamic Pacing E2E Sample',
+      creator: 'Miranda',
+      sourceUrl: 'uploaded://pacing.mp3',
+      sourceKey: 'media:e2e_pacing_1',
+      platform: 'uploaded_audio',
+      mediaKind: 'audio',
+      reviewStatus: 'ready',
+      pacingMode: 'short',
+      speakerCount: 1,
+      repairCount: 0,
+      wordCount: tokens.length,
+      durationSeconds: 12,
+      pacingWpm: 165,
+      sentences: reviewedParts.sentences.map((s) => ({
+        ...s,
+        timeRange: '00:00.100 - 00:02.000',
+        durationSec: Number(((s.endMs - s.startMs) / 1000).toFixed(3)),
+        highlightedHtml: s.text,
+      })),
+      chunks: reviewedParts.paragraphs.map((p) => ({
+        ...p,
+        timeRange: '00:00.100 - 00:11.000',
+        highlightedHtml: p.text,
+      })),
+      transcriptData: {
+        sourceType: 'uploaded_audio',
+        platform: 'uploaded_audio',
+        providerEngine: 'whisper',
+        pacingMode: 'short',
+        reviewStatus: 'ready',
+        reviewError: '',
+        speakerOverrides: {},
+        raw: {
+          provider: 'whisper',
+          model: 'whisper-1',
+          fullText: longText,
+          cues: [],
+          words: rawWords,
+          sentences: [],
+          paragraphs: [],
+          extractedAt: now,
+        },
+        reviewed: {
+          ...reviewedParts,
+          providerName: 'TestAI',
+          modelName: 'test-model',
+          reasoningLevel: 'none',
+          executionTimeMs: 90,
+          reviewedAt: now,
+        },
+      },
+      createdAt: now,
+    },
+    { userId },
+  );
+
+  sqlite.onModuleDestroy?.();
+  if (prevEnv === undefined) delete process.env.FLAPTAP_SQLITE_PATH;
+  else process.env.FLAPTAP_SQLITE_PATH = prevEnv;
+  return saved;
+}
+
 async function run() {
   console.log('\n🚀 Running Consolidated Shadowing E2E Suite...\n');
 
@@ -315,6 +414,8 @@ async function run() {
     assert.strictEqual(unauthStream.status, 401);
     const unauthTitle = await api('/api/tracks/shadowing/fake/title', { method: 'PATCH', body: '{"title":"x"}' });
     assert.strictEqual(unauthTitle.status, 401);
+    const unauthPacing = await api('/api/tracks/shadowing/fake/pacing', { method: 'PATCH', body: '{"pacingMode":"full"}' });
+    assert.strictEqual(unauthPacing.status, 401);
     ok('Auth gates strictly return 401 on consolidated Shadowing endpoints');
 
     // 2. Register two isolated accounts
@@ -334,16 +435,36 @@ async function run() {
     const tokenB = regB.json.token;
     ok('Registered two isolated test accounts');
 
-    // 3. Seed consolidated Shadowing lesson (and also test real audio upload if Whisper key is configured)
+    // 3. Seed consolidated Shadowing lessons
     const seeded = await seedLessonViaSqlite(userIdA);
     assert.strictEqual(seeded.id, 'lesson_e2e_consolidated');
+    const pacingLesson = await seedLongPacingLessonViaSqlite(userIdA);
+    assert.strictEqual(pacingLesson.id, 'lesson_e2e_pacing');
 
     // Verify user isolation
     const bobGet = await api(`/api/history/${seeded.id}`, {}, tokenB);
     assert.ok(bobGet.status === 404 || bobGet.status === 403, `Expected 404/403 for User B, got ${bobGet.status}`);
     const bobExport = await api(`/api/tracks/shadowing/${seeded.id}/export?view=sentences&format=txt`, {}, tokenB);
     assert.strictEqual(bobExport.status, 404);
+    const bobPacing = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"full"}' }, tokenB);
+    assert.strictEqual(bobPacing.status, 404);
     ok('Strict user isolation verified across consolidated Shadowing endpoints');
+
+    // Verify dynamic pacing API validation & round-trip (short -> balanced -> full -> short)
+    const badPacing = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"giant"}' }, tokenA);
+    assert.strictEqual(badPacing.status, 400);
+    const fullRes = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"full"}' }, tokenA);
+    assert.strictEqual(fullRes.status, 200);
+    assert.strictEqual(fullRes.json.pacingMode, 'full');
+    assert.ok(fullRes.json.sentenceCount <= 2, `Expected full pacing <=2 lines, got ${fullRes.json.sentenceCount}`);
+    const balRes = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"balanced"}' }, tokenA);
+    assert.strictEqual(balRes.status, 200);
+    assert.strictEqual(balRes.json.pacingMode, 'balanced');
+    const shortRes = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"short"}' }, tokenA);
+    assert.strictEqual(shortRes.status, 200);
+    assert.strictEqual(shortRes.json.pacingMode, 'short');
+    assert.ok(shortRes.json.sentenceCount >= 4, `Expected short pacing >=4 lines, got ${shortRes.json.sentenceCount}`);
+    ok('PATCH /api/tracks/shadowing/:id/pacing switches short <-> balanced <-> full cleanly with strict validation');
 
     // 4. Test all 7 export formats + Raw Original view via live HTTP API
     for (const fmt of ['txt', 'md', 'srt', 'vtt', 'json', 'csv', 'html']) {
@@ -431,6 +552,14 @@ async function run() {
     const aiSelVisible = await page.$eval('#lessons-ai-selector-wrap', (el) => !el.hidden);
     assert.ok(aiSelVisible, 'AI Review Model selector did not open');
 
+    // Test Shadowing Home pre-start pacing control (#lessons-pacing-group)
+    await page.click('#lessons-pacing-group [data-pacing="full"]');
+    const savedPacingFull = await page.evaluate(() => localStorage.getItem('flaptap_shadowing_pacing'));
+    assert.strictEqual(savedPacingFull, 'full', 'Home pacing pill did not persist full preference');
+    await page.click('#lessons-pacing-group [data-pacing="short"]');
+    const savedPacingShort = await page.evaluate(() => localStorage.getItem('flaptap_shadowing_pacing'));
+    assert.strictEqual(savedPacingShort, 'short', 'Home pacing pill did not restore short preference');
+
     await page.waitForSelector('.history-card[data-lesson-id="lesson_e2e_consolidated"]', { timeout: 8000 });
     const cardText = await page.$eval('.history-card[data-lesson-id="lesson_e2e_consolidated"]', (el) => el.textContent);
     assert.ok(cardText.includes('Uploaded Audio') && cardText.includes('AI Reviewed'), `Missing consolidated badges on card: ${cardText}`);
@@ -516,6 +645,45 @@ async function run() {
     }
     assert.ok(seenFlowStates.has('shadow') && seenFlowStates.has('word') && seenFlowStates.has('loop'), `Missing flow states: ${Array.from(seenFlowStates)}`);
     ok('Sentence Flow cycles cleanly through Loop, Auto-Pause, Shadow Pause, Word Loop & Continuous');
+
+    // Test Live Studio Pacing Switcher (Short -> Full -> Balanced -> Short) without remounting media deck
+    await page.goto(`${BASE}/studio?id=${pacingLesson.id}`, { waitUntil: 'networkidle0' });
+    await page.waitForSelector('#studio-pacing-group .studio-tool-pill[data-pacing="short"].active', { timeout: 10000 });
+    const initialShortCards = await page.$$eval('.sentence-driller-card', (els) => els.length);
+    assert.ok(initialShortCards >= 4, `Expected >=4 short cards in Studio, got ${initialShortCards}`);
+    await page.evaluate(() => {
+      const deck = document.getElementById('studio-media-deck') || document.querySelector('.video-player-stage');
+      if (deck) deck.dataset.pacingKeepAlive = 'intact';
+    });
+
+    await page.click('#studio-pacing-group [data-pacing="full"]');
+    await page.waitForFunction(
+      (prev) => document.querySelectorAll('.sentence-driller-card').length < prev &&
+        document.querySelector('#studio-pacing-group [data-pacing="full"]')?.classList.contains('active'),
+      { timeout: 8000 },
+      initialShortCards,
+    );
+    const fullCards = await page.$$eval('.sentence-driller-card', (els) => els.length);
+    assert.ok(fullCards <= 2, `Expected <=2 full sentence cards, got ${fullCards}`);
+    const deckIntact = await page.evaluate(() => {
+      const deck = document.getElementById('studio-media-deck') || document.querySelector('.video-player-stage');
+      return deck ? deck.dataset.pacingKeepAlive === 'intact' : true;
+    });
+    assert.ok(deckIntact, 'Media deck must NOT remount during real-time pacing switch');
+
+    await page.click('#studio-pacing-group [data-pacing="balanced"]');
+    await page.waitForFunction(
+      () => document.querySelector('#studio-pacing-group [data-pacing="balanced"]')?.classList.contains('active'),
+      { timeout: 8000 },
+    );
+    await page.click('#studio-pacing-group [data-pacing="short"]');
+    await page.waitForFunction(
+      (expected) => document.querySelectorAll('.sentence-driller-card').length === expected &&
+        document.querySelector('#studio-pacing-group [data-pacing="short"]')?.classList.contains('active'),
+      { timeout: 8000 },
+      initialShortCards,
+    );
+    ok('Real-time Studio pacing switcher (Short <-> Full <-> Medium) updates cards & persists without remounting media deck');
 
     // Test Mobile 390px & 360px zero overflow & control bar <= 140px
     for (const width of [390, 360]) {

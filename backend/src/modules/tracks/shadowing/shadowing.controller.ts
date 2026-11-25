@@ -17,6 +17,11 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Request, Response } from 'express';
 import { memoryStorage } from 'multer';
+import {
+  isValidPacingMode,
+  normalizePacingMode,
+  ShadowingPacingMode,
+} from '../../../core/linguistics/segmentation';
 import { requireAuthenticatedUser } from '../../auth/auth.request';
 import { AuthService } from '../../auth/auth.service';
 import { ShadowingService } from './shadowing.service';
@@ -27,6 +32,7 @@ const MAX_MEDIA_UPLOAD_BYTES = 120 * 1024 * 1024;
 export class ProcessVideoDto {
   url: string;
   force?: boolean;
+  pacingMode?: ShadowingPacingMode;
 }
 
 export class TranslateSentencesDto {
@@ -78,7 +84,9 @@ export class ShadowingController {
   @Post('process')
   processVideo(@Body() dto: ProcessVideoDto, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return this.shadowingService.process(dto?.url, Boolean(dto?.force), identity);
+    const pacingMode =
+      dto?.pacingMode !== undefined ? normalizePacingMode(dto.pacingMode) : undefined;
+    return this.shadowingService.process(dto?.url, Boolean(dto?.force), identity, pacingMode);
   }
 
   @Post('upload')
@@ -91,6 +99,7 @@ export class ShadowingController {
   async uploadMedia(
     @UploadedFile() file: { buffer: Buffer; originalname: string; mimetype?: string } | undefined,
     @Body('force') force: string | boolean | undefined,
+    @Body('pacingMode') pacingMode: string | undefined,
     @Req() req: Request,
   ) {
     const identity = requireAuthenticatedUser(req, this.authService);
@@ -105,6 +114,7 @@ export class ShadowingController {
       },
       force === true || force === 'true',
       identity,
+      pacingMode !== undefined ? normalizePacingMode(pacingMode) : undefined,
     );
   }
 
@@ -251,6 +261,27 @@ export class ShadowingController {
     return {
       success: true,
       data: this.shadowingService.renameSpeakers(id, speakers || {}, identity),
+    };
+  }
+
+  @Patch(':id/pacing')
+  updatePacing(
+    @Param('id') id: string,
+    @Body('pacingMode') pacingMode: unknown,
+    @Req() req: Request,
+  ) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    if (!isValidPacingMode(pacingMode)) {
+      throw new BadRequestException(
+        'Invalid pacingMode. Expected one of: "short", "balanced", "full".',
+      );
+    }
+    const updated = this.shadowingService.updateLessonPacing(id, pacingMode, identity);
+    return {
+      success: true,
+      pacingMode,
+      sentenceCount: updated.sentences?.length ?? 0,
+      item: updated,
     };
   }
 

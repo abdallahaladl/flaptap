@@ -1,7 +1,9 @@
 import {
+  normalizePacingMode,
   roundMs,
   segmentParagraphs,
   segmentSentences,
+  ShadowingPacingMode,
   splitTimedWordsForShadowing,
 } from '../../../../core/linguistics/segmentation';
 import { TimedWord, TranscriptCue, TranscriptResult } from '../transcript.service';
@@ -154,7 +156,9 @@ export function buildRawTranscriptSnapshot(params: {
   fullText: string;
   cues?: TranscriptCue[];
   timedWords?: TimedWord[];
+  pacingMode?: ShadowingPacingMode;
 }): RawTranscriptSnapshot {
+  const pacingMode = normalizePacingMode(params.pacingMode);
   const { words, cues } = normalizeRawTimedWords(
     params.timedWords,
     params.cues,
@@ -187,7 +191,7 @@ export function buildRawTranscriptSnapshot(params: {
     full_raw_transcript: params.fullText || words.map((w) => w.word).join(' '),
   };
 
-  const baseSentences = segmentSentences(syntheticTranscript);
+  const baseSentences = segmentSentences(syntheticTranscript, pacingMode);
   const baseParagraphs = segmentParagraphs(baseSentences);
   const defaultSpeaker = params.creator?.trim() || 'Speaker 1';
 
@@ -213,7 +217,7 @@ export function buildRawTranscriptSnapshot(params: {
     const startMs = slice.length > 0 ? slice[0].startMs : Math.round(s.startSec * 1000);
     const endMs =
       slice.length > 0
-        ? Math.max(Math.round(s.endSec * 1000), slice[slice.length - 1].endMs)
+        ? slice[slice.length - 1].endMs
         : Math.round(s.endSec * 1000);
 
     sentences.push({
@@ -229,21 +233,31 @@ export function buildRawTranscriptSnapshot(params: {
       paragraphIndex: paraIndexBySentence.get(s.index) || 1,
       ideaIndex: 1,
       startMs,
-      endMs: Math.max(startMs + 100, endMs),
+      endMs: Math.max(startMs + 80, endMs),
       startSec: roundMs(startMs / 1000),
-      endSec: roundMs(Math.max(startMs + 100, endMs) / 1000),
+      endSec: roundMs(Math.max(startMs + 80, endMs) / 1000),
       words: slice,
     });
   });
 
+  applyPlaybackBoundaryLaw(sentences);
+
+  const sentByIndex = new Map<number, TranscriptSentence>();
+  sentences.forEach((s) => sentByIndex.set(s.index, s));
+
   const paragraphs: TranscriptParagraph[] = baseParagraphs.map((p, idx) => {
-    const startMs = Math.round((Number(p.startSec) || 0) * 1000);
-    const endMs = Math.max(startMs + 100, Math.round((Number(p.endSec) || 0) * 1000));
+    const indices = Array.isArray(p.sentenceIndices) ? p.sentenceIndices : [];
+    const firstSent = indices.length > 0 ? sentByIndex.get(indices[0]) : undefined;
+    const lastSent = indices.length > 0 ? sentByIndex.get(indices[indices.length - 1]) : undefined;
+    const startMs = firstSent ? firstSent.startMs : Math.round((Number(p.startSec) || 0) * 1000);
+    const endMs = lastSent
+      ? lastSent.endMs
+      : Math.max(startMs + 100, Math.round((Number(p.endSec) || 0) * 1000));
     return {
       index: idx + 1,
       speakerId: 'spk_1',
       speaker: defaultSpeaker,
-      sentenceIndices: Array.isArray(p.sentenceIndices) ? p.sentenceIndices : [],
+      sentenceIndices: indices,
       text: p.text,
       startMs,
       endMs,
@@ -763,13 +777,62 @@ export interface DraftReviewedIdea {
   sentenceIndices?: number[];
 }
 
+/**
+ * Unified 50ms Playback Boundary Law:
+ * Always computes every output sentence's `startMs`/`endMs` from its unpadded
+ * `words[0].startMs` .. `words[last].endMs`, absorbs natural acoustic release tail
+ * up to +320ms (`min(320, round(gap * 0.5))`), and strictly caps `endMs <= next.startMs - 50`.
+ */
+export function applyPlaybackBoundaryLaw(sentences: TranscriptSentence[]): void {
+  for (let i = 0; i < sentences.length; i++) {
+    const curr = sentences[i];
+    const words = Array.isArray(curr.words) ? curr.words : [];
+    const fallbackStart = i > 0 ? sentences[i - 1].endMs : 0;
+    const startMs =
+      words.length > 0
+        ? Math.max(0, Math.round(words[0].startMs))
+        : Math.max(0, Math.round(Number(curr.startMs) || fallbackStart));
+    const rawEndMs =
+      words.length > 0
+        ? Math.max(startMs + 80, Math.round(words[words.length - 1].endMs))
+        : Math.max(startMs + 80, Math.round(Number(curr.endMs) || startMs + 350));
+
+    curr.startMs = startMs;
+    curr.endMs = rawEndMs;
+  }
+
+  for (let i = 0; i < sentences.length; i++) {
+    const curr = sentences[i];
+    const next = sentences[i + 1];
+    if (next) {
+      const gap = next.startMs - curr.endMs;
+      if (gap > 60) {
+        const tail = Math.min(320, Math.round(gap * 0.5));
+        curr.endMs = Math.min(curr.endMs + tail, next.startMs - 50);
+      } else if (curr.endMs > next.startMs - 50 && next.startMs - 50 > curr.startMs + 80) {
+        curr.endMs = next.startMs - 50;
+      }
+    } else {
+      curr.endMs = curr.endMs + 280;
+    }
+
+    if (curr.endMs <= curr.startMs) {
+      curr.endMs = curr.startMs + 80;
+    }
+    curr.startSec = roundMs(curr.startMs / 1000);
+    curr.endSec = roundMs(curr.endMs / 1000);
+  }
+}
+
 export function assembleAlignedReviewedViews(params: {
   rawWords: TimedWordMs[];
   draftSentences: DraftReviewedSentence[];
   draftIdeas: DraftReviewedIdea[];
   defaultSpeaker: string;
   speakerOverrides?: Record<string, string>;
+  pacingMode?: ShadowingPacingMode;
 }): {
+  canonicalSentences: TranscriptSentence[];
   sentences: TranscriptSentence[];
   paragraphs: TranscriptParagraph[];
   ideas: TranscriptIdea[];
@@ -777,6 +840,7 @@ export function assembleAlignedReviewedViews(params: {
   speakerTurns: TranscriptSpeakerTurn[];
   quality: TranscriptQualityReport;
 } {
+  const pacingMode = normalizePacingMode(params.pacingMode);
   const cleanDrafts = params.draftSentences
     .map((s) => ({
       text: String(s?.text || '').replace(/\s+/g, ' ').trim(),
@@ -817,7 +881,9 @@ export function assembleAlignedReviewedViews(params: {
     };
   };
 
+  const canonicalSentences: TranscriptSentence[] = [];
   const sentences: TranscriptSentence[] = [];
+  const activeIndicesByCanonicalIdx = new Map<number, number[]>();
   let cursor = 0;
 
   for (let i = 0; i < cleanDrafts.length; i++) {
@@ -827,13 +893,45 @@ export function assembleAlignedReviewedViews(params: {
     cursor += tokCount;
 
     const spk = resolveSpeaker(draft.speaker);
-    // Split long multi-clause reviewed sentences into short, repeatable shadowing bites (4–7 words / <= 8 words max)
-    // while keeping exact millisecond word timings, speaker attribution, repairs, and paragraph/idea grouping.
-    const rawSpanMs = words.length > 0 ? words[words.length - 1].endMs - words[0].startMs : 0;
-    const wordSlices =
-      words.length > 7 || (words.length >= 6 && rawSpanMs > 3200)
-        ? splitTimedWordsForShadowing(words)
-        : [words];
+    const canonStartMs =
+      words.length > 0 ? words[0].startMs : canonicalSentences[canonicalSentences.length - 1]?.endMs || 0;
+    const canonEndMs =
+      words.length > 0 ? Math.max(canonStartMs + 80, words[words.length - 1].endMs) : canonStartMs + 350;
+    const canonRawText = words
+      .map((w) => (w.repaired ? w.rawWord || '' : w.word))
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    const canonRepaired = words.some((w) => w.repaired) || draft.isOverlap;
+    const canonRepairNote = canonRepaired
+      ? draft.repairNote ||
+        (draft.isOverlap
+          ? 'Separated overlapping speaker turn'
+          : 'Corrected ASR transcription wording')
+      : '';
+
+    const canonIndex = canonicalSentences.length + 1;
+    canonicalSentences.push({
+      id: `canon-s-${canonIndex}`,
+      index: canonIndex,
+      text: draft.text,
+      rawText: canonRawText || draft.text,
+      speakerId: spk.id,
+      speaker: spk.name,
+      repaired: canonRepaired,
+      repairNote: canonRepairNote,
+      isOverlap: draft.isOverlap,
+      paragraphIndex: draft.paragraphIndex || 0,
+      ideaIndex: draft.ideaIndex || 0,
+      startMs: canonStartMs,
+      endMs: canonEndMs,
+      startSec: roundMs(canonStartMs / 1000),
+      endSec: roundMs(canonEndMs / 1000),
+      words,
+    });
+
+    const wordSlices = words.length > 0 ? splitTimedWordsForShadowing(words, pacingMode) : [words];
+    const mappedActiveIndices: number[] = [];
 
     for (let sliceIdx = 0; sliceIdx < wordSlices.length; sliceIdx++) {
       const sliceWords = wordSlices[sliceIdx];
@@ -855,6 +953,7 @@ export function assembleAlignedReviewedViews(params: {
       const substantiveRepair = hasWordRepair || draft.isOverlap;
 
       const nextIndex = sentences.length + 1;
+      mappedActiveIndices.push(nextIndex);
       sentences.push({
         id: `s-${nextIndex}`,
         index: nextIndex,
@@ -874,36 +973,50 @@ export function assembleAlignedReviewedViews(params: {
         paragraphIndex: draft.paragraphIndex || 0,
         ideaIndex: draft.ideaIndex || 0,
         startMs,
-        endMs: Math.max(startMs + 120, rawEndMs),
+        endMs: Math.max(startMs + 80, rawEndMs),
         startSec: roundMs(startMs / 1000),
-        endSec: roundMs(Math.max(startMs + 120, rawEndMs) / 1000),
+        endSec: roundMs(Math.max(startMs + 80, rawEndMs) / 1000),
         words: sliceWords,
       });
     }
+    activeIndicesByCanonicalIdx.set(canonIndex, mappedActiveIndices);
   }
 
-  // Playback Boundary Law: natural acoustic release tail, >= 50ms before next onset
-  for (let i = 0; i < sentences.length; i++) {
-    const curr = sentences[i];
-    const next = sentences[i + 1];
-    if (next) {
-      const gap = next.startMs - curr.endMs;
-      if (gap > 60) {
-        const tail = Math.min(320, Math.round(gap * 0.5));
-        curr.endMs = Math.min(curr.endMs + tail, next.startMs - 50);
-      } else if (curr.endMs > next.startMs - 50 && next.startMs - 50 > curr.startMs + 80) {
-        curr.endMs = next.startMs - 50;
-      }
-    } else {
-      curr.endMs = curr.endMs + 280;
+  // Unified 50ms Playback Boundary Law
+  applyPlaybackBoundaryLaw(sentences);
+
+  // Remap draftIdeas.sentenceIndices from canonical indices to active split indices
+  const remappedDraftIdeas: DraftReviewedIdea[] = (params.draftIdeas || []).map((idea) => {
+    if (!Array.isArray(idea.sentenceIndices) || idea.sentenceIndices.length === 0) {
+      return idea;
     }
-    curr.startSec = roundMs(curr.startMs / 1000);
-    curr.endSec = roundMs(curr.endMs / 1000);
-  }
+    const expanded: number[] = [];
+    for (const cIdx of idea.sentenceIndices) {
+      const mapped = activeIndicesByCanonicalIdx.get(Math.floor(Number(cIdx)));
+      if (mapped?.length) expanded.push(...mapped);
+    }
+    return {
+      ...idea,
+      sentenceIndices: expanded.length > 0 ? expanded : undefined,
+    };
+  });
 
-  const paragraphs = buildParagraphsFromSentences(sentences);
-  const ideas = buildIdeasFromSentences(sentences, params.draftIdeas);
+  const paragraphs = buildParagraphsFromSentences(sentences, pacingMode);
+  const ideas = buildIdeasFromSentences(sentences, remappedDraftIdeas);
   const { speakers, speakerTurns } = buildSpeakerViews(sentences, speakerOriginalById, speakerColorById);
+
+  // Sync resolved ideaIndex (and missing paragraphIndex) back to canonicalSentences for future lossless pacing toggles
+  const sentByIndex = new Map<number, TranscriptSentence>(sentences.map((s) => [s.index, s]));
+  for (const canon of canonicalSentences) {
+    const childIndices = activeIndicesByCanonicalIdx.get(canon.index);
+    const firstChild = childIndices?.length ? sentByIndex.get(childIndices[0]) : undefined;
+    if (firstChild) {
+      canon.ideaIndex = firstChild.ideaIndex;
+      if (!canon.paragraphIndex || canon.paragraphIndex <= 0) {
+        canon.paragraphIndex = firstChild.paragraphIndex;
+      }
+    }
+  }
 
   const repairedSentences = sentences.filter((s) => s.repaired).length;
   const overlapsResolved = sentences.filter((s) => s.isOverlap).length;
@@ -926,6 +1039,7 @@ export function assembleAlignedReviewedViews(params: {
   }
 
   return {
+    canonicalSentences,
     sentences,
     paragraphs,
     ideas,
@@ -943,8 +1057,14 @@ export function assembleAlignedReviewedViews(params: {
   };
 }
 
-function buildParagraphsFromSentences(sentences: TranscriptSentence[]): TranscriptParagraph[] {
+export function buildParagraphsFromSentences(
+  sentences: TranscriptSentence[],
+  pacingMode: ShadowingPacingMode = 'short',
+): TranscriptParagraph[] {
   if (sentences.length === 0) return [];
+  const mode = normalizePacingMode(pacingMode);
+  const explicitCap = mode === 'short' ? 12 : mode === 'balanced' ? 8 : 6;
+  const implicitCap = mode === 'short' ? 8 : mode === 'balanced' ? 5 : 4;
 
   const hasExplicitParas = sentences.some((s) => s.paragraphIndex > 0);
   const groups: TranscriptSentence[][] = [];
@@ -955,7 +1075,7 @@ function buildParagraphsFromSentences(sentences: TranscriptSentence[]): Transcri
     for (const s of sentences) {
       const pIdx = s.paragraphIndex || 1;
       const key = `${pIdx}::${s.speakerId}`;
-      if (curr.length > 0 && (key !== currKey || curr.length >= 12)) {
+      if (curr.length > 0 && (key !== currKey || curr.length >= explicitCap)) {
         groups.push(curr);
         curr = [];
       }
@@ -972,7 +1092,12 @@ function buildParagraphsFromSentences(sentences: TranscriptSentence[]): Transcri
       const speakerChanged = prev && prev.speakerId !== s.speakerId;
       const gapMs = prev ? s.startMs - prev.endMs : 0;
 
-      if (curr.length > 0 && (speakerChanged || (curr.length >= 3 && (wordsInCurr >= 55 || gapMs >= 700)) || curr.length >= 5)) {
+      if (
+        curr.length > 0 &&
+        (speakerChanged ||
+          (curr.length >= 3 && (wordsInCurr >= 55 || gapMs >= 700)) ||
+          curr.length >= implicitCap)
+      ) {
         groups.push(curr);
         curr = [];
         wordsInCurr = 0;
@@ -1004,7 +1129,7 @@ function buildParagraphsFromSentences(sentences: TranscriptSentence[]): Transcri
   });
 }
 
-function buildIdeasFromSentences(
+export function buildIdeasFromSentences(
   sentences: TranscriptSentence[],
   draftIdeas: DraftReviewedIdea[],
 ): TranscriptIdea[] {
@@ -1115,7 +1240,7 @@ function buildIdeasFromSentences(
   return ideas;
 }
 
-function buildSpeakerViews(
+export function buildSpeakerViews(
   sentences: TranscriptSentence[],
   originalById: Map<string, string>,
   colorById: Map<string, number>,
@@ -1173,6 +1298,7 @@ function buildSpeakerViews(
 
 export function applySpeakerOverridesToReviewed(
   reviewed: {
+    canonicalSentences?: TranscriptSentence[];
     sentences: TranscriptSentence[];
     paragraphs: TranscriptParagraph[];
     ideas: TranscriptIdea[];
@@ -1188,6 +1314,12 @@ export function applySpeakerOverridesToReviewed(
     nameById.set(sp.id, sp.name);
   });
 
+  if (Array.isArray(reviewed.canonicalSentences)) {
+    reviewed.canonicalSentences.forEach((s) => {
+      const mapped = nameById.get(s.speakerId);
+      if (mapped) s.speaker = mapped;
+    });
+  }
   reviewed.sentences.forEach((s) => {
     const mapped = nameById.get(s.speakerId);
     if (mapped) s.speaker = mapped;
@@ -1224,3 +1356,12 @@ export function formatMsClock(ms: number): string {
   }
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(rem).padStart(3, '0')}`;
 }
+
+export {
+  captureCompletedCoverage,
+  normalizeTranslationKey,
+  regroupShadowingLessonByPacing,
+  remapCompletedIndices,
+  restoreExactTranslations,
+  snapshotTranslationsByText,
+} from './pacing-regroup.util';

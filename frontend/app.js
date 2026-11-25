@@ -40,6 +40,10 @@
       urlPlaceholder: 'Paste YouTube, TikTok, Instagram, X, Podcast RSS, Apple Podcasts, or MP3/MP4 link...',
       worksWithLabel: 'Works with',
       startLessonBtn: 'Start Lesson',
+      lessonsPacingLabel: 'Lines',
+      pacingShort: 'Short',
+      pacingBalanced: 'Medium',
+      pacingFull: 'Full',
       cachedBadge: 'Ready in Library',
       openCachedBtn: 'Open Instantly',
       bypassCacheLabel: 'Re-extract fresh',
@@ -274,6 +278,10 @@
       confirmClear: 'هل تريد حذف جميع الدروس نهائياً من مكتبتك؟',
       confirmClearVocab: 'هل تريد مسح جميع المفردات المحفوظة؟',
       confirmDeleteAccount: 'هل أنت متأكد من حذف حسابك وجميع بياناتك وسجل دروسك نهائياً؟',
+      lessonsPacingLabel: 'السطور',
+      pacingShort: 'قصيرة',
+      pacingBalanced: 'متوسطة',
+      pacingFull: 'كاملة',
     },
     es: {
       brandEdition: 'Estudio de Inglés Hablado',
@@ -298,6 +306,10 @@
       heroSubcopy: 'Pega un enlace de YouTube para practicar oraciones completas, párrafos editoriales, dictado activo y habla conectada.',
       urlPlaceholder: 'Pega un enlace de YouTube...',
       startLessonBtn: 'Iniciar lección',
+      lessonsPacingLabel: 'Líneas',
+      pacingShort: 'Cortas',
+      pacingBalanced: 'Medias',
+      pacingFull: 'Completas',
       libraryHeading: 'Biblioteca de lecciones',
       openLesson: 'Estudiar',
       sentencesUnit: 'oraciones',
@@ -325,6 +337,10 @@
       heroSubcopy: 'Collez un lien YouTube pour travailler phrases complètes, paragraphes cohérents, dictée active et discours connecté.',
       urlPlaceholder: 'Collez un lien vidéo YouTube...',
       startLessonBtn: 'Commencer',
+      lessonsPacingLabel: 'Lignes',
+      pacingShort: 'Courtes',
+      pacingBalanced: 'Moyennes',
+      pacingFull: 'Complètes',
       libraryHeading: 'Bibliothèque',
       openLesson: 'Étudier',
       sentencesUnit: 'phrases',
@@ -352,6 +368,10 @@
       heroSubcopy: 'Füge einen YouTube-Link ein, um vollständige Sätze, Absätze, aktives Diktat und Connected Speech zu trainieren.',
       urlPlaceholder: 'YouTube-Link einfügen...',
       startLessonBtn: 'Lektion starten',
+      lessonsPacingLabel: 'Zeilen',
+      pacingShort: 'Kurz',
+      pacingBalanced: 'Mittel',
+      pacingFull: 'Voll',
       libraryHeading: 'Bibliothek',
       openLesson: 'Lernen',
       sentencesUnit: 'Sätze',
@@ -379,6 +399,10 @@
       heroSubcopy: 'Tam cümleler, paragraflar, aktif dikte ve bağlı konuşma pratiği için bir YouTube bağlantısı yapıştırın.',
       urlPlaceholder: 'Bir YouTube bağlantısı yapıştırın...',
       startLessonBtn: 'Dersi Başlat',
+      lessonsPacingLabel: 'Satırlar',
+      pacingShort: 'Kısa',
+      pacingBalanced: 'Orta',
+      pacingFull: 'Tam',
       libraryHeading: 'Ders Kitaplığı',
       openLesson: 'Çalış',
       sentencesUnit: 'cümle',
@@ -524,6 +548,7 @@
       const qs = new URLSearchParams({ url: act.url });
       if (act.force) qs.set('force', '1');
       if (act.autoreview) qs.set('autoreview', '1');
+      qs.set('pacing', normalizeShadowingPacing(act.pacing || getSavedShadowingPacing()));
       window.location.href = `/studio?${qs.toString()}`;
       return;
     }
@@ -1221,6 +1246,42 @@
     el.textContent = `${file.name} (${sizeMb} MB)`;
   }
 
+  const PACING_STORAGE_KEY = 'flaptap_shadowing_pacing';
+  const VALID_PACING_MODES = ['short', 'balanced', 'full'];
+
+  function normalizeShadowingPacing(raw) {
+    const val = String(raw || '').trim().toLowerCase();
+    return VALID_PACING_MODES.includes(val) ? val : 'short';
+  }
+
+  function getSavedShadowingPacing() {
+    try {
+      return normalizeShadowingPacing(localStorage.getItem(PACING_STORAGE_KEY));
+    } catch {
+      return 'short';
+    }
+  }
+
+  function syncLessonsPacingUi(mode) {
+    const activeMode = normalizeShadowingPacing(mode);
+    const group = document.getElementById('lessons-pacing-group');
+    if (!group) return activeMode;
+    group.querySelectorAll('.lessons-pacing-pill[data-pacing]').forEach((btn) => {
+      const isAct = btn.dataset.pacing === activeMode;
+      btn.classList.toggle('active', isAct);
+      btn.setAttribute('aria-checked', isAct ? 'true' : 'false');
+    });
+    return activeMode;
+  }
+
+  function setSelectedShadowingPacing(mode) {
+    const next = normalizeShadowingPacing(mode);
+    try {
+      localStorage.setItem(PACING_STORAGE_KEY, next);
+    } catch {}
+    return syncLessonsPacingUi(next);
+  }
+
   async function handleLessonFileUpload() {
     if (state.lessonsUploading) return;
     const file = state.lessonsSelectedFile;
@@ -1236,6 +1297,7 @@
     const uploadBtn = document.getElementById('upload-lesson-btn');
     const statusEl = document.getElementById('lessons-upload-status');
     const autoReview = Boolean(document.getElementById('lessons-auto-review')?.checked);
+    const selectedPacing = getSavedShadowingPacing();
     persistShadowingReviewPrefs();
 
     state.lessonsUploading = true;
@@ -1249,6 +1311,7 @@
     try {
       const form = new FormData();
       form.append('file', file);
+      form.append('pacingMode', selectedPacing);
       const headers = apiHeaders();
       delete headers['Content-Type'];
       const res = await fetch('/api/tracks/shadowing/upload', {
@@ -2448,6 +2511,30 @@
       handleLessonFileUpload();
     });
 
+    // Shadowing Pacing Preference Segmented Control (Short | Medium | Full)
+    syncLessonsPacingUi(getSavedShadowingPacing());
+    const lessonsPacingGroup = document.getElementById('lessons-pacing-group');
+    lessonsPacingGroup?.addEventListener('click', (e) => {
+      const pill = e.target.closest('.lessons-pacing-pill[data-pacing]');
+      if (!pill) return;
+      setSelectedShadowingPacing(pill.dataset.pacing);
+    });
+    lessonsPacingGroup?.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const pills = Array.from(lessonsPacingGroup.querySelectorAll('.lessons-pacing-pill[data-pacing]'));
+      if (!pills.length) return;
+      const idx = pills.indexOf(document.activeElement);
+      if (idx === -1) return;
+      e.preventDefault();
+      const dir = document.documentElement.getAttribute('dir') === 'rtl' ? -1 : 1;
+      const delta = (e.key === 'ArrowRight' ? 1 : -1) * dir;
+      const nextPill = pills[(idx + delta + pills.length) % pills.length];
+      if (nextPill) {
+        setSelectedShadowingPacing(nextPill.dataset.pacing);
+        nextPill.focus();
+      }
+    });
+
     const aiModelToggleBtn = document.getElementById('lessons-ai-model-toggle');
     const aiSelectorWrap = document.getElementById('lessons-ai-selector-wrap');
     aiModelToggleBtn?.addEventListener('click', () => {
@@ -2499,11 +2586,12 @@
       }
       const force = Boolean(document.getElementById('force-reextract-checkbox')?.checked);
       const autoreview = Boolean(document.getElementById('lessons-auto-review')?.checked);
+      const selectedPacing = getSavedShadowingPacing();
       persistShadowingReviewPrefs();
-      if (!requireAuthBeforeAction({ type: 'video_lesson', url, force, autoreview })) {
+      if (!requireAuthBeforeAction({ type: 'video_lesson', url, force, autoreview, pacing: selectedPacing })) {
         return;
       }
-      const qs = new URLSearchParams({ url });
+      const qs = new URLSearchParams({ url, pacing: selectedPacing });
       if (force) qs.set('force', '1');
       if (autoreview) qs.set('autoreview', '1');
       window.location.href = `/studio?${qs.toString()}`;

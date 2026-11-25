@@ -3244,8 +3244,81 @@ select.field-input {
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 12px 18px;
+  gap: 10px 16px;
   margin: 12px auto 4px;
+}
+
+.lessons-pacing-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+}
+
+.lessons-pacing-label {
+  font-family: var(--ap-font-text);
+  font-size: 0.75rem;
+  font-weight: 560;
+  color: var(--ap-text-secondary);
+  white-space: nowrap;
+}
+
+.lessons-pacing-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+  padding: 2px;
+  border-radius: var(--ap-radius-pill);
+  background: var(--ap-fill-subtle);
+  border: 1px solid var(--ap-border);
+  box-shadow: var(--ap-specular);
+}
+
+.lessons-pacing-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--ap-radius-pill);
+  background: transparent;
+  color: var(--ap-text-secondary);
+  font-family: var(--ap-font-text);
+  font-size: 0.75rem;
+  font-weight: 520;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.16s var(--ap-ease),
+    color 0.16s var(--ap-ease),
+    border-color 0.16s var(--ap-ease),
+    box-shadow 0.16s var(--ap-ease);
+}
+
+.lessons-pacing-pill:hover {
+  color: var(--ap-text-primary);
+}
+
+.lessons-pacing-pill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ap-blue-ring);
+}
+
+.lessons-pacing-pill.active {
+  background: var(--ap-surface);
+  color: var(--ap-blue);
+  font-weight: 620;
+  border-color: var(--ap-border);
+  box-shadow: var(--ap-shadow-pill);
+}
+
+[data-theme="dark"] .lessons-pacing-pill.active {
+  background: var(--ap-surface-elevated);
+  border-color: var(--ap-border-strong);
+  color: var(--ap-blue);
 }
 
 .lessons-option-check {
@@ -3325,6 +3398,16 @@ select.field-input {
 
   .lessons-ingest-options {
     justify-content: flex-start;
+    gap: 8px 12px;
+  }
+
+  .lessons-pacing-control {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .lessons-pacing-pill {
+    padding: 0 9px;
   }
 
   .library-filter-select {

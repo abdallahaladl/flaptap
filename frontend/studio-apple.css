@@ -3449,7 +3449,8 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
+  max-width: 100%;
 }
 
 .studio-body .studio-clickmode-group,
@@ -3461,6 +3462,22 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   border-radius: 980px;
   background: var(--ap-fill-subtle);
   border: 1px solid var(--ap-border);
+  max-width: 100%;
+}
+
+.studio-body .studio-pacing-group {
+  flex-shrink: 0;
+  box-shadow: var(--ap-specular);
+  transition: opacity 0.14s var(--ap-ease), border-color 0.16s var(--ap-ease);
+}
+
+.studio-body .studio-pacing-group[hidden] {
+  display: none;
+}
+
+.studio-body .studio-pacing-group.is-switching {
+  opacity: 0.62;
+  pointer-events: none;
 }
 
 .studio-body .studio-tool-pill {
@@ -3470,17 +3487,39 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
   border-radius: 980px;
   background: transparent;
   color: var(--ap-text-secondary);
+  font-family: var(--ap-font-text);
   font-size: 0.7rem;
   font-weight: 580;
   cursor: pointer;
   white-space: nowrap;
+  transition:
+    background-color 0.15s var(--ap-ease),
+    color 0.15s var(--ap-ease),
+    border-color 0.15s var(--ap-ease),
+    box-shadow 0.15s var(--ap-ease);
+}
+
+.studio-body .studio-tool-pill:hover {
+  color: var(--ap-text-primary);
+}
+
+.studio-body .studio-tool-pill:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ap-blue-ring);
 }
 
 .studio-body .studio-tool-pill.active {
   background: var(--ap-surface);
   color: var(--ap-blue);
   font-weight: 650;
+  border-color: var(--ap-border);
   box-shadow: var(--ap-shadow-pill);
+}
+
+[data-theme="dark"] .studio-body .studio-tool-pill.active {
+  background: var(--ap-surface-elevated);
+  border-color: var(--ap-border-strong);
+  color: var(--ap-blue);
 }
 
 .studio-body #studio-toggle-repairs,
@@ -3992,6 +4031,20 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
 
   .studio-body .studio-transcript-tools {
     padding: 6px 8px;
+  }
+
+  .studio-body .studio-tools-row {
+    gap: 5px;
+  }
+
+  .studio-body .studio-tools-pills {
+    width: 100%;
+    gap: 4px;
+  }
+
+  .studio-body .studio-tool-pill {
+    padding: 0 7px;
+    font-size: 0.68rem;
   }
 
   .studio-body .studio-read-subbar {

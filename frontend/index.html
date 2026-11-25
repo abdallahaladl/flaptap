@@ -443,6 +443,14 @@
         </div>
 
         <div class="lessons-ingest-options">
+          <div class="lessons-pacing-control" title="Choose shadowing sentence length (changeable anytime in Studio)">
+            <span class="lessons-pacing-label" data-i18n="lessonsPacingLabel">Lines</span>
+            <div class="lessons-pacing-group" id="lessons-pacing-group" role="radiogroup" aria-label="Shadowing line length">
+              <button type="button" class="lessons-pacing-pill active" data-pacing="short" role="radio" aria-checked="true" data-i18n="pacingShort">Short</button>
+              <button type="button" class="lessons-pacing-pill" data-pacing="balanced" role="radio" aria-checked="false" data-i18n="pacingBalanced">Medium</button>
+              <button type="button" class="lessons-pacing-pill" data-pacing="full" role="radio" aria-checked="false" data-i18n="pacingFull">Full</button>
+            </div>
+          </div>
           <label class="lessons-option-check" title="Automatically run AI Verbatim Review after opening Studio to fix ASR errors, separate speakers, and structure ideas">
             <input type="checkbox" id="lessons-auto-review" checked />
             <span>Auto-run AI Verbatim Review</span>

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { AiClient } from '../../../core/ai/ai.client';
 import { DEFAULT_LANGUAGE, getLanguage } from '../../../core/ai/languages';
 import { HistoryRepository, HistoryItem } from '../../../core/database/history.repository';
+import { normalizeTranslationKey } from './utils/pacing-regroup.util';
 
 const BATCH_SIZE = 20;
 const MAX_PARALLEL_BATCHES = 4;
@@ -425,11 +426,20 @@ export class ShadowingTranslationService {
     }
 
     if (Array.isArray(item.sentences)) {
+      const byTextLang = item.translationsByText?.[languageCode];
       for (const s of item.sentences) {
         const idx = Number(s.index);
+        if (!Number.isFinite(idx) || normalized[idx]) continue;
         const val = s.translations?.[languageCode];
-        if (Number.isFinite(idx) && typeof val === 'string' && val.trim() && !normalized[idx]) {
+        if (typeof val === 'string' && val.trim()) {
           normalized[idx] = val;
+          continue;
+        }
+        if (byTextLang && s.text) {
+          const textHit = byTextLang[normalizeTranslationKey(s.text)];
+          if (typeof textHit === 'string' && textHit.trim()) {
+            normalized[idx] = textHit;
+          }
         }
       }
     }
@@ -443,6 +453,8 @@ export class ShadowingTranslationService {
       ...(item.translationsCache[languageCode] || {}),
       ...translations,
     };
+    if (!item.translationsByText) item.translationsByText = {};
+    if (!item.translationsByText[languageCode]) item.translationsByText[languageCode] = {};
     item.translationEngineVersion = 5;
 
     if (item.sentences) {
@@ -451,11 +463,16 @@ export class ShadowingTranslationService {
         if (!translated) continue;
         if (!sentence.translations) sentence.translations = {};
         sentence.translations[languageCode] = translated;
+        const normKey = normalizeTranslationKey(sentence.text);
+        if (normKey) {
+          item.translationsByText[languageCode][normKey] = translated;
+        }
       }
     }
 
     this.historyRepo.update(item.id, {
       translationsCache: item.translationsCache,
+      translationsByText: item.translationsByText,
       sentences: item.sentences,
       translationEngineVersion: 5,
     });

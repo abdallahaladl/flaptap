@@ -16,7 +16,11 @@ import {
   SentenceItem,
 } from '../../../core/database/history.repository';
 import { escapeTranscriptHtml } from '../../../core/linguistics/highlights';
-import { formatTimestampMs } from '../../../core/linguistics/segmentation';
+import {
+  formatTimestampMs,
+  normalizePacingMode,
+  ShadowingPacingMode,
+} from '../../../core/linguistics/segmentation';
 import { classifyMediaUrl } from '../../../core/media/media-url';
 import { AiProvidersService } from '../../ai-providers/ai-providers.service';
 import { MediaTranscriptionService } from '../../american-extractor/sources/media-transcription.service';
@@ -49,6 +53,7 @@ import {
   SUPPORTED_EXPORT_FORMATS,
   SUPPORTED_VIEW_MODES,
 } from './utils/transcript-export.util';
+import { regroupShadowingLessonByPacing } from './utils/pacing-regroup.util';
 import { buildRawTranscriptSnapshot } from './utils/word-alignment.util';
 
 const MEDIA_UPLOAD_EXT = /\.(mp3|m4a|wav|aac|flac|ogg|opus|mp4|mov|m4v|webm|mkv)$/i;
@@ -205,6 +210,7 @@ export class ShadowingService {
     url: string,
     force = false,
     scope?: RequestIdentityScope,
+    pacingMode?: ShadowingPacingMode,
   ): Promise<HistoryItem> {
     const cleanUrl = String(url || '').trim();
     if (!cleanUrl) {
@@ -220,6 +226,7 @@ export class ShadowingService {
       );
     }
 
+    const mode = normalizePacingMode(pacingMode);
     const ytId = mediaInfo.source === 'youtube' ? extractYouTubeVideoId(cleanUrl) : '';
     const sourceKey = buildCanonicalSourceKey({
       sourceUrl: mediaInfo.canonicalUrl,
@@ -236,13 +243,19 @@ export class ShadowingService {
     }
 
     const scopeKey = scope?.userId || 'user';
-    const flightKey = `${scopeKey}:${sourceKey}:${force ? 'force' : 'std'}`;
+    const flightKey = `${scopeKey}:${sourceKey}:${force ? 'force' : 'std'}:${mode}`;
     const running = this.inFlight.get(flightKey);
     if (running) return running;
 
-    const promise = this.ingestUrlAndPersist(mediaInfo, ytId, sourceKey, existing, scope, force).finally(
-      () => this.inFlight.delete(flightKey),
-    );
+    const promise = this.ingestUrlAndPersist(
+      mediaInfo,
+      ytId,
+      sourceKey,
+      existing,
+      scope,
+      force,
+      mode,
+    ).finally(() => this.inFlight.delete(flightKey));
 
     this.inFlight.set(flightKey, promise);
     return promise;
@@ -256,6 +269,7 @@ export class ShadowingService {
     file: { buffer: Buffer; originalname: string; mimetype?: string },
     force = false,
     scope?: RequestIdentityScope,
+    pacingMode?: ShadowingPacingMode,
   ): Promise<HistoryItem> {
     if (!file?.buffer || file.buffer.length < 512) {
       throw new BadRequestException('Please upload a valid audio or video file.');
@@ -268,6 +282,7 @@ export class ShadowingService {
       );
     }
 
+    const mode = normalizePacingMode(pacingMode);
     const sourceKey = buildCanonicalSourceKey({ fileBuffer: file.buffer });
     const existing = this.historyRepo.findBySourceKey(sourceKey, scope);
     if (existing && !force) {
@@ -294,6 +309,7 @@ export class ShadowingService {
       fullText: mediaResult.text,
       cues: mediaResult.cues,
       timedWords: mediaResult.timedWords,
+      pacingMode: mode,
     });
 
     if (rawSnapshot.sentences.length === 0) {
@@ -326,6 +342,7 @@ export class ShadowingService {
       media,
       raw: rawSnapshot,
       existing,
+      pacingMode: mode,
     });
 
     const saved = this.historyRepo.create(item, scope);
@@ -425,6 +442,37 @@ export class ShadowingService {
     return this.reviewService.renameSpeakers(historyId, speakers || {}, scope);
   }
 
+  /**
+   * Deterministically regroups a user-owned lesson into the requested pacing mode
+   * (`short` | `balanced` | `full`) in memory (< 15ms, zero AI calls, zero re-extraction),
+   * re-grounds existing AI Coach annotations, updates Markdown, and persists atomically to SQLite.
+   */
+  updateLessonPacing(
+    historyId: string,
+    pacingMode: ShadowingPacingMode,
+    scope?: RequestIdentityScope,
+  ): HistoryItem {
+    const mode = normalizePacingMode(pacingMode);
+    const item = this.assertOwnedLesson(historyId, scope);
+
+    regroupShadowingLessonByPacing(item, mode);
+
+    if (item.aiAnalysis) {
+      this.analysisService.regroundExistingAnalysisForSentences(item);
+    }
+
+    item.noteMarkdown = this.historyRepo.buildCleanMarkdown(
+      item.title,
+      item.creator,
+      item.sourceUrl,
+      item.chunks || [],
+      item.aiAnalysis,
+      item.studyNotes,
+    );
+
+    return this.historyRepo.saveItem(item, scope);
+  }
+
   exportLesson(
     historyId: string,
     options: ExportOptions,
@@ -441,6 +489,7 @@ export class ShadowingService {
     existing: HistoryItem | undefined,
     scope: RequestIdentityScope | undefined,
     force: boolean,
+    pacingMode: ShadowingPacingMode = 'short',
   ): Promise<HistoryItem> {
     const startedAt = Date.now();
     try {
@@ -458,6 +507,7 @@ export class ShadowingService {
             fullText: yt.full_raw_transcript,
             cues: yt.cues,
             timedWords: yt.timed_words,
+            pacingMode,
           });
 
           if (rawSnapshot.sentences.length === 0) {
@@ -489,6 +539,7 @@ export class ShadowingService {
             media,
             raw: rawSnapshot,
             existing,
+            pacingMode,
           });
 
           const saved = this.historyRepo.create(item, scope);
@@ -523,7 +574,15 @@ export class ShadowingService {
             `YouTube caption path fell back to speech engine (${errCode || errStatus || 'err'}): ${ytErr?.message}`,
           );
           try {
-            return await this.ingestExternalMedia(mediaInfo, ytId, sourceKey, existing, scope, force);
+            return await this.ingestExternalMedia(
+              mediaInfo,
+              ytId,
+              sourceKey,
+              existing,
+              scope,
+              force,
+              pacingMode,
+            );
           } catch {
             throw ytErr;
           }
@@ -531,7 +590,15 @@ export class ShadowingService {
       }
 
       // 2. Universal Media / Podcast / Social Video / Direct Audio-Video Path
-      return await this.ingestExternalMedia(mediaInfo, ytId, sourceKey, existing, scope, force);
+      return await this.ingestExternalMedia(
+        mediaInfo,
+        ytId,
+        sourceKey,
+        existing,
+        scope,
+        force,
+        pacingMode,
+      );
     } catch (error: any) {
       this.logger.warn(
         `Media ingestion failed for ${mediaInfo.canonicalUrl} ` +
@@ -551,6 +618,7 @@ export class ShadowingService {
     existing: HistoryItem | undefined,
     scope: RequestIdentityScope | undefined,
     force: boolean,
+    pacingMode: ShadowingPacingMode = 'short',
   ): Promise<HistoryItem> {
     const persistedDir = this.sharedSources.getMediaDir();
     const mediaResult = await this.mediaTranscription.transcribeUrl(mediaInfo.canonicalUrl, {
@@ -585,6 +653,7 @@ export class ShadowingService {
       fullText: mediaResult.text,
       cues: mediaResult.cues,
       timedWords: mediaResult.timedWords,
+      pacingMode,
     });
 
     if (rawSnapshot.sentences.length === 0) {
@@ -619,6 +688,7 @@ export class ShadowingService {
       media,
       raw: rawSnapshot,
       existing,
+      pacingMode,
     });
 
     const saved = this.historyRepo.create(item, scope);
@@ -655,7 +725,9 @@ export class ShadowingService {
     media: ShadowingMediaPlayback;
     raw: RawTranscriptSnapshot;
     existing?: HistoryItem;
+    pacingMode?: ShadowingPacingMode;
   }): HistoryItem {
+    const pacingMode = normalizePacingMode(params.pacingMode);
     const sentences: SentenceItem[] = params.raw.sentences.map((s) => ({
       id: `s-${s.index}`,
       index: s.index,
@@ -725,11 +797,13 @@ export class ShadowingService {
       sourceUrl: params.sourceUrl,
       platform: params.platform,
       media: params.media,
+      pacingMode,
       transcriptData: {
         sourceKey: params.sourceKey,
         sourceType: params.sourceType,
         platform: params.platform,
         providerEngine: params.providerEngine,
+        pacingMode,
         raw: params.raw,
         reviewed: null,
         reviewStatus: 'pending',

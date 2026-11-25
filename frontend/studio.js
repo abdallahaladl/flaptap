@@ -191,6 +191,11 @@
       emptyRemaining: 'Every item in this section is checked off.',
       emptyCompleted: 'No completed items here yet.',
       jumpActiveTitle: 'Jump to active line',
+      pacingShort: 'Short',
+      pacingBalanced: 'Medium',
+      pacingFull: 'Full',
+      pacingSwitched: 'Switched line length',
+      pacingSwitchFailed: 'Could not switch sentence length.',
     },
     ar: {
       preparingLesson: 'جارٍ تجهيز الدرس...',
@@ -338,6 +343,11 @@
       errTimeoutDetail: 'استغرق يوتيوب وقتاً طويلاً للاستجابة. يرجى المحاولة مرة أخرى.',
       markComplete: 'تم',
       completedLabel: 'مكتمل',
+      pacingShort: 'قصيرة',
+      pacingBalanced: 'متوسطة',
+      pacingFull: 'كاملة',
+      pacingSwitched: 'تم تبديل طول السطور',
+      pacingSwitchFailed: 'تعذر تغيير طول السطور.',
     },
     es: {
       libraryBack: 'Biblioteca',
@@ -358,6 +368,11 @@
       allTranslatedBtn: 'Todo traducido',
       completeSession: 'Completar',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
+      pacingShort: 'Cortas',
+      pacingBalanced: 'Medias',
+      pacingFull: 'Completas',
+      pacingSwitched: 'Longitud de líneas actualizada',
+      pacingSwitchFailed: 'No se pudo cambiar la longitud.',
     },
     fr: {
       libraryBack: 'Bibliothèque',
@@ -378,6 +393,11 @@
       allTranslatedBtn: 'Tout traduit',
       completeSession: 'Terminer',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
+      pacingShort: 'Courtes',
+      pacingBalanced: 'Moyennes',
+      pacingFull: 'Complètes',
+      pacingSwitched: 'Longueur des lignes mise à jour',
+      pacingSwitchFailed: 'Impossible de changer la longueur.',
     },
     de: {
       libraryBack: 'Bibliothek',
@@ -398,6 +418,11 @@
       allTranslatedBtn: 'Alle übersetzt',
       completeSession: 'Abschließen',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
+      pacingShort: 'Kurz',
+      pacingBalanced: 'Mittel',
+      pacingFull: 'Voll',
+      pacingSwitched: 'Zeilenlänge gewechselt',
+      pacingSwitchFailed: 'Zeilenlänge konnte nicht geändert werden.',
     },
     tr: {
       libraryBack: 'Kitaplık',
@@ -418,8 +443,29 @@
       allTranslatedBtn: 'Tümü Çevrildi',
       completeSession: 'Tamamla',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
+      pacingShort: 'Kısa',
+      pacingBalanced: 'Orta',
+      pacingFull: 'Tam',
+      pacingSwitched: 'Satır uzunluğu değiştirildi',
+      pacingSwitchFailed: 'Satır uzunluğu değiştirilemedi.',
     },
   };
+
+  const VALID_PACING_MODES = ['short', 'balanced', 'full'];
+  const PACING_STORAGE_KEY = 'flaptap_shadowing_pacing';
+
+  function normalizePacingMode(raw) {
+    const val = String(raw || '').trim().toLowerCase();
+    return VALID_PACING_MODES.includes(val) ? val : 'short';
+  }
+
+  function getSavedPacingMode() {
+    try {
+      return normalizePacingMode(localStorage.getItem(PACING_STORAGE_KEY));
+    } catch {
+      return 'short';
+    }
+  }
 
   const initialTranslationLang = localStorage.getItem('flaptap_trans_lang') || 'ar';
 
@@ -474,6 +520,7 @@
     reviewing: false,
     reviewAbort: null,
     reviewAiSelector: null,
+    isSwitchingPacing: false,
     infoPopoverPinned: false,
     infoPopoverCloseTimer: null,
     scrubbing: false,
@@ -5755,6 +5802,7 @@
       });
       if (updated) {
         studioState.item = Object.assign({}, studioState.item, updated);
+        syncStudioPacingUi(studioState.item);
         if (studioState.activeSentence) {
           const nextActive = (studioState.item.sentences || []).find(
             (s) => Number(s.index) === Number(studioState.activeSentence.index),
@@ -5776,6 +5824,185 @@
       studioState.reviewing = false;
       studioState.reviewAbort = null;
       if (banner) banner.hidden = true;
+    }
+  }
+
+  function syncStudioPacingUi(item, modeOverride = null) {
+    const group = document.getElementById('studio-pacing-group');
+    if (!group) return;
+    const isShadowing = Boolean(item && item.track === 'shadowing');
+    group.hidden = !isShadowing;
+    if (!isShadowing) return;
+    const activeMode = normalizePacingMode(modeOverride || item.pacingMode || 'short');
+    group.querySelectorAll('[data-pacing]').forEach((btn) => {
+      const act = btn.dataset.pacing === activeMode;
+      btn.classList.toggle('active', act);
+      btn.setAttribute('aria-checked', act ? 'true' : 'false');
+    });
+  }
+
+  function formatPacingSwitchedToast(mode, count) {
+    const n = Number(count) || 0;
+    if (studioState.uiLang === 'en') {
+      const label =
+        mode === 'balanced' ? 'Medium lines' : mode === 'full' ? 'Full sentences' : 'Short lines';
+      return `${label} · ${n} ${n === 1 ? 'line' : 'lines'}`;
+    }
+    const key = mode === 'balanced' ? 'pacingBalanced' : mode === 'full' ? 'pacingFull' : 'pacingShort';
+    return `${t(key)} · ${n} ${t('sentencesUnit')}`;
+  }
+
+  async function switchStudioPacing(nextMode) {
+    const targetMode = normalizePacingMode(nextMode);
+    const item = studioState.item;
+    if (!item?.id || item.track !== 'shadowing' || studioState.isSwitchingPacing) return;
+
+    const prevMode = normalizePacingMode(item.pacingMode || 'short');
+    if (prevMode === targetMode) return;
+
+    if (!studioState.user && !studioState.authToken) {
+      redirectToSignInGate();
+      return;
+    }
+
+    const player = studioState.ytPlayer;
+    const wasPlaying = Boolean(studioState.isPlaying);
+    const wasLooping = studioState.endAction === 'loop';
+    let anchorTimeSec = (studioState.activeSentence?.startSec ?? 0) + 0.05;
+    try {
+      if (player && typeof player.getCurrentTime === 'function') {
+        const cur = Number(player.getCurrentTime());
+        if (Number.isFinite(cur) && cur > 0) {
+          const act = studioState.activeSentence;
+          if (wasPlaying || !act || (cur >= Number(act.startSec) - 0.1 && cur <= Number(act.endSec) + 0.25)) {
+            anchorTimeSec = cur;
+          }
+        }
+      }
+    } catch {}
+
+    const group = document.getElementById('studio-pacing-group');
+    studioState.isSwitchingPacing = true;
+    group?.classList.add('is-switching');
+    syncStudioPacingUi(item, targetMode);
+
+    try {
+      const data = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/pacing`, {
+        method: 'PATCH',
+        body: JSON.stringify({ pacingMode: targetMode }),
+      });
+
+      const nextItem = data?.item;
+      if (!nextItem) {
+        throw new Error(t('pacingSwitchFailed'));
+      }
+
+      try {
+        localStorage.setItem(PACING_STORAGE_KEY, targetMode);
+      } catch {}
+
+      studioState.item = nextItem;
+
+      // Refresh translation map cleanly so zero stale sentence-index translations linger
+      studioState.translationsByLang = {};
+      if (nextItem.translationsCache && typeof nextItem.translationsCache === 'object') {
+        for (const [lang, map] of Object.entries(nextItem.translationsCache)) {
+          studioState.translationsByLang[lang] = Object.assign({}, map || {});
+        }
+      }
+      studioState.translatingAllByLang = {};
+      studioState.translatingSentencesByLang = {};
+
+      // Clear transient playback/karaoke state without touching or remounting studioState.ytPlayer
+      cancelShadowPause();
+      studioState.pendingSeek = null;
+      clearActiveKaraokeWord();
+      studioState.activeRange = null;
+
+      // Resolve new anchor sentence by timestamp
+      const sentences = Array.isArray(nextItem.sentences) ? nextItem.sentences : [];
+      let matched = sentences.find(
+        (s) => anchorTimeSec >= Number(s.startSec) - 0.02 && anchorTimeSec <= Number(s.endSec) + 0.02,
+      );
+      if (!matched && sentences.length > 0) {
+        matched = sentences.reduce((best, s) =>
+          Math.abs(Number(s.startSec) - anchorTimeSec) < Math.abs(Number(best.startSec) - anchorTimeSec) ? s : best,
+        );
+      }
+      if (!matched && sentences.length > 0) {
+        matched = sentences[0];
+      }
+
+      studioState.activeSentence = matched || null;
+      studioState.loopSentenceIndex = wasLooping && matched ? matched.index : null;
+      studioState.dictationIndex = matched ? Number(matched.index) || 1 : 1;
+
+      syncStudioPacingUi(nextItem);
+
+      const sentTotalEl = document.getElementById('studio-sentence-total');
+      if (sentTotalEl) {
+        sentTotalEl.textContent = `${sentences.length} ${t('sentencesUnit')}`;
+      }
+
+      // Re-render all dependent Studio surfaces cleanly without remounting media deck
+      renderSentencesAndParagraphs();
+
+      if (nextItem.aiAnalysis) {
+        const coachContent = document.getElementById('coach-content-box');
+        if (studioState.mode === 'coach' || (coachContent && !coachContent.hidden)) {
+          renderCoachAnalysis(nextItem.aiAnalysis);
+        } else {
+          syncCoachBadgeFromAnalysis(nextItem.aiAnalysis);
+        }
+      }
+
+      if (matched) {
+        updateActiveSentenceDom(matched.index);
+      } else {
+        syncDeckLiveSubtitle();
+      }
+      syncPlaybackButtonsDom();
+
+      if (studioState.mode === 'listen') {
+        renderDictationCard();
+      }
+
+      if (matched) {
+        requestAnimationFrame(() => {
+          const targetEl = getActiveScrollTargetElement(matched.index);
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      }
+
+      // Keep active playback flowing seamlessly with zero stutter
+      if (wasPlaying && matched) {
+        try {
+          if (player && typeof player.getCurrentTime === 'function' && typeof player.seekTo === 'function') {
+            const curNow = Number(player.getCurrentTime());
+            if (
+              !Number.isFinite(curNow) ||
+              curNow < Number(matched.startSec) - 0.1 ||
+              curNow > Number(matched.endSec)
+            ) {
+              player.seekTo(Number(matched.startSec), true);
+            }
+          }
+        } catch {}
+      }
+
+      showToast(formatPacingSwitchedToast(targetMode, data.sentenceCount ?? sentences.length));
+    } catch (err) {
+      if (err?.status === 401 || err?.code === 'auth_required') {
+        redirectToSignInGate();
+        return;
+      }
+      syncStudioPacingUi(studioState.item, prevMode);
+      showToast(err?.message || t('pacingSwitchFailed'));
+    } finally {
+      studioState.isSwitchingPacing = false;
+      group?.classList.remove('is-switching');
     }
   }
 
@@ -6130,6 +6357,7 @@
     }
 
     renderSentencesAndParagraphs();
+    syncStudioPacingUi(item);
     mountMediaDeck(item);
     syncPlaybackButtonsDom();
     if (initialTarget) {
@@ -6242,14 +6470,16 @@
 
     if (rawUrl) {
       try {
+        const pacingMode = normalizePacingMode(params.get('pacing') || getSavedPacingMode());
         const item = await apiFetch('/api/tracks/shadowing/process', {
           method: 'POST',
-          body: JSON.stringify({ url: rawUrl, force: forceExtract }),
+          body: JSON.stringify({ url: rawUrl, force: forceExtract, pacingMode }),
         });
         const nextUrl = new URL(window.location.href);
         nextUrl.searchParams.delete('url');
         nextUrl.searchParams.delete('force');
         nextUrl.searchParams.delete('autoreview');
+        nextUrl.searchParams.delete('pacing');
         nextUrl.searchParams.set('id', item.id);
         nextUrl.searchParams.set('mode', studioState.mode);
         if (studioState.mode === 'read') {
@@ -6645,6 +6875,30 @@
     });
     document.querySelectorAll('[data-word-cushion]').forEach((btn) => {
       btn.addEventListener('click', () => setWordCushion(btn.getAttribute('data-word-cushion')));
+    });
+
+    // Real-time Shadowing Pacing Switcher (Short | Medium | Full)
+    const studioPacingGroup = document.getElementById('studio-pacing-group');
+    studioPacingGroup?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-pacing]');
+      if (!btn) return;
+      switchStudioPacing(btn.dataset.pacing);
+    });
+    studioPacingGroup?.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const pills = Array.from(studioPacingGroup.querySelectorAll('[data-pacing]'));
+      if (!pills.length) return;
+      const idx = pills.indexOf(document.activeElement);
+      if (idx === -1) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const dir = document.documentElement.getAttribute('dir') === 'rtl' ? -1 : 1;
+      const delta = (e.key === 'ArrowRight' ? 1 : -1) * dir;
+      const nextPill = pills[(idx + delta + pills.length) % pills.length];
+      if (nextPill) {
+        nextPill.focus();
+        switchStudioPacing(nextPill.dataset.pacing);
+      }
     });
 
     document.getElementById('studio-toggle-repairs')?.addEventListener('click', () => {
