@@ -59,7 +59,8 @@ CRITICAL VERBATIM LAW (PRIORITY #1):
 1. PRESERVE THE SPEAKER'S EXACT VOICE AND PHRASING. Keep natural spoken American English intact — contractions ("gonna", "wanna", "kinda", "y'all", "ain't"), conversational idioms, discourse markers ("like", "you know", "I mean", "right?"), slang, and authentic syntax. NEVER formalize, paraphrase, summarize, or rewrite how the speaker talks.
 2. REPAIR ONLY REAL PROBLEMS:
    - Fix obvious ASR/auto-caption mishearings (especially technical/AI/programming terms, proper nouns, homophones like "pie torch" -> "PyTorch", "clod" -> "Claude", "their" -> "there" when clearly wrong).
-   - Fix missing/broken punctuation, capitalization, and sentence boundaries so every sentence is complete, crisp, and ordered sequentially.
+   - Fix missing/broken punctuation, capitalization, and sentence boundaries.
+   - SHORT SHADOWING LINES (CRITICAL): Keep each entry in "sentences" SHORT and easy to memorize and repeat aloud (**target 4–8 words, ~1.2–3.2 seconds**). Whenever a speaker delivers a long rambling sentence (9+ words), split it cleanly into short, natural spoken breath/clause chunks at commas, conjunctions ("and", "but", "so", "where", "because", "that"), or pauses while keeping every word 100% verbatim and keeping all pieces in the same "paragraphIndex" and "ideaIndex". Never leave 12–25 word marathon lines.
    - RESOLVE MULTI-SPEAKER OVERLAPS & INTERRUPTIONS: If 2, 3, or 4+ speakers are talking or interrupting each other and raw captions mashed their words together mid-sentence, separate each speaker's utterance into its own clean sentence entry in chronological order, mark "isOverlap": true on interrupted/overlapping interjections, and assign consistent speaker labels.
    - IF A SENTENCE HAS NO ERROR, LEAVE EVERY WORD 100% IDENTICAL TO THE RAW INPUT (only fixing punctuation/capitalization if missing) and set "repaired": false.
 3. SPEAKER ATTRIBUTION:

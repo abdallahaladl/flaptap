@@ -216,84 +216,220 @@ function estimatePauseAfter(words: SegWord[], i: number): number {
   return roundMs(explicitGap + absorbedPause);
 }
 
+const SOFT_BOUNDARY_STARTERS = new Set([
+  'what',
+  'which',
+  'who',
+  'whom',
+  'whose',
+  'that',
+  'with',
+  'without',
+  'for',
+  'to',
+  'in',
+  'into',
+  'about',
+  'from',
+  'through',
+  'after',
+  'before',
+  'during',
+  'over',
+  'under',
+  'between',
+  'is',
+  'are',
+  'was',
+  'were',
+  'have',
+  'has',
+  'had',
+  'will',
+  'would',
+  'can',
+  'could',
+  'should',
+]);
+
+const SEMI_MODAL_BEFORE_TO = new Set([
+  'going',
+  'want',
+  'wants',
+  'wanted',
+  'need',
+  'needs',
+  'needed',
+  'have',
+  'has',
+  'had',
+  'try',
+  'tries',
+  'trying',
+  'tried',
+  'used',
+  'ought',
+  'able',
+  'supposed',
+  'about',
+  'ready',
+  'happy',
+  'glad',
+  'listen',
+  'talk',
+  'talking',
+]);
+
 /**
- * Splits a long grammatical sentence into bite-sized, rhythmically cohesive
- * units suitable for verbatim shadowing (typically 1.5–5.0 seconds / 4–14 words).
+ * Splits a long grammatical sentence into short, bite-sized, rhythmically cohesive
+ * units optimized for active shadowing & verbal repetition (4–7 words ideal, <= 8 words max,
+ * ~1.2–3.2s per line) using globally optimal dynamic programming over linguistic boundaries.
  *
  * Guarantees:
- * - If the sentence is already short (<= 5.8s and <= 15 words), it is NOT split.
- * - Sub-segments NEVER cut inside tight noun/prepositional phrases or end on NON_TERMINAL_WORDS.
- * - Minimum segment size: >= 4 words (or >= 1.5s).
- * - Minimum remaining tail: >= 3 words (or >= 1.2s), avoiding dangling stubs.
- * - Split points prioritize punctuation junctures (commas with conjunctions or list items,
- *   semicolons, colons, dashes), strong conjunctions, and acoustic breath pauses.
+ * - Short sentences (<= 7 words and <= 3.2s) are NEVER split.
+ * - Long sentences are partitioned so every shadowing line is 3–8 words (no 1–2 word stubs
+ *   and no 15–25 word walls of text).
+ * - Globally prefers natural junctures: commas/semicolons/dashes > acoustic breath pauses >
+ *   conjunctions/clause starters > pronouns & prepositional/predicate boundaries, while
+ *   strongly avoiding cuts after NON_TERMINAL_WORDS, semi-modal "going to", or repeated words.
+ * - Preserves exact word order and millisecond timestamps without mutating any word timing.
  */
 function splitLongSentence(words: SegWord[]): SegWord[][] {
-  if (words.length === 0) return [];
-  const totalDur = words[words.length - 1].end - words[0].start;
-  if (totalDur <= 5.8 && words.length <= 15) {
+  const n = words.length;
+  if (n === 0) return [];
+  const totalDur = words[n - 1].end - words[0].start;
+  if (n < 6 || (n <= 7 && totalDur <= 3.2)) {
+    return [words];
+  }
+
+  const MIN_WORDS = 3;
+  const MAX_WORDS = 8;
+  const SPLIT_BASE_COST = 2.0;
+
+  // Precompute boundary quality cost for cutting right after words[k - 1] (before words[k])
+  const boundaryCost = new Array<number>(n + 1).fill(0);
+  for (let k = 1; k < n; k++) {
+    const prev = words[k - 1];
+    const next = words[k];
+    let cost = 0;
+
+    const pause = Math.max(0, next.start - prev.end);
+    const hasPunctuation = /[,;:\u2014\u2013]$/.test(prev.text);
+    const isIndepClause = INDEPENDENT_CLAUSE_STARTERS.has(next.clean);
+    const isPronounClause = PRONOUN_CLAUSE_STARTERS.has(next.clean);
+    const isSemiModalTo = next.clean === 'to' && SEMI_MODAL_BEFORE_TO.has(prev.clean);
+    const isSoftStarter = !isSemiModalTo && SOFT_BOUNDARY_STARTERS.has(next.clean);
+
+    if (prev.clean === next.clean) {
+      cost += 28; // Never cut between identical repeated words ("really really")
+    }
+    if (!hasPunctuation && NON_TERMINAL_WORDS.has(prev.clean)) {
+      cost += 20; // Strongly avoid stranding articles/prepositions/possessives at line end
+    }
+    if (isSemiModalTo && !hasPunctuation) {
+      cost += 14; // Keep "going to", "want to", "have to", "need to" glued together
+    }
+
+    if (hasPunctuation) {
+      cost -= 11; // Strongest preference: natural comma/semicolon/dash pause
+    } else if (pause >= 0.22) {
+      cost -= 7; // Clear acoustic breath pause
+    }
+
+    if (isIndepClause) {
+      cost -= 5.5;
+    } else if (isPronounClause) {
+      cost -= 3.2;
+    } else if (isSoftStarter) {
+      cost -= 2.4;
+    } else if (!hasPunctuation && pause < 0.22) {
+      cost += 2.2; // Discourage arbitrary mid-phrase cuts when a real boundary exists nearby
+    }
+
+    if (PHRASE_CONTINUATION_NEXT.has(next.clean) && !hasPunctuation && pause < 0.22) {
+      cost += 4.5;
+    }
+
+    boundaryCost[k] = cost;
+  }
+
+  // DP: dp[i] = minimum total cost to segment words[0..i-1]
+  const INF = 1e9;
+  const dp = new Array<number>(n + 1).fill(INF);
+  const back = new Array<number>(n + 1).fill(-1);
+  dp[0] = 0;
+
+  for (let end = MIN_WORDS; end <= n; end++) {
+    const minStart = Math.max(0, end - MAX_WORDS);
+    const maxStart = end - MIN_WORDS;
+    for (let start = minStart; start <= maxStart; start++) {
+      if (dp[start] >= INF) continue;
+      const len = end - start;
+      const dur = Math.max(0, words[end - 1].end - words[start].start);
+
+      let chunkCost = 0;
+      if (len === 3) chunkCost += 2.4;
+      else if (len === 8) chunkCost += 1.5;
+      // 4–7 words is the zero-penalty sweet spot for effortless active shadowing
+
+      if (dur > 3.2) chunkCost += (dur - 3.2) * 5;
+      else if (dur < 0.85) chunkCost += (0.85 - dur) * 4;
+
+      const splitPenalty = start === 0 ? 0 : SPLIT_BASE_COST + boundaryCost[start];
+      const total = dp[start] + splitPenalty + chunkCost;
+      if (total < dp[end]) {
+        dp[end] = total;
+        back[end] = start;
+      }
+    }
+  }
+
+  if (back[n] === -1) {
     return [words];
   }
 
   const chunks: SegWord[][] = [];
-  let startIdx = 0;
-
-  for (let i = 0; i < words.length - 1; i++) {
-    const word = words[i];
-    const next = words[i + 1];
-    const currentCount = i - startIdx + 1;
-    const remainingCount = words.length - (i + 1);
-    const currentDur = word.end - words[startIdx].start;
-    const remainingDur = words[words.length - 1].end - next.start;
-
-    // Minimum chunk and remaining tail thresholds
-    if (currentCount < 4 || currentDur < 1.5) continue;
-    if (remainingCount < 3 || remainingDur < 1.2) continue;
-
-    // Never cut on a non-terminal word (articles, prepositions, modals, etc.)
-    if (NON_TERMINAL_WORDS.has(word.clean)) continue;
-    // Never cut between identical repeated words ("really really")
-    if (word.clean === next.clean) continue;
-
-    const pause = Math.max(0, next.start - word.end);
-    const nextContinues = PHRASE_CONTINUATION_NEXT.has(next.clean);
-    // Avoid detaching trailing prepositions without clear silence
-    if (nextContinues && pause < 0.35 && currentCount < 10) continue;
-
-    const hasPunctuation = /[,;:\u2014\u2013]$/.test(word.text);
-    const isIndepClause = INDEPENDENT_CLAUSE_STARTERS.has(next.clean);
-    const isPronounClause = PRONOUN_CLAUSE_STARTERS.has(next.clean);
-
-    let cut = false;
-    if (hasPunctuation) {
-      // Split at comma/semicolon when starting a clause or after reasonable chunk size
-      if (isIndepClause || isPronounClause || currentCount >= 5 || currentDur >= 2.4) {
-        cut = true;
-      }
-    } else {
-      // Unpunctuated phrase break: require strong clause starters or clear acoustic pauses
-      if (isIndepClause && (currentCount >= 7 || currentDur >= 2.8)) {
-        cut = true;
-      } else if (isPronounClause && (pause >= 0.15 || currentCount >= 8) && (currentDur >= 3.0 || currentCount >= 8)) {
-        cut = true;
-      } else if (pause >= 0.30 && (currentDur >= 3.0 || currentCount >= 8)) {
-        cut = true;
-      } else if (currentDur >= 5.8 || currentCount >= 18) {
-        cut = true;
-      }
-    }
-
-    if (cut) {
-      chunks.push(words.slice(startIdx, i + 1));
-      startIdx = i + 1;
-    }
+  let cursor = n;
+  while (cursor > 0) {
+    const prev = back[cursor];
+    if (prev < 0 || prev >= cursor) break;
+    chunks.push(words.slice(prev, cursor));
+    cursor = prev;
   }
+  chunks.reverse();
+  return chunks.length > 0 ? chunks : [words];
+}
 
-  if (startIdx < words.length) {
-    chunks.push(words.slice(startIdx));
+/**
+ * Reusable short-shadowing splitter for millisecond-timed word arrays (e.g. AI-reviewed
+ * sentences in `word-alignment.util.ts`). Preserves exact word objects & timestamps.
+ */
+export function splitTimedWordsForShadowing<
+  T extends { word: string; clean?: string; startMs: number; endMs: number },
+>(words: T[]): T[][] {
+  if (!Array.isArray(words) || words.length === 0) return [];
+  const segWords: SegWord[] = words.map((w) => ({
+    text: w.word,
+    clean: w.clean || cleanToken(w.word),
+    start: (Number(w.startMs) || 0) / 1000,
+    end: (Number(w.endMs) || 0) / 1000,
+  }));
+
+  const splitGroups = splitLongSentence(segWords);
+  if (splitGroups.length <= 1) return [words];
+
+  const out: T[][] = [];
+  let cursor = 0;
+  for (const grp of splitGroups) {
+    const slice = words.slice(cursor, cursor + grp.length);
+    cursor += grp.length;
+    if (slice.length > 0) out.push(slice);
   }
-
-  return chunks;
+  if (cursor < words.length) {
+    if (out.length > 0) out[out.length - 1].push(...words.slice(cursor));
+    else out.push(words.slice(cursor));
+  }
+  return out;
 }
 
 /**
@@ -479,7 +615,8 @@ function segmentUnpunctuatedStream(words: SegWord[]): SegWord[][] {
 
     const count = current.length;
     const remaining = words.length - (i + 1);
-    if (count < 4 || remaining < 3) continue;
+    const curDur = word.end - current[0].start;
+    if (count < 3 || remaining < 3) continue;
 
     // Never end a sentence on a dangling function/modifier word
     if (NON_TERMINAL_WORDS.has(word.clean)) continue;
@@ -490,23 +627,23 @@ function segmentUnpunctuatedStream(words: SegWord[]): SegWord[][] {
     const nextStartsClause = CLAUSE_STARTERS.has(next.clean) || INDEPENDENT_CLAUSE_STARTERS.has(next.clean);
     const nextContinuesPhrase = PHRASE_CONTINUATION_NEXT.has(next.clean);
 
-    if (nextContinuesPhrase && pause < 0.40 && count < 14) {
+    if (nextContinuesPhrase && pause < 0.26 && count < 8 && curDur < 3.2) {
       continue;
     }
 
     let shouldCut = false;
 
-    if (pause >= 0.35 && nextStartsClause && count >= 5) {
+    if (pause >= 0.28 && nextStartsClause && count >= 4) {
       shouldCut = true;
-    } else if (pause >= 0.45 && count >= 6) {
+    } else if (pause >= 0.35 && count >= 4) {
       shouldCut = true;
-    } else if (pause >= 0.18 && nextStartsClause && count >= 8) {
+    } else if (pause >= 0.15 && nextStartsClause && count >= 6) {
       shouldCut = true;
-    } else if (count >= 11 && (nextStartsClause || pause >= 0.10)) {
+    } else if (count >= 7 && (nextStartsClause || pause >= 0.08)) {
       shouldCut = true;
-    } else if (count >= 14 && !nextContinuesPhrase) {
+    } else if (count >= 9 && !nextContinuesPhrase) {
       shouldCut = true;
-    } else if (count >= 17) {
+    } else if (count >= 11 || curDur >= 4.0) {
       shouldCut = true;
     }
 

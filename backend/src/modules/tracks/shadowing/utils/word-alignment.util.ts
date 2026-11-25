@@ -2,6 +2,7 @@ import {
   roundMs,
   segmentParagraphs,
   segmentSentences,
+  splitTimedWordsForShadowing,
 } from '../../../../core/linguistics/segmentation';
 import { TimedWord, TranscriptCue, TranscriptResult } from '../transcript.service';
 import {
@@ -826,41 +827,59 @@ export function assembleAlignedReviewedViews(params: {
     cursor += tokCount;
 
     const spk = resolveSpeaker(draft.speaker);
-    const startMs = words.length > 0 ? words[0].startMs : sentences[sentences.length - 1]?.endMs || 0;
-    const rawEndMs = words.length > 0 ? words[words.length - 1].endMs : startMs + 350;
+    // Split long multi-clause reviewed sentences into short, repeatable shadowing bites (4–7 words / <= 8 words max)
+    // while keeping exact millisecond word timings, speaker attribution, repairs, and paragraph/idea grouping.
+    const rawSpanMs = words.length > 0 ? words[words.length - 1].endMs - words[0].startMs : 0;
+    const wordSlices =
+      words.length > 7 || (words.length >= 6 && rawSpanMs > 3200)
+        ? splitTimedWordsForShadowing(words)
+        : [words];
 
-    const rawWordsForSentence = words
-      .map((w) => (w.repaired ? w.rawWord || '' : w.word))
-      .filter(Boolean)
-      .join(' ')
-      .trim();
-    const hasWordRepair = words.some((w) => w.repaired);
-    const substantiveRepair = hasWordRepair || draft.isOverlap;
+    for (let sliceIdx = 0; sliceIdx < wordSlices.length; sliceIdx++) {
+      const sliceWords = wordSlices[sliceIdx];
+      const startMs =
+        sliceWords.length > 0 ? sliceWords[0].startMs : sentences[sentences.length - 1]?.endMs || 0;
+      const rawEndMs =
+        sliceWords.length > 0 ? sliceWords[sliceWords.length - 1].endMs : startMs + 350;
 
-    sentences.push({
-      id: `s-${i + 1}`,
-      index: i + 1,
-      text: draft.text,
-      rawText: rawWordsForSentence || draft.text,
-      speakerId: spk.id,
-      speaker: spk.name,
-      repaired: substantiveRepair,
-      repairNote:
-        substantiveRepair
-          ? draft.repairNote ||
-            (draft.isOverlap
-              ? 'Separated overlapping speaker turn'
-              : 'Corrected ASR transcription wording')
-          : '',
-      isOverlap: draft.isOverlap,
-      paragraphIndex: draft.paragraphIndex || 0,
-      ideaIndex: draft.ideaIndex || 0,
-      startMs,
-      endMs: Math.max(startMs + 120, rawEndMs),
-      startSec: roundMs(startMs / 1000),
-      endSec: roundMs(Math.max(startMs + 120, rawEndMs) / 1000),
-      words,
-    });
+      const sliceText =
+        wordSlices.length === 1
+          ? draft.text
+          : sliceWords.map((w) => w.word).join(' ').replace(/\s+/g, ' ').trim();
+      const rawWordsForSentence = sliceWords
+        .map((w) => (w.repaired ? w.rawWord || '' : w.word))
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      const hasWordRepair = sliceWords.some((w) => w.repaired);
+      const substantiveRepair = hasWordRepair || draft.isOverlap;
+
+      const nextIndex = sentences.length + 1;
+      sentences.push({
+        id: `s-${nextIndex}`,
+        index: nextIndex,
+        text: sliceText || draft.text,
+        rawText: rawWordsForSentence || sliceText || draft.text,
+        speakerId: spk.id,
+        speaker: spk.name,
+        repaired: substantiveRepair,
+        repairNote:
+          substantiveRepair
+            ? draft.repairNote ||
+              (draft.isOverlap
+                ? 'Separated overlapping speaker turn'
+                : 'Corrected ASR transcription wording')
+            : '',
+        isOverlap: draft.isOverlap,
+        paragraphIndex: draft.paragraphIndex || 0,
+        ideaIndex: draft.ideaIndex || 0,
+        startMs,
+        endMs: Math.max(startMs + 120, rawEndMs),
+        startSec: roundMs(startMs / 1000),
+        endSec: roundMs(Math.max(startMs + 120, rawEndMs) / 1000),
+        words: sliceWords,
+      });
+    }
   }
 
   // Playback Boundary Law: natural acoustic release tail, >= 50ms before next onset
@@ -936,7 +955,7 @@ function buildParagraphsFromSentences(sentences: TranscriptSentence[]): Transcri
     for (const s of sentences) {
       const pIdx = s.paragraphIndex || 1;
       const key = `${pIdx}::${s.speakerId}`;
-      if (curr.length > 0 && (key !== currKey || curr.length >= 7)) {
+      if (curr.length > 0 && (key !== currKey || curr.length >= 12)) {
         groups.push(curr);
         curr = [];
       }

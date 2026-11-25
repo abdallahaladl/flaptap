@@ -172,6 +172,49 @@ test('assembleAlignedReviewedViews resolves multi-speaker overlaps, honors 50ms 
   assert.ok(assembled.ideas[0].speakers.includes('Andrej Karpathy'));
 });
 
+test('assembleAlignedReviewedViews automatically splits long 20+ word rambling sentences into short shadowing bites (<=8 words)', () => {
+  const tokens =
+    "But what I'm not going to do is repeat the past, where I envision myself living a completely different life and not creating a plan to take action on that.".split(
+      /\s+/,
+    );
+  const rawWords = tokens.map((word, i) => ({
+    i,
+    word,
+    clean: word.toLowerCase().replace(/[^a-z0-9']/g, ''),
+    startMs: i * 360,
+    endMs: i * 360 + 300,
+  }));
+
+  const assembled = assembleAlignedReviewedViews({
+    rawWords,
+    draftSentences: [
+      {
+        text: tokens.join(' '),
+        speaker: 'Miranda Cohen',
+        paragraphIndex: 1,
+        ideaIndex: 1,
+      },
+    ],
+    draftIdeas: [{ index: 1, title: 'Action Plan', summary: 'Taking concrete action.' }],
+    defaultSpeaker: 'Miranda Cohen',
+  });
+
+  assert.ok(
+    assembled.sentences.length >= 4,
+    `Expected long 30-word sentence to split into >=4 short lines, got ${assembled.sentences.length}`,
+  );
+  for (const s of assembled.sentences) {
+    assert.ok(
+      s.words.length <= 8,
+      `Shadowing line too long (${s.words.length} words): "${s.text}"`,
+    );
+    assert.strictEqual(s.paragraphIndex, 1, 'Split lines must stay grouped in the same paragraph');
+  }
+  // Verify exact verbatim preservation across all split lines
+  const rejoined = assembled.sentences.map((s) => s.text).join(' ');
+  assert.strictEqual(rejoined, tokens.join(' '));
+});
+
 // 4. Universal 7-Format x 5-View Exporter
 test('exportShadowingLesson generates valid output across all 5 views and all 7 formats', () => {
   const raw = buildRawTranscriptSnapshot({
