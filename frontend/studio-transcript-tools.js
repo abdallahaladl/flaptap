@@ -116,19 +116,45 @@
     let cursor = 0;
     const normWord = (s) =>
       String(s || '')
+        .replace(/[\u2018\u2019]/g, "'")
         .toLowerCase()
         .replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '');
+
+    function splitTextPreservingLexicalTokens(rawText) {
+      const out = [];
+      const chunks = String(rawText || '').split(/(\s+)/);
+      for (const chunk of chunks) {
+        if (!chunk) continue;
+        if (/^\s+$/.test(chunk)) {
+          out.push(chunk);
+          continue;
+        }
+        const m = chunk.match(/^([^\p{L}\p{N}]*)([\p{L}\p{N}](?:.*[\p{L}\p{N}])?)([^\p{L}\p{N}]*)$/u);
+        if (m) {
+          if (m[1]) out.push(m[1]);
+          out.push(m[2]);
+          if (m[3]) out.push(m[3]);
+        } else {
+          out.push(chunk);
+        }
+      }
+      return out;
+    }
 
     function matchTimedWord(token) {
       if (!words.length) return null;
       const nTok = normWord(token);
       if (!nTok) return null;
-      const maxAhead = Math.min(words.length, cursor + 6);
+      // Advance past non-lexical symbol tokens (e.g., >>, [, ], --) that have empty normWord
+      const maxAhead = Math.min(words.length, cursor + 8);
       for (let i = cursor; i < maxAhead; i++) {
         if (normWord(words[i].word) === nTok) {
           cursor = i + 1;
           return words[i];
         }
+      }
+      while (cursor < words.length && !normWord(words[cursor].word)) {
+        cursor += 1;
       }
       if (cursor < words.length) {
         const w = words[cursor];
@@ -143,7 +169,7 @@
         const text = node.nodeValue || '';
         if (!text.trim()) return;
         const frag = document.createDocumentFragment();
-        const parts = text.split(/([\p{L}\p{N}''-]+)/gu);
+        const parts = splitTextPreservingLexicalTokens(text);
         for (const part of parts) {
           if (!part) continue;
           if (/^[\p{L}\p{N}]/u.test(part)) {
@@ -219,11 +245,25 @@
         best = mid;
         lo = mid + 1;
       } else {
+        // Only advance past an exact boundary tie once timeMs reaches/passes words[mid].endMs
+        if (
+          mid + 1 < words.length &&
+          timeMs >= words[mid + 1].startMs &&
+          words[mid].endMs <= timeMs
+        ) {
+          lo = mid + 1;
+          best = mid;
+          continue;
+        }
         return mid;
       }
     }
-    if (best >= 0 && timeMs - words[best].endMs <= 260) {
-      return best;
+    if (best >= 0) {
+      const next = best + 1 < words.length ? words[best + 1] : null;
+      const holdBudget = next ? Math.min(180, Math.max(0, next.startMs - words[best].endMs - 1)) : 200;
+      if (timeMs - words[best].endMs <= holdBudget) {
+        return best;
+      }
     }
     return -1;
   }

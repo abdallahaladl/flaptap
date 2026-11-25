@@ -37,6 +37,7 @@ import {
   applySpeakerOverridesToReviewed,
   assembleAlignedReviewedViews,
   buildRawTranscriptSnapshot,
+  coalesceToCanonicalSentences,
   DraftReviewedIdea,
   DraftReviewedSentence,
 } from './utils/word-alignment.util';
@@ -150,7 +151,13 @@ export class ShadowingReviewService {
       );
     }
 
-    const chunks = buildReviewChunks(td.raw.sentences, 1100);
+    // Always send complete canonical sentences to AI Review (never fragmented pacing slices with fake periods)
+    const canonicalForReview =
+      Array.isArray(td.raw.canonicalSentences) && td.raw.canonicalSentences.length > 0
+        ? td.raw.canonicalSentences
+        : coalesceToCanonicalSentences(td.raw.sentences, td.raw.words);
+    td.raw.canonicalSentences = canonicalForReview;
+    const chunks = buildReviewChunks(canonicalForReview, 1100);
     if (chunks.length === 0) {
       throw new BadRequestException('This lesson has no sentences to review.');
     }

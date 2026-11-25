@@ -226,7 +226,8 @@ export class ShadowingService {
       );
     }
 
-    const mode = normalizePacingMode(pacingMode);
+    const requestedMode = pacingMode ? normalizePacingMode(pacingMode) : null;
+    const mode = requestedMode || 'short';
     const ytId = mediaInfo.source === 'youtube' ? extractYouTubeVideoId(cleanUrl) : '';
     const sourceKey = buildCanonicalSourceKey({
       sourceUrl: mediaInfo.canonicalUrl,
@@ -239,6 +240,11 @@ export class ShadowingService {
 
     if (existing && !force) {
       this.logger.log(`SQLite cache hit for "${existing.title}" (${ytId || mediaInfo.mediaId})`);
+      const hydrated = this.hydrateLegacyRawFromDiskCache(existing);
+      const targetMode = requestedMode || normalizePacingMode(existing.pacingMode);
+      if (hydrated || (requestedMode && normalizePacingMode(existing.pacingMode) !== targetMode)) {
+        return this.applyPacingAndPersist(existing, targetMode, scope);
+      }
       return existing;
     }
 
@@ -282,10 +288,15 @@ export class ShadowingService {
       );
     }
 
-    const mode = normalizePacingMode(pacingMode);
+    const requestedMode = pacingMode ? normalizePacingMode(pacingMode) : null;
+    const mode = requestedMode || 'short';
     const sourceKey = buildCanonicalSourceKey({ fileBuffer: file.buffer });
     const existing = this.historyRepo.findBySourceKey(sourceKey, scope);
     if (existing && !force) {
+      const targetMode = requestedMode || normalizePacingMode(existing.pacingMode);
+      if (requestedMode && normalizePacingMode(existing.pacingMode) !== targetMode) {
+        return this.applyPacingAndPersist(existing, targetMode, scope);
+      }
       return existing;
     }
 
@@ -454,7 +465,58 @@ export class ShadowingService {
   ): HistoryItem {
     const mode = normalizePacingMode(pacingMode);
     const item = this.assertOwnedLesson(historyId, scope);
+    this.hydrateLegacyRawFromDiskCache(item);
+    return this.applyPacingAndPersist(item, mode, scope);
+  }
 
+  private hydrateLegacyRawFromDiskCache(item: HistoryItem): boolean {
+    if (!item || !item.videoId) return false;
+    if (Array.isArray(item.transcriptData?.raw?.words) && item.transcriptData!.raw!.words!.length > 0) {
+      return false;
+    }
+    const cached = this.transcriptService.getCachedTranscript(item.videoId);
+    if (!cached || !Array.isArray(cached.timed_words) || cached.timed_words.length === 0) {
+      return false;
+    }
+    const mode = normalizePacingMode(item.pacingMode);
+    const rawSnapshot = buildRawTranscriptSnapshot({
+      provider: 'youtube_transcript_api',
+      title: item.title || cached.title || 'YouTube Lesson',
+      creator: item.creator || cached.creator || 'Speaker 1',
+      url: item.sourceUrl || cached.url || '',
+      mediaId: item.videoId,
+      durationSeconds: item.durationSeconds || cached.duration_seconds || 0,
+      fullText: cached.full_raw_transcript || '',
+      cues: cached.cues,
+      timedWords: cached.timed_words,
+      pacingMode: mode,
+    });
+    if (!item.transcriptData) {
+      item.transcriptData = {
+        sourceKey: item.sourceKey || `yt:${item.videoId}`,
+        sourceType: 'youtube',
+        platform: item.platform || 'YouTube',
+        providerEngine: 'youtube_transcript_api',
+        pacingMode: mode,
+        raw: rawSnapshot,
+        reviewed: null,
+        reviewStatus: item.reviewStatus || 'pending',
+        reviewError: '',
+        speakerOverrides: {},
+      };
+    } else {
+      item.transcriptData.raw = rawSnapshot;
+    }
+    item.timingVersion = 2;
+    item.segmentationVersion = 2;
+    return true;
+  }
+
+  private applyPacingAndPersist(
+    item: HistoryItem,
+    mode: ShadowingPacingMode,
+    scope?: RequestIdentityScope,
+  ): HistoryItem {
     regroupShadowingLessonByPacing(item, mode);
 
     if (item.aiAnalysis) {

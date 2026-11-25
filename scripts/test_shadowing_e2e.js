@@ -709,6 +709,65 @@ async function run() {
     ok('Mobile 390px & 360px layouts pass zero-overflow & control-bar budget checks');
 
     assert.strictEqual(consoleErrors.length, 0, `Uncaught browser page errors: ${consoleErrors.join(' | ')}`);
+    // 10. Regression check: DOM word timing decoration handles numbers, currency, URLs, curly apostrophes & [ __ ] tokens
+    const domSyncAudit = await page.evaluate(() => {
+      const TT = window.FlaptapStudioTranscriptTools;
+      if (!TT) return { error: 'Missing FlaptapStudioTranscriptTools' };
+
+      const trickySentence = {
+        index: 99,
+        text: "We don’t pay $100,000. at busy.com/cody at 10:00 in D.C. [ __ ]!",
+        words: [
+          { i: 0, word: 'We', startMs: 0, endMs: 180 },
+          { i: 1, word: 'don’t', startMs: 180, endMs: 420 },
+          { i: 2, word: 'pay', startMs: 420, endMs: 650 },
+          { i: 3, word: '$100,000.', startMs: 650, endMs: 1100 },
+          { i: 4, word: 'at', startMs: 1100, endMs: 1220 },
+          { i: 5, word: 'busy.com/cody', startMs: 1220, endMs: 1700 },
+          { i: 6, word: 'at', startMs: 1700, endMs: 1820 },
+          { i: 7, word: '10:00', startMs: 1820, endMs: 2200 },
+          { i: 8, word: 'in', startMs: 2200, endMs: 2320 },
+          { i: 9, word: 'D.C.', startMs: 2320, endMs: 2700 },
+          { i: 10, word: '[', startMs: 2700, endMs: 2750 },
+          { i: 11, word: '__', startMs: 2750, endMs: 2800 },
+          { i: 12, word: ']!', startMs: 2800, endMs: 2850 },
+        ],
+      };
+      const html = TT.decorateTimedWordsHtml(trickySentence.text, trickySentence);
+      const wrap = document.createElement('div');
+      wrap.innerHTML = html;
+      const spans = Array.from(wrap.querySelectorAll('.studio-word')).map((el) => ({
+        word: el.textContent,
+        i: Number(el.getAttribute('data-word-i')),
+        startMs: Number(el.getAttribute('data-start-ms')),
+        endMs: Number(el.getAttribute('data-end-ms')),
+      }));
+
+      // Also check touching boundary lookup precision in findWordAtTimeMs
+      const hitAt180 = TT.findWordAtTimeMs(trickySentence.words, 180);
+      const hitAt1100 = TT.findWordAtTimeMs(trickySentence.words, 1100);
+      const hitAtBusy = TT.findWordAtTimeMs(trickySentence.words, 1450);
+
+      return { spans, hitAt180, hitAt1100, hitAtBusy };
+    });
+
+    assert(!domSyncAudit.error, domSyncAudit.error || 'DOM sync check ok');
+    assert.strictEqual(domSyncAudit.spans.length, 10, 'All 10 lexical tokens get aligned .studio-word spans without splitting 100,000 / 10:00 / busy.com/cody / D.C.');
+    assert.strictEqual(domSyncAudit.spans[1].word, 'don’t');
+    assert.strictEqual(domSyncAudit.spans[1].startMs, 180);
+    assert.strictEqual(domSyncAudit.spans[3].word, '100,000');
+    assert.strictEqual(domSyncAudit.spans[3].startMs, 650);
+    assert.strictEqual(domSyncAudit.spans[5].word, 'busy.com/cody');
+    assert.strictEqual(domSyncAudit.spans[5].startMs, 1220);
+    assert.strictEqual(domSyncAudit.spans[7].word, '10:00');
+    assert.strictEqual(domSyncAudit.spans[7].startMs, 1820);
+    assert.strictEqual(domSyncAudit.spans[9].word, 'D.C');
+    assert.strictEqual(domSyncAudit.spans[9].startMs, 2320);
+    assert.strictEqual(domSyncAudit.hitAt180, 1, 'Boundary 180ms resolves cleanly to word 1 (don’t)');
+    assert.strictEqual(domSyncAudit.hitAt1100, 4, 'Boundary 1100ms resolves cleanly to word 4 (at)');
+    assert.strictEqual(domSyncAudit.hitAtBusy, 5, 'Midpoint 1450ms resolves cleanly to busy.com/cody');
+    ok('DOM word-timing decoration handles curly apostrophes, numbers, currency, times, URLs, acronyms & [ __ ] accurately');
+
     ok('Zero uncaught browser errors across entire E2E flow');
 
     console.log('\n🎉 Consolidated Shadowing E2E Suite: ALL CHECKS PASSED!\n');

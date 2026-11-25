@@ -1,8 +1,9 @@
 import {
+  isTrueSentenceTerminal,
   normalizePacingMode,
   roundMs,
-  segmentParagraphs,
-  segmentSentences,
+  segmentWordStreamWithCanonical,
+  SegWord,
   ShadowingPacingMode,
   splitTimedWordsForShadowing,
 } from '../../../../core/linguistics/segmentation';
@@ -127,23 +128,425 @@ export function normalizeRawTimedWords(
     });
   }
 
-  // Clamp overlaps smoothly so word[i].endMs <= word[i+1].startMs when distinct onsets exist
-  for (let i = 0; i < out.length - 1; i++) {
-    const nxt = out[i + 1];
-    if (out[i].endMs > nxt.startMs && nxt.startMs > out[i].startMs) {
-      out[i].endMs = nxt.startMs;
+  const clamped = enforceNonOverlappingWordTimings(out);
+  return { words: clamped, cues };
+}
+
+const MIN_WORD_SLICE_MS = 25;
+
+/**
+ * Guarantees strictly monotonic, non-overlapping millisecond intervals across
+ * all words (`0 <= w[i].startMs < w[i].endMs <= w[i+1].startMs`) while leaving
+ * already non-overlapping raw timestamps untouched down to the millisecond.
+ */
+export function enforceNonOverlappingWordTimings(words: TimedWordMs[]): TimedWordMs[] {
+  if (!Array.isArray(words) || words.length === 0) return [];
+  const n = words.length;
+  const arr: TimedWordMs[] = new Array(n);
+
+  let prevStart = 0;
+  for (let i = 0; i < n; i++) {
+    const raw = words[i];
+    const startMs = Math.max(prevStart, Math.max(0, Math.round(Number(raw.startMs) || 0)));
+    const endMs = Math.max(startMs + 1, Math.round(Number(raw.endMs) || startMs + 60));
+    prevStart = startMs;
+    arr[i] = { ...raw, i, startMs, endMs };
+  }
+
+  // Pass 1: Partition crowded or equal-start clusters cleanly inside their available window.
+  let g = 0;
+  while (g < n) {
+    let h = g;
+    let maxEndInCluster = arr[g].endMs;
+    while (h + 1 < n) {
+      const countIfAdded = h - g + 2;
+      const nxtStart = arr[h + 1].startMs;
+      const sameOnset = nxtStart <= arr[h].startMs;
+      const tooTightWithOverlap =
+        nxtStart - arr[g].startMs < countIfAdded * MIN_WORD_SLICE_MS &&
+        (sameOnset || arr[h].endMs > nxtStart);
+      if (!sameOnset && !tooTightWithOverlap) break;
+      h += 1;
+      if (arr[h].endMs > maxEndInCluster) maxEndInCluster = arr[h].endMs;
     }
-    if (out[i].endMs <= out[i].startMs) {
-      out[i].endMs = out[i].startMs + 60;
+
+    if (h > g) {
+      const count = h - g + 1;
+      const spanStart = arr[g].startMs;
+      const nextWordStart = h + 1 < n ? arr[h + 1].startMs : Math.max(spanStart + count * 80, maxEndInCluster);
+      const targetCeiling = Math.max(maxEndInCluster, nextWordStart);
+      const spanEnd = Math.max(
+        spanStart + count * MIN_WORD_SLICE_MS,
+        h + 1 < n ? Math.min(nextWordStart, targetCeiling) : targetCeiling,
+      );
+      const totalSpan = Math.max(count * MIN_WORD_SLICE_MS, spanEnd - spanStart);
+      const slack = Math.max(0, totalSpan - count * MIN_WORD_SLICE_MS);
+      const weights = [];
+      let weightSum = 0;
+      for (let k = g; k <= h; k++) {
+        const w = Math.min(12, Math.max(1, (arr[k].clean || arr[k].word || '').length)) + 1;
+        weights.push(w);
+        weightSum += w;
+      }
+      let cursor = spanStart;
+      for (let k = g; k <= h; k++) {
+        const idxInCluster = k - g;
+        const extra = weightSum > 0 ? Math.round((slack * weights[idxInCluster]) / weightSum) : 0;
+        const dur = MIN_WORD_SLICE_MS + extra;
+        const nextBoundary = k === h ? spanStart + totalSpan : Math.min(spanStart + totalSpan - (h - k) * MIN_WORD_SLICE_MS, cursor + dur);
+        arr[k].startMs = cursor;
+        arr[k].endMs = Math.max(cursor + MIN_WORD_SLICE_MS, nextBoundary);
+        cursor = arr[k].endMs;
+      }
+      g = h + 1;
+    } else {
+      g += 1;
     }
   }
 
-  return { words: out, cues };
+  // Pass 2: Enforce zero overlap for adjacent distinct-onset words (`w[i].endMs <= w[i+1].startMs`).
+  for (let i = 0; i < n - 1; i++) {
+    const curr = arr[i];
+    const nxt = arr[i + 1];
+    if (nxt.startMs < curr.startMs + MIN_WORD_SLICE_MS) {
+      curr.endMs = curr.startMs + MIN_WORD_SLICE_MS;
+      nxt.startMs = curr.endMs;
+      nxt.endMs = Math.max(nxt.startMs + MIN_WORD_SLICE_MS, nxt.endMs);
+    } else if (curr.endMs > nxt.startMs) {
+      curr.endMs = nxt.startMs;
+    }
+    if (curr.endMs <= curr.startMs) {
+      curr.endMs = curr.startMs + MIN_WORD_SLICE_MS;
+      if (nxt.startMs < curr.endMs) {
+        nxt.startMs = curr.endMs;
+      }
+    }
+  }
+
+  const last = arr[n - 1];
+  if (last.endMs <= last.startMs) {
+    last.endMs = last.startMs + MIN_WORD_SLICE_MS;
+  }
+
+  return arr;
+}
+
+function buildRawSentenceObjects(
+  groups: SegWord[][],
+  rawWords: TimedWordMs[],
+  idPrefix: string,
+  defaultSpeaker: string,
+): TranscriptSentence[] {
+  const sentences: TranscriptSentence[] = [];
+  let fallbackWordCursor = 0;
+
+  for (let idx = 0; idx < groups.length; idx++) {
+    const seg = groups[idx];
+    if (seg.length === 0) continue;
+
+    const slice: TimedWordMs[] = [];
+    for (let k = 0; k < seg.length; k++) {
+      const sw = seg[k];
+      const rw =
+        typeof sw.srcIndex === 'number' && rawWords[sw.srcIndex]
+          ? rawWords[sw.srcIndex]
+          : rawWords[fallbackWordCursor];
+      fallbackWordCursor++;
+      if (rw) {
+        slice.push({
+          ...rw,
+          word: sw.text,
+          clean: normalizeAlignToken(sw.text) || rw.clean,
+        });
+      } else {
+        const sMs = Math.max(0, Math.round(sw.start * 1000));
+        const eMs = Math.max(sMs + 40, Math.round(sw.end * 1000));
+        slice.push({
+          i: fallbackWordCursor - 1,
+          word: sw.text,
+          clean: normalizeAlignToken(sw.text) || sw.clean,
+          startMs: sMs,
+          endMs: eMs,
+          rawWord: sw.text,
+        });
+      }
+    }
+
+    const startMs = slice.length > 0 ? slice[0].startMs : Math.round(seg[0].start * 1000);
+    const endMs =
+      slice.length > 0
+        ? slice[slice.length - 1].endMs
+        : Math.round(seg[seg.length - 1].end * 1000);
+    const text = slice.map((w) => w.word).join(' ').replace(/\s+/g, ' ').trim();
+
+    sentences.push({
+      id: `${idPrefix}-${sentences.length + 1}`,
+      index: sentences.length + 1,
+      text,
+      rawText: text,
+      speakerId: 'spk_1',
+      speaker: defaultSpeaker,
+      repaired: false,
+      repairNote: '',
+      isOverlap: false,
+      paragraphIndex: 1,
+      ideaIndex: 1,
+      startMs,
+      endMs: Math.max(startMs + 80, endMs),
+      startSec: roundMs(startMs / 1000),
+      endSec: roundMs(Math.max(startMs + 80, endMs) / 1000),
+      words: slice,
+    });
+  }
+
+  return sentences;
+}
+
+/**
+ * Unified raw word segmentation builder producing BOTH complete grammatical
+ * `canonicalSentences` AND mode-paced `sentences` + contiguous `paragraphs`
+ * directly from normalized `rawWords` without cursor drift or fake periods.
+ */
+export function buildRawSentencesAndParagraphsFromWords(params: {
+  rawWords: TimedWordMs[];
+  creator?: string;
+  pacingMode?: ShadowingPacingMode;
+}): {
+  canonicalSentences: TranscriptSentence[];
+  sentences: TranscriptSentence[];
+  paragraphs: TranscriptParagraph[];
+} {
+  const mode = normalizePacingMode(params.pacingMode);
+  const rawWords = Array.isArray(params.rawWords) ? params.rawWords : [];
+  if (rawWords.length === 0) {
+    return { canonicalSentences: [], sentences: [], paragraphs: [] };
+  }
+
+  const defaultSpeaker = params.creator?.trim() || 'Speaker 1';
+  const segWords: SegWord[] = rawWords.map((w, idx) => ({
+    start: w.startMs / 1000,
+    end: w.endMs / 1000,
+    text: w.word,
+    clean: w.clean || normalizeAlignToken(w.word),
+    srcIndex: idx,
+  }));
+
+  const { canonicalGroups, pacedGroups } = segmentWordStreamWithCanonical(segWords, mode);
+  const canonicalSentences = buildRawSentenceObjects(canonicalGroups, rawWords, 'raw-canon-s', defaultSpeaker);
+  const sentences = buildRawSentenceObjects(pacedGroups, rawWords, 'raw-s', defaultSpeaker);
+
+  applyPlaybackBoundaryLaw(canonicalSentences);
+  applyPlaybackBoundaryLaw(sentences);
+
+  const paragraphs = buildParagraphsFromSentences(sentences, mode);
+  return { canonicalSentences, sentences, paragraphs };
+}
+
+function findMatchedRawWordIndex(
+  rawWords: TimedWordMs[],
+  searchStart: number,
+  targetWord: TimedWordMs | undefined,
+): number {
+  if (!targetWord || !rawWords.length) return -1;
+  const targetClean = normalizeAlignToken(targetWord.word);
+  const lo = Math.max(0, searchStart - 3);
+  const hi = Math.min(rawWords.length - 1, searchStart + 140);
+
+  let bestExactIdx = -1;
+  let bestExactDist = Infinity;
+  let bestTimeIdx = -1;
+  let bestTimeDist = Infinity;
+
+  for (let i = lo; i <= hi; i++) {
+    const rw = rawWords[i];
+    const dist = Math.abs(rw.startMs - targetWord.startMs);
+    if (dist <= 1500 && targetClean && normalizeAlignToken(rw.word) === targetClean) {
+      if (dist < bestExactDist) {
+        bestExactDist = dist;
+        bestExactIdx = i;
+      }
+    }
+    if (dist <= 180 && dist < bestTimeDist) {
+      bestTimeDist = dist;
+      bestTimeIdx = i;
+    }
+  }
+
+  return bestExactIdx >= 0 ? bestExactIdx : bestTimeIdx;
+}
+
+function stripSyntheticTrailingPeriod(text: string, replacementPunct: string): string {
+  const trimmed = String(text || '').trim();
+  const replaced = trimmed.replace(/\.([)"'\u201d\u2019]*)$/, `${replacementPunct}$1`);
+  return replaced;
+}
+
+function lowercaseSentenceInitial(wordText: string): string {
+  return String(wordText || '').replace(/^(\s*["'(\[]*)([A-Z])/, (_m, p, ch) => p + ch.toLowerCase());
+}
+
+/**
+ * Coalesces adjacent fragments back into complete canonical grammatical sentences,
+ * including recovering legacy cached lessons whose mid-sentence commas/clauses were
+ * corrupted by synthetic `.` characters when grounded against `rawWords`.
+ */
+export function coalesceToCanonicalSentences(
+  sentences: TranscriptSentence[],
+  rawWords?: TimedWordMs[],
+): TranscriptSentence[] {
+  const out: TranscriptSentence[] = [];
+  let rawTermCount = 0;
+  const hasRaw = Array.isArray(rawWords) && rawWords.length > 0;
+  if (hasRaw) {
+    for (let i = 0; i < rawWords!.length; i++) {
+      if (isTrueSentenceTerminal(rawWords![i].word, rawWords![i + 1]?.word)) rawTermCount++;
+    }
+  }
+  const rawHasPunct = Boolean(
+    hasRaw &&
+      (rawTermCount >= Math.max(2, Math.floor(rawWords!.length / 55)) ||
+        (rawWords!.length <= 80 && rawTermCount >= 1)),
+  );
+  let rawSearchCursor = 0;
+
+  for (const s of sentences) {
+    const words = Array.isArray(s.words) ? s.words.map((w) => ({ ...w })) : [];
+    const prev = out.length > 0 ? out[out.length - 1] : null;
+    const prevLastWordObj =
+      prev && prev.words.length > 0 ? prev.words[prev.words.length - 1] : undefined;
+    const currFirstWordObj = words.length > 0 ? words[0] : undefined;
+
+    const prevLastWord = prevLastWordObj
+      ? prevLastWordObj.word
+      : prev?.text.trim().split(/\s+/).pop() || '';
+    const currFirstWord = currFirstWordObj
+      ? currFirstWordObj.word
+      : s.text.trim().split(/\s+/)[0] || '';
+
+    const sameSpeakerAndIdea =
+      Boolean(prev) &&
+      prev!.speakerId === s.speakerId &&
+      prev!.ideaIndex === s.ideaIndex &&
+      !prev!.isOverlap &&
+      !s.isOverlap;
+
+    let canMerge = false;
+    let recoveredPunct: string | null = null;
+    let shouldLowercaseCurr = false;
+
+    if (sameSpeakerAndIdea && prev) {
+      if (!isTrueSentenceTerminal(prevLastWord, currFirstWord)) {
+        if (prev.paragraphIndex === s.paragraphIndex || rawHasPunct) {
+          canMerge = true;
+        }
+      } else if (rawHasPunct && rawWords) {
+        const strippedPrev = prevLastWord.replace(/[)"'\u201d\u2019]+$/g, '');
+        if (strippedPrev.endsWith('.') && !/[?!]$/.test(strippedPrev)) {
+          const pRawIdx = findMatchedRawWordIndex(rawWords, rawSearchCursor, prevLastWordObj);
+          const cRawIdx = findMatchedRawWordIndex(
+            rawWords,
+            pRawIdx >= 0 ? pRawIdx + 1 : rawSearchCursor,
+            currFirstWordObj,
+          );
+          if (pRawIdx >= 0 && cRawIdx > pRawIdx && cRawIdx - pRawIdx <= 10) {
+            let sawRawTerminal = false;
+            for (let r = pRawIdx; r < cRawIdx; r++) {
+              if (isTrueSentenceTerminal(rawWords[r].word, rawWords[r + 1]?.word)) {
+                sawRawTerminal = true;
+                break;
+              }
+            }
+            const rawPrevWord = rawWords[pRawIdx].word;
+            const rawCurrWord = rawWords[cRawIdx].word;
+            const rawPrevEndedNonTermPunct = /[,;:]$/.test(
+              rawPrevWord.replace(/[)"'\u201d\u2019]+$/g, ''),
+            );
+            const rawCurrStartsLower = /^[a-z]/.test(
+              rawCurrWord.replace(/^["'(\[]+/, ''),
+            );
+            if (
+              !sawRawTerminal &&
+              !/[.?!][)"'\u201d\u2019]*$/.test(rawPrevWord) &&
+              (rawPrevEndedNonTermPunct || rawCurrStartsLower)
+            ) {
+              canMerge = true;
+              const punctMatch = rawPrevWord.replace(/[)"'\u201d\u2019]+$/g, '').match(/([,;:])$/);
+              recoveredPunct = punctMatch ? punctMatch[1] : '';
+              shouldLowercaseCurr =
+                rawCurrStartsLower && !/^(I|I'm|I've|I'll|I'd)\b/.test(currFirstWord);
+            }
+          }
+          if (cRawIdx >= 0) {
+            rawSearchCursor = cRawIdx;
+          } else if (pRawIdx >= 0) {
+            rawSearchCursor = pRawIdx + 1;
+          }
+        }
+      }
+    }
+
+    if (canMerge && prev) {
+      let nextCurrText = s.text;
+      if (recoveredPunct !== null) {
+        prev.text = stripSyntheticTrailingPeriod(prev.text, recoveredPunct);
+        if (prev.rawText) {
+          prev.rawText = stripSyntheticTrailingPeriod(prev.rawText, recoveredPunct);
+        }
+        if (prev.words.length > 0) {
+          const lastW = prev.words[prev.words.length - 1];
+          lastW.word = stripSyntheticTrailingPeriod(lastW.word, recoveredPunct);
+        }
+      }
+      if (shouldLowercaseCurr) {
+        nextCurrText = lowercaseSentenceInitial(nextCurrText);
+        if (words.length > 0) {
+          words[0].word = lowercaseSentenceInitial(words[0].word);
+        }
+      }
+
+      prev.words = [...prev.words, ...words];
+      prev.text = `${prev.text} ${nextCurrText}`.replace(/\s+/g, ' ').trim();
+      prev.rawText = `${prev.rawText || prev.text} ${s.rawText || nextCurrText}`
+        .replace(/\s+/g, ' ')
+        .trim();
+      prev.repaired = Boolean(prev.repaired || s.repaired);
+      if (!prev.repairNote && s.repairNote) prev.repairNote = s.repairNote;
+      if (prev.words.length > 0) {
+        prev.startMs = prev.words[0].startMs;
+        prev.endMs = Math.max(prev.startMs + 80, prev.words[prev.words.length - 1].endMs);
+      } else {
+        prev.endMs = Math.max(prev.endMs, s.endMs);
+      }
+      prev.startSec = roundMs(prev.startMs / 1000);
+      prev.endSec = roundMs(prev.endMs / 1000);
+    } else {
+      if (rawHasPunct && rawWords && currFirstWordObj) {
+        const synced = findMatchedRawWordIndex(rawWords, rawSearchCursor, words[words.length - 1] || currFirstWordObj);
+        if (synced >= 0) rawSearchCursor = synced;
+      }
+      const idx = out.length + 1;
+      const startMs = words.length > 0 ? words[0].startMs : s.startMs;
+      const endMs =
+        words.length > 0 ? Math.max(startMs + 80, words[words.length - 1].endMs) : s.endMs;
+      out.push({
+        ...s,
+        id: `canon-s-${idx}`,
+        index: idx,
+        words,
+        startMs,
+        endMs,
+        startSec: roundMs(startMs / 1000),
+        endSec: roundMs(endMs / 1000),
+      });
+    }
+  }
+
+  return out;
 }
 
 /**
  * Builds the deterministic untouched raw baseline snapshot reusing Flaptap's
- * shared `segmentSentences` and `segmentParagraphs` (zero segmentation duplication).
+ * shared canonical-first word segmentation (`buildRawSentencesAndParagraphsFromWords`).
  */
 export function buildRawTranscriptSnapshot(params: {
   provider: string;
@@ -166,104 +569,10 @@ export function buildRawTranscriptSnapshot(params: {
     params.durationSeconds,
   );
 
-  const syntheticTranscript: TranscriptResult = {
-    title: params.title,
+  const { canonicalSentences, sentences, paragraphs } = buildRawSentencesAndParagraphsFromWords({
+    rawWords: words,
     creator: params.creator,
-    url: params.url,
-    video_id: params.mediaId,
-    duration_seconds: params.durationSeconds,
-    total_cues: cues.length,
-    chunks: [],
-    sentences: [],
-    cues: cues.map((c) => ({
-      start: formatMsClock(c.startMs),
-      end: formatMsClock(c.endMs),
-      start_sec: c.startSec,
-      end_sec: c.endSec,
-      text: c.text,
-    })),
-    timed_words: words.map((w) => ({
-      word: w.word,
-      clean: w.clean,
-      start_sec: roundMs(w.startMs / 1000),
-      end_sec: roundMs(w.endMs / 1000),
-    })),
-    full_raw_transcript: params.fullText || words.map((w) => w.word).join(' '),
-  };
-
-  const baseSentences = segmentSentences(syntheticTranscript, pacingMode);
-  const baseParagraphs = segmentParagraphs(baseSentences);
-  const defaultSpeaker = params.creator?.trim() || 'Speaker 1';
-
-  const paraIndexBySentence = new Map<number, number>();
-  baseParagraphs.forEach((p, pIdx) => {
-    (p.sentenceIndices || []).forEach((sIdx) => paraIndexBySentence.set(sIdx, pIdx + 1));
-  });
-
-  const sentences: TranscriptSentence[] = [];
-  let wordCursor = 0;
-
-  baseSentences.forEach((s, idx) => {
-    const tokens = tokenizeDisplayWords(s.text);
-    const slice: TimedWordMs[] = [];
-    for (let k = 0; k < tokens.length && wordCursor < words.length; k++) {
-      const rw = words[wordCursor++];
-      slice.push({
-        ...rw,
-        word: tokens[k],
-        clean: normalizeAlignToken(tokens[k]) || rw.clean,
-      });
-    }
-    const startMs = slice.length > 0 ? slice[0].startMs : Math.round(s.startSec * 1000);
-    const endMs =
-      slice.length > 0
-        ? slice[slice.length - 1].endMs
-        : Math.round(s.endSec * 1000);
-
-    sentences.push({
-      id: `raw-s-${idx + 1}`,
-      index: idx + 1,
-      text: s.text,
-      rawText: s.text,
-      speakerId: 'spk_1',
-      speaker: defaultSpeaker,
-      repaired: false,
-      repairNote: '',
-      isOverlap: false,
-      paragraphIndex: paraIndexBySentence.get(s.index) || 1,
-      ideaIndex: 1,
-      startMs,
-      endMs: Math.max(startMs + 80, endMs),
-      startSec: roundMs(startMs / 1000),
-      endSec: roundMs(Math.max(startMs + 80, endMs) / 1000),
-      words: slice,
-    });
-  });
-
-  applyPlaybackBoundaryLaw(sentences);
-
-  const sentByIndex = new Map<number, TranscriptSentence>();
-  sentences.forEach((s) => sentByIndex.set(s.index, s));
-
-  const paragraphs: TranscriptParagraph[] = baseParagraphs.map((p, idx) => {
-    const indices = Array.isArray(p.sentenceIndices) ? p.sentenceIndices : [];
-    const firstSent = indices.length > 0 ? sentByIndex.get(indices[0]) : undefined;
-    const lastSent = indices.length > 0 ? sentByIndex.get(indices[indices.length - 1]) : undefined;
-    const startMs = firstSent ? firstSent.startMs : Math.round((Number(p.startSec) || 0) * 1000);
-    const endMs = lastSent
-      ? lastSent.endMs
-      : Math.max(startMs + 100, Math.round((Number(p.endSec) || 0) * 1000));
-    return {
-      index: idx + 1,
-      speakerId: 'spk_1',
-      speaker: defaultSpeaker,
-      sentenceIndices: indices,
-      text: p.text,
-      startMs,
-      endMs,
-      startSec: roundMs(startMs / 1000),
-      endSec: roundMs(endMs / 1000),
-    };
+    pacingMode,
   });
 
   return {
@@ -272,6 +581,7 @@ export function buildRawTranscriptSnapshot(params: {
     fullText: (params.fullText || words.map((w) => w.word).join(' ')).trim(),
     cues,
     words,
+    canonicalSentences,
     sentences,
     paragraphs,
     extractedAt: new Date().toISOString(),
@@ -597,7 +907,8 @@ function alignLocalSlice(
       const nextStart = nextRaw ? nextRaw.startMs : nextBoundaryMs;
       const gap = Math.max(0, nextStart - prevEnd);
       const startMs = prevEnd;
-      const endMs = gap >= 70 ? Math.min(nextStart, startMs + Math.min(gap, 220)) : startMs + 90;
+      // Fit cleanly inside available gap; if tight, finalizer will partition non-overlapping slices cleanly
+      const endMs = gap >= 40 ? Math.min(nextStart, startMs + Math.min(gap, 220)) : startMs + 50;
       repairedCount++;
       out.push({
         i: 0,
@@ -740,18 +1051,7 @@ export function alignReviewedWordsToRawTiming(
 }
 
 function finalizeMonotonicWords(words: TimedWordMs[]): TimedWordMs[] {
-  let prevStart = 0;
-  return words.map((w, idx) => {
-    const startMs = Math.max(prevStart, Math.max(0, Math.round(w.startMs)));
-    const endMs = Math.max(startMs + 60, Math.round(w.endMs));
-    prevStart = startMs;
-    return {
-      ...w,
-      i: idx,
-      startMs,
-      endMs,
-    };
-  });
+  return enforceNonOverlappingWordTimings(words);
 }
 
 function computeVerbatimScore(exactWords: number, totalWords: number): number {
@@ -811,6 +1111,13 @@ export function applyPlaybackBoundaryLaw(sentences: TranscriptSentence[]): void 
         curr.endMs = Math.min(curr.endMs + tail, next.startMs - 50);
       } else if (curr.endMs > next.startMs - 50 && next.startMs - 50 > curr.startMs + 80) {
         curr.endMs = next.startMs - 50;
+      }
+      if (Array.isArray(curr.words) && curr.words.length > 0) {
+        for (const w of curr.words) {
+          if (w.endMs > curr.endMs && w.startMs < curr.endMs) {
+            w.endMs = curr.endMs;
+          }
+        }
       }
     } else {
       curr.endMs = curr.endMs + 280;

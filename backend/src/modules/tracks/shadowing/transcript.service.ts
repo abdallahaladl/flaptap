@@ -278,6 +278,14 @@ export class TranscriptService {
     return path.join(this.cacheDir, `${videoId}.json`);
   }
 
+  /**
+   * Synchronous read-only lookup of a cached disk transcript (accepting older cache
+   * entries cleanly so legacy lessons can hydrate true millisecond word timings offline).
+   */
+  public getCachedTranscript(videoId: string): TranscriptResult | null {
+    return this.readCache(videoId, true);
+  }
+
   private readCache(videoId: string, allowStale = false): TranscriptResult | null {
     if (!videoId) return null;
     try {

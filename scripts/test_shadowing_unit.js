@@ -577,4 +577,193 @@ test('HistoryRepository persists consolidated Shadowing metadata, enforces user 
   }
 });
 
+test('normalizeRawTimedWords & alignReviewedWordsToRawTiming eliminate same-onset and insertion word overlaps', () => {
+  const {
+    normalizeRawTimedWords,
+  } = require(path.join(distRoot, 'modules/tracks/shadowing/utils/word-alignment.util.js'));
+
+  const sameOnsetRaw = [
+    { word: 'You', clean: 'you', start_sec: 4.2, end_sec: 4.21 },
+    { word: 'can', clean: 'can', start_sec: 4.2, end_sec: 4.3 },
+    { word: 'do', clean: 'do', start_sec: 4.3, end_sec: 4.5 },
+  ];
+  const { words: norm } = normalizeRawTimedWords(sameOnsetRaw, undefined, 'You can do', 5);
+  assert.strictEqual(norm.length, 3);
+  assert(norm[0].endMs <= norm[1].startMs, 'same-onset first word must not overlap second word');
+  assert(norm[1].endMs <= norm[2].startMs, 'second word must not overlap third word');
+  assert(norm[0].endMs > norm[0].startMs && norm[1].endMs > norm[1].startMs);
+
+  // Adjacent zero-gap insertion (`I` between `kilograms.` and `think`)
+  const aligned = alignReviewedWordsToRawTiming(
+    [
+      { i: 0, word: 'kilograms', clean: 'kilograms', startMs: 1000, endMs: 1200, rawWord: 'kilograms' },
+      { i: 1, word: 'think', clean: 'think', startMs: 1200, endMs: 1450, rawWord: 'think' },
+    ],
+    ['kilograms.', 'I', 'think'],
+  );
+  assert.strictEqual(aligned.words.length, 3);
+  for (let i = 0; i < aligned.words.length - 1; i++) {
+    assert(
+      aligned.words[i].endMs <= aligned.words[i + 1].startMs,
+      `aligned word ${i} must not overlap word ${i + 1}`,
+    );
+    assert(aligned.words[i].endMs > aligned.words[i].startMs);
+  }
+});
+
+test('Short / Medium / Full pacing modes produce distinct natural boundaries without fake periods or verb-object cuts', () => {
+  const {
+    segmentSentences,
+  } = require(path.join(distRoot, 'core/linguistics/segmentation.js'));
+
+  const rawTokens =
+    "There are two hard problems when it comes to computer science. And I thought I would help guide you through the process, you know. When I was doing random workouts, my strength was plateauing because I wasn't doing anything consistently.".split(
+      /\s+/,
+    );
+  const timed_words = rawTokens.map((w, idx) => ({
+    word: w,
+    clean: w.toLowerCase().replace(/[^a-z']/g, ''),
+    start_sec: idx * 0.34,
+    end_sec: idx * 0.34 + 0.31,
+  }));
+  const transcript = {
+    title: 'Pacing Test',
+    creator: 'Speaker',
+    url: 'https://example.com',
+    video_id: 'pacing_test_1',
+    duration_seconds: rawTokens.length * 0.34 + 1,
+    total_cues: 1,
+    chunks: [],
+    sentences: [],
+    cues: [],
+    timed_words,
+    full_raw_transcript: rawTokens.join(' '),
+  };
+
+  const shortSents = segmentSentences(transcript, 'short');
+  const balancedSents = segmentSentences(transcript, 'balanced');
+  const fullSents = segmentSentences(transcript, 'full');
+
+  assert.strictEqual(fullSents.length, 3, 'Full mode keeps all 3 complete grammatical sentences intact');
+  assert(balancedSents.length > fullSents.length, 'Medium splits the 16-word multi-clause sentence cleanly');
+  assert(shortSents.length > balancedSents.length, 'Short breaks further into bite-sized drills');
+
+  for (let i = 0; i < shortSents.length - 1; i++) {
+    assert(
+      !(/\b(guide|help|get|stay)\.?$/i.test(shortSents[i].text) && /^(you|the|tuned)\b/i.test(shortSents[i + 1].text)),
+      `Short mode must never cut verb+object ("${shortSents[i].text}" | "${shortSents[i + 1].text}")`,
+    );
+  }
+  for (let i = 0; i < shortSents.length - 1; i++) {
+    if (shortSents[i].text.includes('workouts,')) {
+      assert(!shortSents[i].text.endsWith('.'), 'Split comma clause should keep verbatim comma, never inject fake period');
+    }
+  }
+});
+
+test('coalesceToCanonicalSentences + regroupShadowingLessonByPacing recovers legacy synthetic periods from raw.words', () => {
+  const {
+    coalesceToCanonicalSentences,
+  } = require(path.join(distRoot, 'modules/tracks/shadowing/utils/word-alignment.util.js'));
+
+  const rawWords = [
+    { i: 0, word: 'If', clean: 'if', startMs: 0, endMs: 200, rawWord: 'If' },
+    { i: 1, word: "you're", clean: "you're", startMs: 200, endMs: 420, rawWord: "you're" },
+    { i: 2, word: 'like', clean: 'like', startMs: 420, endMs: 650, rawWord: 'like' },
+    { i: 3, word: 'me,', clean: 'me', startMs: 650, endMs: 900, rawWord: 'me,' },
+    { i: 4, word: 'and', clean: 'and', startMs: 950, endMs: 1150, rawWord: 'and' },
+    { i: 5, word: 'you', clean: 'you', startMs: 1150, endMs: 1350, rawWord: 'you' },
+    { i: 6, word: 'find', clean: 'find', startMs: 1350, endMs: 1600, rawWord: 'find' },
+    { i: 7, word: 'yourself', clean: 'yourself', startMs: 1600, endMs: 1950, rawWord: 'yourself' },
+    { i: 8, word: 'accumulating', clean: 'accumulating', startMs: 1950, endMs: 2450, rawWord: 'accumulating' },
+    { i: 9, word: 'things', clean: 'things', startMs: 2450, endMs: 2700, rawWord: 'things' },
+    { i: 10, word: 'because', clean: 'because', startMs: 2750, endMs: 3000, rawWord: 'because' },
+    { i: 11, word: 'you', clean: 'you', startMs: 3000, endMs: 3200, rawWord: 'you' },
+    { i: 12, word: 'need', clean: 'need', startMs: 3200, endMs: 3450, rawWord: 'need' },
+    { i: 13, word: 'them.', clean: 'them', startMs: 3450, endMs: 3800, rawWord: 'them.' },
+  ];
+
+  // Legacy corrupted reviewed snapshot where synthetic periods were baked into short fragments
+  const legacyReviewedSents = [
+    {
+      id: 'rev-1',
+      index: 1,
+      text: "If you're like me.",
+      rawText: "If you're like me.",
+      speakerId: 'spk_1',
+      speaker: 'Speaker',
+      repaired: false,
+      repairNote: '',
+      isOverlap: false,
+      paragraphIndex: 1,
+      ideaIndex: 1,
+      startMs: 0,
+      endMs: 900,
+      startSec: 0,
+      endSec: 0.9,
+      words: [
+        { ...rawWords[0], word: 'If' },
+        { ...rawWords[1], word: "you're" },
+        { ...rawWords[2], word: 'like' },
+        { ...rawWords[3], word: 'me.' },
+      ],
+    },
+    {
+      id: 'rev-2',
+      index: 2,
+      text: 'And you find yourself accumulating things.',
+      rawText: 'And you find yourself accumulating things.',
+      speakerId: 'spk_1',
+      speaker: 'Speaker',
+      repaired: false,
+      repairNote: '',
+      isOverlap: false,
+      paragraphIndex: 1,
+      ideaIndex: 1,
+      startMs: 950,
+      endMs: 2700,
+      startSec: 0.95,
+      endSec: 2.7,
+      words: [
+        { ...rawWords[4], word: 'And' },
+        rawWords[5],
+        rawWords[6],
+        rawWords[7],
+        rawWords[8],
+        { ...rawWords[9], word: 'things.' },
+      ],
+    },
+    {
+      id: 'rev-3',
+      index: 3,
+      text: 'Because you need them.',
+      rawText: 'Because you need them.',
+      speakerId: 'spk_1',
+      speaker: 'Speaker',
+      repaired: false,
+      repairNote: '',
+      isOverlap: false,
+      paragraphIndex: 1,
+      ideaIndex: 1,
+      startMs: 2750,
+      endMs: 3800,
+      startSec: 2.75,
+      endSec: 3.8,
+      words: [
+        { ...rawWords[10], word: 'Because' },
+        rawWords[11],
+        rawWords[12],
+        rawWords[13],
+      ],
+    },
+  ];
+
+  const recovered = coalesceToCanonicalSentences(legacyReviewedSents, rawWords);
+  assert.strictEqual(recovered.length, 1, 'Synthetic periods grounded via rawWords must coalesce into 1 canonical sentence');
+  assert.strictEqual(
+    recovered[0].text,
+    "If you're like me, and you find yourself accumulating things because you need them.",
+  );
+});
+
 console.log(`\n🎉 Consolidated Shadowing Unit Suite: ${passed} / ${passed} passed!\n`);

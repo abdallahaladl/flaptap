@@ -3012,6 +3012,65 @@
     studioState.activeWordIndex = -1;
   }
 
+  const playbackClockAnchor = {
+    rawSec: 0,
+    anchorSec: 0,
+    perfMs: 0,
+    speed: 1,
+    active: false,
+  };
+
+  function resetPlaybackClockAnchor(sec = 0) {
+    const cleanSec = Math.max(0, Number(sec) || 0);
+    playbackClockAnchor.rawSec = cleanSec;
+    playbackClockAnchor.anchorSec = cleanSec;
+    playbackClockAnchor.perfMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    playbackClockAnchor.speed = Math.max(0.25, Number(studioState.speed) || 1);
+    playbackClockAnchor.active = false;
+  }
+
+  /**
+   * Dead-reckoning playback clock between YouTube IFrame's ~250ms getCurrentTime() updates.
+   * For native HTML5 media whose currentTime updates every frame, rawSec advances continuously
+   * so anchor resets every frame without extrapolation.
+   */
+  function getInterpolatedPlaybackTimeSec(rawSec) {
+    const cleanRaw = Math.max(0, Number(rawSec) || 0);
+    const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    const speed = Math.max(0.25, Number(studioState.speed) || 1);
+    let ytPlaying = Boolean(studioState.isPlaying) && !studioState.pendingSeek;
+    if (ytPlaying && typeof studioState.ytPlayer?.getPlayerState === 'function') {
+      try {
+        ytPlaying = studioState.ytPlayer.getPlayerState() === 1;
+      } catch {}
+    }
+
+    if (!ytPlaying) {
+      playbackClockAnchor.rawSec = cleanRaw;
+      playbackClockAnchor.anchorSec = cleanRaw;
+      playbackClockAnchor.perfMs = nowPerf;
+      playbackClockAnchor.speed = speed;
+      playbackClockAnchor.active = false;
+      return cleanRaw;
+    }
+
+    if (
+      !playbackClockAnchor.active ||
+      speed !== playbackClockAnchor.speed ||
+      Math.abs(cleanRaw - playbackClockAnchor.rawSec) > 0.002
+    ) {
+      playbackClockAnchor.rawSec = cleanRaw;
+      playbackClockAnchor.anchorSec = cleanRaw;
+      playbackClockAnchor.perfMs = nowPerf;
+      playbackClockAnchor.speed = speed;
+      playbackClockAnchor.active = true;
+      return cleanRaw;
+    }
+
+    const dtSec = Math.min(0.32, Math.max(0, (nowPerf - playbackClockAnchor.perfMs) / 1000));
+    return playbackClockAnchor.anchorSec + dtSec * speed;
+  }
+
   function updateTimelineAndKaraoke(currentSec) {
     const TT = window.FlaptapStudioTranscriptTools;
     if (!TT) return;
@@ -3036,22 +3095,47 @@
 
     // Never highlight a stale or previous sentence's word while a seek/loop restart is settling
     if (studioState.pendingSeek) {
+      resetPlaybackClockAnchor(currentSec);
       clearActiveKaraokeWord();
       return;
     }
 
     const isRawView = studioState.mode === 'read' && studioState.readView === 'raw';
+    const isDrillingSingle =
+      studioState.loopSentenceIndex !== null ||
+      studioState.endAction === 'loop' ||
+      studioState.endAction === 'pause';
     const activeSent = studioState.activeSentence;
-    const scopeToActiveSentence = Boolean(
+    const nowMsEstimate = Math.round(nowMs);
+
+    let scopedSent = null;
+    if (
       !isRawView &&
       activeSent &&
       Array.isArray(activeSent.words) &&
       activeSent.words.length > 0 &&
-      studioState.activeRange?.mode !== 'range',
-    );
+      studioState.activeRange?.mode !== 'range'
+    ) {
+      const aFirst = Number(activeSent.words[0].startMs || 0);
+      const aLast = Number(activeSent.words[activeSent.words.length - 1].endMs || 0);
+      const withinActiveWindow = nowMsEstimate >= aFirst - 60 && nowMsEstimate <= aLast + 220;
+      if (isDrillingSingle || withinActiveWindow) {
+        scopedSent = activeSent;
+      } else if (Array.isArray(studioState.item?.sentences)) {
+        const playheadSent = studioState.item.sentences.find(
+          (s) =>
+            Array.isArray(s.words) &&
+            s.words.length > 0 &&
+            nowMsEstimate >= Number(s.words[0].startMs || 0) - 40 &&
+            nowMsEstimate <= Number(s.words[s.words.length - 1].endMs || 0) + 180,
+        );
+        if (playheadSent) scopedSent = playheadSent;
+      }
+    }
 
+    const scopeToActiveSentence = Boolean(scopedSent);
     const words = scopeToActiveSentence
-      ? activeSent.words
+      ? scopedSent.words
       : TT.getActiveWordStream(studioState.item, studioState.readView, studioState.mode);
     if (!words.length) {
       clearActiveKaraokeWord();
@@ -3088,7 +3172,7 @@
         : studioState.readView === 'raw'
         ? '#subview-raw-list'
         : '#subview-chunks-list';
-    const sentFilter = scopeToActiveSentence ? `[data-sent-index="${activeSent.index}"]` : '';
+    const sentFilter = scopeToActiveSentence ? `[data-sent-index="${scopedSent.index}"]` : '';
     const el = document.querySelector(`${scopeSelector} .studio-word${sentFilter}[data-word-i="${hitWord.i}"]`);
     if (el) {
       el.classList.add('is-speaking');
@@ -3105,8 +3189,9 @@
         return;
       }
       try {
-        const cur = Number(studioState.ytPlayer.getCurrentTime?.() || 0);
-        updateTimelineAndKaraoke(cur);
+        const rawCur = Number(studioState.ytPlayer.getCurrentTime?.() || 0);
+        const smoothCur = getInterpolatedPlaybackTimeSec(rawCur);
+        updateTimelineAndKaraoke(smoothCur);
       } catch {}
       studioState.karaokeRaf = requestAnimationFrame(step);
     };
@@ -3864,16 +3949,24 @@
         const elapsed = Date.now() - pending.issuedAt;
         const target = pending.targetSec;
         const arrivedTight = current >= target - 0.15 && current <= target + 0.45;
-        const movedFromPreSeek = Math.abs(current - pending.preSeekTime) > 0.01;
-        const preSeekAlreadyNear = Math.abs(pending.preSeekTime - target) <= 0.25;
+        const isBackwardSeek = pending.preSeekTime > target + 0.08;
+        const movedFromPreSeek = isBackwardSeek
+          ? current <= Math.min(target + 0.15, pending.preSeekTime - 0.04)
+          : Math.abs(current - pending.preSeekTime) > 0.015;
+        // Treat preSeek as already in zone across the whole arrival band so short (<= 0.45s)
+        // loop restarts wait for an actual backward jump rather than settling on stale pre-seek time.
+        const preSeekInZone =
+          pending.preSeekTime >= target - 0.15 && pending.preSeekTime <= target + 0.55;
+        const settledWaitMs = isBackwardSeek ? 380 : 120;
         const arrived =
-          (arrivedTight && (!preSeekAlreadyNear || movedFromPreSeek || elapsed >= 120)) ||
+          (arrivedTight && (!preSeekInZone || movedFromPreSeek || elapsed >= settledWaitMs)) ||
           (elapsed >= 450 && movedFromPreSeek && current >= target - 1.0 && current <= target + 0.85) ||
           elapsed >= 2500;
 
         if (!arrived) {
           return;
         }
+        resetPlaybackClockAnchor(current);
         studioState.pendingSeek = null;
         if (studioState.awaitingOnsetUnmute) {
           if (!studioState.userMuted && typeof player.unMute === 'function') player.unMute();
@@ -4028,10 +4121,19 @@
         studioState.endAction === 'pause';
 
       const msSinceSeek = studioState.lastSeekTime > 0 ? Date.now() - studioState.lastSeekTime : Infinity;
-      const isOutsideActive =
-        !active ||
-        (msSinceSeek > 2500 &&
-          (current < active.startSec - 1.5 || current > active.endSec + 1.5));
+      const isInitialSeekJitter =
+        !isDrillingSentence &&
+        active &&
+        msSinceSeek < 350 &&
+        Math.abs(current - active.startSec) <= 0.15;
+      const isOutsideActive = isDrillingSentence
+        ? !active ||
+          (msSinceSeek > 2500 &&
+            (current < active.startSec - 1.5 || current > active.endSec + 1.5))
+        : !active ||
+          (!isInitialSeekJitter &&
+            !studioState.pendingSeek &&
+            (current < active.startSec - 0.08 || current > active.endSec + 0.06));
 
       if (!isDrillingSentence || isOutsideActive) {
         const match = sentences.find((s) => current >= s.startSec && current < s.endSec);

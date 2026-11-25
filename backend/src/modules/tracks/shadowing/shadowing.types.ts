@@ -110,6 +110,7 @@ export interface RawTranscriptSnapshot {
   fullText: string;
   cues: RawCueMs[];
   words: TimedWordMs[];
+  canonicalSentences?: TranscriptSentence[];
   sentences: TranscriptSentence[];
   paragraphs: TranscriptParagraph[];
   extractedAt: string;
