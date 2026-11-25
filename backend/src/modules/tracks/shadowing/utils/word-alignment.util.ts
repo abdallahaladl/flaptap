@@ -1,9 +1,12 @@
 import {
+  normalizePacingMode,
   roundMs,
   segmentParagraphs,
   segmentSentences,
-} from '../../../core/linguistics/segmentation';
-import { TimedWord, TranscriptCue, TranscriptResult } from '../../tracks/shadowing/transcript.service';
+  ShadowingPacingMode,
+  splitTimedWordsForShadowing,
+} from '../../../../core/linguistics/segmentation';
+import { TimedWord, TranscriptCue, TranscriptResult } from '../transcript.service';
 import {
   RawCueMs,
   RawTranscriptSnapshot,
@@ -14,7 +17,7 @@ import {
   TranscriptSentence,
   TranscriptSpeakerInfo,
   TranscriptSpeakerTurn,
-} from '../transcript-lab.types';
+} from '../shadowing.types';
 
 /**
  * Clean alphanumeric + apostrophe core for alignment & search.
@@ -153,7 +156,9 @@ export function buildRawTranscriptSnapshot(params: {
   fullText: string;
   cues?: TranscriptCue[];
   timedWords?: TimedWord[];
+  pacingMode?: ShadowingPacingMode;
 }): RawTranscriptSnapshot {
+  const pacingMode = normalizePacingMode(params.pacingMode);
   const { words, cues } = normalizeRawTimedWords(
     params.timedWords,
     params.cues,
@@ -186,11 +191,10 @@ export function buildRawTranscriptSnapshot(params: {
     full_raw_transcript: params.fullText || words.map((w) => w.word).join(' '),
   };
 
-  const baseSentences = segmentSentences(syntheticTranscript);
+  const baseSentences = segmentSentences(syntheticTranscript, pacingMode);
   const baseParagraphs = segmentParagraphs(baseSentences);
   const defaultSpeaker = params.creator?.trim() || 'Speaker 1';
 
-  // Map raw word slices deterministically onto each baseline sentence
   const paraIndexBySentence = new Map<number, number>();
   baseParagraphs.forEach((p, pIdx) => {
     (p.sentenceIndices || []).forEach((sIdx) => paraIndexBySentence.set(sIdx, pIdx + 1));
@@ -213,7 +217,7 @@ export function buildRawTranscriptSnapshot(params: {
     const startMs = slice.length > 0 ? slice[0].startMs : Math.round(s.startSec * 1000);
     const endMs =
       slice.length > 0
-        ? Math.max(Math.round(s.endSec * 1000), slice[slice.length - 1].endMs)
+        ? slice[slice.length - 1].endMs
         : Math.round(s.endSec * 1000);
 
     sentences.push({
@@ -229,21 +233,31 @@ export function buildRawTranscriptSnapshot(params: {
       paragraphIndex: paraIndexBySentence.get(s.index) || 1,
       ideaIndex: 1,
       startMs,
-      endMs: Math.max(startMs + 100, endMs),
+      endMs: Math.max(startMs + 80, endMs),
       startSec: roundMs(startMs / 1000),
-      endSec: roundMs(Math.max(startMs + 100, endMs) / 1000),
+      endSec: roundMs(Math.max(startMs + 80, endMs) / 1000),
       words: slice,
     });
   });
 
+  applyPlaybackBoundaryLaw(sentences);
+
+  const sentByIndex = new Map<number, TranscriptSentence>();
+  sentences.forEach((s) => sentByIndex.set(s.index, s));
+
   const paragraphs: TranscriptParagraph[] = baseParagraphs.map((p, idx) => {
-    const startMs = Math.round((Number(p.startSec) || 0) * 1000);
-    const endMs = Math.max(startMs + 100, Math.round((Number(p.endSec) || 0) * 1000));
+    const indices = Array.isArray(p.sentenceIndices) ? p.sentenceIndices : [];
+    const firstSent = indices.length > 0 ? sentByIndex.get(indices[0]) : undefined;
+    const lastSent = indices.length > 0 ? sentByIndex.get(indices[indices.length - 1]) : undefined;
+    const startMs = firstSent ? firstSent.startMs : Math.round((Number(p.startSec) || 0) * 1000);
+    const endMs = lastSent
+      ? lastSent.endMs
+      : Math.max(startMs + 100, Math.round((Number(p.endSec) || 0) * 1000));
     return {
       index: idx + 1,
       speakerId: 'spk_1',
       speaker: defaultSpeaker,
-      sentenceIndices: Array.isArray(p.sentenceIndices) ? p.sentenceIndices : [],
+      sentenceIndices: indices,
       text: p.text,
       startMs,
       endMs,
@@ -264,10 +278,6 @@ export function buildRawTranscriptSnapshot(params: {
   };
 }
 
-/**
- * Character-level similarity score in [0, 1] for fuzzy ASR repair matching
- * (e.g. "clod" vs "claude", "kubernetties" vs "kubernetes").
- */
 function charSimilarity(a: string, b: string): number {
   if (!a && !b) return 1;
   if (!a || !b) return 0;
@@ -297,11 +307,6 @@ interface AlignSpanResult {
   exactCount: number;
 }
 
-/**
- * Local Wagner-Fischer DP aligner over two bounded token slices (<= 320 tokens each).
- * Supports 1:1 exact, 1:1 substitution, 2:1 merge (e.g. "pie torch" -> "PyTorch"),
- * 1:2 split (e.g. "gonna" -> "going to"), insertion, and deletion.
- */
 function alignLocalSlice(
   rawSlice: TimedWordMs[],
   revTokens: string[],
@@ -313,7 +318,6 @@ function alignLocalSlice(
 
   if (n === 0) return { words: [], repairedCount: 0, exactCount: 0 };
 
-  // Degenerate case: no raw tokens in gap -> smoothly interpolate between boundaries
   if (m === 0) {
     const startBase = Math.max(0, prevBoundaryMs);
     const endBase = Math.max(startBase + n * 120, nextBoundaryMs);
@@ -335,7 +339,6 @@ function alignLocalSlice(
     return { words: out, repairedCount: n, exactCount: 0 };
   }
 
-  // If slice is unusually large, distribute proportionally without O(M*N) blowup
   if (m * n > 90000) {
     const startMs = rawSlice[0].startMs;
     const endMs = rawSlice[m - 1].endMs;
@@ -362,7 +365,6 @@ function alignLocalSlice(
   const rawNorm = rawSlice.map((w) => w.clean || normalizeAlignToken(w.word));
   const revNorm = revTokens.map((t) => normalizeAlignToken(t));
 
-  // Fast O(N) prefix/suffix exact match stripping — makes verbatim passages sub-millisecond
   let lead = 0;
   const maxLead = Math.min(m, n);
   while (lead < maxLead && rawNorm[lead] === revNorm[lead]) lead++;
@@ -412,8 +414,6 @@ function alignLocalSlice(
     };
   }
 
-  // DP op codes: 1 = match/sub (1:1), 2 = delete raw (1:0), 3 = insert rev (0:1),
-  // 4 = merge 2 raw -> 1 rev (2:1), 5 = split 1 raw -> 2 rev (1:2)
   const stride = n + 1;
   const dp = new Float32Array((m + 1) * stride);
   const op = new Uint8Array((m + 1) * stride);
@@ -437,7 +437,6 @@ function alignLocalSlice(
       let bestCost = Infinity;
       let bestOp = 1;
 
-      // 1:1 exact or substitution
       let subCost: number;
       if (r === c) {
         subCost = 0;
@@ -453,21 +452,18 @@ function alignLocalSlice(
         bestOp = 1;
       }
 
-      // 1:0 delete raw
       const c2 = dp[(i - 1) * stride + j] + 1.15;
       if (c2 < bestCost) {
         bestCost = c2;
         bestOp = 2;
       }
 
-      // 0:1 insert rev
       const c3 = dp[i * stride + (j - 1)] + 1.15;
       if (c3 < bestCost) {
         bestCost = c3;
         bestOp = 3;
       }
 
-      // 2:1 merge (e.g. "pie" + "torch" -> "pytorch")
       if (i >= 2 && nearDiag) {
         const merged = rawNorm[i - 2] + rawNorm[i - 1];
         const simMerge = merged === c ? 1 : charSimilarity(merged, c);
@@ -480,7 +476,6 @@ function alignLocalSlice(
         }
       }
 
-      // 1:2 split (e.g. "pytorch" -> "pie" + "torch" or "dont" -> "do" + "not")
       if (j >= 2 && nearDiag) {
         const joined = revNorm[j - 2] + revNorm[j - 1];
         const simSplit = joined === r ? 1 : charSimilarity(r, joined);
@@ -498,7 +493,6 @@ function alignLocalSlice(
     }
   }
 
-  // Backtrack alignment operations
   type Step =
     | { type: '1:1'; r: number; c: number }
     | { type: '2:1'; r1: number; r2: number; c: number }
@@ -620,14 +614,6 @@ function alignLocalSlice(
   return { words: out, repairedCount, exactCount };
 }
 
-/**
- * Anchor-guided sequence alignment mapping an arbitrarily long reviewed word stream
- * (even 20,000+ words) onto exact raw millisecond word timings in < 30ms.
- *
- * 1. Finds reliable monotonic anchor pairs using rare/n-gram exact token matches.
- * 2. Runs exact Wagner-Fischer DP with 2:1 merges & 1:2 splits between anchors.
- * 3. Guarantees strict monotonic millisecond timestamps on every output token.
- */
 export function alignReviewedWordsToRawTiming(
   rawWords: TimedWordMs[],
   reviewedTokens: string[],
@@ -646,7 +632,6 @@ export function alignReviewedWordsToRawTiming(
     return { words: synthetic.words, repairedWords: 0, exactWords: reviewedTokens.length, verbatimScore: 100 };
   }
 
-  // Direct fast-path when small enough for exact full DP
   if (rawWords.length <= 220 && reviewedTokens.length <= 220) {
     const res = alignLocalSlice(
       rawWords,
@@ -664,7 +649,6 @@ export function alignReviewedWordsToRawTiming(
     };
   }
 
-  // Build bigram anchor index for O(N) global alignment on long transcripts
   const rawNorm = rawWords.map((w) => w.clean || normalizeAlignToken(w.word));
   const revNorm = reviewedTokens.map((t) => normalizeAlignToken(t));
 
@@ -676,7 +660,6 @@ export function alignReviewedWordsToRawTiming(
     else bigramPositions.set(key, [i]);
   }
 
-  // Greedily pick monotonic anchors spaced roughly every 45–120 tokens
   const anchors: Array<{ rawIdx: number; revIdx: number }> = [{ rawIdx: 0, revIdx: 0 }];
   let lastRaw = 0;
   let lastRev = 0;
@@ -689,7 +672,6 @@ export function alignReviewedWordsToRawTiming(
     if (!candidates || candidates.length === 0) continue;
 
     const expectedRaw = lastRaw + Math.round((j - lastRev) * ratio);
-    // Binary search nearest candidate to expectedRaw (handles even repetitive bigrams in O(log k))
     let lo = 0;
     let hi = candidates.length - 1;
     while (lo < hi) {
@@ -796,17 +778,61 @@ export interface DraftReviewedIdea {
 }
 
 /**
- * Takes AI-reviewed sentences + ideas and produces the complete millisecond-aligned
- * `ReviewedTranscriptSnapshot` components (sentences, paragraphs, ideas, speakers,
- * speakerTurns, and quality metrics) enforcing Flaptap's Playback Boundary Law.
+ * Unified 50ms Playback Boundary Law:
+ * Always computes every output sentence's `startMs`/`endMs` from its unpadded
+ * `words[0].startMs` .. `words[last].endMs`, absorbs natural acoustic release tail
+ * up to +320ms (`min(320, round(gap * 0.5))`), and strictly caps `endMs <= next.startMs - 50`.
  */
+export function applyPlaybackBoundaryLaw(sentences: TranscriptSentence[]): void {
+  for (let i = 0; i < sentences.length; i++) {
+    const curr = sentences[i];
+    const words = Array.isArray(curr.words) ? curr.words : [];
+    const fallbackStart = i > 0 ? sentences[i - 1].endMs : 0;
+    const startMs =
+      words.length > 0
+        ? Math.max(0, Math.round(words[0].startMs))
+        : Math.max(0, Math.round(Number(curr.startMs) || fallbackStart));
+    const rawEndMs =
+      words.length > 0
+        ? Math.max(startMs + 80, Math.round(words[words.length - 1].endMs))
+        : Math.max(startMs + 80, Math.round(Number(curr.endMs) || startMs + 350));
+
+    curr.startMs = startMs;
+    curr.endMs = rawEndMs;
+  }
+
+  for (let i = 0; i < sentences.length; i++) {
+    const curr = sentences[i];
+    const next = sentences[i + 1];
+    if (next) {
+      const gap = next.startMs - curr.endMs;
+      if (gap > 60) {
+        const tail = Math.min(320, Math.round(gap * 0.5));
+        curr.endMs = Math.min(curr.endMs + tail, next.startMs - 50);
+      } else if (curr.endMs > next.startMs - 50 && next.startMs - 50 > curr.startMs + 80) {
+        curr.endMs = next.startMs - 50;
+      }
+    } else {
+      curr.endMs = curr.endMs + 280;
+    }
+
+    if (curr.endMs <= curr.startMs) {
+      curr.endMs = curr.startMs + 80;
+    }
+    curr.startSec = roundMs(curr.startMs / 1000);
+    curr.endSec = roundMs(curr.endMs / 1000);
+  }
+}
+
 export function assembleAlignedReviewedViews(params: {
   rawWords: TimedWordMs[];
   draftSentences: DraftReviewedSentence[];
   draftIdeas: DraftReviewedIdea[];
   defaultSpeaker: string;
   speakerOverrides?: Record<string, string>;
+  pacingMode?: ShadowingPacingMode;
 }): {
+  canonicalSentences: TranscriptSentence[];
   sentences: TranscriptSentence[];
   paragraphs: TranscriptParagraph[];
   ideas: TranscriptIdea[];
@@ -814,6 +840,7 @@ export function assembleAlignedReviewedViews(params: {
   speakerTurns: TranscriptSpeakerTurn[];
   quality: TranscriptQualityReport;
 } {
+  const pacingMode = normalizePacingMode(params.pacingMode);
   const cleanDrafts = params.draftSentences
     .map((s) => ({
       text: String(s?.text || '').replace(/\s+/g, ' ').trim(),
@@ -826,12 +853,10 @@ export function assembleAlignedReviewedViews(params: {
     }))
     .filter((s) => s.text.length > 0);
 
-  // Flatten tokens across all reviewed sentences and align ONCE against full raw word stream
   const sentenceTokens = cleanDrafts.map((s) => tokenizeDisplayWords(s.text));
   const flatTokens = sentenceTokens.flat();
   const aligned = alignReviewedWordsToRawTiming(params.rawWords, flatTokens);
 
-  // Normalize speaker roster with deterministic IDs & color indices
   const speakerNameToId = new Map<string, string>();
   const speakerOriginalById = new Map<string, string>();
   const speakerColorById = new Map<string, number>();
@@ -856,8 +881,9 @@ export function assembleAlignedReviewedViews(params: {
     };
   };
 
-  // Slice aligned words back into sentences & compute millisecond boundaries
+  const canonicalSentences: TranscriptSentence[] = [];
   const sentences: TranscriptSentence[] = [];
+  const activeIndicesByCanonicalIdx = new Map<number, number[]>();
   let cursor = 0;
 
   for (let i = 0; i < cleanDrafts.length; i++) {
@@ -867,72 +893,130 @@ export function assembleAlignedReviewedViews(params: {
     cursor += tokCount;
 
     const spk = resolveSpeaker(draft.speaker);
-    const startMs = words.length > 0 ? words[0].startMs : sentences[sentences.length - 1]?.endMs || 0;
-    const rawEndMs = words.length > 0 ? words[words.length - 1].endMs : startMs + 350;
-
-    // Reconstruct rawText span from aligned words for transparent diffing
-    const rawWordsForSentence = words
+    const canonStartMs =
+      words.length > 0 ? words[0].startMs : canonicalSentences[canonicalSentences.length - 1]?.endMs || 0;
+    const canonEndMs =
+      words.length > 0 ? Math.max(canonStartMs + 80, words[words.length - 1].endMs) : canonStartMs + 350;
+    const canonRawText = words
       .map((w) => (w.repaired ? w.rawWord || '' : w.word))
       .filter(Boolean)
       .join(' ')
       .trim();
-    const hasWordRepair = words.some((w) => w.repaired);
-    const substantiveRepair = hasWordRepair || draft.isOverlap;
+    const canonRepaired = words.some((w) => w.repaired) || draft.isOverlap;
+    const canonRepairNote = canonRepaired
+      ? draft.repairNote ||
+        (draft.isOverlap
+          ? 'Separated overlapping speaker turn'
+          : 'Corrected ASR transcription wording')
+      : '';
 
-    sentences.push({
-      id: `s-${i + 1}`,
-      index: i + 1,
+    const canonIndex = canonicalSentences.length + 1;
+    canonicalSentences.push({
+      id: `canon-s-${canonIndex}`,
+      index: canonIndex,
       text: draft.text,
-      rawText: rawWordsForSentence || draft.text,
+      rawText: canonRawText || draft.text,
       speakerId: spk.id,
       speaker: spk.name,
-      repaired: substantiveRepair,
-      repairNote:
-        substantiveRepair
-          ? draft.repairNote ||
-            (draft.isOverlap
-              ? 'Separated overlapping speaker turn'
-              : 'Corrected ASR transcription wording')
-          : '',
+      repaired: canonRepaired,
+      repairNote: canonRepairNote,
       isOverlap: draft.isOverlap,
       paragraphIndex: draft.paragraphIndex || 0,
       ideaIndex: draft.ideaIndex || 0,
-      startMs,
-      endMs: Math.max(startMs + 120, rawEndMs),
-      startSec: roundMs(startMs / 1000),
-      endSec: roundMs(Math.max(startMs + 120, rawEndMs) / 1000),
+      startMs: canonStartMs,
+      endMs: canonEndMs,
+      startSec: roundMs(canonStartMs / 1000),
+      endSec: roundMs(canonEndMs / 1000),
       words,
     });
-  }
 
-  // Apply Flaptap Playback Boundary Law: natural acoustic release tail (up to +320ms),
-  // strictly bounded >= 50ms before the next sentence's onset!
-  for (let i = 0; i < sentences.length; i++) {
-    const curr = sentences[i];
-    const next = sentences[i + 1];
-    if (next) {
-      const gap = next.startMs - curr.endMs;
-      if (gap > 60) {
-        const tail = Math.min(320, Math.round(gap * 0.5));
-        curr.endMs = Math.min(curr.endMs + tail, next.startMs - 50);
-      } else if (curr.endMs > next.startMs - 50 && next.startMs - 50 > curr.startMs + 80) {
-        curr.endMs = next.startMs - 50;
-      }
-    } else {
-      curr.endMs = curr.endMs + 280;
+    const wordSlices = words.length > 0 ? splitTimedWordsForShadowing(words, pacingMode) : [words];
+    const mappedActiveIndices: number[] = [];
+
+    for (let sliceIdx = 0; sliceIdx < wordSlices.length; sliceIdx++) {
+      const sliceWords = wordSlices[sliceIdx];
+      const startMs =
+        sliceWords.length > 0 ? sliceWords[0].startMs : sentences[sentences.length - 1]?.endMs || 0;
+      const rawEndMs =
+        sliceWords.length > 0 ? sliceWords[sliceWords.length - 1].endMs : startMs + 350;
+
+      const sliceText =
+        wordSlices.length === 1
+          ? draft.text
+          : sliceWords.map((w) => w.word).join(' ').replace(/\s+/g, ' ').trim();
+      const rawWordsForSentence = sliceWords
+        .map((w) => (w.repaired ? w.rawWord || '' : w.word))
+        .filter(Boolean)
+        .join(' ')
+        .trim();
+      const hasWordRepair = sliceWords.some((w) => w.repaired);
+      const substantiveRepair = hasWordRepair || draft.isOverlap;
+
+      const nextIndex = sentences.length + 1;
+      mappedActiveIndices.push(nextIndex);
+      sentences.push({
+        id: `s-${nextIndex}`,
+        index: nextIndex,
+        text: sliceText || draft.text,
+        rawText: rawWordsForSentence || sliceText || draft.text,
+        speakerId: spk.id,
+        speaker: spk.name,
+        repaired: substantiveRepair,
+        repairNote:
+          substantiveRepair
+            ? draft.repairNote ||
+              (draft.isOverlap
+                ? 'Separated overlapping speaker turn'
+                : 'Corrected ASR transcription wording')
+            : '',
+        isOverlap: draft.isOverlap,
+        paragraphIndex: draft.paragraphIndex || 0,
+        ideaIndex: draft.ideaIndex || 0,
+        startMs,
+        endMs: Math.max(startMs + 80, rawEndMs),
+        startSec: roundMs(startMs / 1000),
+        endSec: roundMs(Math.max(startMs + 80, rawEndMs) / 1000),
+        words: sliceWords,
+      });
     }
-    curr.startSec = roundMs(curr.startMs / 1000);
-    curr.endSec = roundMs(curr.endMs / 1000);
+    activeIndicesByCanonicalIdx.set(canonIndex, mappedActiveIndices);
   }
 
-  // Build cohesive Paragraphs (use LLM paragraphIndex if sensible, else group deterministically)
-  const paragraphs = buildParagraphsFromSentences(sentences);
+  // Unified 50ms Playback Boundary Law
+  applyPlaybackBoundaryLaw(sentences);
 
-  // Build Ideas / Chapters (normalize LLM ideas or create clean thematic sections)
-  const ideas = buildIdeasFromSentences(sentences, params.draftIdeas);
+  // Remap draftIdeas.sentenceIndices from canonical indices to active split indices
+  const remappedDraftIdeas: DraftReviewedIdea[] = (params.draftIdeas || []).map((idea) => {
+    if (!Array.isArray(idea.sentenceIndices) || idea.sentenceIndices.length === 0) {
+      return idea;
+    }
+    const expanded: number[] = [];
+    for (const cIdx of idea.sentenceIndices) {
+      const mapped = activeIndicesByCanonicalIdx.get(Math.floor(Number(cIdx)));
+      if (mapped?.length) expanded.push(...mapped);
+    }
+    return {
+      ...idea,
+      sentenceIndices: expanded.length > 0 ? expanded : undefined,
+    };
+  });
 
-  // Build Speaker Turns & Speaker Roster Stats
+  const paragraphs = buildParagraphsFromSentences(sentences, pacingMode);
+  const ideas = buildIdeasFromSentences(sentences, remappedDraftIdeas);
   const { speakers, speakerTurns } = buildSpeakerViews(sentences, speakerOriginalById, speakerColorById);
+
+  // Sync resolved ideaIndex (and missing paragraphIndex) back to canonicalSentences for future lossless pacing toggles
+  const sentByIndex = new Map<number, TranscriptSentence>(sentences.map((s) => [s.index, s]));
+  for (const canon of canonicalSentences) {
+    const childIndices = activeIndicesByCanonicalIdx.get(canon.index);
+    const firstChild = childIndices?.length ? sentByIndex.get(childIndices[0]) : undefined;
+    if (firstChild) {
+      canon.ideaIndex = firstChild.ideaIndex;
+      if (!canon.paragraphIndex || canon.paragraphIndex <= 0) {
+        canon.paragraphIndex = firstChild.paragraphIndex;
+      }
+    }
+  }
 
   const repairedSentences = sentences.filter((s) => s.repaired).length;
   const overlapsResolved = sentences.filter((s) => s.isOverlap).length;
@@ -955,6 +1039,7 @@ export function assembleAlignedReviewedViews(params: {
   }
 
   return {
+    canonicalSentences,
     sentences,
     paragraphs,
     ideas,
@@ -972,8 +1057,14 @@ export function assembleAlignedReviewedViews(params: {
   };
 }
 
-function buildParagraphsFromSentences(sentences: TranscriptSentence[]): TranscriptParagraph[] {
+export function buildParagraphsFromSentences(
+  sentences: TranscriptSentence[],
+  pacingMode: ShadowingPacingMode = 'short',
+): TranscriptParagraph[] {
   if (sentences.length === 0) return [];
+  const mode = normalizePacingMode(pacingMode);
+  const explicitCap = mode === 'short' ? 12 : mode === 'balanced' ? 8 : 6;
+  const implicitCap = mode === 'short' ? 8 : mode === 'balanced' ? 5 : 4;
 
   const hasExplicitParas = sentences.some((s) => s.paragraphIndex > 0);
   const groups: TranscriptSentence[][] = [];
@@ -984,7 +1075,7 @@ function buildParagraphsFromSentences(sentences: TranscriptSentence[]): Transcri
     for (const s of sentences) {
       const pIdx = s.paragraphIndex || 1;
       const key = `${pIdx}::${s.speakerId}`;
-      if (curr.length > 0 && (key !== currKey || curr.length >= 7)) {
+      if (curr.length > 0 && (key !== currKey || curr.length >= explicitCap)) {
         groups.push(curr);
         curr = [];
       }
@@ -1001,7 +1092,12 @@ function buildParagraphsFromSentences(sentences: TranscriptSentence[]): Transcri
       const speakerChanged = prev && prev.speakerId !== s.speakerId;
       const gapMs = prev ? s.startMs - prev.endMs : 0;
 
-      if (curr.length > 0 && (speakerChanged || (curr.length >= 3 && (wordsInCurr >= 55 || gapMs >= 700)) || curr.length >= 5)) {
+      if (
+        curr.length > 0 &&
+        (speakerChanged ||
+          (curr.length >= 3 && (wordsInCurr >= 55 || gapMs >= 700)) ||
+          curr.length >= implicitCap)
+      ) {
         groups.push(curr);
         curr = [];
         wordsInCurr = 0;
@@ -1033,7 +1129,7 @@ function buildParagraphsFromSentences(sentences: TranscriptSentence[]): Transcri
   });
 }
 
-function buildIdeasFromSentences(
+export function buildIdeasFromSentences(
   sentences: TranscriptSentence[],
   draftIdeas: DraftReviewedIdea[],
 ): TranscriptIdea[] {
@@ -1082,11 +1178,9 @@ function buildIdeasFromSentences(
     });
   }
 
-  // Attach any uncovered sentences so 100% of the transcript is represented in Ideas view
   const uncovered = sentences.filter((s) => !covered.has(s.index));
   if (uncovered.length > 0) {
     if (ideas.length === 0) {
-      // Auto-partition into clean ~8-sentence idea blocks
       const blockSize = Math.max(5, Math.min(12, Math.ceil(uncovered.length / Math.max(1, Math.round(uncovered.length / 8)))));
       for (let i = 0; i < uncovered.length; i += blockSize) {
         const group = uncovered.slice(i, i + blockSize);
@@ -1107,7 +1201,6 @@ function buildIdeasFromSentences(
         });
       }
     } else {
-      // Assign each uncovered sentence to the nearest chronological idea
       for (const s of uncovered) {
         let bestIdea = ideas[ideas.length - 1];
         for (const idea of ideas) {
@@ -1147,7 +1240,7 @@ function buildIdeasFromSentences(
   return ideas;
 }
 
-function buildSpeakerViews(
+export function buildSpeakerViews(
   sentences: TranscriptSentence[],
   originalById: Map<string, string>,
   colorById: Map<string, number>,
@@ -1205,6 +1298,7 @@ function buildSpeakerViews(
 
 export function applySpeakerOverridesToReviewed(
   reviewed: {
+    canonicalSentences?: TranscriptSentence[];
     sentences: TranscriptSentence[];
     paragraphs: TranscriptParagraph[];
     ideas: TranscriptIdea[];
@@ -1220,6 +1314,12 @@ export function applySpeakerOverridesToReviewed(
     nameById.set(sp.id, sp.name);
   });
 
+  if (Array.isArray(reviewed.canonicalSentences)) {
+    reviewed.canonicalSentences.forEach((s) => {
+      const mapped = nameById.get(s.speakerId);
+      if (mapped) s.speaker = mapped;
+    });
+  }
   reviewed.sentences.forEach((s) => {
     const mapped = nameById.get(s.speakerId);
     if (mapped) s.speaker = mapped;
@@ -1256,3 +1356,12 @@ export function formatMsClock(ms: number): string {
   }
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(rem).padStart(3, '0')}`;
 }
+
+export {
+  captureCompletedCoverage,
+  normalizeTranslationKey,
+  regroupShadowingLessonByPacing,
+  remapCompletedIndices,
+  restoreExactTranslations,
+  snapshotTranslationsByText,
+} from './pacing-regroup.util';

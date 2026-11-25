@@ -55,6 +55,8 @@
       playbackFlowLabel: 'Sentence Flow',
       flowPause: 'Auto-Pause',
       flowLoop: 'Loop Once',
+      flowShadow: 'Shadow Pause',
+      flowWord: 'Word Loop',
       flowContinue: 'Continuous',
       playbackSpeedLabel: 'Playback Speed',
       resetSpeedBtn: 'Reset',
@@ -189,6 +191,11 @@
       emptyRemaining: 'Every item in this section is checked off.',
       emptyCompleted: 'No completed items here yet.',
       jumpActiveTitle: 'Jump to active line',
+      pacingShort: 'Short',
+      pacingBalanced: 'Medium',
+      pacingFull: 'Full',
+      pacingSwitched: 'Switched line length',
+      pacingSwitchFailed: 'Could not switch sentence length.',
     },
     ar: {
       preparingLesson: 'جارٍ تجهيز الدرس...',
@@ -336,6 +343,11 @@
       errTimeoutDetail: 'استغرق يوتيوب وقتاً طويلاً للاستجابة. يرجى المحاولة مرة أخرى.',
       markComplete: 'تم',
       completedLabel: 'مكتمل',
+      pacingShort: 'قصيرة',
+      pacingBalanced: 'متوسطة',
+      pacingFull: 'كاملة',
+      pacingSwitched: 'تم تبديل طول السطور',
+      pacingSwitchFailed: 'تعذر تغيير طول السطور.',
     },
     es: {
       libraryBack: 'Biblioteca',
@@ -356,6 +368,11 @@
       allTranslatedBtn: 'Todo traducido',
       completeSession: 'Completar',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
+      pacingShort: 'Cortas',
+      pacingBalanced: 'Medias',
+      pacingFull: 'Completas',
+      pacingSwitched: 'Longitud de líneas actualizada',
+      pacingSwitchFailed: 'No se pudo cambiar la longitud.',
     },
     fr: {
       libraryBack: 'Bibliothèque',
@@ -376,6 +393,11 @@
       allTranslatedBtn: 'Tout traduit',
       completeSession: 'Terminer',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
+      pacingShort: 'Courtes',
+      pacingBalanced: 'Moyennes',
+      pacingFull: 'Complètes',
+      pacingSwitched: 'Longueur des lignes mise à jour',
+      pacingSwitchFailed: 'Impossible de changer la longueur.',
     },
     de: {
       libraryBack: 'Bibliothek',
@@ -396,6 +418,11 @@
       allTranslatedBtn: 'Alle übersetzt',
       completeSession: 'Abschließen',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
+      pacingShort: 'Kurz',
+      pacingBalanced: 'Mittel',
+      pacingFull: 'Voll',
+      pacingSwitched: 'Zeilenlänge gewechselt',
+      pacingSwitchFailed: 'Zeilenlänge konnte nicht geändert werden.',
     },
     tr: {
       libraryBack: 'Kitaplık',
@@ -416,8 +443,29 @@
       allTranslatedBtn: 'Tümü Çevrildi',
       completeSession: 'Tamamla',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
+      pacingShort: 'Kısa',
+      pacingBalanced: 'Orta',
+      pacingFull: 'Tam',
+      pacingSwitched: 'Satır uzunluğu değiştirildi',
+      pacingSwitchFailed: 'Satır uzunluğu değiştirilemedi.',
     },
   };
+
+  const VALID_PACING_MODES = ['short', 'balanced', 'full'];
+  const PACING_STORAGE_KEY = 'flaptap_shadowing_pacing';
+
+  function normalizePacingMode(raw) {
+    const val = String(raw || '').trim().toLowerCase();
+    return VALID_PACING_MODES.includes(val) ? val : 'short';
+  }
+
+  function getSavedPacingMode() {
+    try {
+      return normalizePacingMode(localStorage.getItem(PACING_STORAGE_KEY));
+    } catch {
+      return 'short';
+    }
+  }
 
   const initialTranslationLang = localStorage.getItem('flaptap_trans_lang') || 'ar';
 
@@ -429,6 +477,7 @@
     user: null,
     item: null,
     mode: 'shadow',
+    readView: 'paragraphs', // 'paragraphs' | 'ideas' | 'speakers' | 'raw'
     layout: 'theater',
     ytPlayer: null,
     ytReady: false,
@@ -436,7 +485,7 @@
     activeSentence: null,
     isPlaying: false,
     loopSentenceIndex: null,
-    endAction: 'loop', // 'loop' | 'pause' | 'continue'
+    endAction: 'loop', // 'loop' | 'pause' | 'shadow' | 'word' | 'continue'
     activeSentenceStep: 'idle', // 'idle' | 'playing-once' | 'paused-from-once' | 'looping' | 'paused-from-loop'
     endedNaturally: false,
     hasStartedPlaybackOnce: false,
@@ -451,6 +500,30 @@
     lastSeekTime: 0,
     pendingSeek: null,
     playbackTicker: null,
+    wordClickMode: localStorage.getItem('flaptap_word_click_mode') || 'define', // 'define' | 'word' | 'from-here'
+    wordCushion: localStorage.getItem('flaptap_word_cushion') || 'natural', // 'natural' | 'exact'
+    showRepairs: true,
+    speakerFilter: 'all',
+    speakerEditorOpen: false,
+    searchQuery: '',
+    searchMatches: [],
+    searchMatchIdx: 0,
+    videoHidden: false,
+    selectedTimedWord: null,
+    activeRange: null, // { startSec, endSec, label, mode: 'word' | 'range' | 'continuous', wordObj? }
+    shadowPauseTimer: null,
+    shadowPauseRaf: null,
+    shadowPauseResumeFn: null,
+    karaokeRaf: null,
+    activeWordEl: null,
+    activeWordIndex: -1,
+    reviewing: false,
+    reviewAbort: null,
+    reviewAiSelector: null,
+    isSwitchingPacing: false,
+    infoPopoverPinned: false,
+    infoPopoverCloseTimer: null,
+    scrubbing: false,
     translationLang: initialTranslationLang,
     translationRtl: RTL_LANGUAGE_CODES.has(initialTranslationLang),
     languages: [],
@@ -709,6 +782,22 @@
         '</svg>'
       );
     }
+    if (mode === 'shadow') {
+      return (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        circleArrows +
+        '<path d="M9.5 11.5c1-1.3 2.5-1.3 3.5 0M10.5 14c.8-.8 2-.8 2.8 0" stroke-width="2"></path>' +
+        '</svg>'
+      );
+    }
+    if (mode === 'word') {
+      return (
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        circleArrows +
+        '<circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"></circle>' +
+        '</svg>'
+      );
+    }
     if (mode === 'continue') {
       return (
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
@@ -729,16 +818,16 @@
   function syncFlowButtonDom() {
     const flowBtn = document.getElementById('studio-flow-btn');
     if (!flowBtn) return;
-    const mode =
-      studioState.endAction === 'loop' || studioState.endAction === 'continue'
-        ? studioState.endAction
-        : 'pause';
+    const allowed = ['loop', 'pause', 'shadow', 'word', 'continue'];
+    const mode = allowed.includes(studioState.endAction) ? studioState.endAction : 'pause';
     flowBtn.dataset.flowState = mode;
     flowBtn.dataset.endAction = mode;
     flowBtn.innerHTML = getFlowIconSvg(mode);
     const labelMap = {
       pause: `${t('playbackFlowLabel')}: ${t('flowPause')}`,
       loop: `${t('playbackFlowLabel')}: ${t('flowLoop')}`,
+      shadow: `${t('playbackFlowLabel')}: ${t('flowShadow')}`,
+      word: `${t('playbackFlowLabel')}: ${t('flowWord')}`,
       continue: `${t('playbackFlowLabel')}: ${t('flowContinue')}`,
     };
     const label = labelMap[mode] || t('playbackFlowLabel');
@@ -830,6 +919,8 @@
 
   const SCB_POPOVER_PAIRS = [
     { triggerId: 'studio-progress-pill', popoverId: 'studio-progress-popover' },
+    { triggerId: 'studio-review-btn', popoverId: 'studio-review-popover' },
+    { triggerId: 'studio-export-btn', popoverId: 'studio-export-popover' },
     { triggerId: 'scb-more-btn', popoverId: 'studio-more-popover' },
     { triggerId: 'video-zoom-level-pill', popoverId: 'video-zoom-popover' },
     { triggerId: 'speed-trigger-btn', popoverId: 'speed-popover' },
@@ -903,6 +994,9 @@
         loadLanguagesCatalog().then(() => {
           if (!pop.hidden) positionControlPopover(pop, trg);
         });
+      }
+      if (popoverId === 'studio-review-popover') {
+        ensureStudioReviewAiSelector();
       }
       pop.style.display = '';
       positionControlPopover(pop, trg);
@@ -1477,10 +1571,56 @@
      SCALABLE PRIMARY LEARNING MODES (0ms Switch, Zero Page Reload)
      ======================================================================== */
 
-  function switchStudioMode(modeName) {
+  function switchReadView(viewName, opts = {}) {
+    const valid = ['paragraphs', 'ideas', 'speakers', 'raw'];
+    const target = valid.includes(viewName) ? viewName : 'paragraphs';
+    studioState.readView = target;
+
+    document.querySelectorAll('[data-read-view]').forEach((btn) => {
+      const act = btn.getAttribute('data-read-view') === target;
+      btn.classList.toggle('active', act);
+      btn.setAttribute('aria-selected', act ? 'true' : 'false');
+    });
+
+    document.querySelectorAll('[data-read-panel]').forEach((panel) => {
+      const match = panel.getAttribute('data-read-panel') === target;
+      panel.hidden = !match;
+      if (panel.id === 'subview-chunks-list') {
+        panel.style.display = studioState.mode === 'read' && match ? '' : 'none';
+      }
+    });
+
+    const readEmpty = document.getElementById('read-filter-empty');
+    if (readEmpty && target !== 'paragraphs') readEmpty.hidden = true;
+
+    syncSearchMatchesDom();
+
+    if (!opts.skipUrlSync) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('mode', studioState.mode);
+        if (studioState.mode === 'read') {
+          url.searchParams.set('view', target);
+        } else {
+          url.searchParams.delete('view');
+        }
+        window.history.replaceState({}, '', url.toString());
+      } catch {}
+    }
+  }
+
+  function switchStudioMode(modeName, opts = {}) {
     let target = modeName;
+    let forcedReadView = opts.readView || null;
     if (target === 'sentences' || target === 'transcript') target = 'shadow';
-    if (target === 'chunks') target = 'read';
+    if (target === 'chunks' || target === 'paragraphs') {
+      target = 'read';
+      forcedReadView = forcedReadView || 'paragraphs';
+    }
+    if (target === 'ideas' || target === 'speakers' || target === 'raw') {
+      forcedReadView = target;
+      target = 'read';
+    }
     if (!STUDIO_MODES.includes(target)) target = 'shadow';
 
     studioState.mode = target;
@@ -1501,9 +1641,20 @@
     });
 
     const sentList = document.getElementById('subview-sentences-list');
-    const chunkList = document.getElementById('subview-chunks-list');
     if (sentList) sentList.style.display = target === 'shadow' ? '' : 'none';
-    if (chunkList) chunkList.style.display = target === 'read' ? '' : 'none';
+
+    const toolsBar = document.getElementById('studio-transcript-tools');
+    if (toolsBar) toolsBar.hidden = !(target === 'shadow' || target === 'read');
+
+    const readSubbar = document.getElementById('studio-read-subbar');
+    if (readSubbar) readSubbar.hidden = target !== 'read';
+
+    if (target === 'read') {
+      switchReadView(forcedReadView || studioState.readView || 'paragraphs', { skipUrlSync: true });
+    } else {
+      const chunkList = document.getElementById('subview-chunks-list');
+      if (chunkList) chunkList.style.display = 'none';
+    }
 
     const transTrigger = document.getElementById('trans-trigger-btn');
     if (transTrigger) {
@@ -1537,16 +1688,25 @@
 
     syncPlaybackButtonsDom();
     refreshAllStudioProgressBars();
+    syncSearchMatchesDom();
     requestAnimationFrame(syncStudioDeckStickyHeightVar);
 
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.set('mode', target);
-      window.history.replaceState({}, '', url.toString());
-    } catch {}
+    if (!opts.skipUrlSync) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('mode', target);
+        if (target === 'read') {
+          url.searchParams.set('view', studioState.readView || 'paragraphs');
+        } else {
+          url.searchParams.delete('view');
+        }
+        window.history.replaceState({}, '', url.toString());
+      } catch {}
+    }
   }
 
   window.switchStudioMode = switchStudioMode;
+  window.switchReadView = switchReadView;
   window.switchTranscriptMode = function (legacy) {
     switchStudioMode(legacy === 'chunks' ? 'read' : 'shadow');
   };
@@ -1556,7 +1716,13 @@
      Preserves `<mark class="hl-...">` AND exact `textContent === sentence.text`
      ======================================================================== */
 
-  function decorateClickableWords(verbatimHtml, sentenceIndex) {
+  function decorateClickableWords(verbatimHtml, sentenceIndex, sentenceObj) {
+    if (sentenceObj && window.FlaptapStudioTranscriptTools?.decorateTimedWordsHtml) {
+      return window.FlaptapStudioTranscriptTools.decorateTimedWordsHtml(verbatimHtml, sentenceObj, {
+        showRepairs: studioState.showRepairs,
+        searchQuery: studioState.searchQuery,
+      });
+    }
     if (window.FlaptapWordLookup) {
       return window.FlaptapWordLookup.tokenizeClickableWords(verbatimHtml, {
         sentIndex: sentenceIndex,
@@ -1566,15 +1732,97 @@
   }
 
   /* ========================================================================
-     RENDER SENTENCES (SHADOW MODE) & COHESIVE PARAGRAPHS (READ MODE)
+     RENDER SENTENCES (SHADOW MODE) & ALL READ VIEWS (PARAGRAPHS/IDEAS/SPEAKERS/RAW)
      ======================================================================== */
+
+  function renderSpeakerBar() {
+    const bar = document.getElementById('studio-speaker-bar');
+    const singleBtn = document.getElementById('studio-single-spk-btn');
+    const TT = window.FlaptapStudioTranscriptTools;
+    if (!bar || !TT || !studioState.item) return;
+
+    const speakers = TT.getSpeakersList(studioState.item);
+    if (singleBtn) {
+      singleBtn.hidden = speakers.length !== 1;
+      if (speakers.length === 1) {
+        singleBtn.textContent = `Speaker: ${speakers[0].name}`;
+      }
+    }
+
+    const html = TT.renderSpeakerBarHtml(studioState.item, studioState);
+    if (!html) {
+      bar.hidden = true;
+      bar.innerHTML = '';
+    } else {
+      bar.hidden = false;
+      bar.innerHTML = html;
+    }
+  }
+
+  function syncReviewStatusChrome() {
+    const item = studioState.item;
+    if (!item) return;
+    const TT = window.FlaptapStudioTranscriptTools;
+
+    const platEl = document.getElementById('studio-platform-badge');
+    const platLabel = TT?.formatPlatformLabel?.(item.platform || (item.videoId ? 'youtube' : '')) || '';
+    if (platEl) {
+      platEl.textContent = platLabel;
+      platEl.hidden = !platLabel;
+    }
+
+    const revStatus = item.reviewStatus || (item.transcriptData?.reviewed ? 'ready' : 'pending');
+    const isReviewed = revStatus === 'ready';
+    const revPill = document.getElementById('studio-review-status-pill');
+    if (revPill) {
+      revPill.hidden = !item.transcriptData;
+      const textSpan = revPill.querySelector('.studio-review-pill-text');
+      if (textSpan) textSpan.textContent = isReviewed ? 'AI Reviewed' : 'Raw Ready';
+      else revPill.textContent = isReviewed ? 'AI Reviewed' : 'Raw Ready';
+      revPill.classList.toggle('is-reviewed', isReviewed);
+    }
+
+    const revDot = document.getElementById('studio-review-dot');
+    if (revDot) {
+      revDot.hidden = !isReviewed;
+    }
+
+    const popStatus = document.getElementById('studio-review-popover-status');
+    if (popStatus) {
+      popStatus.textContent = isReviewed ? 'AI Reviewed' : 'Raw Ready';
+      popStatus.classList.toggle('is-reviewed', isReviewed);
+    }
+    const runBtn = document.getElementById('studio-run-review-btn');
+    const rerunBtn = document.getElementById('studio-rerun-review-btn');
+    if (runBtn) runBtn.hidden = isReviewed;
+    if (rerunBtn) rerunBtn.hidden = !isReviewed;
+
+    const repairCount = Number(
+      item.repairCount ||
+        item.transcriptData?.reviewed?.quality?.repairedWords ||
+        item.transcriptData?.reviewed?.quality?.repairedSentences ||
+        0,
+    );
+    const repToggle = document.getElementById('studio-toggle-repairs');
+    const repCnt = document.getElementById('studio-repairs-count');
+    if (repCnt) repCnt.textContent = String(repairCount);
+    if (repToggle) {
+      repToggle.hidden = repairCount <= 0;
+      repToggle.classList.toggle('active', studioState.showRepairs);
+      repToggle.setAttribute('aria-pressed', studioState.showRepairs ? 'true' : 'false');
+    }
+  }
 
   function renderSentencesAndParagraphs() {
     const item = studioState.item;
     if (!item) return;
+    const TT = window.FlaptapStudioTranscriptTools;
 
     const sentences = Array.isArray(item.sentences) ? item.sentences : [];
     const chunks = Array.isArray(item.chunks) ? item.chunks : [];
+    const spkFilter = studioState.speakerFilter || 'all';
+    const speakers = TT ? TT.getSpeakersList(item) : [];
+    const showSpkChipOnLines = speakers.length > 1;
 
     document.getElementById('badge-sentences-count').textContent = String(sentences.length);
     document.getElementById('badge-paragraphs-count').textContent = String(chunks.length);
@@ -1585,14 +1833,17 @@
     const sentContainer = document.getElementById('subview-sentences-list');
     if (sentContainer) {
       const sentDoneSet = getStudioCompletedSet('sentences');
-      sentContainer.innerHTML = sentences
+      const visibleSentences =
+        spkFilter === 'all' ? sentences : sentences.filter((s) => s.speakerId === spkFilter);
+
+      sentContainer.innerHTML = visibleSentences
         .map((s) => {
           const isActive = activeIdx === s.index;
           const isThisPlaying = Boolean(studioState.isPlaying && isActive);
           const isDone = sentDoneSet.has(Number(s.index));
 
           const baseHtml = s.highlightedHtml || escapeHtml(s.text);
-          const interactiveHtml = decorateClickableWords(baseHtml, s.index);
+          const interactiveHtml = decorateClickableWords(baseHtml, s.index, s);
 
           const langCode = studioState.translationLang || 'ar';
           const langMap = getLangTranslationMap(langCode);
@@ -1601,6 +1852,22 @@
           const isTranslatingAll = Boolean(studioState.translatingAllByLang[langCode]);
           const isSentLoading = !hasTrans && (isTranslatingAll || inFlightSet.has(s.index));
           const isBoxVisible = hasTrans && Boolean(studioState.showTranslations);
+
+          const spkHtml =
+            showSpkChipOnLines && s.speakerId && TT
+              ? `<span class="studio-spk-chip is-mini" style="--spk-color:${TT.speakerColor(item, s.speakerId)}">${escapeHtml(TT.speakerName(item, s.speakerId, s.speaker || s.speakerName))}</span>`
+              : '';
+          const repairedWordsCount = Array.isArray(s.words)
+            ? s.words.filter((w) => w.repaired || w.rawWord).length
+            : 0;
+          const repairCount = repairedWordsCount || (s.repaired ? 1 : 0);
+          const repairBadgeHtml =
+            studioState.showRepairs && repairCount > 0
+              ? `<button type="button" class="studio-info-badge is-repair" data-info-kind="repairs" data-sent-idx="${s.index}" title="${repairCount} ASR repair(s) — click for diff">✦ ${repairCount}</button>`
+              : '';
+          const overlapBadgeHtml = s.isOverlap || s.overlapGroupId
+            ? `<button type="button" class="studio-info-badge is-overlap" data-info-kind="overlap" data-sent-idx="${s.index}" title="Overlapping speakers separated">Overlap</button>`
+            : '';
 
           return `
             <article
@@ -1611,7 +1878,10 @@
               <div class="sent-card-top">
                 <div class="sent-meta-left" title="${escapeHtml(t('jumpPlayTitle'))}">
                   <span class="sent-index-num">#${String(s.index).padStart(2, '0')}</span>
+                  ${spkHtml}
                   <span class="sent-time-badge">${escapeHtml(s.timeRange || '')}</span>
+                  ${repairBadgeHtml}
+                  ${overlapBadgeHtml}
                 </div>
                 <div class="sent-actions-right">
                   ${renderStudioCopyBtnHtml(s.text, 'sent-action-btn sent-icon-btn sent-copy-btn')}
@@ -1669,7 +1939,7 @@
 
     syncTranslationUiState();
 
-    // 2. Render Read Mode Cohesive Editorial Paragraphs
+    // 2. Render Read Mode Cohesive Editorial Paragraphs (with Play Paragraph & Speaker Chips)
     const chunkContainer = document.getElementById('subview-chunks-list');
     if (chunkContainer) {
       const sentenceMap = new Map(sentences.map((s) => [s.index, s]));
@@ -1679,12 +1949,16 @@
           const paraNum = idx + 1;
           const isDone = paraDoneSet.has(paraNum);
           let proseHtml = '';
+          let matchedSents = [];
           if (Array.isArray(chunk.sentenceIndices) && chunk.sentenceIndices.length > 0) {
-            proseHtml = chunk.sentenceIndices
-              .map((sIdx) => {
-                const s = sentenceMap.get(sIdx);
-                if (!s) return '';
-                const sHtml = decorateClickableWords(s.highlightedHtml || escapeHtml(s.text), s.index);
+            matchedSents = chunk.sentenceIndices
+              .map((sIdx) => sentenceMap.get(sIdx))
+              .filter(Boolean)
+              .filter((s) => spkFilter === 'all' || s.speakerId === spkFilter);
+            if (spkFilter !== 'all' && matchedSents.length === 0) return '';
+            proseHtml = matchedSents
+              .map((s) => {
+                const sHtml = decorateClickableWords(s.highlightedHtml || escapeHtml(s.text), s.index, s);
                 const readingCls = activeIdx === s.index ? 'active-reading' : '';
                 return `<span class="read-sentence ${readingCls}" data-read-sent="${s.index}">${sHtml}</span>`;
               })
@@ -1694,11 +1968,22 @@
             proseHtml = chunk.highlightedHtml || escapeHtml(chunk.text);
           }
 
+          const pStart = Number(chunk.startSec ?? matchedSents[0]?.startSec ?? 0);
+          const pEnd = Number(chunk.endSec ?? matchedSents[matchedSents.length - 1]?.endSec ?? pStart + 2);
+          const spkChipHtml =
+            showSpkChipOnLines && chunk.speakerId && TT
+              ? `<span class="studio-spk-chip is-mini" style="--spk-color:${TT.speakerColor(item, chunk.speakerId)}">${escapeHtml(TT.speakerName(item, chunk.speakerId, chunk.speaker || chunk.speakerName))}</span>`
+              : '';
+
           return `
             <section class="editorial-paragraph-block${isDone ? ' is-item-completed' : ''}" data-paragraph-index="${paraNum}">
               <div class="editorial-paragraph-head">
-                <span class="paragraph-time-margin">${escapeHtml(chunk.timeRange || '')}</span>
+                <div class="paragraph-head-left">
+                  ${spkChipHtml}
+                  <span class="paragraph-time-margin">${escapeHtml(chunk.timeRange || '')}</span>
+                </div>
                 <div class="paragraph-head-actions">
+                  <button type="button" class="btn-secondary btn-xs paragraph-play-btn" data-play-range-start="${pStart.toFixed(3)}" data-play-range-end="${pEnd.toFixed(3)}" data-play-range-label="Paragraph ${paraNum}">Play</button>
                   ${renderStudioCopyBtnHtml(chunk.text, 'paragraph-copy-btn')}
                   ${renderStudioCheckBtnHtml({ checked: isDone, subject: 'paragraphs', index: paraNum })}
                 </div>
@@ -1707,9 +1992,28 @@
             </section>
           `;
         })
+        .filter(Boolean)
         .join('');
     }
 
+    // 3. Render Ideas, Speakers & Raw Original Read Sub-Views
+    if (TT) {
+      const renderOpts = {
+        speakerFilter: spkFilter,
+        showRepairs: studioState.showRepairs,
+        searchQuery: studioState.searchQuery,
+      };
+      const ideasEl = document.getElementById('subview-ideas-list');
+      if (ideasEl) ideasEl.innerHTML = TT.renderIdeasView(item, renderOpts);
+      const speakersEl = document.getElementById('subview-speakers-list');
+      if (speakersEl) speakersEl.innerHTML = TT.renderSpeakersView(item, renderOpts);
+      const rawEl = document.getElementById('subview-raw-list');
+      if (rawEl) rawEl.innerHTML = TT.renderRawView(item, renderOpts);
+    }
+
+    renderSpeakerBar();
+    syncReviewStatusChrome();
+    syncSearchMatchesDom();
     refreshAllStudioProgressBars();
   }
 
@@ -2282,24 +2586,61 @@
   function mountMediaDeck(item) {
     const ytDiv = document.getElementById('studio-youtube-player');
     const ttsStage = document.getElementById('tts-audio-stage');
+    const audioStage = document.getElementById('studio-audio-stage');
     const zoomViewport = document.getElementById('video-zoom-viewport');
+    const zoomHud = document.getElementById('video-zoom-hud');
+    const videoToggleBtn = document.getElementById('studio-video-toggle-btn');
+    const timelineBar = document.getElementById('studio-timeline-bar');
 
-    const vidId = String(item.videoId || item.video_id || '').trim();
-    const isExternal = vidId.startsWith('ext_') || (vidId.length > 0 && !vidId.match(/^[a-zA-Z0-9_-]{11}$/));
+    const media = item.media || null;
+    const vidId = String(media?.youtubeId || item.videoId || item.video_id || '').trim();
+    const isYtId = /^[a-zA-Z0-9_-]{11}$/.test(vidId);
+    const streamUrl = media?.streamUrl || (media?.mediaId ? `/api/sources/media/${encodeURIComponent(media.mediaId)}` : '');
+    const mediaKind = media?.mediaKind || (vidId && isYtId ? 'youtube' : streamUrl ? 'audio' : 'none');
 
-    if (vidId && isExternal) {
+    const clockTotal = document.getElementById('studio-clock-total');
+    if (clockTotal && window.FlaptapStudioTranscriptTools) {
+      const durSec = Number(item.durationSeconds || 0);
+      clockTotal.textContent = window.FlaptapStudioTranscriptTools.formatClockMs(durSec * 1000);
+    }
+
+    if (mediaKind === 'youtube' && vidId) {
       if (ttsStage) ttsStage.hidden = true;
+      if (audioStage) audioStage.hidden = true;
       if (zoomViewport) zoomViewport.hidden = false;
+      if (zoomHud) zoomHud.hidden = false;
       if (ytDiv) ytDiv.hidden = false;
-      createHtml5Player(vidId);
-    } else if (vidId) {
-      if (ttsStage) ttsStage.hidden = true;
-      if (zoomViewport) zoomViewport.hidden = false;
-      if (ytDiv) ytDiv.hidden = false;
+      if (videoToggleBtn) videoToggleBtn.hidden = false;
+      if (timelineBar) timelineBar.hidden = false;
+      const aTitle = document.getElementById('studio-audio-stage-title');
+      if (aTitle) aTitle.textContent = item.title || 'Audio Focus Mode';
       loadYouTubeIframeApi(vidId);
+    } else if ((mediaKind === 'video' || mediaKind === 'audio') && streamUrl) {
+      const isVideo = mediaKind === 'video' && media?.hasVideo !== false;
+      if (ttsStage) ttsStage.hidden = true;
+      if (ytDiv) ytDiv.hidden = true;
+      if (zoomViewport) zoomViewport.hidden = !isVideo;
+      if (zoomHud) zoomHud.hidden = !isVideo;
+      if (audioStage) {
+        audioStage.hidden = isVideo;
+        const badgeEl = document.getElementById('studio-audio-stage-badge');
+        const titleEl = document.getElementById('studio-audio-stage-title');
+        if (badgeEl) {
+          badgeEl.textContent =
+            window.FlaptapStudioTranscriptTools?.formatPlatformLabel?.(item.platform) || 'Audio Track';
+        }
+        if (titleEl) titleEl.textContent = item.title || 'Audio Lesson';
+      }
+      if (videoToggleBtn) videoToggleBtn.hidden = !isVideo;
+      if (timelineBar) timelineBar.hidden = false;
+      createHtml5Player(streamUrl, isVideo);
     } else {
       if (zoomViewport) zoomViewport.hidden = true;
+      if (zoomHud) zoomHud.hidden = true;
       if (ytDiv) ytDiv.hidden = true;
+      if (audioStage) audioStage.hidden = true;
+      if (videoToggleBtn) videoToggleBtn.hidden = true;
+      if (timelineBar) timelineBar.hidden = true;
       if (ttsStage) {
         ttsStage.hidden = false;
         document.getElementById('tts-stage-tag').textContent = item.trackTitle || 'Spoken Audio Deck';
@@ -2310,42 +2651,49 @@
     }
   }
 
-  function createHtml5Player(mediaId) {
+  function createHtml5Player(streamUrl, isVideo = true) {
     if (studioState.ytPlayer) return; // Never remount!
     const container = document.getElementById('video-stage-container');
     if (!container) return;
 
-    let videoEl = document.getElementById('studio-html5-player');
-    if (!videoEl) {
+    let mediaEl = document.getElementById('studio-html5-player');
+    if (!mediaEl) {
       const ytDiv = document.getElementById('studio-youtube-player');
       if (ytDiv) ytDiv.style.display = 'none';
 
-      videoEl = document.createElement('video');
-      videoEl.id = 'studio-html5-player';
-      videoEl.className = 'studio-html5-video';
-      videoEl.setAttribute('playsinline', '');
-      videoEl.setAttribute('controls', '');
-      videoEl.setAttribute('preload', 'auto');
-      videoEl.src = `/api/tracks/shadowing/media/${encodeURIComponent(mediaId)}`;
-      const mountParent = document.getElementById('video-zoom-stage') || container;
-      mountParent.appendChild(videoEl);
+      mediaEl = document.createElement(isVideo ? 'video' : 'audio');
+      mediaEl.id = 'studio-html5-player';
+      mediaEl.className = isVideo ? 'studio-html5-video' : 'studio-html5-audio';
+      if (isVideo) mediaEl.setAttribute('playsinline', '');
+      mediaEl.setAttribute('controls', '');
+      mediaEl.setAttribute('preload', 'auto');
+      mediaEl.src = streamUrl;
+      const mountParent = isVideo
+        ? document.getElementById('video-zoom-stage') || container
+        : document.getElementById('studio-audio-stage') || container;
+      mountParent.appendChild(mediaEl);
 
-      videoEl.addEventListener('loadedmetadata', () => {
+      mediaEl.addEventListener('loadedmetadata', () => {
+        const dur = Number(mediaEl.duration || 0);
+        if (dur > 0 && window.FlaptapStudioTranscriptTools) {
+          const clockTotal = document.getElementById('studio-clock-total');
+          if (clockTotal) clockTotal.textContent = window.FlaptapStudioTranscriptTools.formatClockMs(dur * 1000);
+        }
         if (!studioState.hasStartedPlaybackOnce && studioState.activeSentence?.startSec > 0) {
           try {
-            videoEl.currentTime = studioState.activeSentence.startSec;
+            mediaEl.currentTime = studioState.activeSentence.startSec;
           } catch {}
         }
       });
 
-      videoEl.addEventListener('play', () => {
+      mediaEl.addEventListener('play', () => {
         if (handleInitialNativePlayStart(studioState.ytPlayer)) return;
         studioState.isPlaying = true;
         syncPlaybackButtonsDom();
         startPlaybackTicker();
       });
 
-      videoEl.addEventListener('pause', () => {
+      mediaEl.addEventListener('pause', () => {
         if (
           studioState.pendingSeek &&
           Date.now() - studioState.pendingSeek.issuedAt < 2500
@@ -2356,22 +2704,24 @@
           clearInterval(studioState.playbackTicker);
           studioState.playbackTicker = null;
         }
+        stopKaraokeRaf();
         studioState.isPlaying = false;
         syncPlaybackButtonsDom();
       });
 
-      videoEl.addEventListener('ended', () => {
+      mediaEl.addEventListener('ended', () => {
         studioState.pendingSeek = null;
         studioState.awaitingOnsetUnmute = false;
         if (studioState.playbackTicker) {
           clearInterval(studioState.playbackTicker);
           studioState.playbackTicker = null;
         }
+        stopKaraokeRaf();
         studioState.isPlaying = false;
         syncPlaybackButtonsDom();
       });
 
-      videoEl.addEventListener('timeupdate', () => {
+      mediaEl.addEventListener('timeupdate', () => {
         if (!studioState.isPlaying) {
           checkSentenceDrillProgress();
         }
@@ -2380,36 +2730,36 @@
 
     studioState.ytPlayer = {
       isHtml5: true,
-      seekTo(seconds, allowSeekAhead) {
-        if (videoEl) videoEl.currentTime = Number(seconds) || 0;
+      seekTo(seconds) {
+        if (mediaEl) mediaEl.currentTime = Number(seconds) || 0;
       },
       playVideo() {
-        if (videoEl) {
-          const p = videoEl.play();
+        if (mediaEl) {
+          const p = mediaEl.play();
           if (p && typeof p.catch === 'function') p.catch(() => {});
         }
       },
       pauseVideo() {
-        if (videoEl) videoEl.pause();
+        if (mediaEl) mediaEl.pause();
       },
       mute() {
-        if (videoEl) videoEl.muted = true;
+        if (mediaEl) mediaEl.muted = true;
       },
       unMute() {
-        if (videoEl) videoEl.muted = false;
+        if (mediaEl) mediaEl.muted = false;
       },
       getCurrentTime() {
-        return videoEl ? videoEl.currentTime : 0;
+        return mediaEl ? mediaEl.currentTime : 0;
       },
       getDuration() {
-        return videoEl ? videoEl.duration : 0;
+        return mediaEl ? mediaEl.duration : 0;
       },
       setPlaybackRate(rate) {
-        if (videoEl) videoEl.playbackRate = Number(rate) || 1.0;
+        if (mediaEl) mediaEl.playbackRate = Number(rate) || 1.0;
       },
       getPlayerState() {
-        if (!videoEl) return 2;
-        return videoEl.paused ? 2 : 1;
+        if (!mediaEl) return 2;
+        return mediaEl.paused ? 2 : 1;
       },
     };
 
@@ -2576,6 +2926,7 @@
   }
 
   function updateActiveSentenceDom(index) {
+    clearActiveKaraokeWord();
     document.querySelectorAll('.sentence-driller-card.active-drilling').forEach((el) =>
       el.classList.remove('active-drilling'),
     );
@@ -2603,7 +2954,168 @@
     syncDeckLiveSubtitle();
   }
 
+  function cancelShadowPause() {
+    if (studioState.shadowPauseTimer) {
+      clearTimeout(studioState.shadowPauseTimer);
+      studioState.shadowPauseTimer = null;
+    }
+    if (studioState.shadowPauseRaf) {
+      cancelAnimationFrame(studioState.shadowPauseRaf);
+      studioState.shadowPauseRaf = null;
+    }
+    studioState.shadowPauseResumeFn = null;
+    const bar = document.getElementById('studio-shadow-pause-bar');
+    if (bar) bar.hidden = true;
+  }
+
+  function startShadowPause(durationSec, onDone) {
+    cancelShadowPause();
+    const pauseMs = Math.max(1100, Math.min(4800, Math.round((durationSec / Math.max(0.5, studioState.speed)) * 900)));
+    const bar = document.getElementById('studio-shadow-pause-bar');
+    const countdown = document.getElementById('studio-shadow-countdown');
+    const fill = document.getElementById('studio-shadow-fill');
+    const startedAt = performance.now();
+    const endAt = startedAt + pauseMs;
+    studioState.shadowPauseResumeFn = onDone;
+
+    if (bar) bar.hidden = false;
+    const tick = () => {
+      const now = performance.now();
+      const remMs = Math.max(0, endAt - now);
+      const pct = Math.min(100, ((now - startedAt) / pauseMs) * 100);
+      if (countdown) countdown.textContent = `Speak now… ${(remMs / 1000).toFixed(1)}s`;
+      if (fill) fill.style.width = `${pct.toFixed(1)}%`;
+      if (remMs > 0 && studioState.shadowPauseResumeFn) {
+        studioState.shadowPauseRaf = requestAnimationFrame(tick);
+      }
+    };
+    studioState.shadowPauseRaf = requestAnimationFrame(tick);
+    studioState.shadowPauseTimer = setTimeout(() => {
+      const fn = studioState.shadowPauseResumeFn;
+      cancelShadowPause();
+      if (typeof fn === 'function') fn();
+    }, pauseMs);
+  }
+
+  function stopKaraokeRaf() {
+    if (studioState.karaokeRaf) {
+      cancelAnimationFrame(studioState.karaokeRaf);
+      studioState.karaokeRaf = null;
+    }
+  }
+
+  function clearActiveKaraokeWord() {
+    if (studioState.activeWordEl) {
+      studioState.activeWordEl.classList.remove('is-speaking');
+      studioState.activeWordEl = null;
+    }
+    studioState.activeWordIndex = -1;
+  }
+
+  function updateTimelineAndKaraoke(currentSec) {
+    const TT = window.FlaptapStudioTranscriptTools;
+    if (!TT) return;
+    const nowMs = Math.max(0, currentSec * 1000);
+    const playerDur =
+      studioState.ytPlayer && typeof studioState.ytPlayer.getDuration === 'function'
+        ? Number(studioState.ytPlayer.getDuration() || 0)
+        : 0;
+    const totalSec = playerDur > 0 ? playerDur : Number(studioState.item?.durationSeconds || 0);
+
+    const clockNow = document.getElementById('studio-clock-now');
+    if (clockNow) clockNow.textContent = TT.formatClockMs(nowMs);
+    if (totalSec > 0 && !studioState.scrubbing) {
+      const pct = Math.max(0, Math.min(100, (currentSec / totalSec) * 100));
+      const fill = document.getElementById('studio-scrub-fill');
+      const thumb = document.getElementById('studio-scrub-thumb');
+      const track = document.getElementById('studio-scrub-track');
+      if (fill) fill.style.width = `${pct.toFixed(2)}%`;
+      if (thumb) thumb.style.left = `${pct.toFixed(2)}%`;
+      if (track) track.setAttribute('aria-valuenow', String(Math.round(pct)));
+    }
+
+    // Never highlight a stale or previous sentence's word while a seek/loop restart is settling
+    if (studioState.pendingSeek) {
+      clearActiveKaraokeWord();
+      return;
+    }
+
+    const isRawView = studioState.mode === 'read' && studioState.readView === 'raw';
+    const activeSent = studioState.activeSentence;
+    const scopeToActiveSentence = Boolean(
+      !isRawView &&
+      activeSent &&
+      Array.isArray(activeSent.words) &&
+      activeSent.words.length > 0 &&
+      studioState.activeRange?.mode !== 'range',
+    );
+
+    const words = scopeToActiveSentence
+      ? activeSent.words
+      : TT.getActiveWordStream(studioState.item, studioState.readView, studioState.mode);
+    if (!words.length) {
+      clearActiveKaraokeWord();
+      return;
+    }
+
+    // Strict guard: never highlight words before the current sentence's first word or past its last word
+    if (scopeToActiveSentence) {
+      const firstStartMs = Number(words[0].startMs || 0);
+      const lastEndMs = Number(words[words.length - 1].endMs || 0);
+      if (nowMs < firstStartMs - 30 || nowMs > lastEndMs + 260) {
+        clearActiveKaraokeWord();
+        return;
+      }
+    }
+
+    const hitIdx = TT.findWordAtTimeMs(words, nowMs);
+    if (hitIdx < 0) {
+      clearActiveKaraokeWord();
+      return;
+    }
+    const hitWord = words[hitIdx];
+    const hitWordKey = scopeToActiveSentence ? `${activeSent.index}:${hitWord.i}` : `all:${hitWord.i}`;
+    if (hitWordKey === studioState.activeWordIndex) return;
+    clearActiveKaraokeWord();
+
+    const scopeSelector =
+      studioState.mode === 'shadow'
+        ? '#subview-sentences-list'
+        : studioState.readView === 'ideas'
+        ? '#subview-ideas-list'
+        : studioState.readView === 'speakers'
+        ? '#subview-speakers-list'
+        : studioState.readView === 'raw'
+        ? '#subview-raw-list'
+        : '#subview-chunks-list';
+    const sentFilter = scopeToActiveSentence ? `[data-sent-index="${activeSent.index}"]` : '';
+    const el = document.querySelector(`${scopeSelector} .studio-word${sentFilter}[data-word-i="${hitWord.i}"]`);
+    if (el) {
+      el.classList.add('is-speaking');
+      studioState.activeWordEl = el;
+      studioState.activeWordIndex = hitWordKey;
+    }
+  }
+
+  function startKaraokeRaf() {
+    stopKaraokeRaf();
+    const step = () => {
+      if (!studioState.isPlaying || !studioState.ytPlayer) {
+        studioState.karaokeRaf = null;
+        return;
+      }
+      try {
+        const cur = Number(studioState.ytPlayer.getCurrentTime?.() || 0);
+        updateTimelineAndKaraoke(cur);
+      } catch {}
+      studioState.karaokeRaf = requestAnimationFrame(step);
+    };
+    studioState.karaokeRaf = requestAnimationFrame(step);
+  }
+
   function pauseCurrentPlayback() {
+    cancelShadowPause();
+    stopKaraokeRaf();
     if (studioState.playbackTicker) {
       clearInterval(studioState.playbackTicker);
       studioState.playbackTicker = null;
@@ -2611,6 +3123,7 @@
     const wasAwaitingUnmute = Boolean(studioState.awaitingOnsetUnmute);
     studioState.pendingSeek = null;
     studioState.awaitingOnsetUnmute = false;
+    studioState.activeRange = null;
     if (studioState.ytPlayer) {
       if (wasAwaitingUnmute && !studioState.userMuted && typeof studioState.ytPlayer.unMute === 'function') {
         try {
@@ -2633,6 +3146,102 @@
   }
 
   window.pauseCurrentPlayback = pauseCurrentPlayback;
+
+  function playRange(startSec, endSec, opts = {}) {
+    const player = studioState.ytPlayer;
+    if (!player || player.__flaptapAwaitingReady || typeof player.seekTo !== 'function') return;
+    cancelShadowPause();
+    const s = Math.max(0, Number(startSec) || 0);
+    const e = Math.max(s + 0.08, Number(endSec) || s + 0.4);
+    studioState.activeRange = {
+      startSec: s,
+      endSec: e,
+      label: opts.label || 'Clip',
+      mode: opts.mode || 'range',
+      wordObj: opts.wordObj || null,
+    };
+    studioState.hasStartedPlaybackOnce = true;
+    studioState.endedNaturally = false;
+    studioState.isPlaying = true;
+    const preSeekTime = Number(player.getCurrentTime?.() || 0);
+    studioState.pendingSeek = {
+      targetSec: s,
+      sentenceIndex: opts.sentIndex || studioState.activeSentence?.index || 1,
+      issuedAt: Date.now(),
+      preSeekTime,
+    };
+    studioState.awaitingOnsetUnmute = true;
+    studioState.lastSeekTime = Date.now();
+    const clipLabel = document.getElementById('studio-active-clip-label');
+    if (clipLabel) {
+      clipLabel.textContent = opts.label || '';
+      clipLabel.hidden = !opts.label;
+    }
+    try {
+      if (typeof player.mute === 'function') player.mute();
+      if (typeof player.setPlaybackRate === 'function') player.setPlaybackRate(studioState.speed);
+      player.seekTo(s, true);
+      if (typeof player.playVideo === 'function') player.playVideo();
+    } catch {}
+    syncPlaybackButtonsDom();
+    startPlaybackTicker();
+    startKaraokeRaf();
+  }
+
+  function playWord(wordObj) {
+    if (!wordObj || !Number.isFinite(wordObj.startMs)) return;
+    const isExact = studioState.wordCushion === 'exact';
+    const preMs = isExact ? 0 : 25;
+    const postMs = isExact ? 0 : 55;
+    const startSec = Math.max(0, (wordObj.startMs - preMs) / 1000);
+    const endSec = Math.max(startSec + 0.09, (wordObj.endMs + postMs) / 1000);
+    studioState.selectedTimedWord = wordObj;
+    const defBtn = document.getElementById('studio-define-word-btn');
+    if (defBtn) {
+      defBtn.hidden = false;
+      defBtn.textContent = `Define “${wordObj.word}”`;
+    }
+    playRange(startSec, endSec, {
+      mode: 'word',
+      label: `Word: “${wordObj.word}”`,
+      wordObj,
+      sentIndex: wordObj.sentIndex,
+    });
+  }
+
+  function playContinuousFrom(startSec, label) {
+    const player = studioState.ytPlayer;
+    if (!player || player.__flaptapAwaitingReady || typeof player.seekTo !== 'function') return;
+    cancelShadowPause();
+    studioState.activeRange = null;
+    studioState.loopSentenceIndex = null;
+    studioState.endAction = 'continue';
+    studioState.hasStartedPlaybackOnce = true;
+    studioState.endedNaturally = false;
+    studioState.isPlaying = true;
+    const s = Math.max(0, Number(startSec) || 0);
+    const match = (studioState.item?.sentences || []).find((x) => s >= x.startSec && s <= x.endSec);
+    if (match) {
+      studioState.activeSentence = match;
+      updateActiveSentenceDom(match.index);
+    }
+    const clipLabel = document.getElementById('studio-active-clip-label');
+    if (clipLabel) clipLabel.textContent = label || 'Continuous';
+    studioState.lastSeekTime = Date.now();
+    try {
+      if (!studioState.userMuted && typeof player.unMute === 'function') player.unMute();
+      if (typeof player.setPlaybackRate === 'function') player.setPlaybackRate(studioState.speed);
+      player.seekTo(s, true);
+      if (typeof player.playVideo === 'function') player.playVideo();
+    } catch {}
+    syncPlaybackButtonsDom();
+    startPlaybackTicker();
+    startKaraokeRaf();
+  }
+
+  window.playWord = playWord;
+  window.playRange = playRange;
+  window.playContinuousFrom = playContinuousFrom;
 
   function playSentence(index, opts) {
     const options = opts || {};
@@ -2666,9 +3275,17 @@
 
     studioState.endedNaturally = false;
     studioState.hasStartedPlaybackOnce = true;
+    studioState.activeRange = null;
+    cancelShadowPause();
     studioState.activeSentence = sentence;
     studioState.seekTargetStart = sentence.startSec;
     studioState.isPlaying = true;
+    const clipLabel = document.getElementById('studio-active-clip-label');
+    if (clipLabel) {
+      clipLabel.textContent = '';
+      clipLabel.hidden = true;
+    }
+    clearActiveKaraokeWord();
     updateActiveSentenceDom(sentence.index);
     syncPlaybackButtonsDom();
 
@@ -2744,6 +3361,7 @@
     } catch {}
 
     startPlaybackTicker();
+    startKaraokeRaf();
   }
 
   window.playSentence = playSentence;
@@ -2918,9 +3536,10 @@
   }
 
   function cycleSentenceFlow() {
-    const order = ['loop', 'pause', 'continue'];
+    const order = ['loop', 'pause', 'shadow', 'word', 'continue'];
     const curr = order.includes(studioState.endAction) ? studioState.endAction : 'loop';
     const next = order[(order.indexOf(curr) + 1) % order.length];
+    cancelShadowPause();
     studioState.endAction = next;
     if (next === 'loop') {
       studioState.loopSentenceIndex = studioState.activeSentence?.index ?? null;
@@ -2933,6 +3552,8 @@
     const toastMap = {
       pause: t('flowPause'),
       loop: t('flowLoop'),
+      shadow: t('flowShadow'),
+      word: t('flowWord'),
       continue: t('flowContinue'),
     };
     showToast(`${t('playbackFlowLabel')}: ${toastMap[next] || next}`);
@@ -3276,16 +3897,69 @@
 
     const sentences = studioState.item?.sentences || [];
 
-    // 2. Playback Boundary Enforcement (runs FIRST to guarantee loop & auto-pause boundaries)
+    // 1.5 Active Word or Section Range Boundary Enforcement (Paragraph, Idea, Speaker Turn, Raw Cue, Word Clip)
+    const activeRange = studioState.activeRange;
+    if (activeRange) {
+      updateTimelineAndKaraoke(current);
+      if (current >= activeRange.endSec) {
+        if (activeRange.mode === 'word' && studioState.endAction === 'word') {
+          studioState.pendingSeek = {
+            targetSec: activeRange.startSec,
+            sentenceIndex: studioState.activeSentence?.index || 1,
+            issuedAt: Date.now(),
+            preSeekTime: current,
+          };
+          studioState.awaitingOnsetUnmute = true;
+          studioState.lastSeekTime = Date.now();
+          if (typeof player.mute === 'function') player.mute();
+          player.seekTo(activeRange.startSec, true);
+          if (typeof player.playVideo === 'function') player.playVideo();
+          return;
+        }
+        if (typeof player.pauseVideo === 'function') player.pauseVideo();
+        if (studioState.playbackTicker) {
+          clearInterval(studioState.playbackTicker);
+          studioState.playbackTicker = null;
+        }
+        stopKaraokeRaf();
+        studioState.activeRange = null;
+        studioState.isPlaying = false;
+        syncPlaybackButtonsDom();
+      }
+      return;
+    }
+
+    updateTimelineAndKaraoke(current);
+
+    // 2. Playback Boundary Enforcement (runs FIRST to guarantee loop, shadow pause & auto-pause boundaries)
     if (active) {
       const nextSentence = sentences.find((s) => s.index === active.index + 1);
       const endCutoff = getSentenceEndCutoff(active);
 
       if (current >= endCutoff) {
+        if (studioState.endAction === 'shadow') {
+          if (typeof player.pauseVideo === 'function') player.pauseVideo();
+          if (studioState.playbackTicker) {
+            clearInterval(studioState.playbackTicker);
+            studioState.playbackTicker = null;
+          }
+          stopKaraokeRaf();
+          studioState.isPlaying = false;
+          syncPlaybackButtonsDom();
+          const durSec = Math.max(0.8, active.endSec - active.startSec);
+          startShadowPause(durSec, () => {
+            if (studioState.endAction === 'shadow') {
+              playSentence(active.index, { forceMode: 'once' });
+            }
+          });
+          return;
+        }
+
         const shouldLoop =
           studioState.loopSentenceIndex === active.index || studioState.endAction === 'loop';
 
         if (shouldLoop) {
+          clearActiveKaraokeWord();
           studioState.pendingSeek = {
             targetSec: active.startSec,
             sentenceIndex: active.index,
@@ -5050,6 +5724,581 @@
   }
 
   /* ========================================================================
+     CONSOLIDATED TRANSCRIPT CAPABILITIES:
+     AI VERBATIM REVIEW SSE · INLINE TITLE & SPEAKER RENAME · LIVE SEARCH ·
+     REPAIR DIFF POPOVER · SCRUB BAR · WORD CLICK MODES · 7-FORMAT EXPORTER
+     ======================================================================== */
+
+  function ensureStudioReviewAiSelector() {
+    if (studioState.reviewAiSelector || !window.FlaptapAiSelector) return;
+    const mount = document.getElementById('studio-review-ai-mount');
+    if (!mount) return;
+    studioState.reviewAiSelector = window.FlaptapAiSelector.create({
+      container: mount,
+      idPrefix: 'studio-rev-aisel',
+      persistenceKey: 'shadowing_review',
+      title: 'Review Model',
+      compact: true,
+      showRunButton: false,
+      hideMetaChips: true,
+      fetcher: apiFetch,
+    });
+    studioState.reviewAiSelector.init();
+  }
+
+  function getSavedReviewOptions() {
+    if (studioState.reviewAiSelector) {
+      const sel = studioState.reviewAiSelector.getSelection?.();
+      if (sel && (sel.keyId || sel.model)) {
+        return { keyId: sel.keyId || undefined, model: sel.model || undefined, variant: sel.variant || undefined };
+      }
+    }
+    try {
+      const raw = sessionStorage.getItem('flaptap_shadowing_review_opts');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    try {
+      const rawLs = localStorage.getItem('flaptap_aisel_shadowing_review');
+      if (rawLs) {
+        const p = JSON.parse(rawLs);
+        return { keyId: p.keyId || undefined, model: p.model || undefined, variant: p.variant || undefined };
+      }
+    } catch {}
+    return {};
+  }
+
+  async function runTranscriptReview({ force = false } = {}) {
+    const item = studioState.item;
+    const TT = window.FlaptapStudioTranscriptTools;
+    if (!item?.id || !TT || studioState.reviewing) return;
+
+    closeAllControlPopovers();
+    studioState.reviewing = true;
+    const ac = new AbortController();
+    studioState.reviewAbort = ac;
+
+    const banner = document.getElementById('studio-review-banner');
+    const msgEl = document.getElementById('studio-review-msg');
+    const pctEl = document.getElementById('studio-review-pct');
+    const fillEl = document.getElementById('studio-review-fill');
+    if (banner) banner.hidden = false;
+    if (msgEl) msgEl.textContent = 'Starting AI Verbatim Review...';
+    if (pctEl) pctEl.textContent = '5%';
+    if (fillEl) fillEl.style.width = '5%';
+
+    try {
+      const reviewOpts = Object.assign({}, getSavedReviewOptions(), { force: Boolean(force) });
+      const updated = await TT.streamReviewLesson({
+        lessonId: item.id,
+        opts: reviewOpts,
+        headers: apiHeaders(),
+        signal: ac.signal,
+        onProgress: (ev) => {
+          const pct = Math.max(0, Math.min(100, Number(ev?.percent || 0)));
+          if (msgEl && ev?.message) msgEl.textContent = ev.message;
+          if (pctEl) pctEl.textContent = `${Math.round(pct)}%`;
+          if (fillEl) fillEl.style.width = `${pct}%`;
+        },
+      });
+      if (updated) {
+        studioState.item = Object.assign({}, studioState.item, updated);
+        syncStudioPacingUi(studioState.item);
+        if (studioState.activeSentence) {
+          const nextActive = (studioState.item.sentences || []).find(
+            (s) => Number(s.index) === Number(studioState.activeSentence.index),
+          );
+          if (nextActive) studioState.activeSentence = nextActive;
+        }
+        renderSentencesAndParagraphs();
+        syncPlaybackButtonsDom();
+        syncDeckLiveSubtitle();
+        showToast('AI Verbatim Review complete — speakers, repairs & ideas ready');
+      }
+    } catch (err) {
+      if (err?.name === 'AbortError') {
+        showToast('AI Verbatim Review cancelled');
+      } else {
+        showToast(err?.message || 'AI Verbatim Review failed.');
+      }
+    } finally {
+      studioState.reviewing = false;
+      studioState.reviewAbort = null;
+      if (banner) banner.hidden = true;
+    }
+  }
+
+  function syncStudioPacingUi(item, modeOverride = null) {
+    const group = document.getElementById('studio-pacing-group');
+    if (!group) return;
+    const isShadowing = Boolean(item && item.track === 'shadowing');
+    group.hidden = !isShadowing;
+    if (!isShadowing) return;
+    const activeMode = normalizePacingMode(modeOverride || item.pacingMode || 'short');
+    group.querySelectorAll('[data-pacing]').forEach((btn) => {
+      const act = btn.dataset.pacing === activeMode;
+      btn.classList.toggle('active', act);
+      btn.setAttribute('aria-checked', act ? 'true' : 'false');
+    });
+  }
+
+  function formatPacingSwitchedToast(mode, count) {
+    const n = Number(count) || 0;
+    if (studioState.uiLang === 'en') {
+      const label =
+        mode === 'balanced' ? 'Medium lines' : mode === 'full' ? 'Full sentences' : 'Short lines';
+      return `${label} · ${n} ${n === 1 ? 'line' : 'lines'}`;
+    }
+    const key = mode === 'balanced' ? 'pacingBalanced' : mode === 'full' ? 'pacingFull' : 'pacingShort';
+    return `${t(key)} · ${n} ${t('sentencesUnit')}`;
+  }
+
+  async function switchStudioPacing(nextMode) {
+    const targetMode = normalizePacingMode(nextMode);
+    const item = studioState.item;
+    if (!item?.id || item.track !== 'shadowing' || studioState.isSwitchingPacing) return;
+
+    const prevMode = normalizePacingMode(item.pacingMode || 'short');
+    if (prevMode === targetMode) return;
+
+    if (!studioState.user && !studioState.authToken) {
+      redirectToSignInGate();
+      return;
+    }
+
+    const player = studioState.ytPlayer;
+    const wasPlaying = Boolean(studioState.isPlaying);
+    const wasLooping = studioState.endAction === 'loop';
+    let anchorTimeSec = (studioState.activeSentence?.startSec ?? 0) + 0.05;
+    try {
+      if (player && typeof player.getCurrentTime === 'function') {
+        const cur = Number(player.getCurrentTime());
+        if (Number.isFinite(cur) && cur > 0) {
+          const act = studioState.activeSentence;
+          if (wasPlaying || !act || (cur >= Number(act.startSec) - 0.1 && cur <= Number(act.endSec) + 0.25)) {
+            anchorTimeSec = cur;
+          }
+        }
+      }
+    } catch {}
+
+    const group = document.getElementById('studio-pacing-group');
+    studioState.isSwitchingPacing = true;
+    group?.classList.add('is-switching');
+    syncStudioPacingUi(item, targetMode);
+
+    try {
+      const data = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/pacing`, {
+        method: 'PATCH',
+        body: JSON.stringify({ pacingMode: targetMode }),
+      });
+
+      const nextItem = data?.item;
+      if (!nextItem) {
+        throw new Error(t('pacingSwitchFailed'));
+      }
+
+      try {
+        localStorage.setItem(PACING_STORAGE_KEY, targetMode);
+      } catch {}
+
+      studioState.item = nextItem;
+
+      // Refresh translation map cleanly so zero stale sentence-index translations linger
+      studioState.translationsByLang = {};
+      if (nextItem.translationsCache && typeof nextItem.translationsCache === 'object') {
+        for (const [lang, map] of Object.entries(nextItem.translationsCache)) {
+          studioState.translationsByLang[lang] = Object.assign({}, map || {});
+        }
+      }
+      studioState.translatingAllByLang = {};
+      studioState.translatingSentencesByLang = {};
+
+      // Clear transient playback/karaoke state without touching or remounting studioState.ytPlayer
+      cancelShadowPause();
+      studioState.pendingSeek = null;
+      clearActiveKaraokeWord();
+      studioState.activeRange = null;
+
+      // Resolve new anchor sentence by timestamp
+      const sentences = Array.isArray(nextItem.sentences) ? nextItem.sentences : [];
+      let matched = sentences.find(
+        (s) => anchorTimeSec >= Number(s.startSec) - 0.02 && anchorTimeSec <= Number(s.endSec) + 0.02,
+      );
+      if (!matched && sentences.length > 0) {
+        matched = sentences.reduce((best, s) =>
+          Math.abs(Number(s.startSec) - anchorTimeSec) < Math.abs(Number(best.startSec) - anchorTimeSec) ? s : best,
+        );
+      }
+      if (!matched && sentences.length > 0) {
+        matched = sentences[0];
+      }
+
+      studioState.activeSentence = matched || null;
+      studioState.loopSentenceIndex = wasLooping && matched ? matched.index : null;
+      studioState.dictationIndex = matched ? Number(matched.index) || 1 : 1;
+
+      syncStudioPacingUi(nextItem);
+
+      const sentTotalEl = document.getElementById('studio-sentence-total');
+      if (sentTotalEl) {
+        sentTotalEl.textContent = `${sentences.length} ${t('sentencesUnit')}`;
+      }
+
+      // Re-render all dependent Studio surfaces cleanly without remounting media deck
+      renderSentencesAndParagraphs();
+
+      if (nextItem.aiAnalysis) {
+        const coachContent = document.getElementById('coach-content-box');
+        if (studioState.mode === 'coach' || (coachContent && !coachContent.hidden)) {
+          renderCoachAnalysis(nextItem.aiAnalysis);
+        } else {
+          syncCoachBadgeFromAnalysis(nextItem.aiAnalysis);
+        }
+      }
+
+      if (matched) {
+        updateActiveSentenceDom(matched.index);
+      } else {
+        syncDeckLiveSubtitle();
+      }
+      syncPlaybackButtonsDom();
+
+      if (studioState.mode === 'listen') {
+        renderDictationCard();
+      }
+
+      if (matched) {
+        requestAnimationFrame(() => {
+          const targetEl = getActiveScrollTargetElement(matched.index);
+          if (targetEl) {
+            targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        });
+      }
+
+      // Keep active playback flowing seamlessly with zero stutter
+      if (wasPlaying && matched) {
+        try {
+          if (player && typeof player.getCurrentTime === 'function' && typeof player.seekTo === 'function') {
+            const curNow = Number(player.getCurrentTime());
+            if (
+              !Number.isFinite(curNow) ||
+              curNow < Number(matched.startSec) - 0.1 ||
+              curNow > Number(matched.endSec)
+            ) {
+              player.seekTo(Number(matched.startSec), true);
+            }
+          }
+        } catch {}
+      }
+
+      showToast(formatPacingSwitchedToast(targetMode, data.sentenceCount ?? sentences.length));
+    } catch (err) {
+      if (err?.status === 401 || err?.code === 'auth_required') {
+        redirectToSignInGate();
+        return;
+      }
+      syncStudioPacingUi(studioState.item, prevMode);
+      showToast(err?.message || t('pacingSwitchFailed'));
+    } finally {
+      studioState.isSwitchingPacing = false;
+      group?.classList.remove('is-switching');
+    }
+  }
+
+  function setWordClickMode(mode) {
+    const valid = ['define', 'word', 'from-here'];
+    const target = valid.includes(mode) ? mode : 'define';
+    studioState.wordClickMode = target;
+    try {
+      localStorage.setItem('flaptap_word_click_mode', target);
+    } catch {}
+    document.querySelectorAll('[data-word-click-mode]').forEach((btn) => {
+      const act = btn.getAttribute('data-word-click-mode') === target;
+      btn.classList.toggle('active', act);
+      btn.setAttribute('aria-pressed', act ? 'true' : 'false');
+    });
+  }
+
+  function setWordCushion(cushion) {
+    const target = cushion === 'exact' ? 'exact' : 'natural';
+    studioState.wordCushion = target;
+    try {
+      localStorage.setItem('flaptap_word_cushion', target);
+    } catch {}
+    document.querySelectorAll('[data-word-cushion]').forEach((btn) => {
+      const act = btn.getAttribute('data-word-cushion') === target;
+      btn.classList.toggle('active', act);
+      btn.setAttribute('aria-pressed', act ? 'true' : 'false');
+    });
+  }
+
+  function toggleVideoVisibility() {
+    const card = document.querySelector('.player-frame-card');
+    const btn = document.getElementById('studio-video-toggle-btn');
+    const audioStage = document.getElementById('studio-audio-stage');
+    if (!card || !btn) return;
+    studioState.videoHidden = !studioState.videoHidden;
+    card.classList.toggle('is-video-hidden', studioState.videoHidden);
+    if (audioStage) audioStage.hidden = !studioState.videoHidden;
+    btn.textContent = studioState.videoHidden ? 'Show Video' : 'Hide Video';
+    btn.classList.toggle('active', studioState.videoHidden);
+    requestAnimationFrame(syncStudioDeckStickyHeightVar);
+  }
+
+  function hideInfoPopover(immediate = false) {
+    clearTimeout(studioState.infoPopoverCloseTimer);
+    const pop = document.getElementById('studio-info-popover');
+    if (!pop) return;
+    const closeNow = () => {
+      pop.hidden = true;
+      studioState.infoPopoverPinned = false;
+    };
+    if (immediate) closeNow();
+    else studioState.infoPopoverCloseTimer = setTimeout(closeNow, 180);
+  }
+
+  function showInfoPopover(kind, sentIdx, anchorEl, { pinned = false, wordObj = null } = {}) {
+    const TT = window.FlaptapStudioTranscriptTools;
+    const pop = document.getElementById('studio-info-popover');
+    if (!TT || !pop || !anchorEl || !studioState.item) return;
+    clearTimeout(studioState.infoPopoverCloseTimer);
+    studioState.infoPopoverPinned = Boolean(pinned);
+    pop.innerHTML = TT.buildInfoPopoverHtml(studioState.item, kind, sentIdx, wordObj);
+    pop.style.left = '-9999px';
+    pop.style.top = '0px';
+    pop.hidden = false;
+
+    const ar = anchorEl.getBoundingClientRect();
+    const pr = pop.getBoundingClientRect();
+    const vw = window.innerWidth || 1024;
+    const vh = window.innerHeight || 768;
+    const left = Math.max(8, Math.min(vw - pr.width - 8, ar.left + ar.width / 2 - pr.width / 2));
+    let top = ar.top - pr.height - 8;
+    if (top < 8) top = Math.min(vh - pr.height - 8, ar.bottom + 8);
+    pop.style.left = `${Math.round(left)}px`;
+    pop.style.top = `${Math.round(top)}px`;
+  }
+
+  function syncSearchMatchesDom() {
+    const q = studioState.searchQuery.trim().toLowerCase();
+    const countEl = document.getElementById('studio-search-count');
+    const prevBtn = document.getElementById('studio-search-prev');
+    const nextBtn = document.getElementById('studio-search-next');
+    const clearBtn = document.getElementById('studio-search-clear');
+
+    const scopeSelector =
+      studioState.mode === 'shadow'
+        ? '#subview-sentences-list'
+        : studioState.readView === 'ideas'
+        ? '#subview-ideas-list'
+        : studioState.readView === 'speakers'
+        ? '#subview-speakers-list'
+        : studioState.readView === 'raw'
+        ? '#subview-raw-list'
+        : '#subview-chunks-list';
+
+    const root = document.querySelector(scopeSelector);
+    const words = root ? Array.from(root.querySelectorAll('.studio-word')) : [];
+    const hits = [];
+    for (const el of words) {
+      el.classList.remove('is-search-current');
+      const isHit = Boolean(q && (el.textContent || '').toLowerCase().includes(q));
+      el.classList.toggle('is-search-hit', isHit);
+      if (isHit) hits.push(el);
+    }
+
+    studioState.searchMatches = hits;
+    if (!q) {
+      studioState.searchMatchIdx = 0;
+      if (countEl) countEl.hidden = true;
+      if (prevBtn) prevBtn.hidden = true;
+      if (nextBtn) nextBtn.hidden = true;
+      if (clearBtn) clearBtn.hidden = true;
+      return;
+    }
+
+    if (clearBtn) clearBtn.hidden = false;
+    if (countEl) {
+      countEl.hidden = false;
+      countEl.textContent = hits.length ? `${Math.min(studioState.searchMatchIdx + 1, hits.length)}/${hits.length}` : '0/0';
+    }
+    if (prevBtn) prevBtn.hidden = hits.length <= 1;
+    if (nextBtn) nextBtn.hidden = hits.length <= 1;
+    if (hits.length > 0) {
+      const idx = Math.max(0, Math.min(hits.length - 1, studioState.searchMatchIdx));
+      studioState.searchMatchIdx = idx;
+      hits[idx].classList.add('is-search-current');
+    }
+  }
+
+  function jumpSearchMatch(delta) {
+    const hits = studioState.searchMatches || [];
+    if (!hits.length) return;
+    hits[studioState.searchMatchIdx]?.classList.remove('is-search-current');
+    studioState.searchMatchIdx = (studioState.searchMatchIdx + delta + hits.length) % hits.length;
+    const target = hits[studioState.searchMatchIdx];
+    if (target) {
+      target.classList.add('is-search-current');
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    const countEl = document.getElementById('studio-search-count');
+    if (countEl) countEl.textContent = `${studioState.searchMatchIdx + 1}/${hits.length}`;
+  }
+
+  function openInlineTitleEditor() {
+    if (!studioState.item) return;
+    const row = document.getElementById('studio-title-row');
+    const editWrap = document.getElementById('studio-title-edit-wrap');
+    const input = document.getElementById('studio-title-input');
+    if (!row || !editWrap || !input) return;
+    input.value = studioState.item.title || '';
+    row.hidden = true;
+    editWrap.hidden = false;
+    input.focus();
+    input.select();
+  }
+
+  function closeInlineTitleEditor() {
+    const row = document.getElementById('studio-title-row');
+    const editWrap = document.getElementById('studio-title-edit-wrap');
+    if (row) row.hidden = false;
+    if (editWrap) editWrap.hidden = true;
+  }
+
+  async function saveInlineTitle() {
+    const item = studioState.item;
+    const input = document.getElementById('studio-title-input');
+    if (!item?.id || !input) return;
+    const nextTitle = input.value.trim();
+    if (!nextTitle) {
+      showToast('Title cannot be empty.');
+      return;
+    }
+    if (nextTitle === item.title) {
+      closeInlineTitleEditor();
+      return;
+    }
+    try {
+      const res = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/title`, {
+        method: 'PATCH',
+        body: JSON.stringify({ title: nextTitle }),
+      });
+      const updatedTitle = res?.data?.title || nextTitle;
+      item.title = updatedTitle;
+      const titleEl = document.getElementById('studio-title');
+      if (titleEl) titleEl.textContent = updatedTitle;
+      document.title = `${updatedTitle} — Flaptap Studio`;
+      closeInlineTitleEditor();
+      showToast('Lesson title updated');
+    } catch (err) {
+      showToast(err?.message || 'Could not rename lesson.');
+    }
+  }
+
+  async function saveRenamedSpeakers(formEl) {
+    const item = studioState.item;
+    if (!item?.id || !formEl) return;
+    const map = {};
+    formEl.querySelectorAll('[data-spk-rename-id]').forEach((inp) => {
+      const id = inp.getAttribute('data-spk-rename-id');
+      const val = inp.value.trim();
+      if (id && val) map[id] = val;
+    });
+    if (!Object.keys(map).length) return;
+    try {
+      const res = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/speakers`, {
+        method: 'PATCH',
+        body: JSON.stringify({ speakers: map }),
+      });
+      if (res?.data) {
+        studioState.item = Object.assign({}, studioState.item, res.data);
+      }
+      studioState.speakerEditorOpen = false;
+      renderSentencesAndParagraphs();
+      showToast('Speaker names updated');
+    } catch (err) {
+      showToast(err?.message || 'Could not rename speakers.');
+    }
+  }
+
+  function resolveExportViewKey() {
+    const sel = document.getElementById('studio-export-view-select');
+    const chosen = sel ? sel.value : 'active';
+    if (chosen && chosen !== 'active') return chosen;
+    if (studioState.mode === 'read') return studioState.readView || 'paragraphs';
+    return 'sentences';
+  }
+
+  async function exportStructuredTranscript(format) {
+    const item = studioState.item;
+    if (!item?.id) return;
+    const view = resolveExportViewKey();
+    const ts = document.getElementById('studio-export-ts')?.checked ? '1' : '0';
+    const spk = document.getElementById('studio-export-spk')?.checked ? '1' : '0';
+    const url = `/api/tracks/shadowing/${encodeURIComponent(item.id)}/export?view=${encodeURIComponent(view)}&format=${encodeURIComponent(format)}&timestamps=${ts}&speakers=${spk}`;
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: apiHeaders(),
+        credentials: 'same-origin',
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.message || `Export failed (${res.status})`);
+      }
+      const text = await res.text();
+      const disp = res.headers.get('Content-Disposition') || '';
+      const fnMatch = disp.match(/filename="([^"]+)"/i);
+      const filename = fnMatch ? fnMatch[1] : `shadowing-${view}.${format}`;
+      const mime = res.headers.get('Content-Type') || 'text/plain;charset=utf-8';
+      U.downloadBlob(text, filename, mime);
+      closeAllControlPopovers();
+      showToast(`Exported ${filename}`);
+    } catch (err) {
+      showToast(err?.message || 'Export failed.');
+    }
+  }
+
+  function handleStudioWordInteraction(wordEl, e) {
+    if (!wordEl) return false;
+    const text = wordEl.dataset.word || wordEl.textContent?.trim() || '';
+    const sentIdx = Number(wordEl.dataset.sentIndex) || studioState.activeSentence?.index || 1;
+    const startMs = Number(wordEl.dataset.startMs);
+    const endMs = Number(wordEl.dataset.endMs);
+    const hasTiming = Number.isFinite(startMs) && Number.isFinite(endMs) && endMs > startMs;
+    const wordObj = hasTiming
+      ? { word: text, sentIndex: sentIdx, startMs, endMs, wordI: Number(wordEl.dataset.wordI || 0) }
+      : null;
+
+    if (e.altKey) {
+      e.preventDefault();
+      e.stopPropagation();
+      openWordLookup(text, sentIdx, wordEl);
+      return true;
+    }
+    if (e.shiftKey && hasTiming) {
+      e.preventDefault();
+      e.stopPropagation();
+      playContinuousFrom(startMs / 1000, `From “${text}”`);
+      return true;
+    }
+    if (studioState.wordClickMode === 'word' && wordObj) {
+      e.preventDefault();
+      e.stopPropagation();
+      playWord(wordObj);
+      return true;
+    }
+    if (studioState.wordClickMode === 'from-here' && hasTiming) {
+      e.preventDefault();
+      e.stopPropagation();
+      playContinuousFrom(startMs / 1000, `From “${text}”`);
+      return true;
+    }
+    return false;
+  }
+
+  /* ========================================================================
      SINGLE-PASS STUDIO HYDRATION (Strictly Authenticated)
      ======================================================================== */
 
@@ -5108,6 +6357,7 @@
     }
 
     renderSentencesAndParagraphs();
+    syncStudioPacingUi(item);
     mountMediaDeck(item);
     syncPlaybackButtonsDom();
     if (initialTarget) {
@@ -5155,9 +6405,23 @@
     const id = params.get('id');
     const rawUrl = params.get('url');
     const forceExtract = params.get('force') === '1';
+    const wantsAutoReview = params.get('autoreview') === '1';
     const initialMode = params.get('mode') || 'shadow';
+    const initialView = params.get('view') || null;
 
-    switchStudioMode(initialMode);
+    switchStudioMode(initialMode, { readView: initialView, skipUrlSync: true });
+
+    const maybeAutoReview = (loadedItem) => {
+      if (!wantsAutoReview || !loadedItem) return;
+      try {
+        const clean = new URL(window.location.href);
+        clean.searchParams.delete('autoreview');
+        window.history.replaceState({}, '', clean.toString());
+      } catch {}
+      if (loadedItem.reviewStatus !== 'ready' && loadedItem.transcriptData) {
+        runTranscriptReview({ force: false });
+      }
+    };
 
     if (id && studioState.authToken) {
       try {
@@ -5172,6 +6436,7 @@
         studioState.user = me.user;
         renderStudioUserProfile(me);
         hydrateStudioItem(item);
+        maybeAutoReview(item);
       } catch (error) {
         showFatalLoaderError(error);
       }
@@ -5196,6 +6461,7 @@
       try {
         const item = await apiFetch(`/api/history/${encodeURIComponent(id)}`, { method: 'GET' });
         hydrateStudioItem(item);
+        maybeAutoReview(item);
       } catch (error) {
         showFatalLoaderError(error);
       }
@@ -5204,18 +6470,25 @@
 
     if (rawUrl) {
       try {
+        const pacingMode = normalizePacingMode(params.get('pacing') || getSavedPacingMode());
         const item = await apiFetch('/api/tracks/shadowing/process', {
           method: 'POST',
-          body: JSON.stringify({ url: rawUrl, force: forceExtract }),
+          body: JSON.stringify({ url: rawUrl, force: forceExtract, pacingMode }),
         });
         const nextUrl = new URL(window.location.href);
         nextUrl.searchParams.delete('url');
         nextUrl.searchParams.delete('force');
+        nextUrl.searchParams.delete('autoreview');
+        nextUrl.searchParams.delete('pacing');
         nextUrl.searchParams.set('id', item.id);
         nextUrl.searchParams.set('mode', studioState.mode);
+        if (studioState.mode === 'read') {
+          nextUrl.searchParams.set('view', studioState.readView || 'paragraphs');
+        }
         window.history.replaceState({}, '', nextUrl.toString());
 
         hydrateStudioItem(item);
+        maybeAutoReview(item);
       } catch (error) {
         showFatalLoaderError(error);
       }
@@ -5459,7 +6732,7 @@
       }
     });
 
-    // Read Mode Paragraph Interactions (Check Complete, Click Sentence)
+    // Read Mode Paragraph Interactions (Check Complete, Play Paragraph, Word Click, Click Sentence)
     document.getElementById('subview-chunks-list')?.addEventListener('click', (e) => {
       const checkBtn = e.target.closest('[data-studio-check-subject]');
       if (checkBtn) {
@@ -5471,9 +6744,362 @@
         return;
       }
 
+      const rangeBtn = e.target.closest('[data-play-range-start]');
+      if (rangeBtn) {
+        e.stopPropagation();
+        playRange(
+          Number(rangeBtn.getAttribute('data-play-range-start')),
+          Number(rangeBtn.getAttribute('data-play-range-end')),
+          { label: rangeBtn.getAttribute('data-play-range-label') || 'Paragraph' },
+        );
+        return;
+      }
+
+      const wordEl = e.target.closest('.studio-word');
+      if (wordEl && handleStudioWordInteraction(wordEl, e)) return;
+
+      const sel = window.getSelection();
+      if (sel && !sel.isCollapsed && String(sel.toString() || '').trim().length > 0) return;
+
       const sentSpan = e.target.closest('.read-sentence[data-read-sent]');
       if (sentSpan) {
         playSentence(Number(sentSpan.dataset.readSent));
+      }
+    });
+
+    // Structured Read Views (Ideas, Speakers, Raw Original) + Shadow Timed Words & Repair Badges
+    const transcriptPanels = [
+      'subview-sentences-list',
+      'subview-chunks-list',
+      'subview-ideas-list',
+      'subview-speakers-list',
+      'subview-raw-list',
+    ];
+    transcriptPanels.forEach((panelId) => {
+      const el = document.getElementById(panelId);
+      if (!el) return;
+
+      el.addEventListener('click', (e) => {
+        const infoBtn = e.target.closest('[data-info-kind]');
+        if (infoBtn) {
+          e.stopPropagation();
+          showInfoPopover(
+            infoBtn.getAttribute('data-info-kind'),
+            Number(infoBtn.getAttribute('data-sent-idx') || 0),
+            infoBtn,
+            { pinned: true },
+          );
+          return;
+        }
+
+        const reviewBtn = e.target.closest('[data-trigger-ai-review]');
+        if (reviewBtn) {
+          e.stopPropagation();
+          runTranscriptReview({ force: false });
+          return;
+        }
+
+        if (panelId !== 'subview-sentences-list' && panelId !== 'subview-chunks-list') {
+          const playSentBtn = e.target.closest('[data-play-sent]');
+          if (playSentBtn) {
+            e.stopPropagation();
+            handleSentencePlayButtonClick(Number(playSentBtn.dataset.playSent));
+            return;
+          }
+          const rangeBtn = e.target.closest('[data-play-range-start]');
+          if (rangeBtn) {
+            e.stopPropagation();
+            playRange(
+              Number(rangeBtn.getAttribute('data-play-range-start')),
+              Number(rangeBtn.getAttribute('data-play-range-end')),
+              { label: rangeBtn.getAttribute('data-play-range-label') || 'Section' },
+            );
+            return;
+          }
+        }
+
+        if (panelId !== 'subview-chunks-list') {
+          const wordEl = e.target.closest('.studio-word');
+          if (wordEl && handleStudioWordInteraction(wordEl, e)) return;
+        }
+      });
+
+      el.addEventListener('contextmenu', (e) => {
+        const wordEl = e.target.closest('.studio-word');
+        if (!wordEl) return;
+        e.preventDefault();
+        const text = wordEl.dataset.word || wordEl.textContent?.trim() || '';
+        const sentIdx = Number(wordEl.dataset.sentIndex) || studioState.activeSentence?.index || 1;
+        if (text) openWordLookup(text, sentIdx, wordEl);
+      });
+
+      el.addEventListener('mouseover', (e) => {
+        if (studioState.infoPopoverPinned) return;
+        const infoBtn = e.target.closest('[data-info-kind]');
+        if (infoBtn) {
+          showInfoPopover(
+            infoBtn.getAttribute('data-info-kind'),
+            Number(infoBtn.getAttribute('data-sent-idx') || 0),
+            infoBtn,
+          );
+          return;
+        }
+        const repWord = e.target.closest('.studio-word.is-repaired');
+        if (repWord && repWord.dataset.repairedFrom) {
+          showInfoPopover('word-repair', Number(repWord.dataset.sentIndex || 0), repWord, {
+            wordObj: { word: repWord.dataset.word || repWord.textContent, repairedFrom: repWord.dataset.repairedFrom },
+          });
+        }
+      });
+
+      el.addEventListener('mouseout', (e) => {
+        if (studioState.infoPopoverPinned) return;
+        if (e.target.closest('[data-info-kind], .studio-word.is-repaired')) {
+          hideInfoPopover(false);
+        }
+      });
+    });
+
+    // Read Sub-View Switcher (Paragraphs | Ideas | Speakers | Raw Original)
+    document.querySelectorAll('[data-read-view]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        switchReadView(btn.getAttribute('data-read-view') || 'paragraphs');
+      });
+    });
+
+    // Word Click Mode & Word Cushion Controls
+    setWordClickMode(studioState.wordClickMode);
+    setWordCushion(studioState.wordCushion);
+    document.querySelectorAll('[data-word-click-mode]').forEach((btn) => {
+      btn.addEventListener('click', () => setWordClickMode(btn.getAttribute('data-word-click-mode')));
+    });
+    document.querySelectorAll('[data-word-cushion]').forEach((btn) => {
+      btn.addEventListener('click', () => setWordCushion(btn.getAttribute('data-word-cushion')));
+    });
+
+    // Real-time Shadowing Pacing Switcher (Short | Medium | Full)
+    const studioPacingGroup = document.getElementById('studio-pacing-group');
+    studioPacingGroup?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-pacing]');
+      if (!btn) return;
+      switchStudioPacing(btn.dataset.pacing);
+    });
+    studioPacingGroup?.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const pills = Array.from(studioPacingGroup.querySelectorAll('[data-pacing]'));
+      if (!pills.length) return;
+      const idx = pills.indexOf(document.activeElement);
+      if (idx === -1) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const dir = document.documentElement.getAttribute('dir') === 'rtl' ? -1 : 1;
+      const delta = (e.key === 'ArrowRight' ? 1 : -1) * dir;
+      const nextPill = pills[(idx + delta + pills.length) % pills.length];
+      if (nextPill) {
+        nextPill.focus();
+        switchStudioPacing(nextPill.dataset.pacing);
+      }
+    });
+
+    document.getElementById('studio-toggle-repairs')?.addEventListener('click', () => {
+      studioState.showRepairs = !studioState.showRepairs;
+      renderSentencesAndParagraphs();
+    });
+
+    document.getElementById('studio-copy-view-btn')?.addEventListener('click', async () => {
+      const TT = window.FlaptapStudioTranscriptTools;
+      if (!TT || !studioState.item) return;
+      const text = TT.buildActiveViewPlainText(studioState.item, studioState.mode, studioState.readView);
+      if (!text) return;
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('Copied active view to clipboard');
+      } catch {
+        showToast('Copy failed — please allow clipboard access.');
+      }
+    });
+
+    document.getElementById('studio-define-word-btn')?.addEventListener('click', () => {
+      const w = studioState.selectedTimedWord;
+      if (!w) return;
+      openWordLookup(w.word, w.sentIndex, document.getElementById('studio-define-word-btn'));
+    });
+
+    document.getElementById('studio-video-toggle-btn')?.addEventListener('click', toggleVideoVisibility);
+    document.getElementById('studio-skip-pause-btn')?.addEventListener('click', () => {
+      const fn = studioState.shadowPauseResumeFn;
+      cancelShadowPause();
+      if (typeof fn === 'function') fn();
+    });
+
+    // Inline Title Rename
+    document.getElementById('studio-rename-btn')?.addEventListener('click', openInlineTitleEditor);
+    document.getElementById('studio-title-cancel-btn')?.addEventListener('click', closeInlineTitleEditor);
+    document.getElementById('studio-title-save-btn')?.addEventListener('click', saveInlineTitle);
+    document.getElementById('studio-title-input')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        saveInlineTitle();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        closeInlineTitleEditor();
+      }
+    });
+
+    // Speaker Filter & Persistent Inline Speaker Rename
+    document.getElementById('studio-single-spk-btn')?.addEventListener('click', () => {
+      studioState.speakerEditorOpen = !studioState.speakerEditorOpen;
+      renderSpeakerBar();
+    });
+
+    document.getElementById('studio-speaker-bar')?.addEventListener('click', (e) => {
+      const filterBtn = e.target.closest('[data-spk-filter]');
+      if (filterBtn) {
+        studioState.speakerFilter = filterBtn.getAttribute('data-spk-filter') || 'all';
+        renderSentencesAndParagraphs();
+        return;
+      }
+      if (e.target.closest('#studio-spk-rename-toggle')) {
+        studioState.speakerEditorOpen = !studioState.speakerEditorOpen;
+        renderSpeakerBar();
+        return;
+      }
+      if (e.target.closest('#studio-spk-rename-cancel')) {
+        studioState.speakerEditorOpen = false;
+        renderSpeakerBar();
+      }
+    });
+
+    document.getElementById('studio-speaker-bar')?.addEventListener('submit', (e) => {
+      const form = e.target.closest('#studio-speaker-rename-form');
+      if (!form) return;
+      e.preventDefault();
+      saveRenamedSpeakers(form);
+    });
+
+    // AI Verbatim Review Trigger & Cancel
+    document.getElementById('studio-run-review-btn')?.addEventListener('click', () => runTranscriptReview({ force: false }));
+    document.getElementById('studio-rerun-review-btn')?.addEventListener('click', () => runTranscriptReview({ force: true }));
+    document.getElementById('studio-review-cancel-btn')?.addEventListener('click', () => {
+      studioState.reviewAbort?.abort?.();
+    });
+
+    // Unified 7-Format Export Popover Actions
+    document.querySelectorAll('[data-export-fmt]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        exportStructuredTranscript(btn.getAttribute('data-export-fmt') || 'txt');
+      });
+    });
+    document.getElementById('studio-export-copy-btn')?.addEventListener('click', async () => {
+      const TT = window.FlaptapStudioTranscriptTools;
+      if (!TT || !studioState.item) return;
+      const view = resolveExportViewKey();
+      const text = TT.buildActiveViewPlainText(
+        studioState.item,
+        view === 'sentences' ? 'shadow' : 'read',
+        view === 'sentences' ? 'paragraphs' : view,
+      );
+      try {
+        await navigator.clipboard.writeText(text);
+        closeAllControlPopovers();
+        showToast('Copied transcript to clipboard');
+      } catch {
+        showToast('Copy failed.');
+      }
+    });
+
+    // Live In-Transcript Search
+    const searchInput = document.getElementById('studio-search-input');
+    searchInput?.addEventListener('input', (e) => {
+      studioState.searchQuery = e.target.value || '';
+      studioState.searchMatchIdx = 0;
+      syncSearchMatchesDom();
+      if (studioState.searchMatches.length > 0) {
+        studioState.searchMatches[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+    searchInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        jumpSearchMatch(e.shiftKey ? -1 : 1);
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        searchInput.value = '';
+        studioState.searchQuery = '';
+        syncSearchMatchesDom();
+        searchInput.blur();
+      }
+    });
+    document.getElementById('studio-search-prev')?.addEventListener('click', () => jumpSearchMatch(-1));
+    document.getElementById('studio-search-next')?.addEventListener('click', () => jumpSearchMatch(1));
+    document.getElementById('studio-search-clear')?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      studioState.searchQuery = '';
+      syncSearchMatchesDom();
+    });
+
+    // Interactive Scrubbable Millisecond Timeline Bar
+    const scrubTrack = document.getElementById('studio-scrub-track');
+    const scrubTooltip = document.getElementById('studio-scrub-tooltip');
+    if (scrubTrack) {
+      const getTotalDurSec = () => {
+        const pDur = Number(studioState.ytPlayer?.getDuration?.() || 0);
+        return pDur > 0 ? pDur : Number(studioState.item?.durationSeconds || 0);
+      };
+      const ratioFromEvent = (e) => {
+        const rect = scrubTrack.getBoundingClientRect();
+        if (!rect.width) return 0;
+        return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      };
+      const seekToRatio = (ratio) => {
+        const dur = getTotalDurSec();
+        if (!dur) return;
+        const sec = ratio * dur;
+        const fill = document.getElementById('studio-scrub-fill');
+        const thumb = document.getElementById('studio-scrub-thumb');
+        if (fill) fill.style.width = `${(ratio * 100).toFixed(2)}%`;
+        if (thumb) thumb.style.left = `${(ratio * 100).toFixed(2)}%`;
+        updateTimelineAndKaraoke(sec);
+        if (studioState.ytPlayer && typeof studioState.ytPlayer.seekTo === 'function') {
+          studioState.lastSeekTime = Date.now();
+          studioState.ytPlayer.seekTo(sec, true);
+        }
+      };
+
+      scrubTrack.addEventListener('pointerdown', (e) => {
+        studioState.scrubbing = true;
+        try { scrubTrack.setPointerCapture(e.pointerId); } catch {}
+        seekToRatio(ratioFromEvent(e));
+      });
+      scrubTrack.addEventListener('pointermove', (e) => {
+        const ratio = ratioFromEvent(e);
+        const dur = getTotalDurSec();
+        if (scrubTooltip && dur > 0 && window.FlaptapStudioTranscriptTools) {
+          scrubTooltip.hidden = false;
+          scrubTooltip.textContent = window.FlaptapStudioTranscriptTools.formatClockMs(ratio * dur * 1000);
+          scrubTooltip.style.left = `${(ratio * 100).toFixed(1)}%`;
+        }
+        if (studioState.scrubbing) {
+          seekToRatio(ratio);
+        }
+      });
+      const endScrub = (e) => {
+        if (!studioState.scrubbing) return;
+        studioState.scrubbing = false;
+        try { scrubTrack.releasePointerCapture(e.pointerId); } catch {}
+      };
+      scrubTrack.addEventListener('pointerup', endScrub);
+      scrubTrack.addEventListener('pointercancel', endScrub);
+      scrubTrack.addEventListener('pointerleave', () => {
+        if (!studioState.scrubbing && scrubTooltip) scrubTooltip.hidden = true;
+      });
+    }
+
+    // Dismiss pinned Repair/Overlap info popover on outside click
+    document.addEventListener('click', (e) => {
+      const pop = document.getElementById('studio-info-popover');
+      if (pop && !pop.hidden && !pop.contains(e.target) && !e.target.closest('[data-info-kind]')) {
+        hideInfoPopover(true);
       }
     });
 
@@ -5639,6 +7265,18 @@
     bindStudioSelectionLookup(
       document.getElementById('subview-chunks-list'),
       '.read-sentence[data-read-sent]',
+    );
+    bindStudioSelectionLookup(
+      document.getElementById('subview-ideas-list'),
+      '.studio-idea-sent-row[data-sentence-index]',
+    );
+    bindStudioSelectionLookup(
+      document.getElementById('subview-speakers-list'),
+      '.studio-turn-card[data-turn-index]',
+    );
+    bindStudioSelectionLookup(
+      document.getElementById('subview-raw-list'),
+      '.studio-raw-row[data-raw-index]',
     );
 
     // Select any text inside Coach for an instant contextual lookup.

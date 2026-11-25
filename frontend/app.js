@@ -19,7 +19,6 @@
       navLessons: 'Shadowing',
       navDialogue: 'Dialogues',
       navPronunciation: 'Phonetics',
-      navTranscriptLab: 'Transcripts',
       navExtractor: 'Phrase Miner',
       navLearningLibrary: 'Phrase Builder',
       navVocabulary: 'Vocabulary',
@@ -37,10 +36,14 @@
       authGateDesc: 'Your requested action is saved and will run automatically right after you sign in or create an account.',
       heroKicker: 'Spoken English Studio',
       heroHeadline: 'Turn any video into <span class="apple-hero-accent">your speaking studio.</span>',
-      heroSubcopy: 'Paste a link to shadow real speakers sentence by sentence — with word-level timing, connected-speech coaching, and instant translation.',
-      urlPlaceholder: 'Paste a YouTube, TikTok, Vimeo, or video link...',
+      heroSubcopy: 'Paste any video, podcast, or audio link — or upload a file — to shadow real speakers with millisecond word playback, AI verbatim review, multi-speaker views, coaching, and 7-format export.',
+      urlPlaceholder: 'Paste YouTube, TikTok, Instagram, X, Podcast RSS, Apple Podcasts, or MP3/MP4 link...',
       worksWithLabel: 'Works with',
       startLessonBtn: 'Start Lesson',
+      lessonsPacingLabel: 'Lines',
+      pacingShort: 'Short',
+      pacingBalanced: 'Medium',
+      pacingFull: 'Full',
       cachedBadge: 'Ready in Library',
       openCachedBtn: 'Open Instantly',
       bypassCacheLabel: 'Re-extract fresh',
@@ -180,7 +183,6 @@
       navLessons: 'الترديد',
       navDialogue: 'الحوارات',
       navPronunciation: 'الصوتيات',
-      navTranscriptLab: 'النصوص',
       navExtractor: 'استخراج العبارات',
       navLearningLibrary: 'بناء العبارات',
       navVocabulary: 'المفردات',
@@ -276,6 +278,10 @@
       confirmClear: 'هل تريد حذف جميع الدروس نهائياً من مكتبتك؟',
       confirmClearVocab: 'هل تريد مسح جميع المفردات المحفوظة؟',
       confirmDeleteAccount: 'هل أنت متأكد من حذف حسابك وجميع بياناتك وسجل دروسك نهائياً؟',
+      lessonsPacingLabel: 'السطور',
+      pacingShort: 'قصيرة',
+      pacingBalanced: 'متوسطة',
+      pacingFull: 'كاملة',
     },
     es: {
       brandEdition: 'Estudio de Inglés Hablado',
@@ -285,7 +291,6 @@
       navLessons: 'Shadowing',
       navDialogue: 'Diálogos',
       navPronunciation: 'Fonética',
-      navTranscriptLab: 'Transcripciones',
       navExtractor: 'Extractor',
       navLearningLibrary: 'Creador',
       navVocabulary: 'Vocabulario',
@@ -301,6 +306,10 @@
       heroSubcopy: 'Pega un enlace de YouTube para practicar oraciones completas, párrafos editoriales, dictado activo y habla conectada.',
       urlPlaceholder: 'Pega un enlace de YouTube...',
       startLessonBtn: 'Iniciar lección',
+      lessonsPacingLabel: 'Líneas',
+      pacingShort: 'Cortas',
+      pacingBalanced: 'Medias',
+      pacingFull: 'Completas',
       libraryHeading: 'Biblioteca de lecciones',
       openLesson: 'Estudiar',
       sentencesUnit: 'oraciones',
@@ -313,7 +322,6 @@
       navLessons: 'Shadowing',
       navDialogue: 'Dialogues',
       navPronunciation: 'Phonétique',
-      navTranscriptLab: 'Transcriptions',
       navExtractor: 'Extracteur',
       navLearningLibrary: 'Générateur',
       navVocabulary: 'Vocabulaire',
@@ -329,6 +337,10 @@
       heroSubcopy: 'Collez un lien YouTube pour travailler phrases complètes, paragraphes cohérents, dictée active et discours connecté.',
       urlPlaceholder: 'Collez un lien vidéo YouTube...',
       startLessonBtn: 'Commencer',
+      lessonsPacingLabel: 'Lignes',
+      pacingShort: 'Courtes',
+      pacingBalanced: 'Moyennes',
+      pacingFull: 'Complètes',
       libraryHeading: 'Bibliothèque',
       openLesson: 'Étudier',
       sentencesUnit: 'phrases',
@@ -341,7 +353,6 @@
       navLessons: 'Shadowing',
       navDialogue: 'Dialoge',
       navPronunciation: 'Phonetik',
-      navTranscriptLab: 'Transkripte',
       navExtractor: 'Phrase Miner',
       navLearningLibrary: 'Phrase Builder',
       navVocabulary: 'Vokabeln',
@@ -357,6 +368,10 @@
       heroSubcopy: 'Füge einen YouTube-Link ein, um vollständige Sätze, Absätze, aktives Diktat und Connected Speech zu trainieren.',
       urlPlaceholder: 'YouTube-Link einfügen...',
       startLessonBtn: 'Lektion starten',
+      lessonsPacingLabel: 'Zeilen',
+      pacingShort: 'Kurz',
+      pacingBalanced: 'Mittel',
+      pacingFull: 'Voll',
       libraryHeading: 'Bibliothek',
       openLesson: 'Lernen',
       sentencesUnit: 'Sätze',
@@ -369,7 +384,6 @@
       navLessons: 'Gölgeleme',
       navDialogue: 'Diyaloglar',
       navPronunciation: 'Fonetik',
-      navTranscriptLab: 'Metinler',
       navExtractor: 'İfade Çıkarıcı',
       navLearningLibrary: 'İfade Üretici',
       navVocabulary: 'Kelimeler',
@@ -385,6 +399,10 @@
       heroSubcopy: 'Tam cümleler, paragraflar, aktif dikte ve bağlı konuşma pratiği için bir YouTube bağlantısı yapıştırın.',
       urlPlaceholder: 'Bir YouTube bağlantısı yapıştırın...',
       startLessonBtn: 'Dersi Başlat',
+      lessonsPacingLabel: 'Satırlar',
+      pacingShort: 'Kısa',
+      pacingBalanced: 'Orta',
+      pacingFull: 'Tam',
       libraryHeading: 'Ders Kitaplığı',
       openLesson: 'Çalış',
       sentencesUnit: 'cümle',
@@ -404,7 +422,15 @@
     activeSessions: [],
     section: 'lessons',
     libraryFilter: 'all',
+    libraryPlatformFilter: 'all',
+    libraryStatusFilter: 'all',
     librarySearch: '',
+    libraryPage: 1,
+    libraryPageSize: 12,
+    lessonsInputTab: 'link',
+    lessonsSelectedFile: null,
+    lessonsUploading: false,
+    lessonsAiSelector: null,
     lessons: [],
     urlCacheMatch: null,
     ledgerTrackFilter: 'all',
@@ -521,6 +547,8 @@
     if (act.type === 'video_lesson' && act.url) {
       const qs = new URLSearchParams({ url: act.url });
       if (act.force) qs.set('force', '1');
+      if (act.autoreview) qs.set('autoreview', '1');
+      qs.set('pacing', normalizeShadowingPacing(act.pacing || getSavedShadowingPacing()));
       window.location.href = `/studio?${qs.toString()}`;
       return;
     }
@@ -579,10 +607,13 @@
       return;
     }
 
-    if (act.type === 'tlab_ingest_url' && act.payload) {
-      switchSection('transcript-lab');
-      if (window.FlaptapTranscriptLab?.resumePending) {
-        await window.FlaptapTranscriptLab.resumePending(act.payload);
+    if (act.type === 'upload_lesson') {
+      switchSection('lessons');
+      setLessonsInputTab('upload');
+      if (state.lessonsSelectedFile) {
+        await handleLessonFileUpload();
+      } else {
+        showToast('Signed in — choose your audio/video file to transcribe.');
       }
       return;
     }
@@ -654,12 +685,10 @@
 
   function activateSectionPanel(section, opts = {}) {
     if (section === 'library') section = 'learning-library';
-    if (section === 'transcripts') section = 'transcript-lab';
     const validSections = [
       'lessons',
       'dialogue',
       'pronunciation',
-      'transcript-lab',
       'vocabulary',
       'history',
       'american-extractor',
@@ -739,8 +768,6 @@
       await window.FlaptapAmericanExtractor?.init?.(routeState);
     } else if (resolved === 'learning-library') {
       await window.FlaptapLearningLibrary?.init?.(routeState);
-    } else if (resolved === 'transcript-lab') {
-      await window.FlaptapTranscriptLab?.init?.(routeState);
     }
   }
 
@@ -1105,22 +1132,240 @@
     return t('trackVideo');
   }
 
+  function detectClientPlatform(rawUrl) {
+    const u = String(rawUrl || '').trim().toLowerCase();
+    if (!u || !/^https?:\/\//.test(u)) return null;
+    if (u.includes('youtube.com') || u.includes('youtu.be')) return { id: 'youtube', label: 'YouTube Video', note: 'Instant captions + word timestamps' };
+    if (u.includes('tiktok.com')) return { id: 'tiktok', label: 'TikTok Video', note: 'Audio extraction + word timestamps' };
+    if (u.includes('instagram.com')) return { id: 'instagram', label: 'Instagram Reel / Video', note: 'Audio extraction + word timestamps' };
+    if (u.includes('twitter.com') || u.includes('x.com')) return { id: 'twitter', label: 'X / Twitter Video', note: 'Audio extraction + word timestamps' };
+    if (u.includes('podcasts.apple.com')) return { id: 'apple_podcasts', label: 'Apple Podcasts', note: 'Episode audio + word timestamps' };
+    if (u.includes('vimeo.com')) return { id: 'vimeo', label: 'Vimeo Video', note: 'Audio extraction + word timestamps' };
+    if (u.includes('soundcloud.com')) return { id: 'soundcloud', label: 'SoundCloud Audio', note: 'Audio extraction + word timestamps' };
+    if (u.includes('ted.com')) return { id: 'ted', label: 'TED Talk', note: 'Audio extraction + word timestamps' };
+    if (u.includes('loom.com')) return { id: 'loom', label: 'Loom Video', note: 'Audio extraction + word timestamps' };
+    if (/\.(mp3|m4a|wav|ogg|opus|flac|aac)(\?|$)/i.test(u)) return { id: 'direct_audio', label: 'Direct Audio URL', note: 'Streams natively in Studio' };
+    if (/\.(mp4|mov|webm|m4v|mkv)(\?|$)/i.test(u)) return { id: 'direct_video', label: 'Direct Video URL', note: 'Streams natively in Studio' };
+    if (u.includes('rss') || u.includes('feed') || u.endsWith('.xml')) return { id: 'podcast_rss', label: 'Podcast RSS Feed', note: 'Latest episode audio + word timestamps' };
+    return { id: 'other', label: 'Web Media Link', note: 'Auto-extract audio & word timestamps' };
+  }
+
+  function platformDisplayLabel(platform) {
+    const map = {
+      youtube: 'YouTube',
+      tiktok: 'TikTok',
+      instagram: 'Instagram',
+      twitter: 'X / Twitter',
+      apple_podcasts: 'Apple Podcasts',
+      podcast_rss: 'Podcast RSS',
+      vimeo: 'Vimeo',
+      soundcloud: 'SoundCloud',
+      ted: 'TED',
+      loom: 'Loom',
+      direct_audio: 'Audio URL',
+      direct_video: 'Video URL',
+      uploaded_audio: 'Uploaded Audio',
+      uploaded_video: 'Uploaded Video',
+      other: 'Web Media',
+    };
+    return map[platform] || '';
+  }
+
+  function matchesPlatformFilter(item, filter) {
+    if (!filter || filter === 'all') return true;
+    const p = String(item.platform || (item.videoId ? 'youtube' : '')).toLowerCase();
+    if (filter === 'youtube') return p === 'youtube';
+    if (filter === 'podcast') return ['apple_podcasts', 'podcast_rss', 'soundcloud', 'direct_audio'].includes(p);
+    if (filter === 'social') return ['tiktok', 'instagram', 'twitter', 'vimeo', 'ted', 'loom', 'direct_video', 'other'].includes(p);
+    if (filter === 'uploaded') return p === 'uploaded_audio' || p === 'uploaded_video';
+    return true;
+  }
+
+  function persistShadowingReviewPrefs() {
+    try {
+      const sel = state.lessonsAiSelector?.getSelection?.();
+      if (sel && (sel.keyId || sel.model || sel.variant)) {
+        sessionStorage.setItem(
+          'flaptap_shadowing_review_opts',
+          JSON.stringify({
+            keyId: sel.keyId || undefined,
+            model: sel.model || undefined,
+            variant: sel.variant || undefined,
+          }),
+        );
+      }
+    } catch {}
+  }
+
+  function setLessonsInputTab(tab) {
+    const next = tab === 'upload' ? 'upload' : 'link';
+    state.lessonsInputTab = next;
+    document.querySelectorAll('[data-lessons-input]').forEach((btn) => {
+      const active = btn.getAttribute('data-lessons-input') === next;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-lessons-panel]').forEach((panel) => {
+      panel.hidden = panel.getAttribute('data-lessons-panel') !== next;
+    });
+  }
+
+  function initLessonsAiSelector() {
+    if (state.lessonsAiSelector || !window.FlaptapAiSelector) return;
+    const mount = document.getElementById('lessons-ai-selector-mount');
+    if (!mount) return;
+    state.lessonsAiSelector = window.FlaptapAiSelector.create({
+      container: mount,
+      idPrefix: 'lessons-aisel',
+      persistenceKey: 'shadowing_review',
+      title: 'AI Verbatim Review Model',
+      compact: true,
+      showRunButton: false,
+      hideMetaChips: true,
+      fetcher: apiFetch,
+      onChange: () => {
+        persistShadowingReviewPrefs();
+      },
+    });
+    state.lessonsAiSelector.init();
+  }
+
+  function setLessonsSelectedFile(file) {
+    state.lessonsSelectedFile = file || null;
+    const el = document.getElementById('lessons-file-selected');
+    const statusEl = document.getElementById('lessons-upload-status');
+    if (statusEl) statusEl.hidden = true;
+    if (!el) return;
+    if (!file) {
+      el.hidden = true;
+      el.textContent = '';
+      return;
+    }
+    const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+    el.hidden = false;
+    el.textContent = `${file.name} (${sizeMb} MB)`;
+  }
+
+  const PACING_STORAGE_KEY = 'flaptap_shadowing_pacing';
+  const VALID_PACING_MODES = ['short', 'balanced', 'full'];
+
+  function normalizeShadowingPacing(raw) {
+    const val = String(raw || '').trim().toLowerCase();
+    return VALID_PACING_MODES.includes(val) ? val : 'short';
+  }
+
+  function getSavedShadowingPacing() {
+    try {
+      return normalizeShadowingPacing(localStorage.getItem(PACING_STORAGE_KEY));
+    } catch {
+      return 'short';
+    }
+  }
+
+  function syncLessonsPacingUi(mode) {
+    const activeMode = normalizeShadowingPacing(mode);
+    const group = document.getElementById('lessons-pacing-group');
+    if (!group) return activeMode;
+    group.querySelectorAll('.lessons-pacing-pill[data-pacing]').forEach((btn) => {
+      const isAct = btn.dataset.pacing === activeMode;
+      btn.classList.toggle('active', isAct);
+      btn.setAttribute('aria-checked', isAct ? 'true' : 'false');
+    });
+    return activeMode;
+  }
+
+  function setSelectedShadowingPacing(mode) {
+    const next = normalizeShadowingPacing(mode);
+    try {
+      localStorage.setItem(PACING_STORAGE_KEY, next);
+    } catch {}
+    return syncLessonsPacingUi(next);
+  }
+
+  async function handleLessonFileUpload() {
+    if (state.lessonsUploading) return;
+    const file = state.lessonsSelectedFile;
+    if (!file) {
+      showToast('Select an audio or video file first.');
+      document.getElementById('lessons-file-input')?.click();
+      return;
+    }
+    if (!requireAuthBeforeAction({ type: 'upload_lesson' }, 'Sign in to upload and transcribe audio or video files.')) {
+      return;
+    }
+
+    const uploadBtn = document.getElementById('upload-lesson-btn');
+    const statusEl = document.getElementById('lessons-upload-status');
+    const autoReview = Boolean(document.getElementById('lessons-auto-review')?.checked);
+    const selectedPacing = getSavedShadowingPacing();
+    persistShadowingReviewPrefs();
+
+    state.lessonsUploading = true;
+    if (uploadBtn) uploadBtn.disabled = true;
+    if (statusEl) {
+      statusEl.hidden = false;
+      statusEl.classList.remove('is-error');
+      statusEl.textContent = `Uploading & transcribing "${file.name}" with word-level timestamps...`;
+    }
+
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      form.append('pacingMode', selectedPacing);
+      const headers = apiHeaders();
+      delete headers['Content-Type'];
+      const res = await fetch('/api/tracks/shadowing/upload', {
+        method: 'POST',
+        headers,
+        body: form,
+        credentials: 'same-origin',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || data.error || `Upload failed (${res.status})`);
+      }
+      if (!data.id) {
+        throw new Error('Upload succeeded but returned no lesson ID.');
+      }
+      const qs = new URLSearchParams({ id: data.id });
+      if (autoReview && data.reviewStatus !== 'ready') {
+        qs.set('autoreview', '1');
+      }
+      window.location.href = `/studio?${qs.toString()}`;
+    } catch (err) {
+      if (statusEl) {
+        statusEl.hidden = false;
+        statusEl.classList.add('is-error');
+        statusEl.textContent = err?.message || 'Upload failed.';
+      }
+      showToast(err?.message || 'Upload failed.');
+    } finally {
+      state.lessonsUploading = false;
+      if (uploadBtn) uploadBtn.disabled = false;
+    }
+  }
+
   function buildCachePillsHtml(item) {
     const ci = item.cacheInfo;
-    if (!ci) return '';
     const pills = [];
-    if (ci.transcriptCached) pills.push(`<span class="cache-pill">${icon('file-text')}Transcript</span>`);
-    if (ci.aiCoachCached) {
+    if (item.reviewStatus === 'ready') {
+      pills.push(`<span class="cache-pill active">${icon('circle-check')}AI Reviewed</span>`);
+    }
+    if (Number(item.speakerCount) > 1) {
+      pills.push(`<span class="cache-pill ltr-num">${Number(item.speakerCount)} speakers</span>`);
+    }
+    if (ci?.transcriptCached) pills.push(`<span class="cache-pill">${icon('file-text')}Transcript</span>`);
+    if (ci?.aiCoachCached) {
       pills.push(
         `<span class="cache-pill active">${icon('sparkles')}Coach${ci.aiInsightsCount ? ` · ${ci.aiInsightsCount}` : ''}</span>`,
       );
     }
-    if (Array.isArray(ci.translationLanguages) && ci.translationLanguages.length > 0) {
+    if (Array.isArray(ci?.translationLanguages) && ci.translationLanguages.length > 0) {
       pills.push(
         `<span class="cache-pill active">${icon('globe')}${escapeHtml(ci.translationLanguages.map((c) => c.toUpperCase()).join('+'))}</span>`,
       );
     }
-    if (ci.hasNotes) pills.push(`<span class="cache-pill notes">${icon('pencil')}Notes</span>`);
+    if (ci?.hasNotes) pills.push(`<span class="cache-pill notes">${icon('pencil')}Notes</span>`);
     if (item.payloadBytes) {
       pills.push(`<span class="cache-pill ltr-num">${icon('database')}${escapeHtml(formatBytes(item.payloadBytes))}</span>`);
     }
@@ -1325,10 +1570,20 @@
       item.thumbnailUrl ||
       (item.videoId ? `https://img.youtube.com/vi/${encodeURIComponent(item.videoId)}/hqdefault.jpg` : '');
 
+    const platformStamp =
+      item.track === 'shadowing'
+        ? platformDisplayLabel(item.platform) || (item.videoId ? 'YouTube' : trackLabel(item.track))
+        : trackLabel(item.track);
+
+    const coverLabel =
+      item.track === 'shadowing'
+        ? platformStamp || 'Spoken Media'
+        : item.accentDialect || 'General American English';
+
     const mediaHtml = hasVideoThumb
       ? `<img src="${escapeHtml(thumbSrc)}" alt="${escapeHtml(item.title)}" loading="lazy" />`
       : `<div class="card-editorial-cover">
-           <p class="cover-style-quote">${escapeHtml(item.accentDialect || 'General American English')}</p>
+           <p class="cover-style-quote">${escapeHtml(coverLabel)}</p>
          </div>`;
 
     const playOverlayHtml = opts.applePlayOverlay
@@ -1336,6 +1591,7 @@
       : '';
 
     const sentencesCount = Number(item.sentencesCount || item.stats?.sentencesCount || 0);
+    const wordCount = Number(item.wordCount || 0);
     const isDone = Boolean(item.isCompleted);
     const doneItems = Number(item.itemProgress?.doneItems ?? 0);
     const totalItems = Number(item.itemProgress?.totalItems ?? 0);
@@ -1359,7 +1615,7 @@
         <div class="card-media">
           ${mediaHtml}
           ${playOverlayHtml}
-          <span class="card-track-stamp">${escapeHtml(trackLabel(item.track))}</span>
+          <span class="card-track-stamp">${escapeHtml(platformStamp)}</span>
           <span class="card-duration-stamp">${formatDuration(item.durationSeconds)}</span>
           <button type="button" class="card-delete-btn" data-delete-id="${escapeHtml(item.id)}" aria-label="Delete lesson" title="Delete lesson">
             ${icon('x')}
@@ -1379,6 +1635,7 @@
             <div class="card-metrics">
               <span class="ltr-num">${Number(item.pacingWpm || 145)} WPM</span>
               ${sentencesCount > 0 ? `<span>· <strong class="ltr-num">${sentencesCount}</strong> ${escapeHtml(t('sentencesUnit'))}</span>` : ''}
+              ${wordCount > 0 ? `<span>· <strong class="ltr-num">${wordCount.toLocaleString()}</strong> words</span>` : ''}
               ${progressMetaHtml}
             </div>
             <span class="card-open-cue">
@@ -1453,6 +1710,17 @@
       })
     : null;
 
+  const libraryPaginationBar = window.FlaptapPagination?.createBar
+    ? window.FlaptapPagination.createBar({
+        barId: 'library-pagination',
+        onPageChange: (nextPage) => {
+          state.libraryPage = nextPage;
+          renderLibrary();
+          window.FlaptapPagination?.scrollToTop?.('#lessons-items-root');
+        },
+      })
+    : null;
+
   function renderLibrary() {
     renderTrackShelf(
       'dialogue-history-grid',
@@ -1484,6 +1752,7 @@
       if (countLabel) countLabel.textContent = '0';
       if (gateCard) gateCard.hidden = false;
       if (lessonsDock) lessonsDock.hidden = true;
+      libraryPaginationBar?.hide?.();
       renderSubjectProgressBar('lessons-progress-bar', { total: 0, completed: 0 });
       lessonsStickyDock?.disconnect?.();
       return;
@@ -1494,8 +1763,16 @@
     const query = state.librarySearch.trim().toLowerCase();
     const filtered = state.lessons.filter((item) => {
       if (state.libraryFilter !== 'all' && item.track !== state.libraryFilter) return false;
+      if (!matchesPlatformFilter(item, state.libraryPlatformFilter)) return false;
+      if (state.libraryStatusFilter === 'reviewed' && item.reviewStatus !== 'ready') return false;
+      if (state.libraryStatusFilter === 'pending' && item.reviewStatus === 'ready') return false;
+      if (state.libraryStatusFilter === 'done' && !item.isCompleted) return false;
+      if (state.libraryStatusFilter === 'progress') {
+        const done = Number(item.itemProgress?.doneItems ?? 0);
+        if (item.isCompleted || done <= 0) return false;
+      }
       if (query) {
-        const hay = `${item.title || ''} ${item.creator || ''} ${item.accentDialect || ''}`.toLowerCase();
+        const hay = `${item.title || ''} ${item.creator || ''} ${item.platform || ''} ${item.sourceUrl || ''} ${item.accentDialect || ''}`.toLowerCase();
         if (!hay.includes(query)) return false;
       }
       return true;
@@ -1504,7 +1781,11 @@
     if (countLabel) countLabel.textContent = String(filtered.length);
     if (clearBtn) clearBtn.hidden = state.lessons.length === 0;
     const hasFilterOrLessons =
-      state.lessons.length > 0 || state.libraryFilter !== 'all' || Boolean(query);
+      state.lessons.length > 0 ||
+      state.libraryFilter !== 'all' ||
+      state.libraryPlatformFilter !== 'all' ||
+      state.libraryStatusFilter !== 'all' ||
+      Boolean(query);
     if (lessonsDock) lessonsDock.hidden = !hasFilterOrLessons;
 
     renderSubjectProgressBar('lessons-progress-bar', {
@@ -1532,12 +1813,26 @@
     if (filtered.length === 0) {
       grid.innerHTML = '';
       if (empty) empty.hidden = false;
+      libraryPaginationBar?.hide?.();
       return;
     }
 
     if (empty) empty.hidden = true;
 
-    grid.innerHTML = filtered.map((item) => buildLessonCardHtml(item, { applePlayOverlay: true })).join('');
+    const totalPages = Math.max(1, Math.ceil(filtered.length / state.libraryPageSize));
+    state.libraryPage = Math.max(1, Math.min(totalPages, state.libraryPage));
+    const startIdx = (state.libraryPage - 1) * state.libraryPageSize;
+    const pageItems = filtered.slice(startIdx, startIdx + state.libraryPageSize);
+
+    grid.innerHTML = pageItems.map((item) => buildLessonCardHtml(item, { applePlayOverlay: true })).join('');
+    libraryPaginationBar?.render?.({
+      page: state.libraryPage,
+      pageSize: state.libraryPageSize,
+      total: filtered.length,
+      totalPages,
+      itemsCount: pageItems.length,
+      visible: filtered.length > state.libraryPageSize,
+    });
   }
 
   /* ========================================================================
@@ -2152,20 +2447,103 @@
       }
     });
 
-    // URL Input Instant Cache Check + Paste/Clear Pills + Start Video Lesson (Auth-Gated Before Execution!)
+    // URL Input Instant Cache Check + Live Platform Detection + Media Upload + AI Review Model Toggle
     const lessonsUrlInput = document.getElementById('youtube-url-input');
     const lessonsPasteBtn = document.getElementById('lessons-paste-btn');
     const lessonsClearBtn = document.getElementById('lessons-clear-url-btn');
+    const lessonsUrlDetect = document.getElementById('lessons-url-detect');
     const syncLessonsUrlButtons = () => {
-      const hasVal = Boolean((lessonsUrlInput?.value || '').trim());
+      const val = (lessonsUrlInput?.value || '').trim();
+      const hasVal = Boolean(val);
       if (lessonsPasteBtn) lessonsPasteBtn.hidden = hasVal;
       if (lessonsClearBtn) lessonsClearBtn.hidden = !hasVal;
+      if (lessonsUrlDetect) {
+        const det = detectClientPlatform(val);
+        if (det) {
+          lessonsUrlDetect.hidden = false;
+          lessonsUrlDetect.innerHTML = `<span class="lessons-detect-pill">${escapeHtml(det.label)}</span><span class="lessons-detect-note">${escapeHtml(det.note)}</span>`;
+        } else {
+          lessonsUrlDetect.hidden = true;
+          lessonsUrlDetect.innerHTML = '';
+        }
+      }
     };
     syncLessonsUrlButtons();
 
     lessonsUrlInput?.addEventListener('input', (e) => {
       syncLessonsUrlButtons();
       checkUrlCache((e.target.value || '').trim());
+    });
+
+    document.querySelectorAll('[data-lessons-input]').forEach((tabBtn) => {
+      tabBtn.addEventListener('click', () => {
+        setLessonsInputTab(tabBtn.getAttribute('data-lessons-input') || 'link');
+      });
+    });
+
+    const lessonsDropzone = document.getElementById('lessons-dropzone');
+    const lessonsFileInput = document.getElementById('lessons-file-input');
+    lessonsDropzone?.addEventListener('click', () => lessonsFileInput?.click());
+    lessonsDropzone?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        lessonsFileInput?.click();
+      }
+    });
+    lessonsDropzone?.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      lessonsDropzone.classList.add('is-dragover');
+    });
+    lessonsDropzone?.addEventListener('dragleave', () => {
+      lessonsDropzone.classList.remove('is-dragover');
+    });
+    lessonsDropzone?.addEventListener('drop', (e) => {
+      e.preventDefault();
+      lessonsDropzone.classList.remove('is-dragover');
+      const file = e.dataTransfer?.files?.[0];
+      if (file) setLessonsSelectedFile(file);
+    });
+    lessonsFileInput?.addEventListener('change', (e) => {
+      const file = e.target?.files?.[0];
+      if (file) setLessonsSelectedFile(file);
+    });
+    document.getElementById('upload-lesson-btn')?.addEventListener('click', () => {
+      handleLessonFileUpload();
+    });
+
+    // Shadowing Pacing Preference Segmented Control (Short | Medium | Full)
+    syncLessonsPacingUi(getSavedShadowingPacing());
+    const lessonsPacingGroup = document.getElementById('lessons-pacing-group');
+    lessonsPacingGroup?.addEventListener('click', (e) => {
+      const pill = e.target.closest('.lessons-pacing-pill[data-pacing]');
+      if (!pill) return;
+      setSelectedShadowingPacing(pill.dataset.pacing);
+    });
+    lessonsPacingGroup?.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const pills = Array.from(lessonsPacingGroup.querySelectorAll('.lessons-pacing-pill[data-pacing]'));
+      if (!pills.length) return;
+      const idx = pills.indexOf(document.activeElement);
+      if (idx === -1) return;
+      e.preventDefault();
+      const dir = document.documentElement.getAttribute('dir') === 'rtl' ? -1 : 1;
+      const delta = (e.key === 'ArrowRight' ? 1 : -1) * dir;
+      const nextPill = pills[(idx + delta + pills.length) % pills.length];
+      if (nextPill) {
+        setSelectedShadowingPacing(nextPill.dataset.pacing);
+        nextPill.focus();
+      }
+    });
+
+    const aiModelToggleBtn = document.getElementById('lessons-ai-model-toggle');
+    const aiSelectorWrap = document.getElementById('lessons-ai-selector-wrap');
+    aiModelToggleBtn?.addEventListener('click', () => {
+      if (!aiSelectorWrap) return;
+      const open = aiSelectorWrap.hidden;
+      aiSelectorWrap.hidden = !open;
+      aiModelToggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      aiModelToggleBtn.classList.toggle('active', open);
+      if (open) initLessonsAiSelector();
     });
 
     lessonsPasteBtn?.addEventListener('click', async () => {
@@ -2182,7 +2560,7 @@
         }
       } catch {}
       lessonsUrlInput.focus();
-      showToast('Paste a video link into the field');
+      showToast('Paste a video or audio link into the field');
     });
 
     lessonsClearBtn?.addEventListener('click', () => {
@@ -2207,11 +2585,15 @@
         return;
       }
       const force = Boolean(document.getElementById('force-reextract-checkbox')?.checked);
-      if (!requireAuthBeforeAction({ type: 'video_lesson', url, force })) {
+      const autoreview = Boolean(document.getElementById('lessons-auto-review')?.checked);
+      const selectedPacing = getSavedShadowingPacing();
+      persistShadowingReviewPrefs();
+      if (!requireAuthBeforeAction({ type: 'video_lesson', url, force, autoreview, pacing: selectedPacing })) {
         return;
       }
-      const qs = new URLSearchParams({ url });
+      const qs = new URLSearchParams({ url, pacing: selectedPacing });
       if (force) qs.set('force', '1');
+      if (autoreview) qs.set('autoreview', '1');
       window.location.href = `/studio?${qs.toString()}`;
     });
 
@@ -2245,10 +2627,11 @@
       await executePronunciationGeneration(topic);
     });
 
-    // Library Filter & Search
+    // Library Filter, Platform/Status Selects & Search
     document.querySelectorAll('.filter-pill[data-filter]').forEach((pill) => {
       pill.addEventListener('click', () => {
         state.libraryFilter = pill.dataset.filter;
+        state.libraryPage = 1;
         document.querySelectorAll('.filter-pill[data-filter]').forEach((p) => {
           const isAct = p === pill;
           p.classList.toggle('active', isAct);
@@ -2258,8 +2641,21 @@
       });
     });
 
+    document.getElementById('library-platform-filter')?.addEventListener('change', (e) => {
+      state.libraryPlatformFilter = e.target.value || 'all';
+      state.libraryPage = 1;
+      renderLibrary();
+    });
+
+    document.getElementById('library-status-filter')?.addEventListener('change', (e) => {
+      state.libraryStatusFilter = e.target.value || 'all';
+      state.libraryPage = 1;
+      renderLibrary();
+    });
+
     document.getElementById('library-search-input')?.addEventListener('input', (e) => {
       state.librarySearch = e.target.value || '';
+      state.libraryPage = 1;
       renderLibrary();
     });
 

@@ -84,7 +84,6 @@
         var sec = 'lessons';
         if (p === '/dialogue' || p === '/dialogues') sec = 'dialogue';
         else if (p === '/pronunciation' || p === '/phonetics') sec = 'pronunciation';
-        else if (p === '/transcripts' || p === '/transcript-lab' || p.indexOf('/transcripts/') === 0 || p.indexOf('/transcript-lab/') === 0) sec = 'transcript-lab';
         else if (p === '/extractor' || p === '/miner' || p === '/phrase-miner' || p === '/american-extractor' || p === '/american-english' || p === '/phrases' || p.indexOf('/extractor/') === 0 || p.indexOf('/miner/') === 0 || p.indexOf('/phrase-miner/') === 0 || p.indexOf('/american-extractor/') === 0 || p.indexOf('/phrases/') === 0) sec = 'american-extractor';
         else if (p === '/library' || p === '/builder' || p === '/phrase-builder' || p === '/learning-library' || p.indexOf('/library/') === 0 || p.indexOf('/builder/') === 0 || p.indexOf('/phrase-builder/') === 0 || p.indexOf('/learning-library/') === 0) sec = 'learning-library';
         else if (p === '/vocabulary') sec = 'vocabulary';
@@ -93,7 +92,6 @@
           var q = (qs.get('section') || '').trim().toLowerCase();
           if (q === 'dialogue' || q === 'dialogues') sec = 'dialogue';
           else if (q === 'pronunciation' || q === 'phonetics') sec = 'pronunciation';
-          else if (q === 'transcripts' || q === 'transcript-lab' || q === 'transcribe') sec = 'transcript-lab';
           else if (q === 'extractor' || q === 'miner' || q === 'phrase-miner' || q === 'american-extractor' || q === 'american-english' || q === 'phrases' || q === 'anything-to-phrases') sec = 'american-extractor';
           else if (q === 'library' || q === 'builder' || q === 'phrase-builder' || q === 'learning-library') sec = 'learning-library';
           else if (q === 'vocabulary') sec = 'vocabulary';
@@ -115,7 +113,6 @@
   <link rel="stylesheet" href="/study-dock.css" />
   <link rel="stylesheet" href="/learning-library.css" />
   <link rel="stylesheet" href="/american-extractor.css" />
-  <link rel="stylesheet" href="/transcript-lab.css" />
   <link rel="stylesheet" href="/check-button.css" />
   <link rel="stylesheet" href="/celebration.css" />
   <link rel="stylesheet" href="/confirm-undo.css" />
@@ -213,17 +210,6 @@
 
         <div class="sidebar-group" data-sidebar-group="lab">
           <div class="sidebar-group-label" data-i18n="navGroupLab">Lab</div>
-          <a href="/transcripts" class="sidebar-nav-link" data-route-section="transcript-lab" data-tooltip="Transcripts" title="Transcripts — Verbatim media workbench">
-            <span class="sidebar-nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 6h16"></path>
-                <path d="M4 12h10"></path>
-                <path d="M4 18h7"></path>
-                <polygon points="16 14 21 17 16 20 16 14"></polygon>
-              </svg>
-            </span>
-            <span class="sidebar-link-text" data-i18n="navTranscriptLab">Transcripts</span>
-          </a>
           <a href="/extractor" class="sidebar-nav-link" data-route-section="american-extractor" data-tooltip="Phrase Miner" title="Phrase Miner — Extract phrases from any source">
             <span class="sidebar-nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -388,51 +374,107 @@
           Turn any video into <span class="apple-hero-accent">your speaking studio.</span>
         </h1>
         <p class="desk-subcopy" data-i18n="heroSubcopy">
-          Paste a link to shadow real speakers sentence by sentence — with word-level timing, connected-speech coaching, and instant translation.
+          Paste any video, podcast, or audio link — or upload a file — to shadow real speakers with millisecond word playback, AI verbatim review, multi-speaker views, coaching, and 7-format export.
         </p>
 
-        <form class="command-form" id="video-lesson-form" novalidate>
-          <div class="command-input-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-            </svg>
-            <input
-              type="url"
-              id="youtube-url-input"
-              class="command-input"
-              placeholder="Paste a YouTube, TikTok, Vimeo, or video link..."
-              data-i18n-placeholder="urlPlaceholder"
-              autocomplete="off"
-              spellcheck="false"
-              required
-            />
-            <button type="button" class="apple-input-action" id="lessons-paste-btn" aria-label="Paste video URL">Paste</button>
-            <button type="button" class="apple-input-clear" id="lessons-clear-url-btn" aria-label="Clear URL" hidden>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
+        <div class="lessons-input-mode-switch" role="tablist" aria-label="Media source type">
+          <button type="button" class="lessons-mode-pill active" data-lessons-input="link" role="tab" aria-selected="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+            <span>Media Link</span>
+          </button>
+          <button type="button" class="lessons-mode-pill" data-lessons-input="upload" role="tab" aria-selected="false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <span>Audio / Video File</span>
+          </button>
+        </div>
+
+        <div data-lessons-panel="link">
+          <form class="command-form" id="video-lesson-form" novalidate>
+            <div class="command-input-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+              </svg>
+              <input
+                type="url"
+                id="youtube-url-input"
+                class="command-input"
+                placeholder="Paste YouTube, TikTok, Instagram, X, Podcast RSS, Apple Podcasts, or MP3/MP4 link..."
+                data-i18n-placeholder="urlPlaceholder"
+                autocomplete="off"
+                spellcheck="false"
+                required
+              />
+              <button type="button" class="apple-input-action" id="lessons-paste-btn" aria-label="Paste media URL">Paste</button>
+              <button type="button" class="apple-input-clear" id="lessons-clear-url-btn" aria-label="Clear URL" hidden>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <button type="submit" class="btn-vox apple-cta-pill" id="start-lesson-btn">
+              <span data-i18n="startLessonBtn">Start Lesson</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"></polyline>
               </svg>
             </button>
-          </div>
-          <button type="submit" class="btn-vox apple-cta-pill" id="start-lesson-btn">
-            <span data-i18n="startLessonBtn">Start Lesson</span>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-          </button>
-        </form>
+          </form>
+          <div class="lessons-url-detect" id="lessons-url-detect" role="status" aria-live="polite" hidden></div>
+        </div>
 
-        <div class="platform-chips-row" aria-label="Supported video platforms">
+        <div data-lessons-panel="upload" class="lessons-upload-panel" hidden>
+          <div class="lessons-dropzone" id="lessons-dropzone" role="button" tabindex="0">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <strong>Drop an audio or video file here, or click to browse</strong>
+            <span>Supports MP3, M4A, WAV, OGG, FLAC, MP4, MOV, WebM (up to 120 MB)</span>
+            <div class="lessons-file-selected" id="lessons-file-selected" hidden></div>
+          </div>
+          <input type="file" id="lessons-file-input" accept="audio/*,video/*,.mp3,.m4a,.wav,.aac,.flac,.ogg,.opus,.mp4,.mov,.m4v,.webm,.mkv" hidden />
+          <div class="lessons-upload-actions">
+            <button type="button" class="btn-vox apple-cta-pill" id="upload-lesson-btn">
+              <span>Transcribe &amp; Open Studio</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"></polyline>
+              </svg>
+            </button>
+            <div class="lessons-upload-status" id="lessons-upload-status" role="status" aria-live="polite" hidden></div>
+          </div>
+        </div>
+
+        <div class="lessons-ingest-options">
+          <div class="lessons-pacing-control" title="Choose shadowing sentence length (changeable anytime in Studio)">
+            <span class="lessons-pacing-label" data-i18n="lessonsPacingLabel">Lines</span>
+            <div class="lessons-pacing-group" id="lessons-pacing-group" role="radiogroup" aria-label="Shadowing line length">
+              <button type="button" class="lessons-pacing-pill active" data-pacing="short" role="radio" aria-checked="true" data-i18n="pacingShort">Short</button>
+              <button type="button" class="lessons-pacing-pill" data-pacing="balanced" role="radio" aria-checked="false" data-i18n="pacingBalanced">Medium</button>
+              <button type="button" class="lessons-pacing-pill" data-pacing="full" role="radio" aria-checked="false" data-i18n="pacingFull">Full</button>
+            </div>
+          </div>
+          <label class="lessons-option-check" title="Automatically run AI Verbatim Review after opening Studio to fix ASR errors, separate speakers, and structure ideas">
+            <input type="checkbox" id="lessons-auto-review" checked />
+            <span>Auto-run AI Verbatim Review</span>
+          </label>
+          <button type="button" class="lessons-model-toggle-btn" id="lessons-ai-model-toggle" aria-expanded="false" aria-controls="lessons-ai-selector-wrap">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>AI Review Model</span>
+          </button>
+        </div>
+
+        <div class="lessons-ai-selector-wrap" id="lessons-ai-selector-wrap" hidden>
+          <div id="lessons-ai-selector-mount"></div>
+        </div>
+
+        <div class="platform-chips-row" aria-label="Supported media platforms">
           <span class="platform-row-label" data-i18n="worksWithLabel">Works with</span>
           <span class="platform-chip">YouTube</span>
+          <span class="platform-chip">Podcasts &amp; RSS</span>
           <span class="platform-chip">TikTok</span>
           <span class="platform-chip">Instagram Reels</span>
           <span class="platform-chip">X / Twitter</span>
           <span class="platform-chip">Vimeo</span>
-          <span class="platform-chip">TED Talks</span>
-          <span class="platform-chip">Loom</span>
-          <span class="platform-chip">Direct Video</span>
+          <span class="platform-chip">SoundCloud</span>
+          <span class="platform-chip">MP3 / MP4 Upload</span>
         </div>
 
         <!-- Instant Cache Detection & Cache Bypass Bar (For Signed-In Users) -->
@@ -554,6 +596,20 @@
             </div>
 
             <div class="ft-dock-toolbar-right">
+              <select id="library-platform-filter" class="ui-lang-select library-filter-select" aria-label="Filter by media platform">
+                <option value="all">All Platforms</option>
+                <option value="youtube">YouTube</option>
+                <option value="podcast">Podcasts &amp; Audio</option>
+                <option value="social">Social Video</option>
+                <option value="uploaded">Uploads</option>
+              </select>
+              <select id="library-status-filter" class="ui-lang-select library-filter-select" aria-label="Filter by lesson status">
+                <option value="all">All Statuses</option>
+                <option value="reviewed">AI Reviewed</option>
+                <option value="pending">Raw Ready</option>
+                <option value="progress">In Progress</option>
+                <option value="done">Completed</option>
+              </select>
               <label class="search-box ft-dock-search">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="8"></circle>
@@ -570,6 +626,7 @@
           </div>
         </div>
         <div id="history-grid" class="history-grid"></div>
+        <div id="library-pagination"></div>
       </div>
       <div id="library-empty-state" class="empty-ledger" hidden>
         <div class="apple-empty-icon" aria-hidden="true">
@@ -2157,173 +2214,6 @@
         </div>
       </div>
     </section>
-
-    <!-- SECTION 9: TRANSCRIPTS (/transcripts, /transcripts/library, /transcripts/:id) -->
-    <section id="section-transcript-lab" hidden>
-      <div class="editorial-desk tlab-desk">
-        <header class="aex-shell-bar tlab-shell-bar" id="tlab-shell-bar">
-          <div class="aex-extract-hero">
-            <h1 class="aex-headline" id="tlab-shell-headline">Transcripts</h1>
-            <p class="aex-subcopy" id="tlab-shell-subcopy">
-              Turn any YouTube video, podcast, social clip, or audio file into a verbatim, AI-reviewed transcript — switch views instantly and click any word to hear exact millisecond pronunciation.
-            </p>
-          </div>
-          <nav class="lexicon-view-nav tlab-view-nav" id="tlab-view-nav" role="tablist" aria-label="Transcripts pages">
-            <button type="button" class="lexicon-view-tab active" id="tlab-tab-extract" role="tab" aria-selected="true" title="Transcribe new media">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
-              <span id="tlab-tab-extract-label">Transcribe</span>
-            </button>
-            <button type="button" class="lexicon-view-tab" id="tlab-tab-library" role="tab" aria-selected="false" title="Open saved transcript library">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-              <span>Library</span>
-              <span class="lexicon-badge-pill ltr-num" id="tlab-library-count">0</span>
-            </button>
-          </nav>
-        </header>
-
-        <!-- PAGE 1: TRANSCRIBE / EXTRACT (/transcripts) -->
-        <div id="tlab-page-extract" class="tlab-page">
-          <div class="aex-source-card tlab-input-card">
-            <div class="aex-source-topbar">
-              <div class="aex-source-tabs" role="tablist" aria-label="Media input type">
-                <button type="button" class="linguist-tab-btn active" data-tlab-input="link" role="tab" aria-selected="true">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                  <span>Media Link</span>
-                </button>
-                <button type="button" class="linguist-tab-btn" data-tlab-input="upload" role="tab" aria-selected="false">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                  <span>Audio / Video File</span>
-                </button>
-              </div>
-              <span class="aex-source-cap-hint">YouTube · Podcasts · TikTok · X · Instagram · Vimeo · Direct MP3/MP4</span>
-            </div>
-
-            <div class="aex-source-body">
-              <div data-tlab-input-panel="link">
-                <label class="aex-field-label" for="tlab-url-input">Any media, podcast, or video URL</label>
-                <div class="command-input-wrap aex-url-wrap">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                  </svg>
-                  <input
-                    type="url"
-                    id="tlab-url-input"
-                    class="command-input"
-                    placeholder="Paste YouTube, TikTok, Instagram, X, Podcast RSS, Apple Podcasts, or MP3/MP4 link..."
-                    autocomplete="off"
-                    spellcheck="false"
-                  />
-                  <button type="button" class="aex-url-clear-btn" id="tlab-url-clear" aria-label="Clear URL" hidden>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                  </button>
-                  <button type="button" class="command-quick-btn" id="tlab-paste-btn" title="Paste from clipboard">
-                    <span>Paste</span>
-                  </button>
-                </div>
-                <div class="aex-detect-pill" id="tlab-url-detect" role="status" aria-live="polite" hidden></div>
-              </div>
-
-              <div data-tlab-input-panel="upload" hidden>
-                <div class="tlab-dropzone" id="tlab-dropzone" role="button" tabindex="0">
-                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                  <strong>Drop an audio or video file here, or click to browse</strong>
-                  <span>Supports MP3, M4A, WAV, OGG, MP4, MOV, WebM (up to 120 MB)</span>
-                  <div class="tlab-file-selected-name" id="tlab-file-selected-name" hidden></div>
-                </div>
-                <input type="file" id="tlab-file-input" accept="audio/*,video/*,.mp3,.m4a,.wav,.ogg,.opus,.mp4,.mov,.webm" hidden />
-              </div>
-
-              <div class="tlab-extract-options">
-                <label class="tlab-check-option">
-                  <input type="checkbox" id="tlab-auto-review" checked />
-                  <span>Auto-run AI Verbatim Review (fix ASR errors, separate overlapping speakers &amp; structure views)</span>
-                </label>
-                <label class="tlab-check-option">
-                  <input type="checkbox" id="tlab-force-cache" />
-                  <span>Bypass cache and re-extract fresh</span>
-                </label>
-              </div>
-
-              <div id="tlab-ai-selector-mount"></div>
-
-              <div class="tlab-submit-row">
-                <button type="button" class="btn-primary tlab-submit-btn" id="tlab-extract-submit">
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                  <span>Extract Transcript</span>
-                </button>
-                <div class="tlab-ingest-status" id="tlab-ingest-status" role="status" aria-live="polite" hidden></div>
-              </div>
-            </div>
-          </div>
-
-          <div id="tlab-recent-strip" class="tlab-recent-strip" hidden></div>
-
-          <div class="tlab-capabilities-strip">
-            <div class="tlab-cap-item">
-              <div class="tlab-cap-head">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                <strong>Verbatim + AI Repair</strong>
-              </div>
-              <span>Preserves the speaker's exact voice while fixing misheard terms and multi-speaker overlaps.</span>
-            </div>
-            <div class="tlab-cap-item">
-              <div class="tlab-cap-head">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg>
-                <strong>5 Instant Views</strong>
-              </div>
-              <span>Switch across Sentences, Paragraphs, Ideas, Speakers, and the untouched Raw Original.</span>
-            </div>
-            <div class="tlab-cap-item">
-              <div class="tlab-cap-head">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
-                <strong>Millisecond Playback</strong>
-              </div>
-              <span>Click any word to hear its exact native timing, loop it, or shadow with speaking gaps.</span>
-            </div>
-            <div class="tlab-cap-item">
-              <div class="tlab-cap-head">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                <strong>7 Export Formats</strong>
-              </div>
-              <span>Download any view as TXT, Markdown, SRT, VTT, JSON, CSV, or a printable HTML study sheet.</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- PAGE 2: LIBRARY (/transcripts/library) -->
-        <div id="tlab-page-library" class="tlab-page" hidden>
-          <div class="tlab-lib-toolbar">
-            <div class="tlab-lib-stats" id="tlab-library-stats"></div>
-            <div class="tlab-lib-filters">
-              <input type="search" id="tlab-lib-search" class="tlab-filter-input" placeholder="Search transcripts, creators, URLs…" />
-              <select id="tlab-lib-platform" class="ui-lang-select" aria-label="Filter by platform">
-                <option value="all">All Platforms</option>
-                <option value="youtube">YouTube</option>
-                <option value="podcast">Podcasts &amp; Audio</option>
-                <option value="social">Social Video</option>
-                <option value="uploaded">Uploads</option>
-              </select>
-              <select id="tlab-lib-status" class="ui-lang-select" aria-label="Filter by status">
-                <option value="all">All Statuses</option>
-                <option value="reviewed">AI Reviewed</option>
-                <option value="pending">Raw Only</option>
-                <option value="progress">In Progress</option>
-                <option value="done">Mastered</option>
-              </select>
-            </div>
-          </div>
-          <div id="tlab-library-list" class="tlab-library-list"></div>
-          <div id="tlab-library-empty" class="empty-ledger" hidden></div>
-          <div id="tlab-library-pagination"></div>
-        </div>
-
-        <!-- PAGE 3: INTERACTIVE WORKBENCH (/transcripts/:id) -->
-        <div id="tlab-page-workbench" class="tlab-page" hidden>
-          <div id="tlab-workbench-root"></div>
-        </div>
-      </div>
-    </section>
   </main>
   <script>
     (function () {
@@ -2568,9 +2458,6 @@
   <script defer src="/router.js"></script>
   <script defer src="/ai-provider-selector.js"></script>
   <script defer src="/shared-media-engine.js"></script>
-  <script defer src="/transcript-lab/api.js"></script>
-  <script defer src="/transcript-lab/workbench.js"></script>
-  <script defer src="/transcript-lab/index.js"></script>
   <script defer src="/anything-to-phrases/api.js"></script>
   <script defer src="/anything-to-phrases/store.js"></script>
   <script defer src="/anything-to-phrases/media-player.js"></script>

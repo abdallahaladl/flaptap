@@ -1,5 +1,5 @@
-import { extractJsonBlock, repairAndParseJson } from '../learning-library/utils/json-salvage.util';
-import { TranscriptSentence } from './transcript-lab.types';
+import { extractJsonBlock, repairAndParseJson } from '../../learning-library/utils/json-salvage.util';
+import { TranscriptSentence } from './shadowing.types';
 import { DraftReviewedIdea, DraftReviewedSentence } from './utils/word-alignment.util';
 
 export interface TranscriptReviewChunk {
@@ -16,7 +16,7 @@ export interface ParsedReviewChunkOutput {
 }
 
 /**
- * Splits baseline sentences into bounded chunks (~1,200 words max per chunk)
+ * Splits baseline sentences into bounded chunks (~1,100 words max per chunk)
  * so even 60-minute podcasts review rapidly without hitting token truncation.
  */
 export function buildReviewChunks(
@@ -59,7 +59,8 @@ CRITICAL VERBATIM LAW (PRIORITY #1):
 1. PRESERVE THE SPEAKER'S EXACT VOICE AND PHRASING. Keep natural spoken American English intact — contractions ("gonna", "wanna", "kinda", "y'all", "ain't"), conversational idioms, discourse markers ("like", "you know", "I mean", "right?"), slang, and authentic syntax. NEVER formalize, paraphrase, summarize, or rewrite how the speaker talks.
 2. REPAIR ONLY REAL PROBLEMS:
    - Fix obvious ASR/auto-caption mishearings (especially technical/AI/programming terms, proper nouns, homophones like "pie torch" -> "PyTorch", "clod" -> "Claude", "their" -> "there" when clearly wrong).
-   - Fix missing/broken punctuation, capitalization, and sentence boundaries so every sentence is complete, crisp, and ordered sequentially.
+   - Fix missing/broken punctuation, capitalization, and sentence boundaries.
+   - COMPLETE GRAMMATICAL SENTENCES (CRITICAL): Output each entry in "sentences" as a clean, complete grammatical spoken sentence with authentic punctuation (commas, periods, question marks, exclamation marks, em-dashes). Do NOT artificially chop a grammatical sentence into fragments with fake periods — Flaptap's deterministic pacing engine dynamically groups your canonical sentences into Short, Balanced, and Full shadowing lines while preserving your exact punctuation, speakers, overlaps, repairs, "paragraphIndex", and "ideaIndex".
    - RESOLVE MULTI-SPEAKER OVERLAPS & INTERRUPTIONS: If 2, 3, or 4+ speakers are talking or interrupting each other and raw captions mashed their words together mid-sentence, separate each speaker's utterance into its own clean sentence entry in chronological order, mark "isOverlap": true on interrupted/overlapping interjections, and assign consistent speaker labels.
    - IF A SENTENCE HAS NO ERROR, LEAVE EVERY WORD 100% IDENTICAL TO THE RAW INPUT (only fixing punctuation/capitalization if missing) and set "repaired": false.
 3. SPEAKER ATTRIBUTION:

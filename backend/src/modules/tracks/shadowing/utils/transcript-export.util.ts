@@ -1,11 +1,11 @@
+import { HistoryItem } from '../../../../core/database/history.repository';
 import {
   ExportOptions,
   ExportResult,
   TranscriptExportFormat,
-  TranscriptLabDoc,
   TranscriptSentence,
   TranscriptViewMode,
-} from '../transcript-lab.types';
+} from '../shadowing.types';
 import { formatMsClock } from './word-alignment.util';
 
 const FORMAT_META: Record<TranscriptExportFormat, { mimeType: string; extension: string }> = {
@@ -37,12 +37,12 @@ export const SUPPORTED_VIEW_MODES: TranscriptViewMode[] = [
 ];
 
 function slugifyFilename(title: string): string {
-  const base = String(title || 'transcript')
+  const base = String(title || 'shadowing-lesson')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60);
-  return base || 'transcript';
+  return base || 'shadowing-lesson';
 }
 
 function formatSrtTime(ms: number): string {
@@ -88,12 +88,14 @@ interface ExportBlock {
   repairNote?: string;
 }
 
-function resolveViewBlocks(doc: TranscriptLabDoc, view: TranscriptViewMode): ExportBlock[] {
-  const reviewed = doc.reviewed;
+function resolveViewBlocks(lesson: HistoryItem, view: TranscriptViewMode): ExportBlock[] {
+  const td = lesson.transcriptData;
+  const raw = td?.raw;
+  const reviewed = td?.reviewed;
 
-  if (view === 'raw' || !reviewed) {
-    if (view === 'raw' && doc.raw.cues.length > 0) {
-      return doc.raw.cues.map((c, idx) => ({
+  if (view === 'raw') {
+    if (raw?.cues?.length) {
+      return raw.cues.map((c, idx) => ({
         index: idx + 1,
         startMs: c.startMs,
         endMs: c.endMs,
@@ -102,29 +104,48 @@ function resolveViewBlocks(doc: TranscriptLabDoc, view: TranscriptViewMode): Exp
         repaired: false,
       }));
     }
-    const baseSentences = doc.raw.sentences || [];
-    return baseSentences.map((s) => ({
-      index: s.index,
-      speaker: s.speaker,
-      startMs: s.startMs,
-      endMs: s.endMs,
-      text: s.text,
-      rawText: s.rawText,
-      repaired: false,
-    }));
+    if (raw?.sentences?.length) {
+      return raw.sentences.map((s) => ({
+        index: s.index,
+        speaker: s.speaker,
+        startMs: s.startMs,
+        endMs: s.endMs,
+        text: s.text,
+        rawText: s.rawText,
+        repaired: false,
+      }));
+    }
   }
 
   if (view === 'paragraphs') {
-    return reviewed.paragraphs.map((p) => ({
-      index: p.index,
-      speaker: p.speaker,
-      startMs: p.startMs,
-      endMs: p.endMs,
-      text: p.text,
+    if (reviewed?.paragraphs?.length) {
+      return reviewed.paragraphs.map((p) => ({
+        index: p.index,
+        speaker: p.speaker,
+        startMs: p.startMs,
+        endMs: p.endMs,
+        text: p.text,
+      }));
+    }
+    if (raw?.paragraphs?.length) {
+      return raw.paragraphs.map((p) => ({
+        index: p.index,
+        speaker: p.speaker,
+        startMs: p.startMs,
+        endMs: p.endMs,
+        text: p.text,
+      }));
+    }
+    return (lesson.chunks || []).map((c, idx) => ({
+      index: idx + 1,
+      speaker: c.speaker || lesson.creator || '',
+      startMs: Math.round((Number(c.startSec) || 0) * 1000),
+      endMs: Math.round((Number(c.endSec) || 0) * 1000),
+      text: c.text,
     }));
   }
 
-  if (view === 'ideas') {
+  if (view === 'ideas' && reviewed?.ideas?.length) {
     const byIndex = new Map<number, TranscriptSentence>();
     reviewed.sentences.forEach((s) => byIndex.set(s.index, s));
     return reviewed.ideas.map((idea) => ({
@@ -141,7 +162,7 @@ function resolveViewBlocks(doc: TranscriptLabDoc, view: TranscriptViewMode): Exp
     }));
   }
 
-  if (view === 'speakers') {
+  if (view === 'speakers' && reviewed?.speakerTurns?.length) {
     return reviewed.speakerTurns.map((turn) => ({
       index: turn.index,
       speaker: turn.speaker,
@@ -151,21 +172,45 @@ function resolveViewBlocks(doc: TranscriptLabDoc, view: TranscriptViewMode): Exp
     }));
   }
 
-  // Default: sentences
-  return reviewed.sentences.map((s) => ({
+  if (reviewed?.sentences?.length) {
+    return reviewed.sentences.map((s) => ({
+      index: s.index,
+      speaker: s.speaker,
+      startMs: s.startMs,
+      endMs: s.endMs,
+      text: s.text,
+      rawText: s.rawText,
+      repaired: s.repaired,
+      repairNote: s.repairNote,
+    }));
+  }
+
+  if (raw?.sentences?.length) {
+    return raw.sentences.map((s) => ({
+      index: s.index,
+      speaker: s.speaker,
+      startMs: s.startMs,
+      endMs: s.endMs,
+      text: s.text,
+      rawText: s.rawText,
+      repaired: false,
+    }));
+  }
+
+  return (lesson.sentences || []).map((s) => ({
     index: s.index,
-    speaker: s.speaker,
-    startMs: s.startMs,
-    endMs: s.endMs,
+    speaker: s.speaker || lesson.creator || '',
+    startMs: Number.isFinite(s.startMs) ? Number(s.startMs) : Math.round((Number(s.startSec) || 0) * 1000),
+    endMs: Number.isFinite(s.endMs) ? Number(s.endMs) : Math.round((Number(s.endSec) || 0) * 1000),
     text: s.text,
-    rawText: s.rawText,
-    repaired: s.repaired,
-    repairNote: s.repairNote,
+    rawText: s.rawText || s.text,
+    repaired: Boolean(s.repaired),
+    repairNote: s.repairNote || '',
   }));
 }
 
-export function exportTranscriptDocument(
-  doc: TranscriptLabDoc,
+export function exportShadowingLesson(
+  lesson: HistoryItem,
   options: ExportOptions,
 ): ExportResult {
   const view: TranscriptViewMode = SUPPORTED_VIEW_MODES.includes(options.view)
@@ -176,9 +221,15 @@ export function exportTranscriptDocument(
     : 'txt';
   const includeTimestamps = options.includeTimestamps !== false;
   const includeSpeakers = options.includeSpeakers !== false && view !== 'raw';
-  const blocks = resolveViewBlocks(doc, view);
+  const blocks = resolveViewBlocks(lesson, view);
   const meta = FORMAT_META[format];
-  const filename = `${slugifyFilename(doc.title)}-${view}.${meta.extension}`;
+  const filename = `${slugifyFilename(lesson.title)}-${view}.${meta.extension}`;
+  const platform = lesson.platform || lesson.transcriptData?.platform || 'YouTube';
+  const wordCount =
+    lesson.transcriptData?.reviewed?.quality?.totalWords ||
+    lesson.transcriptData?.raw?.words?.length ||
+    lesson.stats?.totalWords ||
+    0;
 
   let content = '';
 
@@ -187,48 +238,52 @@ export function exportTranscriptDocument(
       const payload =
         view === 'raw'
           ? {
-              id: doc.id,
-              title: doc.title,
-              creator: doc.creator,
-              platform: doc.platform,
-              sourceUrl: doc.sourceUrl,
-              durationSeconds: doc.durationSeconds,
+              id: lesson.id,
+              title: lesson.title,
+              creator: lesson.creator,
+              platform,
+              sourceUrl: lesson.sourceUrl,
+              durationSeconds: lesson.durationSeconds,
               view: 'raw',
-              raw: doc.raw,
+              raw: lesson.transcriptData?.raw || { fullText: (lesson.sentences || []).map((s) => s.text).join(' '), sentences: blocks },
             }
           : {
-              id: doc.id,
-              title: doc.title,
-              creator: doc.creator,
-              platform: doc.platform,
-              sourceUrl: doc.sourceUrl,
-              durationSeconds: doc.durationSeconds,
+              id: lesson.id,
+              title: lesson.title,
+              creator: lesson.creator,
+              platform,
+              sourceUrl: lesson.sourceUrl,
+              durationSeconds: lesson.durationSeconds,
               view,
-              reviewed: doc.reviewed,
-              raw: doc.raw,
+              reviewed: lesson.transcriptData?.reviewed || null,
+              raw: lesson.transcriptData?.raw || null,
+              sentences: lesson.sentences || [],
+              chunks: lesson.chunks || [],
             };
       content = JSON.stringify(payload, null, 2);
       break;
     }
 
     case 'srt': {
-      content = blocks
-        .map((b, idx) => {
-          const line =
-            includeSpeakers && b.speaker && view === 'speakers'
-              ? `${b.speaker}: ${b.text}`
-              : b.text;
-          return `${idx + 1}\n${formatSrtTime(b.startMs)} --> ${formatSrtTime(b.endMs)}\n${line}`;
-        })
-        .join('\n\n') + '\n';
+      content =
+        blocks
+          .map((b, idx) => {
+            const line =
+              includeSpeakers && b.speaker && view === 'speakers'
+                ? `${b.speaker}: ${b.text}`
+                : b.text;
+            return `${idx + 1}\n${formatSrtTime(b.startMs)} --> ${formatSrtTime(b.endMs)}\n${line}`;
+          })
+          .join('\n\n') + '\n';
       break;
     }
 
     case 'vtt': {
+      const multiSpeaker = (lesson.transcriptData?.reviewed?.speakers?.length || 0) > 1;
       const body = blocks
         .map((b) => {
           const voiceTag =
-            includeSpeakers && b.speaker && (view === 'speakers' || (doc.reviewed?.speakers.length || 0) > 1)
+            includeSpeakers && b.speaker && (view === 'speakers' || multiSpeaker)
               ? `<v ${b.speaker}>${b.text}`
               : b.text;
           return `${formatVttTime(b.startMs)} --> ${formatVttTime(b.endMs)}\n${voiceTag}`;
@@ -263,17 +318,17 @@ export function exportTranscriptDocument(
     case 'md': {
       const frontmatter = [
         '---',
-        `title: "${String(doc.title || '').replace(/"/g, '\\"')}"`,
-        `creator: "${String(doc.creator || '').replace(/"/g, '\\"')}"`,
-        `platform: "${doc.platform}"`,
-        `source_url: "${doc.sourceUrl}"`,
+        `title: "${String(lesson.title || '').replace(/"/g, '\\"')}"`,
+        `creator: "${String(lesson.creator || '').replace(/"/g, '\\"')}"`,
+        `platform: "${platform}"`,
+        `source_url: "${lesson.sourceUrl || ''}"`,
         `view: "${view}"`,
-        `words: ${doc.wordCount}`,
+        `words: ${wordCount}`,
         '---',
         '',
-        `# ${doc.title}`,
+        `# ${lesson.title}`,
         '',
-        `> **Creator:** ${doc.creator || 'Unknown'} · **Platform:** ${doc.platform} · **View:** ${view}`,
+        `> **Creator:** ${lesson.creator || 'Unknown'} · **Platform:** ${platform} · **View:** ${view}`,
         '',
       ];
       const body = blocks.map((b) => {
@@ -285,9 +340,6 @@ export function exportTranscriptDocument(
           if (b.summary) lines.push('', `> ${b.summary}`);
           lines.push('', b.text);
           return lines.join('\n');
-        }
-        if (view === 'paragraphs') {
-          return `${ts}${spk}${b.text}`;
         }
         return `${ts}${spk}${b.text}`;
       });
@@ -314,25 +366,25 @@ export function exportTranscriptDocument(
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>${escapeHtml(doc.title)} (${escapeHtml(view)})</title>
+  <title>${escapeHtml(lesson.title)} (${escapeHtml(view)})</title>
   <style>
-    body { font-family: Georgia, "Iowan Old Style", serif; max-width: 780px; margin: 40px auto; padding: 0 20px; background: #F6F4EE; color: #141413; line-height: 1.65; }
-    header { border-bottom: 2px solid #141413; padding-bottom: 16px; margin-bottom: 28px; }
-    h1 { margin: 0 0 6px; font-size: 28px; }
-    .sub { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 13px; color: #555; }
-    .blk { background: #FCFBF7; border: 1px solid #E3DFD4; border-radius: 10px; padding: 14px 18px; margin-bottom: 12px; }
-    .meta { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; font-family: ui-monospace, monospace; font-size: 12px; }
-    .ts { color: #666; }
-    .spk { font-family: -apple-system, sans-serif; font-weight: 600; background: #FFF04B; color: #141413; padding: 1px 8px; border-radius: 99px; }
-    .sum { font-style: italic; color: #444; margin: 4px 0 8px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif; max-width: 780px; margin: 40px auto; padding: 0 20px; background: #F5F5F7; color: #1D1D1F; line-height: 1.65; }
+    header { border-bottom: 1.5px solid #D2D2D7; padding-bottom: 16px; margin-bottom: 28px; }
+    h1 { margin: 0 0 6px; font-size: 26px; letter-spacing: -0.02em; }
+    .sub { font-size: 13px; color: #6E6E73; }
+    .blk { background: #FFFFFF; border: 1px solid #E5E5EA; border-radius: 12px; padding: 14px 18px; margin-bottom: 12px; }
+    .meta { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; font-family: ui-monospace, "SF Mono", monospace; font-size: 12px; }
+    .ts { color: #6E6E73; }
+    .spk { font-family: -apple-system, sans-serif; font-weight: 600; background: #E8F2FF; color: #0071E3; padding: 1px 8px; border-radius: 99px; }
+    .sum { font-style: italic; color: #48484A; margin: 4px 0 8px; }
     h2 { margin: 0 0 6px; font-size: 18px; }
-    p { margin: 0; font-size: 17px; }
+    p { margin: 0; font-size: 16px; }
   </style>
 </head>
 <body>
   <header>
-    <h1>${escapeHtml(doc.title)}</h1>
-    <div class="sub">${escapeHtml(doc.creator || doc.platform)} · View: ${escapeHtml(view)} · ${doc.wordCount} words</div>
+    <h1>${escapeHtml(lesson.title)}</h1>
+    <div class="sub">${escapeHtml(lesson.creator || platform)} · View: ${escapeHtml(view)} · ${wordCount} words</div>
   </header>
   ${itemsHtml}
 </body>
@@ -342,11 +394,11 @@ export function exportTranscriptDocument(
 
     case 'txt':
     default: {
-      if (view === 'raw' && !includeTimestamps) {
-        content = `${doc.raw.fullText}\n`;
+      if (view === 'raw' && !includeTimestamps && lesson.transcriptData?.raw?.fullText) {
+        content = `${lesson.transcriptData.raw.fullText}\n`;
         break;
       }
-      const header = `${doc.title}\n${doc.creator ? `By ${doc.creator} · ` : ''}${doc.platform} · View: ${view}\n${'='.repeat(48)}\n\n`;
+      const header = `${lesson.title}\n${lesson.creator ? `By ${lesson.creator} · ` : ''}${platform} · View: ${view}\n${'='.repeat(48)}\n\n`;
       const sep = view === 'sentences' ? '\n' : '\n\n';
       const lines = blocks.map((b) => {
         const ts = includeTimestamps ? `[${formatMsClock(b.startMs)}] ` : '';

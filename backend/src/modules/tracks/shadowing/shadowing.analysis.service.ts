@@ -229,13 +229,100 @@ export class ShadowingAnalysisService {
   }
 
   /**
+   * Pure local, zero-AI re-grounding after deterministic sentence pacing changes.
+   * Updates every Coach entry's `sentenceIndex` and reapplies dynamic `<mark>`
+   * highlights onto `item.sentences` and `item.chunks` while keeping entry order
+   * and array indices intact so `coachGlosses` and Coach completion progress remain valid.
+   */
+  public regroundExistingAnalysisForSentences(item: HistoryItem): void {
+    if (!item?.aiAnalysis || !Array.isArray(item.sentences) || item.sentences.length === 0) {
+      return;
+    }
+
+    const sentences = item.sentences;
+    const prev = item.aiAnalysis;
+    const grounded = this.groundAndValidateAnalysis(prev, sentences, {
+      preserveUngrounded: true,
+      analyzedAt: prev.analyzedAt,
+      aiModel: prev.aiModel,
+    });
+
+    const annotations: HighlightAnnotation[] = [
+      ...grounded.connectedSpeech.map((c) => ({
+        phrase: c.exactPhrase,
+        category: 'connected' as const,
+      })),
+      ...grounded.expressions.map((e) => ({
+        phrase: e.phrase,
+        category: 'expression' as const,
+      })),
+      ...grounded.vocabulary.map((v) => ({
+        phrase: v.term,
+        category: 'vocab' as const,
+      })),
+    ];
+
+    const updatedSentences = sentences.map((s) => ({
+      ...s,
+      highlightedHtml: annotations.length
+        ? applyDynamicHighlights(s.text, annotations)
+        : escapeTranscriptHtml(s.text),
+    }));
+
+    const sentenceByIdx = new Map<number, SentenceItem>(
+      updatedSentences.map((s) => [s.index, s]),
+    );
+
+    const updatedChunks = (item.chunks || []).map((chunk) => {
+      if (Array.isArray(chunk.sentenceIndices) && chunk.sentenceIndices.length > 0) {
+        const html = chunk.sentenceIndices
+          .map((idx) => sentenceByIdx.get(idx)?.highlightedHtml || '')
+          .filter(Boolean)
+          .join(' ');
+        return {
+          ...chunk,
+          highlightedHtml:
+            html ||
+            (annotations.length
+              ? applyDynamicHighlights(chunk.text, annotations)
+              : escapeTranscriptHtml(chunk.text)),
+        };
+      }
+      return {
+        ...chunk,
+        highlightedHtml: annotations.length
+          ? applyDynamicHighlights(chunk.text, annotations)
+          : escapeTranscriptHtml(chunk.text),
+      };
+    });
+
+    item.aiAnalysis = grounded;
+    item.sentences = updatedSentences;
+    item.chunks = updatedChunks;
+    if (item.stats) {
+      item.stats.connectedCount = grounded.connectedSpeech.length;
+      item.stats.expressionsCount = grounded.expressions.length;
+      item.stats.vocabularyCount = grounded.vocabulary.length;
+    }
+  }
+
+  /**
    * Grounds every AI-extracted phrase against the real transcript sentences so
    * timestamps and "Play in Video" links are 100% accurate and verbatim.
    */
-  private groundAndValidateAnalysis(raw: any, sentences: SentenceItem[]): AiCoachAnalysis {
+  private groundAndValidateAnalysis(
+    raw: any,
+    sentences: SentenceItem[],
+    options: {
+      preserveUngrounded?: boolean;
+      analyzedAt?: string;
+      aiModel?: string;
+    } = {},
+  ): AiCoachAnalysis {
     const validCefr = new Set(['A2', 'B1', 'B2', 'C1', 'C2']);
     const rawCefr = String(raw?.overview?.cefrLevel || 'B2').toUpperCase();
     const cefrLevel = (validCefr.has(rawCefr) ? rawCefr : 'B2') as AiCoachAnalysis['overview']['cefrLevel'];
+    const maxSentenceIdx = sentences.length > 0 ? sentences[sentences.length - 1].index : 1;
 
     const findGroundedSentence = (phrase: string, hintedIndex?: number): { index: number; exact: string } | null => {
       const clean = (phrase || '').replace(/\s+/g, ' ').trim();
@@ -283,9 +370,25 @@ export class ShadowingAnalysisService {
             return { index: s.index, exact: m[1] };
           }
         }
+
+        // 4. When re-grounding after shorter pacing splits, match across adjacent sentence pairs
+        if (options.preserveUngrounded && sentences.length > 1) {
+          for (let i = 0; i < sentences.length - 1; i++) {
+            const pairText = `${sentences[i].text} ${sentences[i + 1].text}`;
+            const m = rx.exec(pairText);
+            if (m) {
+              return { index: sentences[i].index, exact: clean };
+            }
+          }
+        }
       }
 
       return null;
+    };
+
+    const clampIndex = (rawIdx?: number): number => {
+      const num = Math.floor(Number(rawIdx) || 1);
+      return Math.max(1, Math.min(maxSentenceIdx, num));
     };
 
     const seenConnected = new Set<string>();
@@ -293,17 +396,19 @@ export class ShadowingAnalysisService {
     for (const entry of Array.isArray(raw?.connectedSpeech) ? raw.connectedSpeech : []) {
       const rawPhrase = String(entry?.exactPhrase || entry?.written || '').trim();
       const grounded = findGroundedSentence(rawPhrase, entry?.sentenceIndex);
-      if (!grounded) continue;
-      const key = grounded.exact.toLowerCase();
-      if (seenConnected.has(key)) continue;
+      if (!grounded && !options.preserveUngrounded) continue;
+      const exact = grounded ? grounded.exact : rawPhrase;
+      if (!exact) continue;
+      const key = exact.toLowerCase();
+      if (!options.preserveUngrounded && seenConnected.has(key)) continue;
       seenConnected.add(key);
 
       connectedSpeech.push({
-        exactPhrase: grounded.exact,
+        exactPhrase: exact,
         spokenIpa: String(entry?.spokenIpa || entry?.spoken || '').trim(),
         phenomenon: String(entry?.phenomenon || 'Connected Speech').trim(),
         mechanics: String(entry?.mechanics || '').trim(),
-        sentenceIndex: grounded.index,
+        sentenceIndex: grounded ? grounded.index : clampIndex(entry?.sentenceIndex),
       });
     }
 
@@ -312,18 +417,20 @@ export class ShadowingAnalysisService {
     for (const entry of Array.isArray(raw?.expressions) ? raw.expressions : []) {
       const rawPhrase = String(entry?.phrase || entry?.term || '').trim();
       const grounded = findGroundedSentence(rawPhrase, entry?.sentenceIndex);
-      if (!grounded) continue;
-      const key = grounded.exact.toLowerCase();
-      if (seenExpressions.has(key)) continue;
+      if (!grounded && !options.preserveUngrounded) continue;
+      const exact = grounded ? grounded.exact : rawPhrase;
+      if (!exact) continue;
+      const key = exact.toLowerCase();
+      if (!options.preserveUngrounded && seenExpressions.has(key)) continue;
       seenExpressions.add(key);
 
       expressions.push({
-        phrase: grounded.exact,
+        phrase: exact,
         meaning: String(entry?.meaning || '').trim(),
         register: String(entry?.register || 'Conversational').trim(),
         ipa: String(entry?.ipa || '').trim(),
         usageNote: String(entry?.usageNote || '').trim(),
-        sentenceIndex: grounded.index,
+        sentenceIndex: grounded ? grounded.index : clampIndex(entry?.sentenceIndex),
       });
     }
 
@@ -332,17 +439,19 @@ export class ShadowingAnalysisService {
     for (const entry of Array.isArray(raw?.vocabulary) ? raw.vocabulary : []) {
       const rawTerm = String(entry?.term || '').trim();
       const grounded = findGroundedSentence(rawTerm, entry?.sentenceIndex);
-      if (!grounded) continue;
-      const key = grounded.exact.toLowerCase();
-      if (seenVocab.has(key)) continue;
+      if (!grounded && !options.preserveUngrounded) continue;
+      const exact = grounded ? grounded.exact : rawTerm;
+      if (!exact) continue;
+      const key = exact.toLowerCase();
+      if (!options.preserveUngrounded && seenVocab.has(key)) continue;
       seenVocab.add(key);
 
       vocabulary.push({
-        term: grounded.exact,
+        term: exact,
         ipa: String(entry?.ipa || '').trim(),
         partOfSpeech: String(entry?.partOfSpeech || 'word').trim(),
         definition: String(entry?.definition || '').trim(),
-        sentenceIndex: grounded.index,
+        sentenceIndex: grounded ? grounded.index : clampIndex(entry?.sentenceIndex),
       });
     }
 
@@ -352,8 +461,8 @@ export class ShadowingAnalysisService {
 
     return {
       version: ANALYSIS_VERSION,
-      analyzedAt: new Date().toISOString(),
-      aiModel: this.ai.modelName,
+      analyzedAt: options.analyzedAt || new Date().toISOString(),
+      aiModel: options.aiModel || this.ai.modelName,
       overview: {
         summary:
           String(raw?.overview?.summary || '').trim() ||

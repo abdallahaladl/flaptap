@@ -76,14 +76,26 @@
         <span class="topbar-lead-sep" aria-hidden="true"></span>
 
         <div class="studio-title-block">
-          <h1 id="studio-title" class="studio-title">Loading lesson...</h1>
+          <div class="studio-title-row" id="studio-title-row">
+            <h1 id="studio-title" class="studio-title">Loading lesson...</h1>
+            <button type="button" class="studio-rename-btn" id="studio-rename-btn" title="Rename lesson" aria-label="Rename lesson">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+            </button>
+          </div>
+          <div class="studio-title-edit-wrap" id="studio-title-edit-wrap" hidden>
+            <input type="text" id="studio-title-input" class="studio-title-input" maxlength="160" aria-label="Lesson title" />
+            <button type="button" class="btn-vox btn-xs" id="studio-title-save-btn">Save</button>
+            <button type="button" class="btn-secondary btn-xs" id="studio-title-cancel-btn">Cancel</button>
+          </div>
           <div class="studio-meta-line">
-            <span id="studio-creator">—</span>
-            <span aria-hidden="true">·</span>
-            <span id="studio-wpm" class="ltr-num">150 WPM</span>
-            <span aria-hidden="true">·</span>
-            <span id="studio-sentence-total" class="ltr-num">0 sentences</span>
+            <span id="studio-platform-badge" class="studio-platform-pill" hidden>YouTube</span>
+            <span id="studio-creator" class="studio-meta-creator">—</span>
+            <span class="studio-meta-sep" aria-hidden="true"></span>
+            <span id="studio-wpm" class="studio-meta-stat ltr-num">150 WPM</span>
+            <span class="studio-meta-dot" aria-hidden="true">·</span>
+            <span id="studio-sentence-total" class="studio-meta-stat ltr-num">0 sentences</span>
             <span id="studio-cefr-badge" class="cefr-pill ltr-num" hidden>B2</span>
+            <span id="studio-review-status-pill" class="studio-review-pill" hidden><span class="studio-status-dot" aria-hidden="true"></span><span class="studio-review-pill-text">Raw Ready</span></span>
           </div>
         </div>
       </div>
@@ -113,13 +125,38 @@
         </button>
 
         <div class="topbar-utility-capsule" role="group" aria-label="Workspace tools">
+          <button
+            type="button"
+            class="icon-action topbar-cap-btn studio-review-trigger"
+            id="studio-review-btn"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="studio-review-popover"
+            title="AI Verbatim Review (fix ASR errors, separate speakers &amp; structure ideas)"
+            aria-label="AI Verbatim Review"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
+            <span class="studio-review-dot" id="studio-review-dot" hidden></span>
+          </button>
+
+          <span class="topbar-cap-sep" aria-hidden="true"></span>
+
           <button type="button" class="icon-action topbar-cap-btn" id="studio-extract-phrases-btn" title="Open or extract phrases in Phrase Miner (reuses this lesson's transcript)" aria-label="Open in Phrase Miner">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V4h16v3"></path><path d="M9 20h6"></path><path d="M12 4v16"></path></svg>
           </button>
 
           <span class="topbar-cap-sep" aria-hidden="true"></span>
 
-          <button type="button" class="icon-action topbar-cap-btn" id="download-markdown-btn" title="Export Markdown study sheet" aria-label="Export Markdown study sheet">
+          <button
+            type="button"
+            class="icon-action topbar-cap-btn"
+            id="studio-export-btn"
+            aria-haspopup="dialog"
+            aria-expanded="false"
+            aria-controls="studio-export-popover"
+            title="Export transcript &amp; study sheet (7 formats × 5 views)"
+            aria-label="Export transcript and study sheet"
+          >
             <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#download"></use></svg>
           </button>
 
@@ -201,6 +238,11 @@
             <!-- Single-Click Action Flash (Play / Pause Indicator) -->
             <div class="video-action-flash" id="video-action-flash" aria-hidden="true" hidden></div>
           </div>
+          <div id="studio-audio-stage" class="studio-audio-stage" hidden>
+            <div class="studio-audio-stage-badge" id="studio-audio-stage-badge">Audio Track</div>
+            <p class="studio-audio-stage-title" id="studio-audio-stage-title">Native Audio Deck</p>
+            <p class="studio-audio-stage-sub" id="studio-audio-stage-sub">Click any word or scrub the millisecond timeline below.</p>
+          </div>
           <div id="tts-audio-stage" class="tts-audio-stage" hidden>
             <span class="tts-stage-tag" id="tts-stage-tag">Spoken Audio Deck</span>
             <p class="tts-active-quote" id="tts-active-quote">Select any sentence to play spoken American English audio.</p>
@@ -209,9 +251,39 @@
         </div>
       </div>
 
-      <!-- Unified Apple Control Dock (Grouped by Category: Playback & Flow · Video Zoom & Focus · Speed · Tools) -->
-      <div class="studio-control-bar-host" dir="ltr">
-        <div id="studio-control-bar" class="studio-control-bar" role="toolbar" aria-label="Playback and study controls" dir="ltr">
+      <!-- Unified Apple Media Console (Timeline + Controls + Active Line + Live Status) -->
+      <div class="studio-media-console" id="studio-media-console">
+        <!-- Row 1: Precision Millisecond Timeline & Media View Toggle -->
+        <div id="studio-timeline-bar" class="studio-timeline-bar" dir="ltr">
+          <div class="studio-scrub-track" id="studio-scrub-track" role="slider" tabindex="0" aria-label="Millisecond playback timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="studio-scrub-fill" id="studio-scrub-fill" style="width: 0%;"></div>
+            <div class="studio-scrub-thumb" id="studio-scrub-thumb" style="left: 0%;"></div>
+            <div class="studio-scrub-tooltip ltr-num" id="studio-scrub-tooltip" hidden>00:00.000</div>
+          </div>
+          <div class="studio-timeline-top">
+            <div class="studio-timeline-left">
+              <span class="studio-ms-clock ltr-num"><span id="studio-clock-now">00:00.000</span> <span class="clock-sep">/</span> <span id="studio-clock-total">00:00.000</span></span>
+              <span class="studio-clip-readout" id="studio-active-clip-label" hidden></span>
+            </div>
+            <div class="studio-timeline-right">
+              <button type="button" class="studio-define-pill" id="studio-define-word-btn" hidden>Define</button>
+              <button type="button" class="studio-video-toggle-pill" id="studio-video-toggle-btn" hidden title="Hide or show video frame (keeps audio playing)">Hide Video</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Shadow Pause Speaking Gap Countdown Bar -->
+        <div id="studio-shadow-pause-bar" class="studio-shadow-pause-bar" hidden>
+          <div class="studio-shadow-pause-top">
+            <span class="studio-shadow-countdown" id="studio-shadow-countdown">Speak now… 1.0s</span>
+            <button type="button" class="btn-secondary btn-xs" id="studio-skip-pause-btn">Skip Pause</button>
+          </div>
+          <div class="studio-shadow-track"><div class="studio-shadow-fill" id="studio-shadow-fill" style="width: 0%;"></div></div>
+        </div>
+
+        <!-- Row 2: Unified Apple Control Bar (Playback & Flow · Framing & Zoom · Speed · Tools) -->
+        <div class="studio-control-bar-host" dir="ltr">
+          <div id="studio-control-bar" class="studio-control-bar" role="toolbar" aria-label="Playback and study controls" dir="ltr">
           <!-- Group 1: Playback Transport & Sentence Flow -->
           <div class="scb-pod scb-pod--primary">
             <div class="scb-cluster scb-cluster--playback" role="group" aria-label="Playback and sentence flow">
@@ -357,18 +429,31 @@
         <p class="deck-live-trans" id="deck-live-trans" dir="rtl" hidden></p>
       </div>
 
-      <!-- Compact Live Recording Strip (Visible ONLY while recording) -->
-      <div id="rec-live-floating" class="rec-live-floating" hidden>
-        <span class="rec-live-dot"></span>
-        <span class="rec-live-label" data-i18n="recRecording">Recording...</span>
-        <span id="rec-live-timer" class="rec-timer-badge ltr-num">00:00</span>
-        <div class="rec-vu-meter" style="flex: 1;"><div id="rec-live-vu-fill" class="rec-vu-fill" style="width: 0%;"></div></div>
+        <!-- Compact Live Recording Strip (Visible ONLY while recording) -->
+        <div id="rec-live-floating" class="rec-live-floating" hidden>
+          <span class="rec-live-dot"></span>
+          <span class="rec-live-label" data-i18n="recRecording">Recording...</span>
+          <span id="rec-live-timer" class="rec-timer-badge ltr-num">00:00</span>
+          <div class="rec-vu-meter" style="flex: 1;"><div id="rec-live-vu-fill" class="rec-vu-fill" style="width: 0%;"></div></div>
+        </div>
       </div>
     </aside>
 
     <!-- Primary Scalable Learning Workspace -->
     <section class="studio-canvas" data-active-mode="shadow" aria-label="Learning modes">
-      <!-- Sticky Canvas Header Dock (Mode Tabs + Highlight Legend + Live Progress, Filter & Jump) -->
+      <!-- Live AI Verbatim Review SSE Progress Banner -->
+      <div id="studio-review-banner" class="studio-review-banner" hidden role="status" aria-live="polite">
+        <div class="studio-review-banner-top">
+          <span class="studio-review-banner-msg" id="studio-review-msg">Running AI Verbatim Review...</span>
+          <div class="studio-review-banner-right">
+            <span class="studio-review-banner-pct ltr-num" id="studio-review-pct">0%</span>
+            <button type="button" class="btn-secondary btn-xs" id="studio-review-cancel-btn">Cancel</button>
+          </div>
+        </div>
+        <div class="studio-review-track"><div class="studio-review-fill" id="studio-review-fill" style="width: 0%;"></div></div>
+      </div>
+
+      <!-- Sticky Canvas Header Dock (Mode Tabs + Transcript Tools + Highlight Legend + Live Progress) -->
       <header class="canvas-header-dock" id="canvas-header-dock">
         <!-- Primary Learning Modes Rail (0ms switching, zero reload) -->
         <nav class="primary-modes-bar" role="tablist" aria-label="Learning modes">
@@ -400,6 +485,45 @@
             <span data-i18n="modeNotes">Notes</span>
           </button>
         </nav>
+
+        <!-- Transcript Utility Bar: Read Sub-Views, Live Search, Word Click Mode, Repairs Diff & Copy -->
+        <div id="studio-transcript-tools" class="studio-transcript-tools">
+          <div id="studio-read-subbar" class="studio-read-subbar" role="tablist" aria-label="Transcript document views" hidden>
+            <button type="button" class="studio-subtab-btn active" data-read-view="paragraphs" role="tab" aria-selected="true">Paragraphs</button>
+            <button type="button" class="studio-subtab-btn" data-read-view="ideas" role="tab" aria-selected="false">Ideas</button>
+            <button type="button" class="studio-subtab-btn" data-read-view="speakers" role="tab" aria-selected="false">Speakers</button>
+            <button type="button" class="studio-subtab-btn" data-read-view="raw" role="tab" aria-selected="false">Raw Original</button>
+          </div>
+
+          <div class="studio-tools-row">
+            <div class="studio-search-wrap" role="search">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="search" id="studio-search-input" class="studio-search-input" placeholder="Search transcript..." aria-label="Search transcript" />
+              <span id="studio-search-count" class="studio-search-count ltr-num" hidden>0/0</span>
+              <button type="button" class="studio-search-nav-btn" id="studio-search-prev" hidden aria-label="Previous match" title="Previous match (Shift+Enter)">‹</button>
+              <button type="button" class="studio-search-nav-btn" id="studio-search-next" hidden aria-label="Next match" title="Next match (Enter)">›</button>
+              <button type="button" class="studio-search-nav-btn" id="studio-search-clear" hidden aria-label="Clear search" title="Clear search (Esc)">×</button>
+            </div>
+
+            <div class="studio-tools-pills">
+              <div class="studio-clickmode-group" role="group" aria-label="Word click behavior">
+                <button type="button" class="studio-tool-pill active" data-word-click-mode="define" aria-pressed="true" title="Click a word for contextual AI definition (Alt+Click always defines)">Define</button>
+                <button type="button" class="studio-tool-pill" data-word-click-mode="word" aria-pressed="false" title="Click a word to play that exact millisecond word">Word</button>
+                <button type="button" class="studio-tool-pill" data-word-click-mode="from-here" aria-pressed="false" title="Click a word to play continuously from that millisecond (Shift+Click always plays from here)">From Here</button>
+              </div>
+              <div class="studio-pacing-group studio-clickmode-group" id="studio-pacing-group" role="radiogroup" aria-label="Shadowing sentence length" title="Switch sentence length in real time (Short: 4–8w · Medium: 7–13w · Full: Complete sentences)">
+                <button type="button" class="studio-tool-pill active" data-pacing="short" role="radio" aria-checked="true" data-i18n="pacingShort">Short</button>
+                <button type="button" class="studio-tool-pill" data-pacing="balanced" role="radio" aria-checked="false" data-i18n="pacingBalanced">Medium</button>
+                <button type="button" class="studio-tool-pill" data-pacing="full" role="radio" aria-checked="false" data-i18n="pacingFull">Full</button>
+              </div>
+              <button type="button" class="studio-tool-pill active" id="studio-toggle-repairs" hidden aria-pressed="true" title="Highlight AI ASR repairs">Repairs <span class="ltr-num" id="studio-repairs-count">0</span></button>
+              <button type="button" class="studio-tool-pill" id="studio-single-spk-btn" hidden title="Rename speaker">Speaker</button>
+              <button type="button" class="studio-tool-pill" id="studio-copy-view-btn" title="Copy active view text">Copy View</button>
+            </div>
+          </div>
+
+          <div id="studio-speaker-bar" class="studio-speaker-bar" hidden></div>
+        </div>
 
         <!-- Verbatim Highlight Legend & Word Click Hint -->
         <div id="transcript-legend-strip" class="legend-strip">
@@ -457,9 +581,12 @@
         </div>
       </div>
 
-      <!-- MODE PANEL 2: READ (Cohesive Editorial Paragraphs) -->
+      <!-- MODE PANEL 2: READ (Paragraphs | Ideas | Speakers | Raw Original) -->
       <div id="mode-panel-read" style="display: none;">
-        <div id="subview-chunks-list" class="editorial-article-view"></div>
+        <div id="subview-chunks-list" class="editorial-article-view" data-read-panel="paragraphs"></div>
+        <div id="subview-ideas-list" class="studio-structured-view" data-read-panel="ideas" hidden></div>
+        <div id="subview-speakers-list" class="studio-structured-view" data-read-panel="speakers" hidden></div>
+        <div id="subview-raw-list" class="studio-structured-view" data-read-panel="raw" hidden></div>
         <div id="read-filter-empty" class="studio-filter-empty" hidden>
           <p class="studio-filter-empty-text" data-filter-empty-msg></p>
           <button type="button" class="btn-secondary studio-filter-reset-btn" data-studio-reset-filter data-i18n="showAllItemsBtn">Show All</button>
@@ -849,6 +976,23 @@
         </span>
       </button>
 
+      <!-- Word Cushion Row (Natural -25ms/+55ms vs Exact 0ms) -->
+      <div class="more-menu-row" role="group" aria-label="Word playback cushion">
+        <div class="more-menu-item-info">
+          <span class="more-menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+          </span>
+          <div class="more-menu-copy">
+            <span class="more-menu-title">Word Clip Cushion</span>
+            <span class="more-menu-sub">Boundary padding for word clicks</span>
+          </div>
+        </div>
+        <div class="studio-cushion-pills">
+          <button type="button" class="studio-tool-pill active" data-word-cushion="natural" aria-pressed="true">Natural</button>
+          <button type="button" class="studio-tool-pill" data-word-cushion="exact" aria-pressed="false">Exact</button>
+        </div>
+      </div>
+
       <!-- Keyboard Shortcuts Row -->
       <button type="button" class="more-menu-item" id="shortcuts-trigger-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="shortcuts-popover" title="Keyboard shortcuts (?)">
         <span class="more-menu-icon" aria-hidden="true">
@@ -1105,6 +1249,62 @@
     </div>
   </div>
 
+  <!-- Floating Popover 6: AI Verbatim Review & Model Picker -->
+  <div id="studio-review-popover" class="scb-popover deck-panel studio-review-popover" role="dialog" aria-label="AI Verbatim Review" hidden>
+    <div class="deck-panel-head">
+      <span class="deck-panel-label">AI Verbatim Review</span>
+      <span class="studio-review-popover-badge" id="studio-review-popover-status">Raw Ready</span>
+    </div>
+    <p class="studio-popover-desc">Repairs ASR misspellings while keeping spoken wording verbatim, separates multi-speaker turns, and builds structured Ideas while preserving untouched Raw Original.</p>
+    <div id="studio-review-ai-mount" class="studio-review-ai-mount"></div>
+    <div class="studio-review-popover-actions">
+      <button type="button" class="btn-vox btn-sm" id="studio-run-review-btn">Run AI Review</button>
+      <button type="button" class="btn-secondary btn-sm" id="studio-rerun-review-btn" hidden>Re-run Fresh</button>
+    </div>
+  </div>
+
+  <!-- Floating Popover 7: Unified 7-Format × 5-View Exporter + Study Sheet -->
+  <div id="studio-export-popover" class="scb-popover deck-panel studio-export-popover" role="dialog" aria-label="Export Transcript &amp; Study Sheet" hidden>
+    <div class="deck-panel-head">
+      <span class="deck-panel-label">Export &amp; Study Sheet</span>
+    </div>
+    <button type="button" class="studio-export-primary-btn" id="download-markdown-btn">
+      <span><strong>Full Study Sheet (.md)</strong><small>Transcript, AI Coach insights &amp; personal study notes</small></span>
+      <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#download"></use></svg>
+    </button>
+    <div class="studio-export-divider"></div>
+    <div class="studio-export-options">
+      <label class="studio-export-field">
+        <span>Transcript View</span>
+        <select id="studio-export-view-select" class="ui-lang-select">
+          <option value="active">Active View</option>
+          <option value="sentences">Sentences</option>
+          <option value="paragraphs">Paragraphs</option>
+          <option value="ideas">Ideas</option>
+          <option value="speakers">Speakers</option>
+          <option value="raw">Raw Original</option>
+        </select>
+      </label>
+      <div class="studio-export-checks">
+        <label><input type="checkbox" id="studio-export-ts" checked /> Timestamps</label>
+        <label><input type="checkbox" id="studio-export-spk" checked /> Speakers</label>
+      </div>
+    </div>
+    <div class="studio-export-grid">
+      <button type="button" class="studio-export-fmt-btn" data-export-fmt="txt"><strong>TXT</strong><span>Plain text</span></button>
+      <button type="button" class="studio-export-fmt-btn" data-export-fmt="md"><strong>MD</strong><span>Markdown</span></button>
+      <button type="button" class="studio-export-fmt-btn" data-export-fmt="srt"><strong>SRT</strong><span>Subtitles</span></button>
+      <button type="button" class="studio-export-fmt-btn" data-export-fmt="vtt"><strong>VTT</strong><span>WebVTT</span></button>
+      <button type="button" class="studio-export-fmt-btn" data-export-fmt="json"><strong>JSON</strong><span>Word ms</span></button>
+      <button type="button" class="studio-export-fmt-btn" data-export-fmt="csv"><strong>CSV</strong><span>Anki/Sheet</span></button>
+      <button type="button" class="studio-export-fmt-btn" data-export-fmt="html"><strong>HTML</strong><span>Printable</span></button>
+      <button type="button" class="studio-export-fmt-btn" id="studio-export-copy-btn"><strong>Copy</strong><span>Clipboard</span></button>
+    </div>
+  </div>
+
+  <!-- Floating Repair / Overlap Rich Diff Popover -->
+  <div id="studio-info-popover" class="studio-info-popover" role="tooltip" hidden></div>
+
   <!-- Contextual AI Word Lookup Popover -->
   <div id="word-lookup-popover" class="word-popover" hidden role="dialog" aria-label="Word definition">
     <div class="word-popover-head">
@@ -1163,6 +1363,8 @@
   <script defer src="/check-button.js"></script>
   <script defer src="/celebration.js"></script>
   <script defer src="/word-lookup.js"></script>
+  <script defer src="/ai-provider-selector.js"></script>
+  <script defer src="/studio-transcript-tools.js"></script>
   <script defer src="/studio.js"></script>
 </body>
 </html>

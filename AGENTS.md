@@ -9,7 +9,7 @@
 ## 1. AI Transport & Shared Provider Selector
 
 1. **Direct Multi-Provider APIs (`AiProvidersModule` + `AiClient`)**
-   - Workspace generators (`Phrase Builder` / `learning-library`, `Phrase Miner` / `american-extractor`, `Transcripts` / `transcript-lab`) run through [`AiProvidersService`](file:///Users/abdallah/workspace/flaptap/backend/src/modules/ai-providers/ai-providers.service.ts), supporting live `/models` probing, `models.dev` capability enrichment, streaming SSE with transient `429`/timeout failover, and per-user AES-256-GCM BYOK keys alongside `.env` system keys.
+   - Workspace generators & review pipelines (`Shadowing` AI Verbatim Review, `Phrase Builder` / `learning-library`, `Phrase Miner` / `american-extractor`) run through [`AiProvidersService`](file:///Users/abdallah/workspace/flaptap/backend/src/modules/ai-providers/ai-providers.service.ts), supporting live `/models` probing, `models.dev` capability enrichment, streaming SSE with transient `429`/timeout failover, and per-user AES-256-GCM BYOK keys alongside `.env` system keys.
    - Studio sentence pipelines (`ShadowingAnalysisService`, `ShadowingTranslationService`, `StreetTalkService`, `PhoneticsService`, `WordLookupService`) use [`AiClient`](file:///Users/abdallah/workspace/flaptap/backend/src/core/ai/ai.client.ts) (`reasoning_effort: "none"` for sub-second Studio responsiveness).
    - Never commit `.env` or expose raw secrets outside authenticated masked previews (`sk-••••abcd`).
 2. **Single Shared Provider UI**
@@ -68,9 +68,9 @@ Every AI agent modifying, renaming, or adding any workspace feature MUST follow 
 
 1. **Three-Pillar Scalable Category Architecture**
    - **Studio** *(Active Speaking & Drill Studios — sessions that open in `/studio`)*:
-     - `Shadowing` (`/`, `lessons`) · `Dialogues` (`/dialogue`, `dialogue`) · `Phonetics` (`/pronunciation`, `pronunciation`)
-   - **Lab** *(Media Capture, Extraction & Phrase Authoring Tools)*:
-     - `Transcripts` (`/transcripts`, `transcript-lab`) · `Phrase Miner` (`/extractor`, `american-extractor`) · `Phrase Builder` (`/library`, `learning-library`)
+     - `Shadowing` (`/`, `lessons` — unified universal media ingest, upload, millisecond word playback, AI Verbatim Review, multi-speaker/ideas/raw views, Coach, translations & 7-format export) · `Dialogues` (`/dialogue`, `dialogue`) · `Phonetics` (`/pronunciation`, `pronunciation`)
+   - **Lab** *(Phrase Extraction & Phrase Authoring Tools)*:
+     - `Phrase Miner` (`/extractor`, `american-extractor`) · `Phrase Builder` (`/library`, `learning-library`)
    - **Workspace** *(Personal Memory, Progress, Cache & System Control)*:
      - `Vocabulary` (`/vocabulary`, `vocabulary`) · `Activity` (`/history`, `history`)
    - **Footer Control Dock:** Global system utilities (`AI Models` modal trigger + rail shortcut hint).
@@ -78,7 +78,7 @@ Every AI agent modifying, renaming, or adding any workspace feature MUST follow 
 
 2. **Brand Naming Contract (Short, Expressive, Parallel)**
    - **1–2 Words, ≤ 15 Characters:** Fits cleanly at `248px` desktop and `212px` tablet width without wrapping or truncation.
-   - **Noun-First Functional Clarity:** Use concrete, memorable studio/tool nouns (`Shadowing`, `Dialogues`, `Phonetics`, `Transcripts`, `Phrase Miner`, `Phrase Builder`, `Vocabulary`, `Activity`).
+   - **Noun-First Functional Clarity:** Use concrete, memorable studio/tool nouns (`Shadowing`, `Dialogues`, `Phonetics`, `Phrase Miner`, `Phrase Builder`, `Vocabulary`, `Activity`).
    - **Forbidden Patterns:** Never use imperative CTA verbs (`Generate...`, `Create...`), marketing taglines (`Anything to...`), or ampersands (`X & Y`) in sidebar labels.
    - **Cross-Surface Parity:** The sidebar label, topbar breadcrumb, `<title>`, section `<h1>`, `I18N` translations, and collapsed `data-tooltip` MUST all use the same canonical name.
 
@@ -93,7 +93,7 @@ Every AI agent modifying, renaming, or adding any workspace feature MUST follow 
 
 ### Real Derived Completion Law
 
-- **Zero Manual Completion Overrides:** Never add container-level "Mark Complete" buttons or toggles on multi-item learning entities (`Phrase Miner` guides, `Phrase Builder` items, `Transcripts`, `Shadowing`/`Dialogues`/`Phonetics` lessons, or `Activity` rows).
+- **Zero Manual Completion Overrides:** Never add container-level "Mark Complete" buttons or toggles on multi-item learning entities (`Phrase Miner` guides, `Phrase Builder` items, `Shadowing`/`Dialogues`/`Phonetics` lessons, or `Activity` rows).
 - **Strict Child Derivation:** A container is `Completed` (`done`) **if and only if** `totalItems > 0 && completedItems === totalItems` (`progress` when `completedItems > 0`, `new` when `0`). Backend repositories and frontend views must compute completion strictly from checked child items.
 
 ### Studio Layout Invariants
@@ -107,6 +107,6 @@ Every AI agent modifying, renaming, or adding any workspace feature MUST follow 
 
 - Typecheck & build: `npm run build` (`cd backend && npm run build`)
 - Offline timing unit suite: `npm run test:timing`
-- Feature unit suites: `npm run test:extractor:unit` · `npm run test:transcript:unit`
+- Feature unit suites: `npm run test:extractor:unit` · `npm run test:shadowing:unit`
 - Full production E2E suite: `npm run test:e2e`
 - Never commit `.env`, API keys, `data/*.sqlite*`, or temporary artifacts.

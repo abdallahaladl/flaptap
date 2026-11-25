@@ -489,13 +489,12 @@ async function runProductionE2ETest() {
             'lessons',
             'dialogue',
             'pronunciation',
-            'transcript-lab',
             'american-extractor',
             'learning-library',
             'vocabulary',
             'history',
           ]),
-      `Expected all 8 primary links inside Left Sidebar (0 topbar tabs), got ${JSON.stringify(signedOutHome.navTabs)}`,
+      `Expected all 7 primary links inside Left Sidebar (0 topbar tabs), got ${JSON.stringify(signedOutHome.navTabs)}`,
     );
     assert(signedOutHome.cardsLeaked === 0 && signedOutHome.gateVisible, 'Signed-out visitor leaked library cards!');
     assert(signedOutHome.startBtnEnabled, 'Start Lesson button must remain clickable for signed-out visitor.');
@@ -1622,6 +1621,8 @@ async function runProductionE2ETest() {
       `Derived Studio completion state failed: ${JSON.stringify(derivedDrillState)}`,
     );
 
+    await page.click('#studio-export-btn');
+    await page.waitForSelector('#download-markdown-btn', { visible: true, timeout: 5000 });
     await page.click('#download-markdown-btn');
     await new Promise((r) => setTimeout(r, 250));
     const toastMsg = await page.evaluate(() => document.getElementById('studio-toast')?.textContent || '');
