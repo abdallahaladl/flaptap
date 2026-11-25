@@ -37,15 +37,6 @@
       group: 'Studio',
       groupI18nKey: 'navGroupStudio',
     },
-    'transcript-lab': {
-      section: 'transcript-lab',
-      path: '/transcripts',
-      aliases: ['/transcript-lab'],
-      title: 'Transcripts',
-      i18nKey: 'navTranscriptLab',
-      group: 'Lab',
-      groupI18nKey: 'navGroupLab',
-    },
     'american-extractor': {
       section: 'american-extractor',
       path: '/extractor',
@@ -112,13 +103,6 @@
       val === 'anything-to-phrases'
     ) {
       return 'american-extractor';
-    }
-    if (
-      val === 'transcripts' ||
-      val === 'transcript-lab' ||
-      val === 'transcribe'
-    ) {
-      return 'transcript-lab';
     }
     if (val === 'activity' || val === 'history') return 'history';
     if (ROUTE_TABLE[val]) return val;
@@ -204,33 +188,6 @@
       };
     }
 
-    // Sub-routes: Transcripts (/transcripts, /transcripts/library, /transcripts/:id)
-    if (pathname === '/transcripts/library' || pathname === '/transcript-lab/library') {
-      return {
-        section: 'transcript-lab',
-        subview: 'library',
-        domainId: '',
-        noteId: '',
-        docId: '',
-        searchParams: params,
-        canonicalizedFromQuery: false,
-      };
-    }
-    if (pathname.startsWith('/transcripts/') || pathname.startsWith('/transcript-lab/')) {
-      const parts = pathname.split('/').filter(Boolean);
-      const last = decodeURIComponent(parts[parts.length - 1] || '');
-      const docId = last && last !== 'view' && last !== 'library' ? last : '';
-      return {
-        section: 'transcript-lab',
-        subview: docId ? 'view' : 'library',
-        domainId: '',
-        noteId: '',
-        docId,
-        searchParams: params,
-        canonicalizedFromQuery: false,
-      };
-    }
-
     // Exact path lookup across canonical routes + aliases
     for (const def of Object.values(ROUTE_TABLE)) {
       if (def.path === pathname || def.aliases.includes(pathname)) {
@@ -300,17 +257,6 @@
       } else {
         pathname = '/extractor';
       }
-    } else if (section === 'transcript-lab') {
-      if (options.subview === 'library') {
-        pathname = '/transcripts/library';
-      } else if (options.subview === 'view' && options.docId) {
-        pathname = `/transcripts/${encodeURIComponent(options.docId)}`;
-        if (options.view && options.view !== 'sentences') {
-          nextParams.set('view', options.view);
-        }
-      } else {
-        pathname = '/transcripts';
-      }
     } else if (section === 'vocabulary') {
       if (options.subview === 'flashcards') {
         nextParams.set('view', 'flashcards');
@@ -347,11 +293,6 @@
     if (route.section === 'american-extractor') {
       if (route.subview === 'library') return 'Library';
       if (route.subview === 'detail' || route.subview === 'note') return 'Study Guide';
-      return '';
-    }
-    if (route.section === 'transcript-lab') {
-      if (route.subview === 'library') return 'Library';
-      if (route.subview === 'view') return 'Workbench';
       return '';
     }
     if (route.section === 'vocabulary') {
@@ -502,7 +443,6 @@
     '/phrase-miner',
     '/american-english',
     '/phrases',
-    '/transcript-lab',
     '/activity',
   ]);
 

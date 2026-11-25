@@ -1,5 +1,5 @@
-import { extractJsonBlock, repairAndParseJson } from '../learning-library/utils/json-salvage.util';
-import { TranscriptSentence } from './transcript-lab.types';
+import { extractJsonBlock, repairAndParseJson } from '../../learning-library/utils/json-salvage.util';
+import { TranscriptSentence } from './shadowing.types';
 import { DraftReviewedIdea, DraftReviewedSentence } from './utils/word-alignment.util';
 
 export interface TranscriptReviewChunk {
@@ -16,7 +16,7 @@ export interface ParsedReviewChunkOutput {
 }
 
 /**
- * Splits baseline sentences into bounded chunks (~1,200 words max per chunk)
+ * Splits baseline sentences into bounded chunks (~1,100 words max per chunk)
  * so even 60-minute podcasts review rapidly without hitting token truncation.
  */
 export function buildReviewChunks(

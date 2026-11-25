@@ -5,6 +5,12 @@ import { v4 as uuidv4 } from 'uuid';
 import { SqliteService } from './sqlite.service';
 import { escapeTranscriptHtml, highlightsAreVerbatim, sanitizeVerbatimHtml } from '../linguistics/highlights';
 import { segmentParagraphs, segmentSentences } from '../linguistics/segmentation';
+import type {
+  ShadowingMediaPlayback,
+  ShadowingTranscriptData,
+  TimedWordMs,
+  TranscriptReviewStatus,
+} from '../../modules/tracks/shadowing/shadowing.types';
 
 export interface RequestIdentityScope {
   userId?: string | null;
@@ -20,6 +26,8 @@ export interface ChunkItem {
   startSec: number;
   endSec: number;
   sentenceIndices?: number[];
+  speakerId?: string;
+  speaker?: string;
   title?: string;
   text: string;
   highlightedHtml: string;
@@ -31,8 +39,19 @@ export interface SentenceItem {
   timeRange: string;
   startSec: number;
   endSec: number;
+  startMs?: number;
+  endMs?: number;
   durationSec: number;
   text: string;
+  rawText?: string;
+  speakerId?: string;
+  speaker?: string;
+  repaired?: boolean;
+  repairNote?: string;
+  isOverlap?: boolean;
+  paragraphIndex?: number;
+  ideaIndex?: number;
+  words?: TimedWordMs[];
   highlightedHtml: string;
   translations?: Record<string, string>;
 }
@@ -110,7 +129,16 @@ export interface HistoryItem {
   title: string;
   creator: string;
   videoId?: string;
+  sourceId?: string;
+  sourceKey?: string;
   sourceUrl: string;
+  platform?: string;
+  media?: ShadowingMediaPlayback;
+  transcriptData?: ShadowingTranscriptData;
+  reviewStatus?: TranscriptReviewStatus;
+  speakerCount?: number;
+  repairCount?: number;
+  wordCount?: number;
   thumbnailUrl: string;
   accentDialect: string;
   durationSeconds: number;
@@ -190,6 +218,7 @@ export type HistorySummary = Omit<
   | 'translationsCache'
   | 'aiAnalysis'
   | 'completionProgress'
+  | 'transcriptData'
 >;
 
 export type CacheClearScope = 'all' | 'coach' | 'translations' | 'transcript';
@@ -561,6 +590,38 @@ export class HistoryRepository {
       vocabularyCount: item.aiAnalysis?.vocabulary?.length || 0,
     };
 
+    const platform =
+      item.platform ||
+      item.transcriptData?.platform ||
+      (item.track === 'shadowing' && item.videoId ? 'YouTube' : '');
+    const mediaKind =
+      item.media?.mediaKind || (item.track === 'shadowing' && item.videoId ? 'youtube' : 'none');
+    const reviewStatus: TranscriptReviewStatus =
+      item.transcriptData?.reviewStatus || (item.transcriptData?.reviewed ? 'ready' : 'pending');
+    const speakerCount = Math.max(
+      1,
+      item.transcriptData?.reviewed?.speakers?.length || Number(item.speakerCount) || 1,
+    );
+    const repairCount = Math.max(
+      0,
+      item.transcriptData?.reviewed?.quality?.repairedSentences || Number(item.repairCount) || 0,
+    );
+    const wordCount = Math.max(
+      0,
+      item.transcriptData?.reviewed?.quality?.totalWords ||
+        item.transcriptData?.raw?.words?.length ||
+        item.stats?.totalWords ||
+        0,
+    );
+    const sourceKey = item.sourceKey || item.transcriptData?.sourceKey || '';
+    const sourceId = item.sourceId || item.transcriptData?.sourceId || '';
+
+    item.platform = platform;
+    item.reviewStatus = reviewStatus;
+    item.speakerCount = speakerCount;
+    item.repairCount = repairCount;
+    item.wordCount = wordCount;
+
     // Do not embed transient summary-only fields inside payload_json
     const serializable = { ...item };
     delete serializable.payloadBytes;
@@ -575,8 +636,11 @@ export class HistoryRepository {
           thumbnail_url, accent_dialect, duration_seconds, pacing_wpm, difficulty,
           cefr_level, sentences_count, chunks_count, completed_drills, is_completed,
           completed_items_count, total_items_count, study_notes,
-          analysis_status, cached_langs, ai_insights_count, payload_json, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          analysis_status, cached_langs, ai_insights_count,
+          source_id, source_key, platform, media_kind, review_status,
+          speaker_count, repair_count, word_count,
+          payload_json, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           user_id = COALESCE(excluded.user_id, lessons.user_id),
           guest_token = CASE WHEN COALESCE(excluded.user_id, lessons.user_id) IS NOT NULL THEN NULL ELSE COALESCE(excluded.guest_token, lessons.guest_token) END,
@@ -601,6 +665,14 @@ export class HistoryRepository {
           analysis_status = excluded.analysis_status,
           cached_langs = excluded.cached_langs,
           ai_insights_count = excluded.ai_insights_count,
+          source_id = CASE WHEN excluded.source_id != '' THEN excluded.source_id ELSE lessons.source_id END,
+          source_key = CASE WHEN excluded.source_key != '' THEN excluded.source_key ELSE lessons.source_key END,
+          platform = excluded.platform,
+          media_kind = excluded.media_kind,
+          review_status = excluded.review_status,
+          speaker_count = excluded.speaker_count,
+          repair_count = excluded.repair_count,
+          word_count = excluded.word_count,
           payload_json = excluded.payload_json,
           updated_at = excluded.updated_at
       `)
@@ -629,6 +701,14 @@ export class HistoryRepository {
         analysisStatus,
         cachedLangs,
         aiInsightsCount,
+        sourceId,
+        sourceKey,
+        platform,
+        mediaKind,
+        reviewStatus,
+        speakerCount,
+        repairCount,
+        wordCount,
         payloadJson,
         item.createdAt,
         now,
@@ -650,6 +730,8 @@ export class HistoryRepository {
         cefr_level, sentences_count, chunks_count, completed_drills, is_completed,
         completed_items_count, total_items_count, study_notes,
         analysis_status, cached_langs, ai_insights_count,
+        source_id, source_key, platform, media_kind, review_status,
+        speaker_count, repair_count, word_count,
         LENGTH(payload_json) AS payload_bytes,
         created_at, updated_at
       FROM lessons
@@ -678,6 +760,13 @@ export class HistoryRepository {
       const totalItems = Math.max(0, Number(row.total_items_count) || 0);
       const pct = totalItems > 0 ? Math.round((doneItems / totalItems) * 100) : 0;
       const realCompleted = totalItems > 0 && doneItems >= totalItems;
+      const wordCount =
+        Number(row.word_count) > 0
+          ? Number(row.word_count)
+          : Math.round(((Number(row.duration_seconds) || 60) / 60) * (Number(row.pacing_wpm) || 140));
+      const platform =
+        String(row.platform || '') ||
+        (String(row.track) === 'shadowing' && videoId ? 'YouTube' : '');
 
       return {
         id: String(row.id),
@@ -688,7 +777,29 @@ export class HistoryRepository {
         title: String(row.title),
         creator: String(row.creator),
         videoId,
+        sourceId: String(row.source_id || ''),
+        sourceKey: String(row.source_key || ''),
         sourceUrl: String(row.source_url),
+        platform,
+        reviewStatus: (row.review_status || 'pending') as TranscriptReviewStatus,
+        speakerCount: Math.max(1, Number(row.speaker_count) || 1),
+        repairCount: Math.max(0, Number(row.repair_count) || 0),
+        wordCount,
+        media:
+          row.media_kind && row.media_kind !== 'none'
+            ? {
+                hasAudio: true,
+                hasVideo: row.media_kind === 'youtube' || row.media_kind === 'video',
+                mediaKind: row.media_kind,
+                mediaId: videoId || '',
+                streamUrl:
+                  (row.media_kind === 'audio' || row.media_kind === 'video') && videoId
+                    ? `/api/sources/media/${encodeURIComponent(videoId)}`
+                    : '',
+                mimeType: '',
+                durationSeconds: Number(row.duration_seconds) || 0,
+              }
+            : undefined,
         thumbnailUrl: String(row.thumbnail_url),
         accentDialect: String(row.accent_dialect),
         durationSeconds: Number(row.duration_seconds) || 0,
@@ -701,7 +812,7 @@ export class HistoryRepository {
         timingVersion: 2,
         segmentationVersion: 2,
         stats: {
-          totalWords: Math.round(((Number(row.duration_seconds) || 60) / 60) * (Number(row.pacing_wpm) || 140)),
+          totalWords: wordCount,
           sentencesCount: Number(row.sentences_count) || 0,
           connectedCount: insightsCount,
           expressionsCount: 0,
@@ -741,6 +852,39 @@ export class HistoryRepository {
     }
     const row = this.sqlite.db.prepare('SELECT * FROM lessons WHERE id = ?').get(id);
     return this.rowToItem(row);
+  }
+
+  findBySourceKey(sourceKey: string, scope?: RequestIdentityScope): HistoryItem | undefined {
+    const cleanKey = String(sourceKey || '').trim();
+    if (!cleanKey) return undefined;
+    const where = this.scopeWhereClause(scope);
+    const row = this.sqlite.db
+      .prepare(
+        `SELECT * FROM lessons WHERE ${where.sql} AND track = 'shadowing' AND source_key = ? ORDER BY updated_at DESC LIMIT 1`,
+      )
+      .get(...where.params, cleanKey);
+    return row ? this.rowToItem(row) : undefined;
+  }
+
+  updateTitle(id: string, title: string, scope?: RequestIdentityScope): HistoryItem | undefined {
+    const clean = String(title || '').trim().slice(0, 160);
+    if (!clean) return this.findById(id, scope);
+    const existing = this.findById(id, scope);
+    if (!existing) return undefined;
+    existing.title = clean;
+    existing.noteMarkdown = this.buildCleanMarkdown(
+      existing.title,
+      existing.creator,
+      existing.sourceUrl,
+      existing.chunks || [],
+      existing.aiAnalysis,
+      existing.studyNotes,
+    );
+    this.insertOrReplaceRow(existing, {
+      userId: existing.userId,
+      guestToken: existing.guestToken,
+    });
+    return existing;
   }
 
   findByUrlOrVideoId(url: string, videoId?: string, scope?: RequestIdentityScope): HistoryItem | undefined {

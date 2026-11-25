@@ -13,6 +13,7 @@ import { ShadowingService } from './modules/tracks/shadowing/shadowing.service';
 import { ShadowingTranslationService } from './modules/tracks/shadowing/shadowing.translation.service';
 import { ShadowingAnalysisService } from './modules/tracks/shadowing/shadowing.analysis.service';
 import { ShadowingCoachGlossService } from './modules/tracks/shadowing/shadowing.coach-gloss.service';
+import { ShadowingReviewService } from './modules/tracks/shadowing/shadowing.review.service';
 import { TranscriptService } from './modules/tracks/shadowing/transcript.service';
 import { StreetTalkController, StreetTalkService } from './modules/tracks/street-talk/street-talk.service';
 import { PhoneticsController, PhoneticsService } from './modules/tracks/phonetics/phonetics.service';
@@ -23,7 +24,6 @@ import { AiProvidersModule } from './modules/ai-providers/ai-providers.module';
 import { LearningLibraryModule } from './modules/learning-library/learning-library.module';
 import { AmericanExtractorModule } from './modules/american-extractor/american-extractor.module';
 import { SharedSourcesModule } from './modules/shared-sources/shared-sources.module';
-import { TranscriptLabModule } from './modules/transcript-lab/transcript-lab.module';
 
 @Module({
   imports: [
@@ -31,7 +31,6 @@ import { TranscriptLabModule } from './modules/transcript-lab/transcript-lab.mod
     AiProvidersModule,
     LearningLibraryModule,
     AmericanExtractorModule,
-    TranscriptLabModule,
   ],
   controllers: [
     HealthController,
@@ -54,6 +53,7 @@ import { TranscriptLabModule } from './modules/transcript-lab/transcript-lab.mod
     ShadowingTranslationService,
     ShadowingAnalysisService,
     ShadowingCoachGlossService,
+    ShadowingReviewService,
     ShadowingService,
     StreetTalkService,
     PhoneticsService,

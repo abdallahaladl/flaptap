@@ -1,4 +1,4 @@
-import { SharedMediaKind, SharedSourceType } from '../shared-sources/shared-sources.types';
+import { SharedMediaKind, SharedSourceType } from '../../shared-sources/shared-sources.types';
 
 export type TranscriptViewMode = 'sentences' | 'paragraphs' | 'ideas' | 'speakers' | 'raw';
 
@@ -137,12 +137,7 @@ export interface ReviewedTranscriptSnapshot {
   reviewedAt: string;
 }
 
-export interface TranscriptCompletionState {
-  /** 1-based sentence indices checked off by the learner. */
-  items: number[];
-}
-
-export interface TranscriptMediaPlayback {
+export interface ShadowingMediaPlayback {
   hasAudio: boolean;
   hasVideo: boolean;
   mediaKind: SharedMediaKind;
@@ -152,73 +147,17 @@ export interface TranscriptMediaPlayback {
   durationSeconds: number;
 }
 
-export interface TranscriptLabDoc {
-  id: string;
-  userId: string;
-  sourceId: string;
-  sourceKey: string;
-  sourceUrl: string;
+export interface ShadowingTranscriptData {
+  sourceId?: string;
+  sourceKey?: string;
   sourceType: SharedSourceType;
   platform: string;
-  title: string;
-  creator: string;
-  thumbnailUrl: string;
-  durationSeconds: number;
   providerEngine: string;
-  media: TranscriptMediaPlayback;
   raw: RawTranscriptSnapshot;
   reviewed: ReviewedTranscriptSnapshot | null;
   reviewStatus: TranscriptReviewStatus;
   reviewError: string;
   speakerOverrides: Record<string, string>;
-  completion: TranscriptCompletionState;
-  sentenceCount: number;
-  completedCount: number;
-  wordCount: number;
-  speakerCount: number;
-  repairCount: number;
-  isCompleted: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TranscriptLabSummary {
-  id: string;
-  sourceId: string;
-  sourceUrl: string;
-  sourceType: SharedSourceType;
-  platform: string;
-  title: string;
-  creator: string;
-  thumbnailUrl: string;
-  durationSeconds: number;
-  hasAudio: boolean;
-  hasVideo: boolean;
-  mediaKind: SharedMediaKind;
-  providerEngine: string;
-  reviewStatus: TranscriptReviewStatus;
-  sentenceCount: number;
-  completedCount: number;
-  wordCount: number;
-  speakerCount: number;
-  repairCount: number;
-  isCompleted: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TranscriptLabListResult {
-  items: TranscriptLabSummary[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-  stats: {
-    totalDocs: number;
-    reviewedDocs: number;
-    completedDocs: number;
-    totalWords: number;
-  };
 }
 
 export interface ReviewProgressEvent {

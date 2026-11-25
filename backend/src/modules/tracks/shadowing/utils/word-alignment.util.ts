@@ -2,8 +2,8 @@ import {
   roundMs,
   segmentParagraphs,
   segmentSentences,
-} from '../../../core/linguistics/segmentation';
-import { TimedWord, TranscriptCue, TranscriptResult } from '../../tracks/shadowing/transcript.service';
+} from '../../../../core/linguistics/segmentation';
+import { TimedWord, TranscriptCue, TranscriptResult } from '../transcript.service';
 import {
   RawCueMs,
   RawTranscriptSnapshot,
@@ -14,7 +14,7 @@ import {
   TranscriptSentence,
   TranscriptSpeakerInfo,
   TranscriptSpeakerTurn,
-} from '../transcript-lab.types';
+} from '../shadowing.types';
 
 /**
  * Clean alphanumeric + apostrophe core for alignment & search.
@@ -190,7 +190,6 @@ export function buildRawTranscriptSnapshot(params: {
   const baseParagraphs = segmentParagraphs(baseSentences);
   const defaultSpeaker = params.creator?.trim() || 'Speaker 1';
 
-  // Map raw word slices deterministically onto each baseline sentence
   const paraIndexBySentence = new Map<number, number>();
   baseParagraphs.forEach((p, pIdx) => {
     (p.sentenceIndices || []).forEach((sIdx) => paraIndexBySentence.set(sIdx, pIdx + 1));
@@ -264,10 +263,6 @@ export function buildRawTranscriptSnapshot(params: {
   };
 }
 
-/**
- * Character-level similarity score in [0, 1] for fuzzy ASR repair matching
- * (e.g. "clod" vs "claude", "kubernetties" vs "kubernetes").
- */
 function charSimilarity(a: string, b: string): number {
   if (!a && !b) return 1;
   if (!a || !b) return 0;
@@ -297,11 +292,6 @@ interface AlignSpanResult {
   exactCount: number;
 }
 
-/**
- * Local Wagner-Fischer DP aligner over two bounded token slices (<= 320 tokens each).
- * Supports 1:1 exact, 1:1 substitution, 2:1 merge (e.g. "pie torch" -> "PyTorch"),
- * 1:2 split (e.g. "gonna" -> "going to"), insertion, and deletion.
- */
 function alignLocalSlice(
   rawSlice: TimedWordMs[],
   revTokens: string[],
@@ -313,7 +303,6 @@ function alignLocalSlice(
 
   if (n === 0) return { words: [], repairedCount: 0, exactCount: 0 };
 
-  // Degenerate case: no raw tokens in gap -> smoothly interpolate between boundaries
   if (m === 0) {
     const startBase = Math.max(0, prevBoundaryMs);
     const endBase = Math.max(startBase + n * 120, nextBoundaryMs);
@@ -335,7 +324,6 @@ function alignLocalSlice(
     return { words: out, repairedCount: n, exactCount: 0 };
   }
 
-  // If slice is unusually large, distribute proportionally without O(M*N) blowup
   if (m * n > 90000) {
     const startMs = rawSlice[0].startMs;
     const endMs = rawSlice[m - 1].endMs;
@@ -362,7 +350,6 @@ function alignLocalSlice(
   const rawNorm = rawSlice.map((w) => w.clean || normalizeAlignToken(w.word));
   const revNorm = revTokens.map((t) => normalizeAlignToken(t));
 
-  // Fast O(N) prefix/suffix exact match stripping — makes verbatim passages sub-millisecond
   let lead = 0;
   const maxLead = Math.min(m, n);
   while (lead < maxLead && rawNorm[lead] === revNorm[lead]) lead++;
@@ -412,8 +399,6 @@ function alignLocalSlice(
     };
   }
 
-  // DP op codes: 1 = match/sub (1:1), 2 = delete raw (1:0), 3 = insert rev (0:1),
-  // 4 = merge 2 raw -> 1 rev (2:1), 5 = split 1 raw -> 2 rev (1:2)
   const stride = n + 1;
   const dp = new Float32Array((m + 1) * stride);
   const op = new Uint8Array((m + 1) * stride);
@@ -437,7 +422,6 @@ function alignLocalSlice(
       let bestCost = Infinity;
       let bestOp = 1;
 
-      // 1:1 exact or substitution
       let subCost: number;
       if (r === c) {
         subCost = 0;
@@ -453,21 +437,18 @@ function alignLocalSlice(
         bestOp = 1;
       }
 
-      // 1:0 delete raw
       const c2 = dp[(i - 1) * stride + j] + 1.15;
       if (c2 < bestCost) {
         bestCost = c2;
         bestOp = 2;
       }
 
-      // 0:1 insert rev
       const c3 = dp[i * stride + (j - 1)] + 1.15;
       if (c3 < bestCost) {
         bestCost = c3;
         bestOp = 3;
       }
 
-      // 2:1 merge (e.g. "pie" + "torch" -> "pytorch")
       if (i >= 2 && nearDiag) {
         const merged = rawNorm[i - 2] + rawNorm[i - 1];
         const simMerge = merged === c ? 1 : charSimilarity(merged, c);
@@ -480,7 +461,6 @@ function alignLocalSlice(
         }
       }
 
-      // 1:2 split (e.g. "pytorch" -> "pie" + "torch" or "dont" -> "do" + "not")
       if (j >= 2 && nearDiag) {
         const joined = revNorm[j - 2] + revNorm[j - 1];
         const simSplit = joined === r ? 1 : charSimilarity(r, joined);
@@ -498,7 +478,6 @@ function alignLocalSlice(
     }
   }
 
-  // Backtrack alignment operations
   type Step =
     | { type: '1:1'; r: number; c: number }
     | { type: '2:1'; r1: number; r2: number; c: number }
@@ -620,14 +599,6 @@ function alignLocalSlice(
   return { words: out, repairedCount, exactCount };
 }
 
-/**
- * Anchor-guided sequence alignment mapping an arbitrarily long reviewed word stream
- * (even 20,000+ words) onto exact raw millisecond word timings in < 30ms.
- *
- * 1. Finds reliable monotonic anchor pairs using rare/n-gram exact token matches.
- * 2. Runs exact Wagner-Fischer DP with 2:1 merges & 1:2 splits between anchors.
- * 3. Guarantees strict monotonic millisecond timestamps on every output token.
- */
 export function alignReviewedWordsToRawTiming(
   rawWords: TimedWordMs[],
   reviewedTokens: string[],
@@ -646,7 +617,6 @@ export function alignReviewedWordsToRawTiming(
     return { words: synthetic.words, repairedWords: 0, exactWords: reviewedTokens.length, verbatimScore: 100 };
   }
 
-  // Direct fast-path when small enough for exact full DP
   if (rawWords.length <= 220 && reviewedTokens.length <= 220) {
     const res = alignLocalSlice(
       rawWords,
@@ -664,7 +634,6 @@ export function alignReviewedWordsToRawTiming(
     };
   }
 
-  // Build bigram anchor index for O(N) global alignment on long transcripts
   const rawNorm = rawWords.map((w) => w.clean || normalizeAlignToken(w.word));
   const revNorm = reviewedTokens.map((t) => normalizeAlignToken(t));
 
@@ -676,7 +645,6 @@ export function alignReviewedWordsToRawTiming(
     else bigramPositions.set(key, [i]);
   }
 
-  // Greedily pick monotonic anchors spaced roughly every 45–120 tokens
   const anchors: Array<{ rawIdx: number; revIdx: number }> = [{ rawIdx: 0, revIdx: 0 }];
   let lastRaw = 0;
   let lastRev = 0;
@@ -689,7 +657,6 @@ export function alignReviewedWordsToRawTiming(
     if (!candidates || candidates.length === 0) continue;
 
     const expectedRaw = lastRaw + Math.round((j - lastRev) * ratio);
-    // Binary search nearest candidate to expectedRaw (handles even repetitive bigrams in O(log k))
     let lo = 0;
     let hi = candidates.length - 1;
     while (lo < hi) {
@@ -795,11 +762,6 @@ export interface DraftReviewedIdea {
   sentenceIndices?: number[];
 }
 
-/**
- * Takes AI-reviewed sentences + ideas and produces the complete millisecond-aligned
- * `ReviewedTranscriptSnapshot` components (sentences, paragraphs, ideas, speakers,
- * speakerTurns, and quality metrics) enforcing Flaptap's Playback Boundary Law.
- */
 export function assembleAlignedReviewedViews(params: {
   rawWords: TimedWordMs[];
   draftSentences: DraftReviewedSentence[];
@@ -826,12 +788,10 @@ export function assembleAlignedReviewedViews(params: {
     }))
     .filter((s) => s.text.length > 0);
 
-  // Flatten tokens across all reviewed sentences and align ONCE against full raw word stream
   const sentenceTokens = cleanDrafts.map((s) => tokenizeDisplayWords(s.text));
   const flatTokens = sentenceTokens.flat();
   const aligned = alignReviewedWordsToRawTiming(params.rawWords, flatTokens);
 
-  // Normalize speaker roster with deterministic IDs & color indices
   const speakerNameToId = new Map<string, string>();
   const speakerOriginalById = new Map<string, string>();
   const speakerColorById = new Map<string, number>();
@@ -856,7 +816,6 @@ export function assembleAlignedReviewedViews(params: {
     };
   };
 
-  // Slice aligned words back into sentences & compute millisecond boundaries
   const sentences: TranscriptSentence[] = [];
   let cursor = 0;
 
@@ -870,7 +829,6 @@ export function assembleAlignedReviewedViews(params: {
     const startMs = words.length > 0 ? words[0].startMs : sentences[sentences.length - 1]?.endMs || 0;
     const rawEndMs = words.length > 0 ? words[words.length - 1].endMs : startMs + 350;
 
-    // Reconstruct rawText span from aligned words for transparent diffing
     const rawWordsForSentence = words
       .map((w) => (w.repaired ? w.rawWord || '' : w.word))
       .filter(Boolean)
@@ -905,8 +863,7 @@ export function assembleAlignedReviewedViews(params: {
     });
   }
 
-  // Apply Flaptap Playback Boundary Law: natural acoustic release tail (up to +320ms),
-  // strictly bounded >= 50ms before the next sentence's onset!
+  // Playback Boundary Law: natural acoustic release tail, >= 50ms before next onset
   for (let i = 0; i < sentences.length; i++) {
     const curr = sentences[i];
     const next = sentences[i + 1];
@@ -925,13 +882,8 @@ export function assembleAlignedReviewedViews(params: {
     curr.endSec = roundMs(curr.endMs / 1000);
   }
 
-  // Build cohesive Paragraphs (use LLM paragraphIndex if sensible, else group deterministically)
   const paragraphs = buildParagraphsFromSentences(sentences);
-
-  // Build Ideas / Chapters (normalize LLM ideas or create clean thematic sections)
   const ideas = buildIdeasFromSentences(sentences, params.draftIdeas);
-
-  // Build Speaker Turns & Speaker Roster Stats
   const { speakers, speakerTurns } = buildSpeakerViews(sentences, speakerOriginalById, speakerColorById);
 
   const repairedSentences = sentences.filter((s) => s.repaired).length;
@@ -1082,11 +1034,9 @@ function buildIdeasFromSentences(
     });
   }
 
-  // Attach any uncovered sentences so 100% of the transcript is represented in Ideas view
   const uncovered = sentences.filter((s) => !covered.has(s.index));
   if (uncovered.length > 0) {
     if (ideas.length === 0) {
-      // Auto-partition into clean ~8-sentence idea blocks
       const blockSize = Math.max(5, Math.min(12, Math.ceil(uncovered.length / Math.max(1, Math.round(uncovered.length / 8)))));
       for (let i = 0; i < uncovered.length; i += blockSize) {
         const group = uncovered.slice(i, i + blockSize);
@@ -1107,7 +1057,6 @@ function buildIdeasFromSentences(
         });
       }
     } else {
-      // Assign each uncovered sentence to the nearest chronological idea
       for (const s of uncovered) {
         let bestIdea = ideas[ideas.length - 1];
         for (const idea of ideas) {
