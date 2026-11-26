@@ -145,4 +145,11 @@ export class AiProvidersRepository {
       .run(cleanId, userId);
     return Number(res.changes) > 0;
   }
+
+  deleteAllUserKeys(userId: string): number {
+    const res = this.sqlite.db
+      .prepare('DELETE FROM user_ai_keys WHERE user_id = ?')
+      .run(userId);
+    return Number(res.changes) || 0;
+  }
 }

@@ -123,6 +123,143 @@ html.ft-confirm-open body {
   display: none;
 }
 
+.ft-confirm-card.is-rich {
+  width: min(100%, 440px);
+}
+
+.ft-confirm-impact {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.ft-confirm-impact[hidden] {
+  display: none;
+}
+
+.ft-confirm-impact-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--ap-fill-subtle, rgba(118, 118, 128, 0.09));
+  border: 1px solid var(--ap-border, rgba(0, 0, 0, 0.08));
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--ap-text-secondary, #6e6e73);
+}
+
+.ft-confirm-impact-pill strong {
+  color: var(--ap-text-primary, #1d1d1f);
+  font-weight: 700;
+}
+
+.ft-confirm-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  text-align: start;
+}
+
+.ft-confirm-options[hidden] {
+  display: none;
+}
+
+.ft-confirm-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px 11px;
+  border-radius: 12px;
+  background: var(--ap-fill-subtle, rgba(118, 118, 128, 0.08));
+  border: 1px solid var(--ap-border, rgba(0, 0, 0, 0.08));
+  cursor: pointer;
+}
+
+.ft-confirm-option input[type='checkbox'] {
+  margin-top: 2px;
+  width: 15px;
+  height: 15px;
+  accent-color: var(--ap-red-solid, #ff3b30);
+  flex-shrink: 0;
+}
+
+.ft-confirm-option span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ft-confirm-option strong {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ap-text-primary, #1d1d1f);
+}
+
+.ft-confirm-option small {
+  font-size: 0.73rem;
+  line-height: 1.35;
+  color: var(--ap-text-secondary, #6e6e73);
+}
+
+.ft-confirm-typecheck {
+  margin-top: 14px;
+  text-align: start;
+}
+
+.ft-confirm-typecheck[hidden] {
+  display: none;
+}
+
+.ft-confirm-typecheck-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ap-text-secondary, #6e6e73);
+}
+
+.ft-confirm-typecheck-label code {
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: var(--ap-red-wash, rgba(255, 59, 48, 0.12));
+  color: var(--ap-red, #d70015);
+  font-family: var(--ap-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-weight: 700;
+}
+
+.ft-confirm-phrase-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--ap-border-strong, rgba(0, 0, 0, 0.14));
+  background: var(--ap-surface, #ffffff);
+  color: var(--ap-text-primary, #1d1d1f);
+  font-family: var(--ap-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.84rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  box-sizing: border-box;
+}
+
+.ft-confirm-phrase-input:focus {
+  outline: 2px solid var(--ap-red-solid, #ff3b30);
+  outline-offset: 1px;
+}
+
+.ft-confirm-accept:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  box-shadow: none;
+  filter: none;
+}
+
 .ft-confirm-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

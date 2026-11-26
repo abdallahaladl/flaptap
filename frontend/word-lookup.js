@@ -270,10 +270,12 @@
     const classes = ['selection-menu-btn'];
     if (isSecondary) classes.push('is-secondary');
     if (isIconOnly) classes.push('is-icon-only');
+    if (action.emphasis === 'accent') classes.push('is-accent');
+    else if (action.emphasis === 'subtle') classes.push('is-subtle');
     const actionId = escapeText(action.id || index);
     const label = escapeText(action.label);
     const title = escapeText(action.title || action.label);
-    const iconHtml = action.icon ? icon(action.icon, { size: isIconOnly ? 15 : 14 }) : '';
+    const iconHtml = action.icon ? icon(action.icon, { size: isIconOnly ? 15 : 13.5 }) : '';
     const labelHtml = isIconOnly ? '' : `<span>${label}</span>`;
     return `
       <button type="button" class="${classes.join(' ')}" data-selection-action="${actionId}" aria-label="${label}" title="${title}">
@@ -289,12 +291,15 @@
     bindSelectionMenuDismiss();
 
     const textEl = menu.querySelector('#selection-menu-text');
-    textEl.textContent = text.length > 26 ? `${text.slice(0, 25)}…` : text;
-    textEl.title = text;
-
     const indexed = list.map((action, index) => ({ action, index }));
     const primary = indexed.filter((entry) => entry.action.variant !== 'secondary');
     const secondary = indexed.filter((entry) => entry.action.variant === 'secondary');
+
+    const hasPrimaryMulti = primary.length > 1;
+    menu.classList.toggle('has-multi-actions', hasPrimaryMulti);
+    const previewLimit = hasPrimaryMulti ? 18 : 25;
+    textEl.textContent = text.length > previewLimit ? `${text.slice(0, previewLimit - 1)}…` : text;
+    textEl.title = text;
 
     const secondaryHtml = secondary.length
       ? `<span class="selection-menu-tools">${secondary
@@ -308,7 +313,9 @@
       ? '<span class="selection-menu-divider" aria-hidden="true"></span>'
       : '';
 
-    menu.querySelector('#selection-menu-actions').innerHTML = `${secondaryHtml}${dividerHtml}${primaryHtml}`;
+    menu.querySelector('#selection-menu-actions').innerHTML = hasPrimaryMulti
+      ? `${primaryHtml}${secondaryHtml ? `${dividerHtml}${secondaryHtml}` : ''}`
+      : `${secondaryHtml}${dividerHtml}${primaryHtml}`;
 
     selectionMenuState = { text, range, sourceEl: options?.sourceEl || null, actions: list };
     positionSelectionMenu(menu, range);
@@ -899,6 +906,11 @@
     });
   }
 
+  function clearCache() {
+    lookupCache.clear();
+    close();
+  }
+
   global.FlaptapWordLookup = {
     tokenizeClickableWords,
     speakText,
@@ -908,6 +920,7 @@
     normalizeSelectionText,
     open,
     close,
+    clearCache,
     syncSavedButtonDom,
     getActiveLookup: () => activeLookup,
     normalizeTermKey,

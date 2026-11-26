@@ -27,6 +27,16 @@ interface CachedKeyModels {
   fetchedAt: number;
 }
 
+const sharedModelsCache = new Map<string, CachedKeyModels>();
+
+export function clearModelsCacheForFingerprints(fingerprints: string[]): number {
+  let cleared = 0;
+  for (const fp of fingerprints) {
+    if (fp && sharedModelsCache.delete(fp)) cleared++;
+  }
+  return cleared;
+}
+
 export interface AddUserApiKeyDto {
   providerId: string;
   label?: string;
@@ -39,7 +49,7 @@ export interface AddUserApiKeyDto {
 export class AiProvidersService {
   private readonly logger = new Logger(AiProvidersService.name);
   private readonly adapters = new Map<ProviderProtocol, IProviderProtocolAdapter>();
-  private readonly modelsCache = new Map<string, CachedKeyModels>();
+  private readonly modelsCache = sharedModelsCache;
 
   constructor(
     private readonly keyDiscovery: KeyDiscoveryService,
@@ -285,6 +295,16 @@ export class AiProvidersService {
     return this.repository.deleteUserKey(userId, keyId);
   }
 
+  clearUserModelsCache(userId: string): number {
+    const keys = this.repository.listUserKeys(userId);
+    return clearModelsCacheForFingerprints(keys.map((k) => k.fingerprint));
+  }
+
+  deleteAllUserKeys(userId: string): number {
+    this.clearUserModelsCache(userId);
+    return this.repository.deleteAllUserKeys(userId);
+  }
+
   async resolveExecutionSelection(params: {
     userId?: string | null;
     keyId?: string;
@@ -521,5 +541,39 @@ export class AiProvidersService {
 
       throw primaryError || firstErr;
     }
+  }
+
+  /**
+   * Resolves a configured Cloud Speech-to-Text key (`groq` free-tier first, then `openai`)
+   * so audio/video transcription can run with zero local CPU usage when available.
+   */
+  resolvePreferredCloudSttKey(userId?: string | null): {
+    provider: 'groq' | 'openai';
+    apiKey: string;
+    baseUrl: string;
+    model: string;
+  } | null {
+    const keys = this.keyDiscovery.discoverAllKeys(userId);
+    const groqKey = keys.find((k) => k.providerId === 'groq' && k.apiKey);
+    if (groqKey) {
+      return {
+        provider: 'groq',
+        apiKey: groqKey.apiKey,
+        baseUrl: groqKey.baseUrl || 'https://api.groq.com/openai/v1',
+        model: 'whisper-large-v3-turbo',
+      };
+    }
+
+    const openaiKey = keys.find((k) => k.providerId === 'openai' && k.apiKey);
+    if (openaiKey) {
+      return {
+        provider: 'openai',
+        apiKey: openaiKey.apiKey,
+        baseUrl: openaiKey.baseUrl || 'https://api.openai.com/v1',
+        model: 'whisper-1',
+      };
+    }
+
+    return null;
   }
 }

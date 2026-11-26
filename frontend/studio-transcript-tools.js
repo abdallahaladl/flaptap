@@ -99,19 +99,26 @@
     return found?.name || fallback || speakerId;
   }
 
+  function decodeMinimalEntities(str) {
+    if (!str || !str.includes('&')) return str;
+    return str
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/&gt;/g, '>')
+      .replace(/&lt;/g, '<')
+      .replace(/&amp;/g, '&');
+  }
+
   /**
    * Decorates verbatim HTML (preserving `<mark class="hl-...">` AND exact `textContent`)
    * with millisecond word spans (`.clickable-word.studio-word`), repair underlines,
-   * and live search highlight classes.
+   * and live search highlight classes using a zero-DOM string pass.
    */
   function decorateTimedWordsHtml(verbatimHtml, sentence, opts = {}) {
     const words = Array.isArray(sentence?.words) ? sentence.words : [];
     const sentIndex = Number(sentence?.index) || 1;
     const showRepairs = opts.showRepairs !== false;
     const searchQuery = String(opts.searchQuery || '').trim().toLowerCase();
-
-    const container = document.createElement('div');
-    container.innerHTML = verbatimHtml || escapeHtml(sentence?.text || '');
 
     let cursor = 0;
     const normWord = (s) =>
@@ -164,49 +171,51 @@
       return null;
     }
 
-    function walk(node) {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.nodeValue || '';
-        if (!text.trim()) return;
-        const frag = document.createDocumentFragment();
-        const parts = splitTextPreservingLexicalTokens(text);
-        for (const part of parts) {
-          if (!part) continue;
-          if (/^[\p{L}\p{N}]/u.test(part)) {
-            const matched = matchTimedWord(part);
-            const span = document.createElement('span');
-            const rawOrig = matched?.rawWord || matched?.repairedFrom || '';
-            const isRepaired = Boolean(showRepairs && (matched?.repaired || rawOrig));
-            const isSearchHit = Boolean(searchQuery && part.toLowerCase().includes(searchQuery));
-            const classes = ['clickable-word', 'studio-word'];
-            if (matched) classes.push('has-word-timing');
-            if (isRepaired) classes.push('is-repaired');
-            if (isSearchHit) classes.push('is-search-hit');
-            span.className = classes.join(' ');
-            span.dataset.word = part;
-            span.dataset.sentIndex = String(sentIndex);
-            if (matched) {
-              span.dataset.wordI = String(matched.i);
-              span.dataset.startMs = String(Math.round(matched.startMs));
-              span.dataset.endMs = String(Math.round(matched.endMs));
-              if (rawOrig) {
-                span.dataset.repairedFrom = rawOrig;
-              }
+    const sourceHtml = verbatimHtml || escapeHtml(sentence?.text || '');
+    if (!sourceHtml) return '';
+
+    const segments = sourceHtml.split(/(<[^>]+>)/g);
+    let out = '';
+    for (let sIdx = 0; sIdx < segments.length; sIdx++) {
+      const seg = segments[sIdx];
+      if (!seg) continue;
+      if (seg.charCodeAt(0) === 60 && seg.charCodeAt(seg.length - 1) === 62) {
+        out += seg;
+        continue;
+      }
+      const text = decodeMinimalEntities(seg);
+      if (!text.trim()) {
+        out += escapeHtml(text);
+        continue;
+      }
+      const parts = splitTextPreservingLexicalTokens(text);
+      for (let pIdx = 0; pIdx < parts.length; pIdx++) {
+        const part = parts[pIdx];
+        if (!part) continue;
+        if (/^[\p{L}\p{N}]/u.test(part)) {
+          const matched = matchTimedWord(part);
+          const rawOrig = matched?.rawWord || matched?.repairedFrom || '';
+          const isRepaired = Boolean(showRepairs && (matched?.repaired || rawOrig));
+          const isSearchHit = Boolean(searchQuery && part.toLowerCase().includes(searchQuery));
+          let cls = 'clickable-word studio-word';
+          if (matched) cls += ' has-word-timing';
+          if (isRepaired) cls += ' is-repaired';
+          if (isSearchHit) cls += ' is-search-hit';
+          const escPart = escapeHtml(part);
+          let attrs = `class="${cls}" data-word="${escPart}" data-sent-index="${sentIndex}"`;
+          if (matched) {
+            attrs += ` data-word-i="${matched.i}" data-start-ms="${Math.round(matched.startMs)}" data-end-ms="${Math.round(matched.endMs)}"`;
+            if (rawOrig) {
+              attrs += ` data-repaired-from="${escapeHtml(rawOrig)}"`;
             }
-            span.textContent = part;
-            frag.appendChild(span);
-          } else {
-            frag.appendChild(document.createTextNode(part));
           }
+          out += `<span ${attrs}>${escPart}</span>`;
+        } else {
+          out += escapeHtml(part);
         }
-        node.parentNode.replaceChild(frag, node);
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        Array.from(node.childNodes).forEach(walk);
       }
     }
-
-    Array.from(container.childNodes).forEach(walk);
-    return container.innerHTML;
+    return out;
   }
 
   /**
@@ -349,8 +358,9 @@
           })
           .join('');
 
+        const ideaRangeKey = `${(idea.startMs / 1000).toFixed(3)}-${(idea.endMs / 1000).toFixed(3)}`;
         return `
-          <article class="studio-idea-card" data-idea-index="${idea.index}">
+          <article class="studio-idea-card" data-idea-index="${idea.index}" data-idea-sent-range="${ideaRangeKey}">
             <div class="studio-idea-head">
               <div class="studio-idea-title-group">
                 <span class="studio-idea-num ltr-num">Idea ${idea.index}</span>
@@ -358,7 +368,7 @@
                 <span class="sent-time-badge ltr-num">${escapeHtml(formatRangeMs(idea.startMs, idea.endMs))}</span>
               </div>
               <div class="studio-section-actions">
-                <button type="button" class="btn-secondary btn-xs" data-play-range-start="${(idea.startMs / 1000).toFixed(3)}" data-play-range-end="${(idea.endMs / 1000).toFixed(3)}" data-play-range-label="Idea ${idea.index}">Play Idea</button>
+                <button type="button" class="btn-secondary btn-xs" data-play-range-start="${(idea.startMs / 1000).toFixed(3)}" data-play-range-end="${(idea.endMs / 1000).toFixed(3)}" data-play-range-key="${ideaRangeKey}" data-idle-label="Play Idea" data-play-range-label="Idea ${idea.index}">Play Idea</button>
                 ${renderCopyBtn(copyPayload, 'sent-action-btn sent-icon-btn')}
               </div>
             </div>
@@ -417,8 +427,10 @@
 
         const copyPayload = `[${formatClockMs(turn.startMs)}] ${name}: ${turn.text || sents.map((s) => s.text).join(' ')}`;
 
+        const turnRangeKey = `${(turn.startMs / 1000).toFixed(3)}-${(turn.endMs / 1000).toFixed(3)}`;
+        const turnSentsAttr = Array.isArray(turn.sentenceIndices) ? turn.sentenceIndices.join(',') : '';
         return `
-          <article class="studio-turn-card" style="--spk-color:${color}" data-turn-index="${turn.index}">
+          <article class="studio-turn-card" style="--spk-color:${color}" data-turn-index="${turn.index}" data-turn-sents="${escapeHtml(turnSentsAttr)}">
             <div class="studio-turn-head">
               <div class="studio-turn-meta">
                 <span class="studio-spk-chip" style="--spk-color:${color}">${escapeHtml(name)}</span>
@@ -426,7 +438,7 @@
                 ${overlapBadge}
               </div>
               <div class="studio-section-actions">
-                <button type="button" class="btn-secondary btn-xs" data-play-range-start="${(turn.startMs / 1000).toFixed(3)}" data-play-range-end="${(turn.endMs / 1000).toFixed(3)}" data-play-range-label="${escapeHtml(name)}">Play Turn</button>
+                <button type="button" class="btn-secondary btn-xs" data-play-range-start="${(turn.startMs / 1000).toFixed(3)}" data-play-range-end="${(turn.endMs / 1000).toFixed(3)}" data-play-range-key="${turnRangeKey}" data-idle-label="Play Turn" data-play-range-label="${escapeHtml(name)}">Play Turn</button>
                 ${renderCopyBtn(copyPayload, 'sent-action-btn sent-icon-btn')}
               </div>
             </div>
@@ -591,6 +603,13 @@
       `;
     }
 
+    if (kind === 'interrupted') {
+      return `
+        <div class="info-pop-kicker">Interrupted / Cut-Off Utterance</div>
+        <p class="info-pop-reason">This speaker was interrupted mid-sentence in real conversation. It is kept verbatim as a cut-off turn (—) rather than pretending it is a complete grammatical sentence.</p>
+      `;
+    }
+
     const repairedWords = (sent?.words || []).filter((w) => w.repaired || w.rawWord);
     if (repairedWords.length > 0) {
       return `
@@ -722,8 +741,14 @@
         .map((t) => `[${formatClockMs(t.startMs)}] ${speakerName(item, t.speakerId, t.speaker || t.speakerName)}: ${t.text}`)
         .join('\n\n');
     }
-    if (mode === 'read' && Array.isArray(item.chunks) && item.chunks.length) {
-      return item.chunks.map((c) => `[${c.timeRange || ''}] ${c.text}`).join('\n\n');
+    if (mode === 'read') {
+      const flowParas = global.FlaptapStudioReaderFlow?.getParagraphs?.(item, { source: 'reviewed' });
+      if (Array.isArray(flowParas) && flowParas.length) {
+        return flowParas.map((p) => `[${p.timeRange || ''}] ${p.text}`).join('\n\n');
+      }
+      if (Array.isArray(item.chunks) && item.chunks.length) {
+        return item.chunks.map((c) => `[${c.timeRange || ''}] ${c.text}`).join('\n\n');
+      }
     }
     return (item.sentences || [])
       .map((s) => {

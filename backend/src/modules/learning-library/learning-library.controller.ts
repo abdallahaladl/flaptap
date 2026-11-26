@@ -16,6 +16,7 @@ import {
 import { Request, Response } from 'express';
 import { requireAuthenticatedUser } from '../auth/auth.request';
 import { AuthService } from '../auth/auth.service';
+import { DataLifecycleService } from '../data-lifecycle/data-lifecycle.service';
 import { LearningLibraryTranslationService } from './learning-library-translation.service';
 import { LearningLibraryService } from './learning-library.service';
 import {
@@ -48,6 +49,7 @@ export class LearningLibraryController {
     private readonly learningLibrary: LearningLibraryService,
     private readonly translationService: LearningLibraryTranslationService,
     private readonly authService: AuthService,
+    private readonly dataLifecycle: DataLifecycleService,
   ) {}
 
   /**
@@ -304,22 +306,49 @@ export class LearningLibraryController {
     };
   }
 
+  @Post('items/bulk-delete')
+  bulkDeleteItems(@Body() body: { ids?: string[] } | undefined, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return {
+      success: true,
+      ...this.dataLifecycle.purgeLearningLibraryBulk(identity.userId, body?.ids || []),
+    };
+  }
+
+  @Post('reset-progress')
+  resetProgress(
+    @Body()
+    body: { domainId?: string; clearNotes?: boolean; clearFavorites?: boolean } | undefined,
+    @Req() req: Request,
+  ) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return {
+      success: true,
+      ...this.dataLifecycle.resetLearningLibraryProgress(identity.userId, body?.domainId, {
+        clearNotes: Boolean(body?.clearNotes),
+        clearFavorites: Boolean(body?.clearFavorites),
+      }),
+    };
+  }
+
   @Delete('items/:id')
   deleteItem(@Param('id') id: string, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    const deleted = this.learningLibrary.deleteItem(identity.userId, id);
+    const res = this.dataLifecycle.purgeLearningLibraryItem(identity.userId, id);
     return {
-      success: deleted,
+      success: res.deleted,
+      purged: res.purged,
     };
   }
 
   @Post('clear')
   clearDomain(@Body() body: { domainId?: string } | undefined, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    const removedCount = this.learningLibrary.clearDomain(identity.userId, body?.domainId);
+    const res = this.dataLifecycle.purgeLearningLibraryDomain(identity.userId, body?.domainId);
     return {
       success: true,
-      removedCount,
+      removedCount: res.removedCount,
+      purged: res.purged,
     };
   }
 }

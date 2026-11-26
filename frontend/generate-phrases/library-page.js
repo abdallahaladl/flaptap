@@ -620,6 +620,7 @@
       if (items.length === 0) {
         container.classList.remove('ft-items-entering');
         container.innerHTML = '';
+        syncBulkBar();
         renderPagination();
         syncTranslateMissingButton();
         return;
@@ -642,8 +643,37 @@
       }
 
       bindSelectionLookup(container);
+      syncBulkBar();
       renderPagination();
       syncTranslateMissingButton();
+    }
+
+    function syncBulkBar() {
+      const bar = el('ll-browse-bulk-bar');
+      const selectAll = el('ll-browse-select-all');
+      const countEl = el('ll-browse-selected-count');
+      const delBtn = el('ll-browse-bulk-delete-btn');
+      if (!bar) return;
+
+      const items = store.state.items || [];
+      const signedIn = Boolean(store.currentUser());
+      if (!signedIn || items.length === 0) {
+        bar.hidden = true;
+        return;
+      }
+
+      bar.hidden = false;
+      const selected = store.state.selectedIds || new Set();
+      const visibleIds = items.map((it) => it.id);
+      const selectedVisibleCount = visibleIds.filter((id) => selected.has(id)).length;
+      const totalSelectedCount = selected.size;
+
+      if (selectAll) {
+        selectAll.checked = visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
+        selectAll.indeterminate = selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
+      }
+      if (countEl) countEl.textContent = `(${totalSelectedCount} selected)`;
+      if (delBtn) delBtn.disabled = totalSelectedCount === 0;
     }
 
     function renderPagination() {
@@ -955,7 +985,11 @@
 
       const snapshot = {
         items: [...store.state.items],
+        recentItems: [...(store.state.recentItems || [])],
         stats: { ...store.state.stats },
+        categoryCounts: { ...(store.state.categoryCounts || {}) },
+        registerCounts: { ...(store.state.registerCounts || {}) },
+        cefrCounts: { ...(store.state.cefrCounts || {}) },
         filteredCount: store.state.filteredCount,
         filteredCompletedCount: store.state.filteredCompletedCount,
         page: store.state.page,
@@ -964,13 +998,17 @@
 
       await global.FlaptapConfirm.confirmAndUndo({
         title: 'Remove expression?',
-        message: 'This expression will be removed from Generate Phrases.',
+        message: 'This expression and its empty batch container will be permanently deleted.',
         detail: exprLabel,
         confirmLabel: 'Remove',
         undoMessage: `Removed "${exprLabel}"`,
         restoredMessage: `Restored "${exprLabel}"`,
         onApply: () => {
           store.state.items = store.state.items.filter((e) => e.id !== id);
+          store.state.recentItems = (store.state.recentItems || []).filter((e) => e.id !== id);
+          store.state.justGeneratedIds?.delete(id);
+          store.state.revealedCardIds?.delete(id);
+          store.state.selectedIds?.delete(id);
           store.state.stats.totalItems = Math.max(0, (Number(store.state.stats.totalItems) || 0) - 1);
           if (targetItem?.isCompleted) {
             store.state.stats.completedCount = Math.max(0, (Number(store.state.stats.completedCount) || 0) - 1);
@@ -986,7 +1024,11 @@
         },
         onUndo: () => {
           store.state.items = snapshot.items;
+          store.state.recentItems = snapshot.recentItems;
           store.state.stats = snapshot.stats;
+          store.state.categoryCounts = snapshot.categoryCounts;
+          store.state.registerCounts = snapshot.registerCounts;
+          store.state.cefrCounts = snapshot.cefrCounts;
           store.state.filteredCount = snapshot.filteredCount;
           store.state.filteredCompletedCount = snapshot.filteredCompletedCount;
           store.state.page = snapshot.page;
@@ -1017,6 +1059,9 @@
         items: [...store.state.items],
         recentItems: [...store.state.recentItems],
         stats: { ...store.state.stats },
+        categoryCounts: { ...(store.state.categoryCounts || {}) },
+        registerCounts: { ...(store.state.registerCounts || {}) },
+        cefrCounts: { ...(store.state.cefrCounts || {}) },
         filteredCount: store.state.filteredCount,
         filteredCompletedCount: store.state.filteredCompletedCount,
         page: store.state.page,
@@ -1025,7 +1070,7 @@
 
       await global.FlaptapConfirm.confirmAndUndo({
         title: `Clear ${domainTitle}?`,
-        message: `All saved expressions in "${domainTitle}" will be removed.`,
+        message: `All saved expressions and batches in "${domainTitle}" will be removed.`,
         detail: `${Number(snapshot.stats?.totalItems || snapshot.items.length)} saved item(s)`,
         confirmLabel: 'Clear All',
         undoMessage: `Cleared ${domainTitle} expressions`,
@@ -1039,6 +1084,9 @@
           store.state.items = snapshot.items;
           store.state.recentItems = snapshot.recentItems;
           store.state.stats = snapshot.stats;
+          store.state.categoryCounts = snapshot.categoryCounts;
+          store.state.registerCounts = snapshot.registerCounts;
+          store.state.cefrCounts = snapshot.cefrCounts;
           store.state.filteredCount = snapshot.filteredCount;
           store.state.filteredCompletedCount = snapshot.filteredCompletedCount;
           store.state.page = snapshot.page;
@@ -1051,6 +1099,103 @@
           if (!keepalive) await loadLibraryItems({ showSkeleton: false, animate: false });
         },
       });
+    }
+
+    async function handleBulkDelete() {
+      const ids = Array.from(store.state.selectedIds || []);
+      if (ids.length === 0) return;
+
+      await global.FlaptapConfirm?.flushPending?.({ keepalive: false });
+      const confirmFn = global.FlaptapConfirm?.confirmAction || global.FlaptapConfirm?.askAdvanced;
+      const decision = confirmFn
+        ? await confirmFn({
+            title: `Delete ${ids.length} selected expression${ids.length === 1 ? '' : 's'}?`,
+            message: 'Selected expressions and any empty generation batches will be permanently deleted.',
+            impactItems: [{ value: ids.length, label: 'Selected expressions' }],
+            confirmLabel: `Delete ${ids.length}`,
+            cancelLabel: 'Cancel',
+            tone: 'danger',
+          })
+        : { confirmed: true };
+      if (!decision?.confirmed) return;
+
+      try {
+        await api.bulkDeleteItems(ids);
+        ids.forEach((id) => {
+          store.state.selectedIds?.delete(id);
+          store.state.justGeneratedIds?.delete(id);
+          store.state.revealedCardIds?.delete(id);
+          if (store.state.activeStudyItemId === id) nav.closeStudyDrawer();
+        });
+        await loadLibraryItems({ showSkeleton: false, animate: false });
+        showToast(`Deleted ${ids.length} expression${ids.length === 1 ? '' : 's'}`);
+      } catch (err) {
+        showToast(err?.message || 'Bulk delete failed.');
+      }
+    }
+
+    async function handleResetDomainProgress() {
+      const domain = store.getActiveDomain();
+      const domainId = store.state.activeDomainId;
+      const domainTitle = domain?.title || 'this domain';
+      const total = Number(store.state.stats?.totalItems || store.state.items.length || 0);
+
+      await global.FlaptapConfirm?.flushPending?.({ keepalive: false });
+      const confirmFn = global.FlaptapConfirm?.confirmAction || global.FlaptapConfirm?.askAdvanced;
+      const decision = confirmFn
+        ? await confirmFn({
+            title: `Reset progress in ${domainTitle}?`,
+            message:
+              'Resets mastered/completed status and review counts back to new while keeping your generated expressions.',
+            impactItems: [{ value: total, label: 'Expressions' }],
+            checkboxes: [
+              { id: 'clearNotes', label: 'Also clear personal study notes', checked: false },
+              { id: 'clearFavorites', label: 'Also clear favorite flags', checked: false },
+            ],
+            confirmLabel: 'Reset Progress',
+            cancelLabel: 'Cancel',
+            tone: 'primary',
+          })
+        : { confirmed: true, options: {} };
+      if (!decision?.confirmed) return;
+
+      try {
+        const res = await api.resetProgress(domainId, {
+          clearNotes: Boolean(decision.options?.clearNotes),
+          clearFavorites: Boolean(decision.options?.clearFavorites),
+        });
+        await loadLibraryItems({ showSkeleton: false, animate: false });
+        deps.refreshDrawer?.();
+        showToast(`Reset progress for ${Number(res?.resetCount || 0)} expression(s)`);
+      } catch (err) {
+        showToast(err?.message || 'Could not reset domain progress.');
+      }
+    }
+
+    async function handleClearAllDomains() {
+      await global.FlaptapConfirm?.flushPending?.({ keepalive: false });
+      const confirmFn = global.FlaptapConfirm?.confirmAction || global.FlaptapConfirm?.askAdvanced;
+      const decision = confirmFn
+        ? await confirmFn({
+            title: 'Clear entire Phrase Builder library?',
+            message:
+              'Permanently deletes every generated expression, note, and batch across ALL Phrase Builder domains.',
+            confirmLabel: 'Clear Everything',
+            cancelLabel: 'Cancel',
+            tone: 'danger',
+          })
+        : { confirmed: true };
+      if (!decision?.confirmed) return;
+
+      try {
+        await api.clearDomain(undefined);
+        store.resetUserData();
+        nav.closeStudyDrawer();
+        await loadLibraryItems({ showSkeleton: false, animate: false });
+        showToast('Cleared all Phrase Builder domains');
+      } catch (err) {
+        showToast(err?.message || 'Failed to clear Phrase Builder library.');
+      }
     }
 
     async function handleExportJson() {
@@ -1533,13 +1678,49 @@
         closeMoreMenu();
         handleExportJson();
       });
+      el('ll-reset-domain-progress-btn')?.addEventListener('click', () => {
+        closeMoreMenu();
+        handleResetDomainProgress();
+      });
       el('ll-clear-domain-btn')?.addEventListener('click', () => {
         closeMoreMenu();
         handleClearDomain();
       });
+      el('ll-clear-all-domains-btn')?.addEventListener('click', () => {
+        closeMoreMenu();
+        handleClearAllDomains();
+      });
+      el('ll-browse-bulk-delete-btn')?.addEventListener('click', () => {
+        handleBulkDelete();
+      });
+      el('ll-browse-select-all')?.addEventListener('change', (e) => {
+        const checked = Boolean(e.target.checked);
+        const visibleIds = (store.state.items || []).map((it) => it.id);
+        visibleIds.forEach((id) => {
+          if (checked) store.state.selectedIds.add(id);
+          else store.state.selectedIds.delete(id);
+        });
+        root?.querySelectorAll('input[data-ll-select]')?.forEach((cb) => {
+          cb.checked = checked;
+        });
+        syncBulkBar();
+      });
+      root?.addEventListener('change', (e) => {
+        const cb = e.target.closest('input[data-ll-select]');
+        if (!cb) return;
+        const id = cb.getAttribute('data-ll-select');
+        if (!id) return;
+        if (cb.checked) store.state.selectedIds.add(id);
+        else store.state.selectedIds.delete(id);
+        syncBulkBar();
+      });
 
       // Delegated item clicks
       root.addEventListener('click', (e) => {
+        if (e.target.closest('.ft-item-select-label')) {
+          e.stopPropagation();
+          return;
+        }
         handleDelegatedAction(e);
       });
     }

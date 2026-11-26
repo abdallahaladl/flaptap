@@ -216,6 +216,23 @@
       shell.libraryPage?.onLanguagesLoaded?.();
     });
 
+    global.addEventListener('flaptap:data-purged', async (e) => {
+      const detail = e?.detail || {};
+      const features = Array.isArray(detail.features) ? detail.features : [];
+      if (!detail.resetAll && !features.includes('learning_library')) return;
+      store.resetUserData();
+      shell.studyDrawer?.close?.();
+      syncLibraryCountBadge();
+      if (store.currentUser() && store.state.activeView === 'browse') {
+        await shell.libraryPage?.loadLibraryItems({ showSkeleton: false, animate: false });
+      } else if (store.currentUser()) {
+        await loadSnapshotForHeaderAndRecent();
+      } else {
+        shell.generatePage?.renderRecentShelf?.();
+        shell.libraryPage?.renderAll?.();
+      }
+    });
+
     global.addEventListener('flaptap:auth-changed', async (e) => {
       const nextUser = e?.detail?.user || store.currentUser();
       const nextUserId = nextUser?.id || null;

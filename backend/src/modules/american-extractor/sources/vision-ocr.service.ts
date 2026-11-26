@@ -7,6 +7,15 @@ export const MAX_IMAGES_PER_EXTRACTION = 10;
 const OCR_CONCURRENCY = 3;
 const NO_TEXT_SENTINEL = 'NO_READABLE_TEXT';
 
+// Module-level cache shared across NestJS module instances so lifecycle purges clear every entry.
+const sharedVisionOcrCache = new Map<string, string>();
+
+export function clearVisionOcrCache(): number {
+  const count = sharedVisionOcrCache.size;
+  sharedVisionOcrCache.clear();
+  return count;
+}
+
 export interface MultiImageOcrInput {
   buffer: Buffer;
   mimeType?: string;
@@ -46,9 +55,13 @@ const USER_PROMPT = [
 @Injectable()
 export class VisionOcrService {
   private readonly logger = new Logger(VisionOcrService.name);
-  private readonly memoryCache = new Map<string, string>();
+  private readonly memoryCache = sharedVisionOcrCache;
 
   constructor(private readonly aiProviders: AiProvidersService) {}
+
+  clearCache(): number {
+    return clearVisionOcrCache();
+  }
 
   async transcribeImage(params: {
     userId: string;

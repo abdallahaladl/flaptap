@@ -296,6 +296,74 @@ export class SqliteService implements OnModuleDestroy {
         ON user_ai_keys(user_id, created_at DESC);
       CREATE UNIQUE INDEX IF NOT EXISTS idx_user_ai_keys_unique_fp
         ON user_ai_keys(user_id, key_fingerprint);
+
+      CREATE TABLE IF NOT EXISTS think_aloud_sessions (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        mode TEXT NOT NULL,
+        domain TEXT NOT NULL,
+        cefr_level TEXT NOT NULL DEFAULT 'B2',
+        framework_id TEXT NOT NULL DEFAULT '',
+        prompt_title TEXT NOT NULL,
+        prompt_body TEXT NOT NULL,
+        prompt_meta_json TEXT NOT NULL DEFAULT '{}',
+        input_mode TEXT NOT NULL DEFAULT 'mic',
+        rounds_json TEXT NOT NULL DEFAULT '[]',
+        metrics_json TEXT NOT NULL DEFAULT '{}',
+        coaching_json TEXT NOT NULL DEFAULT '{}',
+        directness_score INTEGER NOT NULL DEFAULT 0,
+        flow_score INTEGER NOT NULL DEFAULT 0,
+        structure_score INTEGER NOT NULL DEFAULT 0,
+        naturalness_score INTEGER NOT NULL DEFAULT 0,
+        overall_score INTEGER NOT NULL DEFAULT 0,
+        avg_wpm REAL NOT NULL DEFAULT 0,
+        total_duration_sec INTEGER NOT NULL DEFAULT 0,
+        media_id TEXT NOT NULL DEFAULT '',
+        model_used TEXT NOT NULL DEFAULT '',
+        native_language TEXT NOT NULL DEFAULT 'ar',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ta_sessions_user_created
+        ON think_aloud_sessions(user_id, created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_ta_sessions_user_mode
+        ON think_aloud_sessions(user_id, mode, created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS think_aloud_spine_packs (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title TEXT NOT NULL,
+        domain TEXT NOT NULL,
+        topic TEXT NOT NULL DEFAULT '',
+        starters_json TEXT NOT NULL DEFAULT '[]',
+        engines_json TEXT NOT NULL DEFAULT '[]',
+        tails_json TEXT NOT NULL DEFAULT '[]',
+        chunks_json TEXT NOT NULL DEFAULT '[]',
+        practiced_ids_json TEXT NOT NULL DEFAULT '[]',
+        model_used TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ta_spines_user_created
+        ON think_aloud_spine_packs(user_id, created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS audit_events (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        action TEXT NOT NULL,
+        feature TEXT NOT NULL,
+        scope TEXT NOT NULL,
+        target_id TEXT NOT NULL DEFAULT '',
+        target_label TEXT NOT NULL DEFAULT '',
+        summary TEXT NOT NULL DEFAULT '',
+        purged_json TEXT NOT NULL DEFAULT '{}',
+        created_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_audit_events_user_created
+        ON audit_events(user_id, created_at DESC);
     `);
 
     // Idempotent schema migrations for pre-existing databases

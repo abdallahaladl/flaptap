@@ -283,11 +283,26 @@ export class SourceResolverService {
 
     if (mediaInfo?.source === 'youtube') {
       try {
-        return await this.resolveYouTube(raw, options.userId);
+        return await this.resolveYouTube(raw, options.userId, Boolean(options.force));
       } catch (error: any) {
+        const errResp = error?.getResponse?.();
+        const errCode = errResp && typeof errResp === 'object' ? String(errResp.code || '') : '';
+        const errStatus = Number(error?.getStatus?.() || 0);
+        if (
+          errCode === 'rate_limited' ||
+          errCode === 'live_fetch_disabled' ||
+          errCode === 'video_unavailable' ||
+          errStatus === 503 ||
+          errStatus === 404
+        ) {
+          throw error;
+        }
         this.logger.warn(`YouTube captions unavailable, falling back to speech: ${error?.message}`);
         try {
-          const media = await this.mediaTranscription.transcribeUrl(raw);
+          const media = await this.mediaTranscription.transcribeUrl(raw, {
+            force: Boolean(options.force),
+            allowLocalWhisper: true,
+          });
           return this.fromMediaTranscript(media, raw, 'youtube', 'YouTube', { videoId: ytId }, options.userId, {
             hasAudio: true,
             hasVideo: true,
@@ -311,7 +326,10 @@ export class SourceResolverService {
         if (article.kind === 'text') {
           return this.fromArticle(article, options.userId);
         }
-        const media = await this.mediaTranscription.transcribeUrl(raw);
+        const media = await this.mediaTranscription.transcribeUrl(raw, {
+          force: Boolean(options.force),
+          allowLocalWhisper: true,
+        });
         return this.fromMediaTranscript(
           media,
           raw,
@@ -323,7 +341,10 @@ export class SourceResolverService {
         );
       } catch (articleError: any) {
         try {
-          const media = await this.mediaTranscription.transcribeUrl(raw);
+          const media = await this.mediaTranscription.transcribeUrl(raw, {
+            force: Boolean(options.force),
+            allowLocalWhisper: true,
+          });
           return this.fromMediaTranscript(
             media,
             raw,
@@ -342,7 +363,10 @@ export class SourceResolverService {
     }
 
     try {
-      const media = await this.mediaTranscription.transcribeUrl(raw);
+      const media = await this.mediaTranscription.transcribeUrl(raw, {
+        force: Boolean(options.force),
+        allowLocalWhisper: true,
+      });
       return this.fromMediaTranscript(
         media,
         raw,
@@ -484,6 +508,7 @@ export class SourceResolverService {
       const media = await this.mediaTranscription.transcribeFile(persisted.filePath, {
         title: displayName,
         creator: 'Uploaded media',
+        force: Boolean(params.force),
       });
       return this.fromMediaTranscript(
         media,
@@ -741,8 +766,8 @@ export class SourceResolverService {
     });
   }
 
-  private async resolveYouTube(url: string, userId?: string): Promise<ResolvedSource> {
-    const transcript = await this.transcriptService.extract(url);
+  private async resolveYouTube(url: string, userId?: string, force = false): Promise<ResolvedSource> {
+    const transcript = await this.transcriptService.extract(url, force);
     const segmented = segmentSentences(transcript);
     const segments: SourceSegment[] =
       segmented.length > 0

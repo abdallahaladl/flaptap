@@ -309,7 +309,8 @@ export class ShadowingReviewService {
         message: 'Syncing reviewed transcript & millisecond timings to your studio…',
       });
 
-      const latest = this.historyRepo.findById(lesson.id, scope) || lesson;
+      const latest = this.historyRepo.findById(lesson.id, scope);
+      if (!latest) throw new NotFoundException(`Lesson "${lessonId}" not found.`);
       const updated = this.applyReviewedSnapshotToLesson(latest, reviewedSnapshot);
       const saved = this.historyRepo.update(lesson.id, updated, scope);
       if (!saved) throw new NotFoundException(`Lesson "${lessonId}" not found.`);
@@ -437,6 +438,7 @@ export class ShadowingReviewService {
       repaired: s.repaired,
       repairNote: s.repairNote,
       isOverlap: s.isOverlap,
+      isInterrupted: Boolean(s.isInterrupted),
       paragraphIndex: s.paragraphIndex,
       ideaIndex: s.ideaIndex,
       words: s.words,

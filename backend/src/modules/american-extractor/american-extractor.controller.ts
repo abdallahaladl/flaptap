@@ -20,6 +20,8 @@ import { memoryStorage } from 'multer';
 import { Request, Response } from 'express';
 import { requireAuthenticatedUser } from '../auth/auth.request';
 import { AuthService } from '../auth/auth.service';
+import { AuditLogRepository } from '../data-lifecycle/audit-log.repository';
+import { DataLifecycleService } from '../data-lifecycle/data-lifecycle.service';
 import { AmericanExtractorService } from './american-extractor.service';
 import {
   ExtractorInputKind,
@@ -71,6 +73,8 @@ export class AmericanExtractorController {
   constructor(
     private readonly extractor: AmericanExtractorService,
     private readonly authService: AuthService,
+    private readonly dataLifecycle: DataLifecycleService,
+    private readonly auditLog: AuditLogRepository,
   ) {}
 
   /**
@@ -428,11 +432,77 @@ export class AmericanExtractorController {
     };
   }
 
+  @Post('notes/bulk-delete')
+  bulkDeleteNotes(@Body() body: { ids?: string[] } | undefined, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return {
+      success: true,
+      ...this.dataLifecycle.purgeExtractorNotesBulk(identity.userId, body?.ids || []),
+    };
+  }
+
+  @Post('notes/clear')
+  clearAllNotes(@Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return {
+      success: true,
+      ...this.dataLifecycle.purgeAllExtractorNotes(identity.userId),
+    };
+  }
+
+  @Post('notes/:id/reset-progress')
+  resetNoteProgress(@Param('id') id: string, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    const updated = this.extractor.resetNoteProgress(identity.userId, id);
+    this.auditLog.record(identity.userId, {
+      action: 'reset_extractor_progress',
+      feature: 'american_extractor',
+      scope: 'progress',
+      targetId: id,
+      targetLabel: updated.title,
+      summary: `Reset phrase checkmarks for "${updated.title}"`,
+      purged: { extractorNotes: 1 },
+    });
+    return { success: true, ...updated };
+  }
+
+  @Delete('notes/:id/items/:index')
+  deleteNoteItem(
+    @Param('id') id: string,
+    @Param('index') index: string,
+    @Req() req: Request,
+  ) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    const parsedIndex = Number(index);
+    if (!Number.isInteger(parsedIndex) || parsedIndex < 0) {
+      throw new BadRequestException('Item index must be a non-negative integer.');
+    }
+    const res = this.extractor.deleteNoteItem(identity.userId, id, parsedIndex);
+    this.auditLog.record(identity.userId, {
+      action: 'delete_extractor_phrase',
+      feature: 'american_extractor',
+      scope: 'sub_item',
+      targetId: id,
+      targetLabel: res.removedPhrase || res.note.title,
+      summary: `Removed phrase "${res.removedPhrase || parsedIndex}" from "${res.note.title}"`,
+      purged: { extractorItems: 1 },
+    });
+    return {
+      success: true,
+      note: res.note,
+      completionProgress: res.completionProgress,
+      isCompleted: res.isCompleted,
+    };
+  }
+
   @Delete('notes/:id')
   deleteNote(@Param('id') id: string, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    this.extractor.deleteNote(identity.userId, id);
-    return { success: true, message: 'Extraction deleted.' };
+    const res = this.dataLifecycle.purgeExtractorNote(identity.userId, id);
+    if (!res.deleted) {
+      throw new HttpException('Extraction not found.', HttpStatus.NOT_FOUND);
+    }
+    return { success: true, message: 'Extraction deleted.', purged: res.purged };
   }
 }
 

@@ -136,6 +136,9 @@
       const err = new Error(body?.message || `Request failed (${res.status})`);
       err.status = res.status;
       err.code = body?.code;
+      err.retryAfterSec = Number(body?.retryAfterSec) || 0;
+      err.provider = body?.provider || '';
+      err.cooldownUntil = body?.cooldownUntil || '';
       throw err;
     }
     return body;

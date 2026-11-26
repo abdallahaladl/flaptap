@@ -51,7 +51,7 @@
       status: 'all',
       sort: 'newest',
       renamingId: '',
-      armedDeleteId: '',
+      selectedIds: new Set(),
       searchTimer: null,
       fetchSeq: 0,
       unsubs: [],
@@ -213,10 +213,10 @@
     }
 
     function renderCard(item, idx = 0) {
-      const armed = local.armedDeleteId === item.id;
       const renaming = local.renamingId === item.id;
       const stats = store.historyStudyState(item);
       const deleteLabel = `Delete ${item.title || 'study guide'}`;
+      const selected = local.selectedIds.has(item.id);
 
       const titleBlock = renaming
         ? `<form class="aex-rename-form" data-aex-rename-form="${escapeHtml(item.id)}">
@@ -237,7 +237,10 @@
       return `
         <article class="aex-library-card-item ft-item-surface" style="--ft-stagger:${idx}" data-state="${stats.tone}" data-aex-library-id="${escapeHtml(item.id)}">
           <div class="aex-recent-top">
-            ${store.sourceBadgeHtml(item.source_type)}
+            <label class="ft-item-select-label" style="display:inline-flex;align-items:center;gap:8px;cursor:pointer;">
+              <input type="checkbox" data-aex-select="${escapeHtml(item.id)}" ${selected ? 'checked' : ''} aria-label="Select ${escapeHtml(item.title || 'study guide')}" />
+              ${store.sourceBadgeHtml(item.source_type)}
+            </label>
             <span class="aex-recent-meta">${escapeHtml(store.formatDate(item.created_at))}</span>
           </div>
           ${titleBlock}
@@ -262,11 +265,9 @@
             )}" aria-label="Rename ${escapeHtml(item.title || 'study guide')}" title="Rename">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
             </button>
-            <button type="button" class="aex-recent-delete${armed ? ' is-armed' : ''}" data-aex-delete="${escapeHtml(
+            <button type="button" class="aex-recent-delete" data-aex-delete="${escapeHtml(
               item.id,
-            )}" data-armed="${armed ? '1' : ''}" data-armed-label="${escapeHtml(deleteLabel)}" aria-label="${
-              armed ? 'Click again to confirm delete' : escapeHtml(deleteLabel)
-            }" title="${armed ? 'Click again to confirm delete' : 'Delete study guide'}">
+            )}" aria-label="${escapeHtml(deleteLabel)}" title="Delete study guide">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
             </button>
           </div>
@@ -286,6 +287,8 @@
       renderSourceFilters();
 
       const signedIn = Boolean(store.currentUser());
+      const clearAllBtn = el('aex-lib-clear-all-btn');
+      const bulkBar = el('aex-library-bulk-bar');
       if (authGate) authGate.hidden = signedIn;
       if (!signedIn) {
         grid.removeAttribute('aria-busy');
@@ -293,10 +296,27 @@
         grid.innerHTML = '';
         if (empty) empty.hidden = true;
         if (errBox) errBox.hidden = true;
+        if (clearAllBtn) clearAllBtn.hidden = true;
+        if (bulkBar) bulkBar.hidden = true;
         pager.hide();
         if (totalEl) totalEl.textContent = 'Sign in to view your saved guides';
         return;
       }
+
+      const validIds = new Set(local.items.map((it) => it.id));
+      for (const id of Array.from(local.selectedIds)) {
+        if (!validIds.has(id)) local.selectedIds.delete(id);
+      }
+      if (clearAllBtn) clearAllBtn.hidden = local.total === 0;
+      if (bulkBar) bulkBar.hidden = local.items.length === 0;
+      const selCountEl = el('aex-lib-selected-count');
+      if (selCountEl) selCountEl.textContent = `(${local.selectedIds.size} selected)`;
+      const selectAllCb = el('aex-lib-select-all');
+      if (selectAllCb) {
+        selectAllCb.checked = local.items.length > 0 && local.items.every((it) => local.selectedIds.has(it.id));
+      }
+      const bulkDelBtn = el('aex-lib-bulk-delete-btn');
+      if (bulkDelBtn) bulkDelBtn.disabled = local.selectedIds.size === 0;
 
       if (totalEl) {
         const s = local.stats;
@@ -415,6 +435,8 @@
         totalPages: local.totalPages,
         hasMore: local.hasMore,
         page: local.page,
+        localStats: { ...local.stats },
+        cachedNote: store.getCachedNote(id),
         recentHistory: [...(store.state.recentHistory || [])],
         historyTotal: store.state.historyTotal,
         stats: { ...(store.state.stats || {}) },
@@ -422,17 +444,23 @@
 
       await global.FlaptapConfirm.confirmAndUndo({
         title: 'Delete study guide?',
-        message: 'This study guide and its extracted phrases will be removed.',
+        message: 'This study guide, its extracted phrases, and orphaned source caches will be removed.',
         detail: guideTitle,
         confirmLabel: 'Delete',
         undoMessage: `Deleted "${guideTitle}"`,
         restoredMessage: `Restored "${guideTitle}"`,
         onApply: () => {
           local.items = local.items.filter((entry) => entry.id !== id);
+          local.selectedIds.delete(id);
           local.total = Math.max(0, (Number(local.total) || 0) - 1);
           local.filteredTotal = Math.max(0, (Number(local.filteredTotal) || 0) - 1);
           local.totalPages = Math.max(1, Math.ceil(local.filteredTotal / local.pageSize) || 1);
           local.hasMore = local.page < local.totalPages;
+          local.stats = {
+            ...local.stats,
+            totalGuides: Math.max(0, (Number(local.stats.totalGuides) || 0) - 1),
+            totalItems: Math.max(0, (Number(local.stats.totalItems) || 0) - (Number(target?.item_count) || 0)),
+          };
           store.removeNoteFromCache(id);
           render();
         },
@@ -443,6 +471,8 @@
           local.totalPages = snapshot.totalPages;
           local.hasMore = snapshot.hasMore;
           local.page = snapshot.page;
+          local.stats = snapshot.localStats;
+          if (snapshot.cachedNote) store.cacheNote(snapshot.cachedNote);
           store.restoreHistorySnapshot(snapshot);
           render();
         },
@@ -457,6 +487,51 @@
         onError: (err) => {
           showToast(err?.message || 'Could not delete that study guide.');
           render();
+        },
+      });
+    }
+
+    async function handleBulkDelete() {
+      const ids = Array.from(local.selectedIds);
+      if (!ids.length || !global.FlaptapConfirm?.confirmAction) return;
+      await global.FlaptapConfirm.confirmAction({
+        title: 'Delete selected study guides?',
+        message: `Permanently delete ${ids.length} study guide(s) and clean up orphaned source caches.`,
+        detail: `${ids.length} guide(s) selected`,
+        confirmLabel: 'Delete Selected',
+        tone: 'danger',
+        onConfirm: async () => {
+          await api.bulkDeleteNotes(ids);
+          local.selectedIds.clear();
+          ids.forEach((id) => store.removeNoteFromCache(id));
+          await loadPage(1, { animate: false, syncRoute: true });
+          deps.reloadHistory?.().catch(() => {});
+          showToast(`Deleted ${ids.length} study guide(s)`);
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Bulk delete failed.');
+        },
+      });
+    }
+
+    async function handleClearAll() {
+      if (!global.FlaptapConfirm?.confirmAction) return;
+      await global.FlaptapConfirm.confirmAction({
+        title: 'Clear all Phrase Miner guides?',
+        message: 'Permanently removes every saved study guide and cleans up orphaned source caches and OCR caches.',
+        detail: `${local.total} study guide(s)`,
+        confirmLabel: 'Clear All Guides',
+        tone: 'danger',
+        onConfirm: async () => {
+          const res = await api.clearAllNotes();
+          local.selectedIds.clear();
+          store.resetUserData();
+          await loadPage(1, { animate: false, syncRoute: true });
+          deps.reloadHistory?.().catch(() => {});
+          showToast(`Cleared ${res.removedCount || 0} study guide(s)`);
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not clear study guides.');
         },
       });
     }
@@ -501,6 +576,21 @@
       el('aex-lib-header-new-btn')?.addEventListener('click', () => nav.goToExtract({ focusInput: true }));
       el('aex-library-clear-filters-btn')?.addEventListener('click', clearAllFilters);
       el('aex-library-retry-btn')?.addEventListener('click', () => loadPage(local.page));
+      el('aex-lib-clear-all-btn')?.addEventListener('click', handleClearAll);
+      el('aex-lib-bulk-delete-btn')?.addEventListener('click', handleBulkDelete);
+      el('aex-lib-select-all')?.addEventListener('change', (e) => {
+        if (e.target.checked) local.items.forEach((it) => local.selectedIds.add(it.id));
+        else local.selectedIds.clear();
+        render();
+      });
+      root.addEventListener('change', (e) => {
+        const cb = e.target.closest('[data-aex-select]');
+        if (!cb) return;
+        const id = cb.getAttribute('data-aex-select');
+        if (cb.checked) local.selectedIds.add(id);
+        else local.selectedIds.delete(id);
+        render();
+      });
 
       pager.bind({
         onPageChange: (nextPage) => {

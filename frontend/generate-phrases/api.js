@@ -120,6 +120,25 @@
     });
   }
 
+  function bulkDeleteItems(ids) {
+    return apiFetch('/api/learning-library/items/bulk-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    });
+  }
+
+  function resetProgress(domainId, { clearNotes = false, clearFavorites = false, keepalive = false } = {}) {
+    return apiFetch('/api/learning-library/reset-progress', {
+      method: 'POST',
+      keepalive,
+      body: JSON.stringify({
+        domainId: domainId || undefined,
+        clearNotes: Boolean(clearNotes),
+        clearFavorites: Boolean(clearFavorites),
+      }),
+    });
+  }
+
   global.FlaptapGPApi = {
     apiFetch,
     listDomains,
@@ -128,7 +147,9 @@
     generateStream,
     patchItem,
     deleteItem,
+    bulkDeleteItems,
     clearDomain,
+    resetProgress,
     exportLibrary,
     translateItem,
     translateBatch,

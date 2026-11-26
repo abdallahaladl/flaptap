@@ -317,6 +317,7 @@ function splitCanonicalSentencesByPacing(
               : 'Corrected ASR transcription wording')
           : '',
         isOverlap: Boolean(canon.isOverlap),
+        isInterrupted: Boolean(canon.isInterrupted),
         paragraphIndex: canon.paragraphIndex || 0,
         ideaIndex: canon.ideaIndex || 0,
         startMs,
@@ -413,7 +414,7 @@ function mapTranscriptParagraphsToChunks(paragraphs: TranscriptParagraph[]): Chu
 
 /**
  * Deterministically re-segments any Shadowing lesson in-memory (< 15ms, ZERO AI calls,
- * ZERO media re-extraction) into the requested `pacingMode` (`short` | `balanced` | `full`).
+ * ZERO media re-extraction) into the requested `pacingMode` (`short` | `normal`).
  *
  * Handles all 4 lesson states seamlessly:
  * 1. AI-reviewed with `reviewed.canonicalSentences`

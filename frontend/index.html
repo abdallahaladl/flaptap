@@ -86,6 +86,7 @@
         else if (p === '/pronunciation' || p === '/phonetics') sec = 'pronunciation';
         else if (p === '/extractor' || p === '/miner' || p === '/phrase-miner' || p === '/american-extractor' || p === '/american-english' || p === '/phrases' || p.indexOf('/extractor/') === 0 || p.indexOf('/miner/') === 0 || p.indexOf('/phrase-miner/') === 0 || p.indexOf('/american-extractor/') === 0 || p.indexOf('/phrases/') === 0) sec = 'american-extractor';
         else if (p === '/library' || p === '/builder' || p === '/phrase-builder' || p === '/learning-library' || p.indexOf('/library/') === 0 || p.indexOf('/builder/') === 0 || p.indexOf('/phrase-builder/') === 0 || p.indexOf('/learning-library/') === 0) sec = 'learning-library';
+        else if (p === '/think' || p === '/think-aloud' || p === '/spontaneous' || p === '/thinking' || p.indexOf('/think/') === 0 || p.indexOf('/think-aloud/') === 0 || p.indexOf('/spontaneous/') === 0 || p.indexOf('/thinking/') === 0) sec = 'think-aloud';
         else if (p === '/vocabulary') sec = 'vocabulary';
         else if (p === '/history' || p === '/activity') sec = 'history';
         else if (p === '/' && qs.has('section')) {
@@ -94,6 +95,7 @@
           else if (q === 'pronunciation' || q === 'phonetics') sec = 'pronunciation';
           else if (q === 'extractor' || q === 'miner' || q === 'phrase-miner' || q === 'american-extractor' || q === 'american-english' || q === 'phrases' || q === 'anything-to-phrases') sec = 'american-extractor';
           else if (q === 'library' || q === 'builder' || q === 'phrase-builder' || q === 'learning-library') sec = 'learning-library';
+          else if (q === 'think' || q === 'think-aloud' || q === 'spontaneous' || q === 'thinking') sec = 'think-aloud';
           else if (q === 'vocabulary') sec = 'vocabulary';
           else if (q === 'history' || q === 'activity') sec = 'history';
         }
@@ -113,6 +115,7 @@
   <link rel="stylesheet" href="/study-dock.css" />
   <link rel="stylesheet" href="/learning-library.css" />
   <link rel="stylesheet" href="/american-extractor.css" />
+  <link rel="stylesheet" href="/think-aloud.css" />
   <link rel="stylesheet" href="/check-button.css" />
   <link rel="stylesheet" href="/celebration.css" />
   <link rel="stylesheet" href="/confirm-undo.css" />
@@ -205,6 +208,16 @@
               </svg>
             </span>
             <span class="sidebar-link-text" data-i18n="navPronunciation">Phonetics</span>
+          </a>
+          <a href="/think" class="sidebar-nav-link" data-route-section="think-aloud" data-tooltip="Think Aloud" title="Think Aloud — Spontaneous English thinking &amp; speaking">
+            <span class="sidebar-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 20v-4"></path>
+                <path d="M12 4a5 5 0 0 1 5 5c0 2.2-1.4 4-3.3 4.7-.5.2-.7.6-.7 1.1V16h-2v-1.2c0-1.3.8-2.4 2-2.9A3 3 0 1 0 9 9"></path>
+                <path d="M4 9a8 8 0 0 1 16 0"></path>
+              </svg>
+            </span>
+            <span class="sidebar-link-text" data-i18n="navThinkAloud">Think Aloud</span>
           </a>
         </div>
 
@@ -443,26 +456,14 @@
         </div>
 
         <div class="lessons-ingest-options">
-          <div class="lessons-pacing-control" title="Choose shadowing sentence length (changeable anytime in Studio)">
+          <div class="lessons-pacing-control" title="Choose shadowing unit (changeable anytime in Studio)">
             <span class="lessons-pacing-label" data-i18n="lessonsPacingLabel">Lines</span>
             <div class="lessons-pacing-group" id="lessons-pacing-group" role="radiogroup" aria-label="Shadowing line length">
-              <button type="button" class="lessons-pacing-pill active" data-pacing="short" role="radio" aria-checked="true" data-i18n="pacingShort">Short</button>
-              <button type="button" class="lessons-pacing-pill" data-pacing="balanced" role="radio" aria-checked="false" data-i18n="pacingBalanced">Medium</button>
-              <button type="button" class="lessons-pacing-pill" data-pacing="full" role="radio" aria-checked="false" data-i18n="pacingFull">Full</button>
+              <button type="button" class="lessons-pacing-pill active" data-pacing="short" role="radio" aria-checked="true" title="4–9 word drill lines; complete thoughts up to 11 words stay intact" data-i18n="pacingShort">Short</button>
+              <button type="button" class="lessons-pacing-pill" data-pacing="normal" role="radio" aria-checked="false" title="Complete sentences up to ~20 words; longer run-ons break at their strongest clause boundary" data-i18n="pacingNormal">Normal</button>
             </div>
           </div>
-          <label class="lessons-option-check" title="Automatically run AI Verbatim Review after opening Studio to fix ASR errors, separate speakers, and structure ideas">
-            <input type="checkbox" id="lessons-auto-review" checked />
-            <span>Auto-run AI Verbatim Review</span>
-          </label>
-          <button type="button" class="lessons-model-toggle-btn" id="lessons-ai-model-toggle" aria-expanded="false" aria-controls="lessons-ai-selector-wrap">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-            <span>AI Review Model</span>
-          </button>
-        </div>
-
-        <div class="lessons-ai-selector-wrap" id="lessons-ai-selector-wrap" hidden>
-          <div id="lessons-ai-selector-mount"></div>
+          <span class="lessons-instant-hint">Opens Studio instantly · AI Review, Coach &amp; Translations available inside</span>
         </div>
 
         <div class="platform-chips-row" aria-label="Supported media platforms">
@@ -713,6 +714,11 @@
             <h2 class="section-heading">Your Dialogues</h2>
             <span class="section-count ltr-num" id="dialogue-count-label">0</span>
           </div>
+          <div class="library-controls">
+            <button type="button" class="icon-action is-danger" id="clear-dialogues-btn" hidden aria-label="Clear all dialogues" title="Clear all dialogues">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
+            </button>
+          </div>
         </div>
         <div id="dialogue-progress-bar" class="subject-progress-bar" hidden></div>
         <div id="dialogue-history-grid" class="history-grid"></div>
@@ -790,6 +796,11 @@
             <h2 class="section-heading">Your Pronunciation Workouts</h2>
             <span class="section-count ltr-num" id="pronunciation-count-label">0</span>
           </div>
+          <div class="library-controls">
+            <button type="button" class="icon-action is-danger" id="clear-pronunciation-btn" hidden aria-label="Clear all pronunciation workouts" title="Clear all pronunciation workouts">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
+            </button>
+          </div>
         </div>
         <div id="pronunciation-progress-bar" class="subject-progress-bar" hidden></div>
         <div id="pronunciation-history-grid" class="history-grid"></div>
@@ -812,6 +823,14 @@
         </div>
 
         <div class="library-controls">
+          <button type="button" class="apple-action-pill" id="vocab-reset-progress-btn" hidden title="Reset SRS mastery progress for all saved words">
+            <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#rotate-ccw"></use></svg>
+            <span>Reset SRS</span>
+          </button>
+          <button type="button" class="apple-action-pill is-danger" id="vocab-clear-all-btn" hidden title="Clear all saved vocabulary words">
+            <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
+            <span>Clear All</span>
+          </button>
           <button type="button" class="btn-vox btn-flashcards-trigger" id="toggle-flashcards-btn" aria-expanded="false">
             <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#sparkles"></use></svg>
             <span data-i18n="practiceFlashcardsBtn">Practice Flashcards</span>
@@ -827,6 +846,9 @@
             <button type="button" class="item-check-btn" id="fc-complete-toggle-btn" aria-pressed="false" aria-label="Mark done" title="Mark done">
               <svg class="ft-check-svg chk-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path class="ft-check-tick chk-tick" d="M5.2 12.75 L9.55 17.1 Q10.1 17.65 10.65 17.05 L18.9 7.35" pathLength="1" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
               <span id="fc-complete-label" class="visually-hidden">Done</span>
+            </button>
+            <button type="button" class="icon-action icon-action--sm is-danger" id="fc-delete-btn" aria-label="Delete flashcard word" title="Delete word from vault">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
             </button>
             <button type="button" class="icon-action icon-action--sm" id="close-flashcards-btn" aria-label="Close flashcards" title="Close flashcards">
               <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#x"></use></svg>
@@ -888,6 +910,19 @@
                 <input type="search" id="vocab-search-input" placeholder="Search saved words..." data-i18n-placeholder="vocabSearchPlaceholder" />
               </label>
             </div>
+          </div>
+        </div>
+        <div class="bulk-actions-bar ft-compact-bulk-bar" id="vocab-bulk-bar" hidden>
+          <label class="bulk-select-label">
+            <input type="checkbox" id="vocab-select-all" />
+            <span>Select all visible</span>
+            <span class="section-count ltr-num" id="vocab-selected-count">(0 selected)</span>
+          </label>
+          <div class="bulk-buttons-group">
+            <button type="button" class="apple-action-pill is-danger" id="vocab-bulk-delete-btn" disabled>
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
+              <span>Delete Selected</span>
+            </button>
           </div>
         </div>
         <div id="vocab-grid" class="vocab-grid"></div>
@@ -1174,6 +1209,49 @@
           <div id="activity-empty-state" class="empty-ledger" hidden>
             <h3 data-i18n="emptyActivityTitle">No completed practice sessions logged yet</h3>
             <p data-i18n="emptyActivityDesc">Click Complete inside any Studio lesson to record your session, practice mode, and daily streak.</p>
+          </div>
+        </div>
+
+        <!-- Cross-Feature Data & Purge Matrix -->
+        <div class="ledger-panel" id="lifecycle-feature-panel" style="margin-top: 28px;">
+          <div class="library-header" style="margin-bottom: 14px;">
+            <div class="library-title-group">
+              <h2 class="section-heading" data-i18n="featureDataMatrixHeading">Feature Data &amp; Storage Control</h2>
+              <span class="section-count ltr-num" id="lifecycle-total-items-label">0</span>
+            </div>
+          </div>
+          <div id="lifecycle-feature-grid" class="lifecycle-feature-grid"></div>
+        </div>
+
+        <!-- Operations & Deletion Audit Log -->
+        <div class="ledger-panel" id="audit-log-panel" style="margin-top: 28px;">
+          <div class="library-header" style="margin-bottom: 14px;">
+            <div class="library-title-group">
+              <h2 class="section-heading" data-i18n="auditLogHeading">Operations &amp; Deletion Log</h2>
+              <span class="section-count ltr-num" id="audit-count-label">0</span>
+            </div>
+            <button type="button" class="icon-action icon-action--sm is-danger" id="clear-audit-log-btn" hidden aria-label="Clear operations log" title="Clear operations log">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
+            </button>
+          </div>
+          <div id="audit-log-list" class="activity-timeline-list"></div>
+          <div id="audit-empty-state" class="empty-ledger" hidden>
+            <h3 data-i18n="emptyAuditTitle">No deletion or reset operations logged yet</h3>
+            <p data-i18n="emptyAuditDesc">Every item delete, cache purge, progress reset, and workspace wipe records a lightweight receipt here while keeping zero deleted content.</p>
+          </div>
+        </div>
+
+        <!-- Workspace Factory Reset Danger Card -->
+        <div class="drawer-danger-zone workspace-reset-zone" id="workspace-reset-panel" style="margin-top: 28px;">
+          <div class="workspace-reset-head">
+            <div>
+              <div class="drawer-danger-zone-title" data-i18n="workspaceResetTitle">Workspace Factory Reset</div>
+              <p data-i18n="workspaceResetDesc">Wipe all lessons, transcripts, disk media, Think Aloud sessions, Phrase Miner guides, Phrase Builder items, Vocabulary, and practice history to start fresh like Day 1 while keeping your login account.</p>
+            </div>
+            <button type="button" class="btn-danger-ghost" id="workspace-factory-reset-btn">
+              <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#rotate-ccw"></use></svg>
+              <span data-i18n="workspaceResetBtn">Reset Entire Workspace…</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1509,10 +1587,16 @@
                 <h1 class="aex-library-title">Phrase Library</h1>
                 <p class="aex-library-sub" id="aex-library-total">0 guides</p>
               </div>
-              <button type="button" class="btn-vox btn-sm" id="aex-lib-header-new-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                <span>New Extraction</span>
-              </button>
+              <div class="aex-library-head-actions">
+                <button type="button" class="btn-danger-ghost btn-sm" id="aex-lib-clear-all-btn" hidden>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
+                  <span>Clear All</span>
+                </button>
+                <button type="button" class="btn-vox btn-sm" id="aex-lib-header-new-btn">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  <span>New Extraction</span>
+                </button>
+              </div>
             </div>
 
             <div class="aex-lib-toolbar">
@@ -1539,6 +1623,20 @@
             </div>
 
             <div class="filter-pills aex-lib-source-filters" id="aex-lib-source-filters" role="group" aria-label="Filter by source type"></div>
+
+            <div class="bulk-actions-bar ft-compact-bulk-bar" id="aex-library-bulk-bar" hidden>
+              <label class="bulk-select-label">
+                <input type="checkbox" id="aex-lib-select-all" />
+                <span>Select all visible</span>
+                <span class="section-count ltr-num" id="aex-lib-selected-count">(0 selected)</span>
+              </label>
+              <div class="bulk-buttons-group">
+                <button type="button" class="apple-action-pill is-danger" id="aex-lib-bulk-delete-btn" disabled>
+                  <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
+                  <span>Delete Selected</span>
+                </button>
+              </div>
+            </div>
 
             <div class="aex-inline-error" id="aex-library-error" role="alert" hidden>
               <div class="inline-err-content">
@@ -1658,6 +1756,14 @@
                     <button type="button" class="btn-secondary btn-sm" id="aex-new-btn" title="New extraction">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                       <span>New</span>
+                    </button>
+                    <button type="button" class="btn-secondary btn-sm" id="aex-detail-reset-progress-btn" title="Reset phrase checkmarks">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                      <span>Reset</span>
+                    </button>
+                    <button type="button" class="btn-danger-ghost btn-sm" id="aex-detail-delete-btn" title="Delete this study guide and orphan caches">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
+                      <span>Delete</span>
                     </button>
                     <button type="button" class="btn-vox btn-sm" id="aex-save-all-btn" title="Save all phrases to Vocabulary Vault">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
@@ -2040,9 +2146,17 @@
                       <span>Export JSON (.json)</span>
                     </button>
                     <div class="ll-more-divider"></div>
+                    <button type="button" class="ll-more-item" id="ll-reset-domain-progress-btn" role="menuitem">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>
+                      <span>Reset Domain Progress</span>
+                    </button>
                     <button type="button" class="ll-more-item is-danger" id="ll-clear-domain-btn" role="menuitem">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path></svg>
                       <span>Clear Domain Library</span>
+                    </button>
+                    <button type="button" class="ll-more-item is-danger" id="ll-clear-all-domains-btn" role="menuitem">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><line x1="9" y1="3" x2="15" y2="3"></line></svg>
+                      <span>Clear All Domains</span>
                     </button>
                   </div>
                 </div>
@@ -2162,6 +2276,21 @@
               </div>
             </div>
 
+            <!-- Bulk Selection Bar -->
+            <div class="bulk-actions-bar ft-compact-bulk-bar" id="ll-browse-bulk-bar" hidden>
+              <label class="bulk-select-label">
+                <input type="checkbox" id="ll-browse-select-all" />
+                <span>Select all visible</span>
+                <span class="section-count ltr-num" id="ll-browse-selected-count">(0 selected)</span>
+              </label>
+              <div class="bulk-buttons-group">
+                <button type="button" class="apple-action-pill is-danger" id="ll-browse-bulk-delete-btn" disabled>
+                  <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#trash"></use></svg>
+                  <span>Delete Selected</span>
+                </button>
+              </div>
+            </div>
+
             <!-- Items List / Cards Container -->
             <div id="ll-browse-items-container" class="ll-items-list"></div>
 
@@ -2211,6 +2340,65 @@
               <button type="button" class="btn-secondary" data-open-auth="register" data-i18n="createFreeAccount">Create account</button>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 9: THINK ALOUD — DIRECT ENGLISH THINKING & SPONTANEOUS SPEAKING STUDIO -->
+    <section id="section-think-aloud" hidden>
+      <div class="editorial-desk ta-desk">
+        <header class="ta-shell-bar">
+          <div class="ta-hero-copy">
+            <div class="ta-kicker-pill">
+              <span class="ta-kicker-dot" aria-hidden="true"></span>
+              <span>Direct L2 Automaticity Studio</span>
+            </div>
+            <h1 class="ta-headline">Think Aloud</h1>
+            <p class="ta-subcopy">
+              Train spontaneous American English thinking without mental translation—using 4/3/2 time compression, Stanford speaking frameworks, taboo circumlocution, and unscripted camera Q&amp;A.
+            </p>
+          </div>
+
+          <nav class="lexicon-view-nav ta-view-nav" role="tablist" aria-label="Think Aloud views">
+            <button type="button" class="lexicon-view-tab active" id="ta-tab-practice" role="tab" aria-selected="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+              <span>Practice</span>
+            </button>
+            <button type="button" class="lexicon-view-tab" id="ta-tab-spines" role="tab" aria-selected="false">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect></svg>
+              <span>Spines</span>
+            </button>
+            <button type="button" class="lexicon-view-tab" id="ta-tab-sessions" role="tab" aria-selected="false">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>
+              <span>Sessions</span>
+              <span class="lexicon-badge-pill ltr-num" id="ta-nav-sessions-count">0</span>
+            </button>
+          </nav>
+        </header>
+
+        <!-- Subview 1: Practice Arena (/think) -->
+        <div id="ta-view-practice" class="ta-view-panel" style="display:flex;flex-direction:column;gap:16px;">
+          <div id="ta-ritual-host"></div>
+          <div id="ta-configurator-host"></div>
+          <div id="ta-ai-selector-mount"></div>
+          <div id="ta-arena-host"></div>
+          <div id="ta-report-host"></div>
+        </div>
+
+        <!-- Subview 2: Interactive Thinking Spines Playbook (/think/spines) -->
+        <div id="ta-view-spines" class="ta-view-panel" hidden style="display:flex;flex-direction:column;gap:16px;">
+          <div id="ta-spine-ai-mount"></div>
+          <div id="ta-spines-host" style="display:flex;flex-direction:column;gap:16px;"></div>
+        </div>
+
+        <!-- Subview 3: Sessions & Progress (/think/sessions) -->
+        <div id="ta-view-sessions" class="ta-view-panel" hidden style="display:flex;flex-direction:column;gap:16px;">
+          <div id="ta-sessions-host" style="display:flex;flex-direction:column;gap:16px;"></div>
+        </div>
+
+        <!-- Subview 4: Session Detail (/think/session/:id) -->
+        <div id="ta-view-detail" class="ta-view-panel" hidden style="display:flex;flex-direction:column;gap:16px;">
+          <div id="ta-detail-host"></div>
         </div>
       </div>
     </section>
@@ -2391,6 +2579,14 @@
             </button>
           </div>
 
+          <div class="drawer-danger-zone" style="margin-bottom: 12px;">
+            <div class="drawer-danger-zone-title" data-i18n="workspaceResetTitle">Workspace Factory Reset</div>
+            <p data-i18n="workspaceResetShortDesc">Reset all study data, caches, and media to Day 1 while keeping your login account.</p>
+            <button type="button" class="btn-danger-ghost" style="width: 100%; justify-content: center;" id="drawer-workspace-reset-btn" data-i18n="workspaceResetBtn">
+              Reset Entire Workspace…
+            </button>
+          </div>
+
           <div class="drawer-danger-zone">
             <div class="drawer-danger-zone-title">Danger Zone</div>
             <p>Permanently delete your account, lessons, vocabulary deck, study notes, and saved API keys. This cannot be undone.</p>
@@ -2472,6 +2668,13 @@
   <script defer src="/generate-phrases/library-page.js"></script>
   <script defer src="/generate-phrases/study-drawer.js"></script>
   <script defer src="/generate-phrases/index.js"></script>
+  <script defer src="/think-aloud/api.js"></script>
+  <script defer src="/think-aloud/store.js"></script>
+  <script defer src="/think-aloud/recorder.js"></script>
+  <script defer src="/think-aloud/practice-page.js"></script>
+  <script defer src="/think-aloud/spines-page.js"></script>
+  <script defer src="/think-aloud/sessions-page.js"></script>
+  <script defer src="/think-aloud/index.js"></script>
   <script defer src="/app.js"></script>
 </body>
 </html>

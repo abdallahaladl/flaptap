@@ -45,7 +45,9 @@ import {
   ExportOptions,
   ExportResult,
   RawTranscriptSnapshot,
+  ReadingBookmark,
   ShadowingMediaPlayback,
+  TranscriptAvailabilityStatus,
 } from './shadowing.types';
 import { TranscriptService } from './transcript.service';
 import {
@@ -53,10 +55,47 @@ import {
   SUPPORTED_EXPORT_FORMATS,
   SUPPORTED_VIEW_MODES,
 } from './utils/transcript-export.util';
+import { parseManualTranscriptInput } from './utils/manual-transcript.util';
 import { regroupShadowingLessonByPacing } from './utils/pacing-regroup.util';
 import { buildRawTranscriptSnapshot } from './utils/word-alignment.util';
 
 const MEDIA_UPLOAD_EXT = /\.(mp3|m4a|wav|aac|flac|ogg|opus|mp4|mov|m4v|webm|mkv)$/i;
+
+const deletedLessonWatermarks = new Map<string, number>();
+
+/**
+ * Records deletion timestamps for a lesson's identifiers so concurrent in-flight
+ * ingestion requests cannot resurrect a lesson deleted mid-flight.
+ */
+export function markShadowingTargetDeleted(userId: string, keys: Array<string | undefined | null>): void {
+  if (!userId) return;
+  const now = Date.now();
+  // Prune stale watermarks older than 10 minutes
+  for (const [k, ts] of deletedLessonWatermarks.entries()) {
+    if (now - ts > 10 * 60 * 1000) deletedLessonWatermarks.delete(k);
+  }
+  for (const raw of keys) {
+    const clean = String(raw || '').trim();
+    if (clean) {
+      deletedLessonWatermarks.set(`${userId}:${clean}`, now);
+    }
+  }
+}
+
+export function wasShadowingTargetDeletedAfter(
+  userId: string | null | undefined,
+  keys: Array<string | undefined | null>,
+  startedAt: number,
+): boolean {
+  if (!userId) return false;
+  for (const raw of keys) {
+    const clean = String(raw || '').trim();
+    if (!clean) continue;
+    const ts = deletedLessonWatermarks.get(`${userId}:${clean}`);
+    if (ts && ts >= startedAt) return true;
+  }
+  return false;
+}
 
 function inferSourceType(platform: string, hasVideo: boolean): SharedSourceType {
   const low = (platform || '').toLowerCase();
@@ -111,7 +150,15 @@ export class ShadowingService {
     private readonly aiProviders: AiProvidersService,
   ) {}
 
-  getConfig() {
+  getCloudSttInfo(_userId?: string | null): {
+    available: boolean;
+    provider: 'groq' | 'openai' | null;
+    model: string;
+  } {
+    return { available: false, provider: null, model: '' };
+  }
+
+  getConfig(_userId?: string | null) {
     return {
       views: SUPPORTED_VIEW_MODES,
       exportFormats: SUPPORTED_EXPORT_FORMATS,
@@ -128,7 +175,10 @@ export class ShadowingService {
         'Loom',
         'Direct Audio/Video',
       ],
-      aiConfigured: this.aiProviders.hasAnyConfiguredKey(null),
+      aiConfigured: this.aiProviders.hasAnyConfiguredKey(_userId ?? null),
+      cloudStt: this.getCloudSttInfo(_userId ?? null),
+      strictProviderTranscriptsOnly: true,
+      providerGuard: this.transcriptService.getGuardStatus?.() || null,
     };
   }
 
@@ -150,13 +200,13 @@ export class ShadowingService {
 
     if (!existing) {
       return {
-        exists: transcriptCache.cached,
+        exists: false,
         id: null,
-        title: transcriptCache.cached ? 'Raw YouTube transcript cached on disk' : null,
-        transcriptCached: transcriptCache.cached,
+        title: null,
+        transcriptCached: false,
         cacheInfo: {
-          transcriptCached: transcriptCache.cached,
-          transcriptBytes: transcriptCache.bytes,
+          transcriptCached: false,
+          transcriptBytes: 0,
           aiCoachCached: false,
           aiInsightsCount: 0,
           translationLanguages: [],
@@ -211,6 +261,7 @@ export class ShadowingService {
     force = false,
     scope?: RequestIdentityScope,
     pacingMode?: ShadowingPacingMode,
+    options?: { allowInstantOpen?: boolean },
   ): Promise<HistoryItem> {
     const cleanUrl = String(url || '').trim();
     if (!cleanUrl) {
@@ -248,8 +299,9 @@ export class ShadowingService {
       return existing;
     }
 
+    const allowInstantOpen = Boolean(options?.allowInstantOpen);
     const scopeKey = scope?.userId || 'user';
-    const flightKey = `${scopeKey}:${sourceKey}:${force ? 'force' : 'std'}:${mode}`;
+    const flightKey = `${scopeKey}:${sourceKey}:${force ? 'force' : 'std'}:${mode}:${allowInstantOpen ? 'instant' : 'strict'}`;
     const running = this.inFlight.get(flightKey);
     if (running) return running;
 
@@ -261,6 +313,7 @@ export class ShadowingService {
       scope,
       force,
       mode,
+      allowInstantOpen,
     ).finally(() => this.inFlight.delete(flightKey));
 
     this.inFlight.set(flightKey, promise);
@@ -300,14 +353,28 @@ export class ShadowingService {
       return existing;
     }
 
+    const opStartedAt = Date.now();
     const persisted = this.sharedSources.persistMediaBuffer(file.buffer, name, mime);
     const title = prettifyFileTitle(name);
+    const cloudStt = this.aiProviders.resolvePreferredCloudSttKey(scope?.userId);
     const mediaResult = await this.mediaTranscription.transcribeFile(persisted.filePath, {
       title,
       creator: 'Uploaded Media',
       wordTimestamps: true,
       force,
+      cloudStt,
+      allowLocalWhisper: true,
     });
+
+    if (
+      wasShadowingTargetDeletedAfter(
+        scope?.userId,
+        [sourceKey, persisted.mediaId, existing?.id],
+        opStartedAt,
+      )
+    ) {
+      throw new BadRequestException('This lesson was deleted while processing.');
+    }
 
     const rawSnapshot = buildRawTranscriptSnapshot({
       provider: mediaResult.engine || 'faster_whisper',
@@ -354,9 +421,10 @@ export class ShadowingService {
       raw: rawSnapshot,
       existing,
       pacingMode: mode,
+      preserveProgress: !force,
     });
 
-    const saved = this.historyRepo.create(item, scope);
+    const saved = this.historyRepo.create(item, scope, { replaceExisting: force });
     this.syncSharedSource(scope?.userId, saved, {
       sourceKey,
       sourceType,
@@ -454,8 +522,48 @@ export class ShadowingService {
   }
 
   /**
+   * Persists the learner's reading-position bookmark ("where I left off")
+   * strictly separate from derived lesson completion (`isCompleted` / `completionProgress`).
+   */
+  updateReadingBookmark(
+    historyId: string,
+    bookmark: Partial<ReadingBookmark> | null,
+    scope?: RequestIdentityScope,
+  ): { readingBookmark: ReadingBookmark | null } {
+    const lesson = this.assertOwnedLesson(historyId, scope);
+    const td = this.reviewService.ensureTranscriptData(lesson);
+
+    if (bookmark === null) {
+      td.readingBookmark = null;
+      this.historyRepo.update(lesson.id, { transcriptData: td }, scope);
+      return { readingBookmark: null };
+    }
+
+    const sentenceIndex = Math.floor(Number(bookmark.sentenceIndex));
+    if (!Number.isFinite(sentenceIndex) || sentenceIndex < 1) {
+      throw new BadRequestException('bookmark.sentenceIndex must be a positive integer.');
+    }
+
+    const startMs = Math.max(0, Math.round(Number(bookmark.startMs) || 0));
+    const view: 'reviewed' | 'raw' = bookmark.view === 'raw' ? 'raw' : 'reviewed';
+    const excerpt = String(bookmark.excerpt || '').replace(/\s+/g, ' ').trim().slice(0, 180);
+
+    const savedBookmark: ReadingBookmark = {
+      sentenceIndex,
+      startMs,
+      view,
+      excerpt,
+      updatedAt: new Date().toISOString(),
+    };
+
+    td.readingBookmark = savedBookmark;
+    this.historyRepo.update(lesson.id, { transcriptData: td }, scope);
+    return { readingBookmark: savedBookmark };
+  }
+
+  /**
    * Deterministically regroups a user-owned lesson into the requested pacing mode
-   * (`short` | `balanced` | `full`) in memory (< 15ms, zero AI calls, zero re-extraction),
+   * (`short` | `normal`) in memory (< 15ms, zero AI calls, zero re-extraction),
    * re-grounds existing AI Coach annotations, updates Markdown, and persists atomically to SQLite.
    */
   updateLessonPacing(
@@ -552,13 +660,90 @@ export class ShadowingService {
     scope: RequestIdentityScope | undefined,
     force: boolean,
     pacingMode: ShadowingPacingMode = 'short',
+    allowInstantOpen = false,
   ): Promise<HistoryItem> {
     const startedAt = Date.now();
     try {
-      // 1. YouTube Fast Path (~1-2s via JSON3 per-word timedtext, with Whisper fallback on missing captions)
+      // 0. Reuse SharedSources cache first (0 network, 0 CPU) if user already ingested via Phrase Miner
+      if (!force && scope?.userId) {
+        const shared = this.sharedSources.findByKey(scope.userId, sourceKey);
+        if (
+          shared &&
+          Array.isArray(shared.segments) &&
+          shared.segments.length > 0 &&
+          String(shared.transcriptText || '').trim()
+        ) {
+          const cues = shared.segments.map((seg) => ({
+            start: formatTimestampMs(Math.round(seg.startSec * 1000)),
+            end: formatTimestampMs(Math.round(seg.endSec * 1000)),
+            start_sec: Number(seg.startSec) || 0,
+            end_sec: Math.max((Number(seg.startSec) || 0) + 0.25, Number(seg.endSec) || 0),
+            text: seg.text,
+          }));
+          const rawSnapshot = buildRawTranscriptSnapshot({
+            provider: 'shared_source_cache',
+            title: shared.title || 'Media Lesson',
+            creator: shared.creator || mediaInfo.platform || 'Speaker',
+            url: mediaInfo.canonicalUrl,
+            mediaId: ytId || shared.mediaId || mediaInfo.mediaId,
+            durationSeconds: shared.durationSeconds || 0,
+            fullText: shared.transcriptText,
+            cues,
+            pacingMode,
+          });
+          if (rawSnapshot.sentences.length > 0) {
+            const isYt = mediaInfo.source === 'youtube' && Boolean(ytId);
+            const mediaKind: SharedMediaKind = isYt
+              ? 'youtube'
+              : (shared.mediaKind as SharedMediaKind) || 'none';
+            const mediaId = isYt ? ytId : shared.mediaId || '';
+            const media: ShadowingMediaPlayback = {
+              hasAudio: true,
+              hasVideo: isYt || Boolean(shared.hasVideo),
+              mediaKind,
+              mediaId,
+              streamUrl: buildStreamUrl(mediaKind, mediaId),
+              mimeType: shared.mimeType || (isYt ? 'video/youtube' : ''),
+              durationSeconds: shared.durationSeconds || 0,
+            };
+            const item = this.buildShadowingLessonItem({
+              title: shared.title || 'Media Lesson',
+              creator: shared.creator || mediaInfo.platform,
+              sourceUrl: mediaInfo.canonicalUrl,
+              sourceKey,
+              sourceType: inferSourceType(mediaInfo.platform, media.hasVideo),
+              platform: mediaInfo.platform,
+              thumbnailUrl: isYt ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '',
+              durationSeconds: shared.durationSeconds || 0,
+              videoId: ytId || mediaId || mediaInfo.mediaId,
+              providerEngine: 'shared_source_cache',
+              media,
+              raw: rawSnapshot,
+              existing,
+              pacingMode,
+              preserveProgress: !force,
+            });
+            const saved = this.historyRepo.create(item, scope, { replaceExisting: force });
+            this.sharedSources.linkLessonToSource(scope.userId, saved.id, shared.id);
+            this.logger.log(`SharedSource cache hit in ${Date.now() - startedAt}ms (${rawSnapshot.sentences.length} lines)`);
+            return this.historyRepo.findById(saved.id, scope) || saved;
+          }
+        }
+      }
+
+      // 1. YouTube Fast Path (~1s via native YouTube captions — NEVER auto-runs local Whisper CPU)
       if (mediaInfo.source === 'youtube' && ytId) {
         try {
           const yt = await this.transcriptService.extract(mediaInfo.canonicalUrl, force);
+          if (
+            wasShadowingTargetDeletedAfter(
+              scope?.userId,
+              [sourceKey, ytId, existing?.id],
+              startedAt,
+            )
+          ) {
+            throw new BadRequestException('This lesson was deleted while processing.');
+          }
           const rawSnapshot = buildRawTranscriptSnapshot({
             provider: yt.timed_words?.length ? 'youtube_json3' : 'youtube_captions',
             title: yt.title || 'YouTube Video Lesson',
@@ -602,9 +787,10 @@ export class ShadowingService {
             raw: rawSnapshot,
             existing,
             pacingMode,
+            preserveProgress: !force,
           });
 
-          const saved = this.historyRepo.create(item, scope);
+          const saved = this.historyRepo.create(item, scope, { replaceExisting: force });
           this.syncSharedSource(scope?.userId, saved, {
             sourceKey,
             sourceType: 'youtube',
@@ -626,32 +812,11 @@ export class ShadowingService {
           );
           return this.historyRepo.findById(saved.id, scope) || saved;
         } catch (ytErr: any) {
-          // Immediately preserve 404 video_unavailable and invalid_url contract
-          const errStatus = ytErr instanceof HttpException ? ytErr.getStatus() : 0;
-          const errCode = (ytErr instanceof HttpException ? (ytErr.getResponse() as any)?.code : '') || '';
-          if (errStatus === 404 || errCode === 'video_unavailable' || errCode === 'invalid_url') {
-            throw ytErr;
-          }
-          this.logger.warn(
-            `YouTube caption path fell back to speech engine (${errCode || errStatus || 'err'}): ${ytErr?.message}`,
-          );
-          try {
-            return await this.ingestExternalMedia(
-              mediaInfo,
-              ytId,
-              sourceKey,
-              existing,
-              scope,
-              force,
-              pacingMode,
-            );
-          } catch {
-            throw ytErr;
-          }
+          throw ytErr;
         }
       }
 
-      // 2. Universal Media / Podcast / Social Video / Direct Audio-Video Path
+      // 2. Universal Media / Podcast / Social Video / Direct Audio-Video Path (strictly native provider subtitles — never Whisper/Groq fallback)
       return await this.ingestExternalMedia(
         mediaInfo,
         ytId,
@@ -660,6 +825,8 @@ export class ShadowingService {
         scope,
         force,
         pacingMode,
+        false,
+        { allowLocalWhisper: false, cloudStt: null },
       );
     } catch (error: any) {
       this.logger.warn(
@@ -673,6 +840,298 @@ export class ShadowingService {
     }
   }
 
+  private normalizeTranscriptStatus(errCode: string): TranscriptAvailabilityStatus {
+    if (errCode === 'no_captions') return 'no_captions';
+    if (errCode === 'timeout') return 'timeout';
+    if (errCode === 'rate_limited') return 'rate_limited';
+    return 'pending';
+  }
+
+  private async fetchYoutubeOembedQuick(ytId: string): Promise<{ title: string; creator: string }> {
+    try {
+      const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(ytId)}`;
+      const res = await fetch(
+        `https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrl)}&format=json`,
+        { signal: AbortSignal.timeout(2500) },
+      );
+      if (res.ok) {
+        const meta: any = await res.json();
+        return {
+          title: String(meta?.title || '').trim() || 'YouTube Video Lesson',
+          creator: String(meta?.author_name || '').trim() || 'YouTube Creator',
+        };
+      }
+    } catch {
+      // Non-fatal fallback
+    }
+    return { title: 'YouTube Video Lesson', creator: 'YouTube Creator' };
+  }
+
+  private async createPendingYoutubeLesson(params: {
+    mediaInfo: NonNullable<ReturnType<typeof classifyMediaUrl>>;
+    ytId: string;
+    sourceKey: string;
+    existing?: HistoryItem;
+    scope?: RequestIdentityScope;
+    pacingMode: ShadowingPacingMode;
+    status: TranscriptAvailabilityStatus;
+    errorMessage: string;
+  }): Promise<HistoryItem> {
+    const meta = await this.fetchYoutubeOembedQuick(params.ytId);
+    const thumbnailUrl = `https://img.youtube.com/vi/${params.ytId}/hqdefault.jpg`;
+    const media: ShadowingMediaPlayback = {
+      hasAudio: true,
+      hasVideo: true,
+      mediaKind: 'youtube',
+      mediaId: params.ytId,
+      streamUrl: '',
+      mimeType: 'video/youtube',
+      durationSeconds: params.existing?.durationSeconds || 0,
+    };
+
+    const emptyRaw: RawTranscriptSnapshot = {
+      provider: 'youtube_pending',
+      model: '',
+      fullText: '',
+      cues: [],
+      words: [],
+      canonicalSentences: [],
+      sentences: [],
+      paragraphs: [],
+      extractedAt: new Date().toISOString(),
+    };
+
+    const item: HistoryItem = {
+      id: params.existing?.id || uuidv4(),
+      track: 'shadowing',
+      trackTitle: 'Video Lesson',
+      title: meta.title,
+      creator: meta.creator,
+      videoId: params.ytId,
+      sourceKey: params.sourceKey,
+      sourceUrl: params.mediaInfo.canonicalUrl,
+      platform: 'YouTube',
+      media,
+      pacingMode: normalizePacingMode(params.pacingMode),
+      transcriptData: {
+        sourceKey: params.sourceKey,
+        sourceType: 'youtube',
+        platform: 'YouTube',
+        providerEngine: 'youtube_pending',
+        pacingMode: normalizePacingMode(params.pacingMode),
+        raw: emptyRaw,
+        reviewed: null,
+        reviewStatus: 'pending',
+        reviewError: '',
+        transcriptStatus: params.status,
+        transcriptError: params.errorMessage,
+        speakerOverrides: {},
+      },
+      transcriptStatus: params.status,
+      transcriptError: params.errorMessage,
+      reviewStatus: 'pending',
+      speakerCount: 1,
+      repairCount: 0,
+      wordCount: 0,
+      thumbnailUrl,
+      accentDialect: 'Spoken English',
+      durationSeconds: params.existing?.durationSeconds || 0,
+      pacingWpm: 145,
+      difficulty: 'Intermediate',
+      cefrLevel: '',
+      sentencesCount: 0,
+      chunksCount: 0,
+      analysisStatus: 'pending',
+      stats: {
+        totalWords: 0,
+        sentencesCount: 0,
+        connectedCount: 0,
+        expressionsCount: 0,
+        vocabularyCount: 0,
+      },
+      chunks: [],
+      sentences: [],
+      studyNotes: params.existing?.studyNotes || '',
+      noteMarkdown: `# ${meta.title}\n\n${params.mediaInfo.canonicalUrl}\n`,
+      translationEngineVersion: 4,
+      timingVersion: 2,
+      segmentationVersion: 2,
+      createdAt: params.existing?.createdAt || new Date().toISOString(),
+      completedDrills: params.existing?.completedDrills || 0,
+    };
+
+    const saved = this.historyRepo.create(item, params.scope, { replaceExisting: false });
+    return this.historyRepo.findById(saved.id, params.scope) || saved;
+  }
+
+  /**
+   * Post-open action: retry fetching native YouTube captions (0% local CPU).
+   */
+  async retryYoutubeCaptions(historyId: string, scope?: RequestIdentityScope): Promise<HistoryItem> {
+    const existing = this.assertOwnedLesson(historyId, scope);
+    if (!existing.sourceUrl) {
+      throw new BadRequestException('This lesson has no source URL to fetch captions from.');
+    }
+    const yt = await this.transcriptService.extract(existing.sourceUrl, true);
+    const mode = normalizePacingMode(existing.pacingMode);
+    const ytId = existing.videoId || this.extractYoutubeId(existing.sourceUrl);
+    const rawSnapshot = buildRawTranscriptSnapshot({
+      provider: yt.timed_words?.length ? 'youtube_json3' : 'youtube_captions',
+      title: yt.title || existing.title || 'YouTube Video Lesson',
+      creator: yt.creator || existing.creator || 'YouTube Creator',
+      url: existing.sourceUrl,
+      mediaId: ytId,
+      durationSeconds: yt.duration_seconds || existing.durationSeconds || 0,
+      fullText: yt.full_raw_transcript,
+      cues: yt.cues,
+      timedWords: yt.timed_words,
+      pacingMode: mode,
+    });
+    if (rawSnapshot.sentences.length === 0) {
+      throw new ServiceUnavailableException('No spoken sentences could be built from these captions.');
+    }
+
+    return this.applyNewTranscriptToLesson(
+      existing,
+      rawSnapshot,
+      {
+        title: yt.title && yt.title !== 'YouTube Shadowing Session' ? yt.title : existing.title,
+        creator: yt.creator && yt.creator !== 'YouTube Creator' ? yt.creator : existing.creator,
+        durationSeconds: yt.duration_seconds || existing.durationSeconds || 0,
+        providerEngine: rawSnapshot.provider,
+        sourceLabel: 'YouTube · captions',
+      },
+      scope,
+    );
+  }
+
+  /**
+   * Post-open action: deterministically import pasted SRT, WebVTT, timestamped,
+   * or plain-text transcript (0% local CPU, instant).
+   */
+  importManualTranscript(
+    historyId: string,
+    rawText: string,
+    scope?: RequestIdentityScope,
+  ): HistoryItem {
+    const existing = this.assertOwnedLesson(historyId, scope);
+    let parsed: ReturnType<typeof parseManualTranscriptInput>;
+    try {
+      parsed = parseManualTranscriptInput(rawText, existing.durationSeconds || 0);
+    } catch (err: any) {
+      throw new BadRequestException(err?.message || 'Could not parse transcript text.');
+    }
+
+    const mode = normalizePacingMode(existing.pacingMode);
+    const rawSnapshot = buildRawTranscriptSnapshot({
+      provider: `manual_${parsed.format}`,
+      title: existing.title || 'Lesson',
+      creator: existing.creator || 'Speaker',
+      url: existing.sourceUrl || '',
+      mediaId: existing.videoId || existing.media?.mediaId || '',
+      durationSeconds: existing.durationSeconds || parsed.estimatedDurationSec || 0,
+      fullText: parsed.fullText,
+      cues: parsed.cues,
+      timedWords: parsed.timedWords,
+      pacingMode: mode,
+    });
+    if (rawSnapshot.sentences.length === 0) {
+      throw new BadRequestException('No spoken sentences could be built from that transcript.');
+    }
+
+    return this.applyNewTranscriptToLesson(
+      existing,
+      rawSnapshot,
+      {
+        durationSeconds: existing.durationSeconds || parsed.estimatedDurationSec || 0,
+        providerEngine: `manual_${parsed.format}`,
+        sourceLabel: `${existing.platform || 'Lesson'} · imported`,
+      },
+      scope,
+    );
+  }
+
+  /**
+   * Third-party speech-to-text (Whisper / Groq / OpenAI) is intentionally disabled
+   * for Shadowing so learners only receive original transcripts directly from the source provider.
+   */
+  async transcribeLessonExplicit(
+    _historyId: string,
+    _options: { allowLocalWhisper?: boolean } = {},
+    _scope?: RequestIdentityScope,
+  ): Promise<HistoryItem> {
+    throw new BadRequestException({
+      code: 'third_party_stt_disabled',
+      message:
+        'Third-party transcription (Whisper / Groq / OpenAI) is disabled. Shadowing only uses original transcripts directly from the source provider.',
+    });
+  }
+
+  private applyNewTranscriptToLesson(
+    existing: HistoryItem,
+    rawSnapshot: RawTranscriptSnapshot,
+    updates: {
+      title?: string;
+      creator?: string;
+      durationSeconds?: number;
+      providerEngine: string;
+      sourceLabel: string;
+    },
+    scope?: RequestIdentityScope,
+  ): HistoryItem {
+    const mode = normalizePacingMode(existing.pacingMode);
+    const rebuilt = this.buildShadowingLessonItem({
+      title: updates.title || existing.title,
+      creator: updates.creator || existing.creator,
+      sourceUrl: existing.sourceUrl,
+      sourceKey: existing.sourceKey || existing.transcriptData?.sourceKey || '',
+      sourceType: existing.transcriptData?.sourceType || 'youtube',
+      platform: existing.platform || 'YouTube',
+      thumbnailUrl: existing.thumbnailUrl || '',
+      durationSeconds: updates.durationSeconds || existing.durationSeconds || 0,
+      videoId: existing.videoId || existing.media?.mediaId || '',
+      providerEngine: updates.providerEngine,
+      media: existing.media || {
+        hasAudio: true,
+        hasVideo: true,
+        mediaKind: existing.videoId ? 'youtube' : 'none',
+        mediaId: existing.videoId || '',
+        streamUrl: '',
+        mimeType: existing.videoId ? 'video/youtube' : '',
+        durationSeconds: updates.durationSeconds || 0,
+      },
+      raw: rawSnapshot,
+      existing,
+      pacingMode: mode,
+      preserveProgress: true,
+    });
+
+    rebuilt.transcriptStatus = 'ready';
+    rebuilt.transcriptError = '';
+    if (rebuilt.transcriptData) {
+      rebuilt.transcriptData.transcriptStatus = 'ready';
+      rebuilt.transcriptData.transcriptError = '';
+    }
+    if (existing.studyNotes) rebuilt.studyNotes = existing.studyNotes;
+
+    const saved = this.historyRepo.create(rebuilt, scope, { replaceExisting: false });
+    this.syncSharedSource(scope?.userId, saved, {
+      sourceKey: rebuilt.sourceKey || '',
+      sourceType: rebuilt.transcriptData?.sourceType || 'youtube',
+      platform: rebuilt.platform || 'YouTube',
+      sourceLabel: updates.sourceLabel,
+      media: rebuilt.media!,
+      raw: rawSnapshot,
+      sourceMeta: {
+        platform: rebuilt.platform || 'YouTube',
+        videoId: rebuilt.videoId,
+        lessonId: saved.id,
+        thumbnailUrl: rebuilt.thumbnailUrl,
+      },
+    });
+    return this.historyRepo.findById(saved.id, scope) || saved;
+  }
+
   private async ingestExternalMedia(
     mediaInfo: NonNullable<ReturnType<typeof classifyMediaUrl>>,
     ytId: string,
@@ -681,14 +1140,33 @@ export class ShadowingService {
     scope: RequestIdentityScope | undefined,
     force: boolean,
     pacingMode: ShadowingPacingMode = 'short',
+    skipSubtitles = false,
+    sttOptions?: {
+      allowLocalWhisper?: boolean;
+      cloudStt?: { provider: 'groq' | 'openai'; apiKey: string; baseUrl?: string; model?: string } | null;
+    },
   ): Promise<HistoryItem> {
+    const opStartedAt = Date.now();
     const persistedDir = this.sharedSources.getMediaDir();
     const mediaResult = await this.mediaTranscription.transcribeUrl(mediaInfo.canonicalUrl, {
       wordTimestamps: true,
+      skipSubtitles,
       persistMediaDir: mediaInfo.source === 'youtube' ? undefined : persistedDir,
       mediaId: mediaInfo.mediaId,
       force,
+      allowLocalWhisper: Boolean(sttOptions?.allowLocalWhisper),
+      cloudStt: sttOptions?.cloudStt ?? null,
     });
+
+    if (
+      wasShadowingTargetDeletedAfter(
+        scope?.userId,
+        [sourceKey, ytId, mediaInfo.mediaId, existing?.id],
+        opStartedAt,
+      )
+    ) {
+      throw new BadRequestException('This lesson was deleted while processing.');
+    }
 
     const isYouTubeFallback = mediaInfo.source === 'youtube' && Boolean(ytId);
     const hasVideo = isYouTubeFallback ? true : Boolean(mediaResult.hasVideo);
@@ -751,9 +1229,10 @@ export class ShadowingService {
       raw: rawSnapshot,
       existing,
       pacingMode,
+      preserveProgress: !force,
     });
 
-    const saved = this.historyRepo.create(item, scope);
+    const saved = this.historyRepo.create(item, scope, { replaceExisting: force });
     this.syncSharedSource(scope?.userId, saved, {
       sourceKey,
       sourceType,
@@ -788,6 +1267,7 @@ export class ShadowingService {
     raw: RawTranscriptSnapshot;
     existing?: HistoryItem;
     pacingMode?: ShadowingPacingMode;
+    preserveProgress?: boolean;
   }): HistoryItem {
     const pacingMode = normalizePacingMode(params.pacingMode);
     const sentences: SentenceItem[] = params.raw.sentences.map((s) => ({
@@ -870,8 +1350,12 @@ export class ShadowingService {
         reviewed: null,
         reviewStatus: 'pending',
         reviewError: '',
+        transcriptStatus: 'ready',
+        transcriptError: '',
         speakerOverrides: {},
       },
+      transcriptStatus: 'ready',
+      transcriptError: '',
       reviewStatus: 'pending',
       speakerCount: 1,
       repairCount: 0,
@@ -894,7 +1378,7 @@ export class ShadowingService {
       },
       chunks,
       sentences,
-      studyNotes: params.existing?.studyNotes || '',
+      studyNotes: params.preserveProgress !== false ? params.existing?.studyNotes || '' : '',
       noteMarkdown: this.historyRepo.buildCleanMarkdown(
         params.title,
         params.creator,
@@ -904,8 +1388,11 @@ export class ShadowingService {
       translationEngineVersion: 4,
       timingVersion: 2,
       segmentationVersion: 2,
-      createdAt: params.existing?.createdAt || new Date().toISOString(),
-      completedDrills: params.existing?.completedDrills || 0,
+      createdAt:
+        params.preserveProgress !== false
+          ? params.existing?.createdAt || new Date().toISOString()
+          : new Date().toISOString(),
+      completedDrills: params.preserveProgress !== false ? params.existing?.completedDrills || 0 : 0,
     };
 
     return item;

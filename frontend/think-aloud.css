@@ -1,0 +1,1080 @@
+/* ==========================================================================
+   FLAPTAP — THINK ALOUD STUDIO (think-aloud.css)
+   Apple Liquid Glass & Tactile Design Tokens (Light + OLED Dark parity).
+   Consumes tokens exclusively from design-tokens.css & apple-components.css.
+   ========================================================================== */
+
+#section-think-aloud {
+  --ta-blue: var(--ap-blue);
+  --ta-blue-hover: var(--ap-blue-hover);
+  --ta-blue-wash: var(--ap-blue-wash);
+  --ta-green: var(--ap-green);
+  --ta-green-solid: var(--ap-green-solid);
+  --ta-green-wash: var(--ap-green-wash);
+  --ta-orange: var(--ap-orange);
+  --ta-orange-wash: var(--ap-orange-wash);
+  --ta-red: var(--ap-red);
+  --ta-red-wash: var(--ap-red-wash);
+  --ta-indigo: var(--ap-indigo);
+  --ta-indigo-wash: var(--ap-indigo-wash);
+
+  font-family: var(--ap-font-text);
+  color: var(--ap-text-primary);
+}
+
+#section-think-aloud *,
+#section-think-aloud *::before,
+#section-think-aloud *::after {
+  box-sizing: border-box;
+}
+
+#section-think-aloud [hidden] {
+  display: none !important;
+}
+
+#section-think-aloud .ltr-num,
+#section-think-aloud .ta-ipa {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
+
+#section-think-aloud .ta-ipa {
+  font-family: var(--ap-font-mono);
+  font-size: 0.82rem;
+  color: var(--ap-blue);
+}
+
+.ta-desk {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* --------------------------------------------------------------------------
+   1. SPLIT HEADER & SEGMENTED NAVIGATION (1:1 Parity with Lab & Studio)
+   -------------------------------------------------------------------------- */
+
+.ta-shell-bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.ta-hero-copy {
+  max-width: 660px;
+}
+
+.ta-kicker-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border-radius: var(--ap-radius-pill);
+  background: var(--ap-fill-subtle);
+  border: 1px solid var(--ap-border);
+  color: var(--ap-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 620;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.ta-kicker-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ap-blue);
+  box-shadow: 0 0 0 3px var(--ap-blue-wash);
+}
+
+.ta-headline {
+  margin: 0 0 6px;
+  font-family: var(--ap-font-display);
+  font-size: clamp(1.65rem, 2.7vw, 2.2rem);
+  font-weight: 740;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+  color: var(--ap-text-primary);
+}
+
+.ta-subcopy {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.5;
+  color: var(--ap-text-secondary);
+}
+
+.ta-view-nav {
+  flex-shrink: 0;
+}
+
+/* --------------------------------------------------------------------------
+   2. DAILY RITUAL + AUTOMATICITY STAGE STRIP
+   -------------------------------------------------------------------------- */
+
+.ta-ritual-card {
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius-lg);
+  box-shadow: var(--ap-shadow-card);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ta-ritual-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ta-stage-pill-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ta-stage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: var(--ap-radius-pill);
+  background: var(--ap-blue-wash);
+  border: 1px solid rgba(0, 113, 227, 0.22);
+  color: var(--ap-blue);
+  font-size: 0.78rem;
+  font-weight: 660;
+}
+
+.ta-stage-meta {
+  font-size: 0.82rem;
+  color: var(--ap-text-secondary);
+}
+
+.ta-ritual-progress-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ap-text-secondary);
+}
+
+.ta-ritual-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ta-ritual-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 11px 13px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-surface-secondary);
+  border: 1px solid var(--ap-border);
+  text-align: start;
+  cursor: pointer;
+  color: inherit;
+  transition: border-color 0.16s var(--ap-ease), background-color 0.16s var(--ap-ease), transform 0.14s var(--ap-ease);
+}
+
+.ta-ritual-step:hover {
+  border-color: var(--ap-border-strong);
+  background: var(--ap-fill-subtle);
+  transform: translateY(-1px);
+}
+
+.ta-ritual-step.is-done {
+  border-color: rgba(52, 199, 89, 0.34);
+  background: var(--ap-green-wash);
+}
+
+.ta-ritual-step-title {
+  font-size: 0.84rem;
+  font-weight: 640;
+  color: var(--ap-text-primary);
+  margin-bottom: 2px;
+}
+
+.ta-ritual-step-sub {
+  font-size: 0.75rem;
+  color: var(--ap-text-secondary);
+}
+
+.ta-ritual-check {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ap-border-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: transparent;
+  background: var(--ap-surface);
+}
+
+.ta-ritual-step.is-done .ta-ritual-check {
+  background: var(--ap-green-solid);
+  border-color: var(--ap-green-solid);
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   3. COMMAND DESK CONFIGURATOR CARD
+   -------------------------------------------------------------------------- */
+
+.ta-card {
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius-lg);
+  box-shadow: var(--ap-shadow-card);
+  overflow: hidden;
+}
+
+.ta-command-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--ap-border);
+  background: var(--ap-surface-secondary);
+  flex-wrap: wrap;
+}
+
+.ta-mode-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ta-mode-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: var(--ap-radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ap-text-secondary);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s var(--ap-ease);
+}
+
+.ta-mode-tab:hover {
+  background: var(--ap-fill-subtle);
+  color: var(--ap-text-primary);
+}
+
+.ta-mode-tab.active {
+  background: var(--ap-surface);
+  color: var(--ap-blue);
+  border-color: rgba(0, 113, 227, 0.25);
+  box-shadow: var(--ap-shadow-pill);
+}
+
+.ta-mode-science-pill {
+  font-size: 0.74rem;
+  color: var(--ap-text-tertiary);
+  font-weight: 520;
+}
+
+.ta-command-body {
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ta-mode-brief {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--ap-radius-sm);
+  background: var(--ap-fill-subtle);
+  border: 1px solid var(--ap-border);
+  font-size: 0.85rem;
+  color: var(--ap-text-secondary);
+  flex-wrap: wrap;
+}
+
+.ta-field-label {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 640;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ap-text-tertiary);
+  margin-bottom: 8px;
+}
+
+.ta-domain-pills {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.ta-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: var(--ap-radius-pill);
+  border: 1px solid var(--ap-border-strong);
+  background: var(--ap-surface-secondary);
+  color: var(--ap-text-secondary);
+  font-size: 0.82rem;
+  font-weight: 560;
+  cursor: pointer;
+  transition: all 0.16s var(--ap-ease);
+}
+
+.ta-pill-btn:hover {
+  background: var(--ap-fill-subtle);
+  color: var(--ap-text-primary);
+}
+
+.ta-pill-btn.active {
+  background: var(--ap-blue-wash);
+  border-color: var(--ap-blue);
+  color: var(--ap-blue);
+  font-weight: 630;
+}
+
+.ta-controls-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ta-select,
+.ta-input,
+.ta-textarea {
+  width: 100%;
+  border-radius: var(--ap-radius-sm);
+  border: 1px solid var(--ap-border-strong);
+  background: var(--ap-surface-secondary);
+  color: var(--ap-text-primary);
+  font-family: var(--ap-font-text);
+  font-size: 0.88rem;
+  padding: 9px 12px;
+  transition: border-color 0.16s var(--ap-ease), box-shadow 0.16s var(--ap-ease);
+}
+
+.ta-select:focus,
+.ta-input:focus,
+.ta-textarea:focus {
+  outline: none;
+  border-color: var(--ap-blue);
+  box-shadow: 0 0 0 3px var(--ap-blue-ring);
+}
+
+.ta-command-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.ta-input-mode-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--ap-radius-pill);
+  background: var(--ap-fill-subtle);
+  border: 1px solid var(--ap-border);
+}
+
+.ta-input-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: var(--ap-radius-pill);
+  border: none;
+  background: transparent;
+  color: var(--ap-text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s var(--ap-ease);
+}
+
+.ta-input-mode-btn.active {
+  background: var(--ap-surface);
+  color: var(--ap-text-primary);
+  box-shadow: var(--ap-shadow-pill);
+}
+
+/* --------------------------------------------------------------------------
+   4. LIVE SPEAKING ARENA (4/3/2, FRAMEWORK, CIRCUMLOCUTION, CAMERA & Q&A)
+   -------------------------------------------------------------------------- */
+
+.ta-arena-card {
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius-xl);
+  box-shadow: var(--ap-shadow-hero);
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  animation: appleFadeRise 0.24s var(--ap-spring);
+}
+
+.ta-arena-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ta-arena-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.ta-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: var(--ap-radius-pill);
+  font-size: 0.74rem;
+  font-weight: 620;
+  background: var(--ap-fill-subtle);
+  color: var(--ap-text-secondary);
+  border: 1px solid var(--ap-border);
+}
+
+.ta-badge--blue {
+  background: var(--ap-blue-wash);
+  color: var(--ap-blue);
+  border-color: rgba(0, 113, 227, 0.25);
+}
+
+.ta-badge--green {
+  background: var(--ap-green-wash);
+  color: var(--ap-green);
+  border-color: rgba(52, 199, 89, 0.28);
+}
+
+.ta-badge--orange {
+  background: var(--ap-orange-wash);
+  color: var(--ap-orange);
+  border-color: rgba(255, 149, 0, 0.28);
+}
+
+.ta-badge--red {
+  background: var(--ap-red-wash);
+  color: var(--ap-red);
+  border-color: rgba(255, 59, 48, 0.28);
+}
+
+.ta-arena-title {
+  margin: 0 0 6px;
+  font-family: var(--ap-font-display);
+  font-size: 1.35rem;
+  font-weight: 710;
+  letter-spacing: -0.02em;
+  color: var(--ap-text-primary);
+}
+
+.ta-arena-body {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--ap-text-secondary);
+  max-width: 720px;
+}
+
+.ta-timer-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  padding: 10px 16px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-surface-secondary);
+  border: 1px solid var(--ap-border);
+  min-width: 144px;
+}
+
+.ta-timer-label {
+  font-size: 0.7rem;
+  font-weight: 640;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ap-text-tertiary);
+}
+
+.ta-timer-clock {
+  font-family: var(--ap-font-mono);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--ap-text-primary);
+  line-height: 1;
+}
+
+.ta-timer-clock.is-urgent {
+  color: var(--ap-orange);
+}
+
+/* Grounding cue & Curveball alert */
+.ta-grounding-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-blue-wash);
+  border: 1px solid rgba(0, 113, 227, 0.22);
+  font-size: 0.85rem;
+  color: var(--ap-text-primary);
+  flex-wrap: wrap;
+}
+
+.ta-curveball-banner {
+  padding: 14px 16px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-orange-wash);
+  border: 1px solid rgba(255, 149, 0, 0.36);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: appleFadeRise 0.25s var(--ap-spring);
+}
+
+.ta-curveball-kicker {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ap-orange);
+}
+
+.ta-curveball-question {
+  font-size: 1rem;
+  font-weight: 640;
+  color: var(--ap-text-primary);
+}
+
+/* Framework Beat Pacer */
+.ta-beats-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.ta-beat-card {
+  padding: 11px 13px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-surface-secondary);
+  border: 1px solid var(--ap-border);
+  transition: all 0.2s var(--ap-ease);
+}
+
+.ta-beat-card.is-active {
+  border-color: var(--ap-blue);
+  background: var(--ap-blue-wash);
+}
+
+.ta-beat-card.is-done {
+  border-color: rgba(52, 199, 89, 0.3);
+}
+
+.ta-beat-label {
+  font-size: 0.78rem;
+  font-weight: 680;
+  color: var(--ap-text-primary);
+  margin-bottom: 3px;
+}
+
+.ta-beat-cue {
+  font-size: 0.79rem;
+  line-height: 1.4;
+  color: var(--ap-text-secondary);
+}
+
+/* 4/3/2 Rounds Strip */
+.ta-rounds-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.ta-round-pill {
+  padding: 10px 12px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-surface-secondary);
+  border: 1px solid var(--ap-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ta-round-pill.is-active {
+  border-color: var(--ap-blue);
+  background: var(--ap-blue-wash);
+}
+
+.ta-round-pill.is-done {
+  border-color: rgba(52, 199, 89, 0.34);
+  background: var(--ap-green-wash);
+}
+
+/* Circumlocution Card */
+.ta-taboo-card {
+  padding: 18px 20px;
+  border-radius: var(--ap-radius-lg);
+  background: var(--ap-surface-secondary);
+  border: 1px solid var(--ap-border-strong);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ta-taboo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ta-taboo-concept {
+  font-family: var(--ap-font-display);
+  font-size: 1.45rem;
+  font-weight: 740;
+  color: var(--ap-text-primary);
+}
+
+.ta-taboo-hint {
+  font-size: 0.88rem;
+  color: var(--ap-text-secondary);
+}
+
+.ta-forbidden-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ta-forbidden-chip {
+  padding: 5px 11px;
+  border-radius: var(--ap-radius-pill);
+  background: var(--ap-red-wash);
+  border: 1px solid rgba(255, 59, 48, 0.28);
+  color: var(--ap-red);
+  font-size: 0.8rem;
+  font-weight: 630;
+  text-decoration: line-through;
+}
+
+.ta-forbidden-chip.is-hit {
+  background: var(--ap-red);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+/* Camera Preview + Audio Level + Live Transcript */
+.ta-arena-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+}
+
+.ta-arena-workspace.has-camera {
+  grid-template-columns: 300px minmax(0, 1fr);
+}
+
+.ta-camera-frame {
+  border-radius: var(--ap-radius-md);
+  overflow: hidden;
+  background: #0d0e12;
+  border: 1px solid var(--ap-border-strong);
+  aspect-ratio: 4 / 3;
+  position: relative;
+}
+
+.ta-camera-frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  display: block;
+}
+
+.ta-camera-status {
+  position: absolute;
+  inset-inline-start: 10px;
+  bottom: 10px;
+  padding: 4px 9px;
+  border-radius: var(--ap-radius-pill);
+  background: rgba(0, 0, 0, 0.65);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.ta-level-meter {
+  height: 6px;
+  border-radius: var(--ap-radius-pill);
+  background: var(--ap-fill);
+  overflow: hidden;
+}
+
+.ta-level-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--ap-accent-grad);
+  transition: width 0.08s linear;
+}
+
+.ta-arena-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ta-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ta-starter-drawer {
+  border-top: 1px solid var(--ap-border);
+  padding-top: 12px;
+}
+
+.ta-starter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ta-starter-chip {
+  padding: 6px 12px;
+  border-radius: var(--ap-radius-pill);
+  border: 1px solid var(--ap-border-strong);
+  background: var(--ap-surface-secondary);
+  color: var(--ap-text-primary);
+  font-size: 0.82rem;
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.ta-starter-chip:hover {
+  border-color: var(--ap-blue);
+  color: var(--ap-blue);
+}
+
+/* --------------------------------------------------------------------------
+   5. AI AUTOMATICITY SCORECARD & CALQUE RADAR REPORT
+   -------------------------------------------------------------------------- */
+
+.ta-report-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: appleFadeRise 0.25s var(--ap-spring);
+}
+
+.ta-scores-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ta-score-tile {
+  padding: 14px 16px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-surface-secondary);
+  border: 1px solid var(--ap-border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ta-score-val {
+  font-family: var(--ap-font-display);
+  font-size: 1.6rem;
+  font-weight: 740;
+  color: var(--ap-blue);
+}
+
+.ta-score-lbl {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ap-text-secondary);
+}
+
+.ta-recast-box {
+  padding: 16px 18px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-surface-secondary);
+  border: 1px solid rgba(0, 113, 227, 0.24);
+  font-size: 0.98rem;
+  line-height: 1.7;
+  color: var(--ap-text-primary);
+}
+
+.ta-calque-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
+
+.ta-calque-card {
+  padding: 14px 16px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-surface-secondary);
+  border: 1px solid var(--ap-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ta-calque-before {
+  font-size: 0.86rem;
+  color: var(--ap-red);
+  text-decoration: line-through;
+}
+
+.ta-calque-after {
+  font-size: 0.98rem;
+  font-weight: 660;
+  color: var(--ap-green);
+}
+
+.ta-chunk-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.ta-chunk-card {
+  padding: 14px 16px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-surface-secondary);
+  border: 1px solid var(--ap-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   6. INTERACTIVE THINKING SPINES COMBINER (/think/spines)
+   -------------------------------------------------------------------------- */
+
+.ta-combiner-preview {
+  padding: 18px 20px;
+  border-radius: var(--ap-radius-lg);
+  background: var(--ap-surface);
+  border: 1px solid rgba(0, 113, 227, 0.26);
+  box-shadow: var(--ap-shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ta-combiner-sentence {
+  font-family: var(--ap-font-display);
+  font-size: 1.2rem;
+  font-weight: 650;
+  line-height: 1.45;
+  color: var(--ap-text-primary);
+}
+
+.ta-combiner-sentence .seg-starter {
+  color: var(--ap-blue);
+}
+
+.ta-combiner-sentence .seg-engine {
+  color: var(--ap-text-primary);
+}
+
+.ta-combiner-sentence .seg-tail {
+  color: var(--ap-green);
+}
+
+.ta-spine-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ta-spine-col {
+  padding: 14px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-surface-secondary);
+  border: 1px solid var(--ap-border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ta-spine-choice {
+  padding: 9px 11px;
+  border-radius: var(--ap-radius-sm);
+  border: 1px solid var(--ap-border);
+  background: var(--ap-surface);
+  text-align: start;
+  cursor: pointer;
+  color: var(--ap-text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: border-color 0.15s var(--ap-ease), background-color 0.15s var(--ap-ease);
+}
+
+.ta-spine-choice:hover {
+  border-color: var(--ap-border-strong);
+}
+
+.ta-spine-choice.active {
+  border-color: var(--ap-blue);
+  background: var(--ap-blue-wash);
+}
+
+.ta-pack-card {
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius-lg);
+  padding: 18px 20px;
+  box-shadow: var(--ap-shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   7. SESSIONS ANALYTICS & HISTORY LIST (/think/sessions)
+   -------------------------------------------------------------------------- */
+
+.ta-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ta-metric-card {
+  padding: 15px 17px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-border);
+  box-shadow: var(--ap-shadow-card);
+}
+
+.ta-metric-val {
+  font-family: var(--ap-font-display);
+  font-size: 1.55rem;
+  font-weight: 740;
+  color: var(--ap-text-primary);
+  margin: 4px 0 2px;
+}
+
+.ta-metric-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ap-text-tertiary);
+}
+
+.ta-session-card {
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-border);
+  border-radius: var(--ap-radius-lg);
+  padding: 16px 18px;
+  box-shadow: var(--ap-shadow-card);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ta-empty-box {
+  padding: 36px 24px;
+  border-radius: var(--ap-radius-lg);
+  border: 1px dashed var(--ap-border-strong);
+  background: var(--ap-surface);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* --------------------------------------------------------------------------
+   8. RESPONSIVE BREAKPOINTS
+   -------------------------------------------------------------------------- */
+
+@media (max-width: 1024px) {
+  .ta-scores-grid,
+  .ta-metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ta-controls-grid,
+  .ta-spine-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ta-arena-workspace.has-camera {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .ta-ritual-steps,
+  .ta-rounds-strip,
+  .ta-controls-grid,
+  .ta-spine-columns,
+  .ta-scores-grid,
+  .ta-metrics-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ta-arena-card {
+    padding: 16px;
+  }
+  .ta-timer-box {
+    width: 100%;
+    align-items: flex-start;
+  }
+}

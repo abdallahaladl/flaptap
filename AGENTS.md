@@ -37,7 +37,13 @@
 
 ### Caption Failure Contract
 
-- `video_unavailable` (`404`, no retry) · `no_captions` (`422`, no retry) · `rate_limited` (`503`, retry offered) · `timeout` (`503`, retry offered).
+- `video_unavailable` (`404`, no retry) · `no_captions` (`422`, no retry) · `rate_limited` (`503`, retry offered with cooldown) · `live_fetch_disabled` (`503`, guard kill-switch active) · `timeout` (`503`, retry offered).
+
+### Transcript Provider Rate-Limit Guard Law
+
+- All live outbound transcript/subtitle fetches MUST flow through [`TranscriptProviderGuard`](file:///Users/abdallah/workspace/flaptap/backend/src/core/media/transcript-provider-guard.service.ts) (`TranscriptService` / `MediaTranscriptionService`); never bypass it or invoke `extract_transcript.py`, `transcribe_media.py`, or `yt-dlp` against live URLs in loops.
+- AI agents and automated test suites MUST NOT hit live YouTube or external media providers during development, debugging, or testing; set `FLAPTAP_LIVE_TRANSCRIPTS=off` (default under `NODE_ENV=test`) and use cached lessons, SQLite fixtures, or manual transcript import.
+- Never retry immediately after a `rate_limited` (`503`) response; respect `retryAfterSec` / persisted cooldown state so network IP blocks are never extended.
 
 ---
 

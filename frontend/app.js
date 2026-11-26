@@ -19,6 +19,7 @@
       navLessons: 'Shadowing',
       navDialogue: 'Dialogues',
       navPronunciation: 'Phonetics',
+      navThinkAloud: 'Think Aloud',
       navExtractor: 'Phrase Miner',
       navLearningLibrary: 'Phrase Builder',
       navVocabulary: 'Vocabulary',
@@ -42,8 +43,7 @@
       startLessonBtn: 'Start Lesson',
       lessonsPacingLabel: 'Lines',
       pacingShort: 'Short',
-      pacingBalanced: 'Medium',
-      pacingFull: 'Full',
+      pacingNormal: 'Normal',
       cachedBadge: 'Ready in Library',
       openCachedBtn: 'Open Instantly',
       bypassCacheLabel: 'Re-extract fresh',
@@ -174,6 +174,14 @@
       confirmClear: 'Permanently delete all lessons from your library?',
       confirmClearVocab: 'Permanently clear all saved words from your Vocabulary Vault?',
       confirmDeleteAccount: 'Permanently delete your account, lesson history, caches, notes, and vocabulary? This cannot be undone.',
+      featureDataMatrixHeading: 'Feature Data & Storage Control',
+      auditLogHeading: 'Operations & Deletion Log',
+      emptyAuditTitle: 'No deletion or reset operations logged yet',
+      emptyAuditDesc: 'Every item delete, cache purge, progress reset, and workspace wipe records a lightweight receipt here while keeping zero deleted content.',
+      workspaceResetTitle: 'Workspace Factory Reset',
+      workspaceResetDesc: 'Wipe all lessons, transcripts, disk media, Think Aloud sessions, Phrase Miner guides, Phrase Builder items, Vocabulary, and practice history to start fresh like Day 1 while keeping your login account.',
+      workspaceResetShortDesc: 'Reset all study data, caches, and media to Day 1 while keeping your login account.',
+      workspaceResetBtn: 'Reset Entire Workspace…',
     },
     ar: {
       brandEdition: 'استوديو الإنجليزية المنطوقة',
@@ -183,6 +191,7 @@
       navLessons: 'الترديد',
       navDialogue: 'الحوارات',
       navPronunciation: 'الصوتيات',
+      navThinkAloud: 'فكّر بصوت عالٍ',
       navExtractor: 'استخراج العبارات',
       navLearningLibrary: 'بناء العبارات',
       navVocabulary: 'المفردات',
@@ -280,8 +289,15 @@
       confirmDeleteAccount: 'هل أنت متأكد من حذف حسابك وجميع بياناتك وسجل دروسك نهائياً؟',
       lessonsPacingLabel: 'السطور',
       pacingShort: 'قصيرة',
-      pacingBalanced: 'متوسطة',
-      pacingFull: 'كاملة',
+      pacingNormal: 'عادية',
+      featureDataMatrixHeading: 'التحكم في بيانات وتخزين الميزات',
+      auditLogHeading: 'سجل العمليات والحذف',
+      emptyAuditTitle: 'لا توجد عمليات حذف أو إعادة ضبط مسجلة بعد',
+      emptyAuditDesc: 'يتم تسجيل إيصال خفيف لكل عملية حذف أو مسح ذاكرة أو تصفير تقدم هنا دون الاحتفاظ بأي بيانات محذوفة.',
+      workspaceResetTitle: 'إعادة ضبط المصنع لمساحة العمل',
+      workspaceResetDesc: 'مسح جميع الدروس والنصوص والوسائط وجلسات التفكير وأدلة استخراج العبارات وبناء العبارات والمفردات وسجل التدريب للبدء من جديد كاليوم الأول مع بقاء حسابك.',
+      workspaceResetShortDesc: 'إعادة ضبط جميع بيانات الدراسة والذاكرة والوسائط كاليوم الأول مع بقاء حسابك.',
+      workspaceResetBtn: 'إعادة ضبط مساحة العمل بالكامل…',
     },
     es: {
       brandEdition: 'Estudio de Inglés Hablado',
@@ -291,6 +307,7 @@
       navLessons: 'Shadowing',
       navDialogue: 'Diálogos',
       navPronunciation: 'Fonética',
+      navThinkAloud: 'Think Aloud',
       navExtractor: 'Extractor',
       navLearningLibrary: 'Creador',
       navVocabulary: 'Vocabulario',
@@ -308,8 +325,7 @@
       startLessonBtn: 'Iniciar lección',
       lessonsPacingLabel: 'Líneas',
       pacingShort: 'Cortas',
-      pacingBalanced: 'Medias',
-      pacingFull: 'Completas',
+      pacingNormal: 'Normal',
       libraryHeading: 'Biblioteca de lecciones',
       openLesson: 'Estudiar',
       sentencesUnit: 'oraciones',
@@ -322,6 +338,7 @@
       navLessons: 'Shadowing',
       navDialogue: 'Dialogues',
       navPronunciation: 'Phonétique',
+      navThinkAloud: 'Think Aloud',
       navExtractor: 'Extracteur',
       navLearningLibrary: 'Générateur',
       navVocabulary: 'Vocabulaire',
@@ -339,8 +356,7 @@
       startLessonBtn: 'Commencer',
       lessonsPacingLabel: 'Lignes',
       pacingShort: 'Courtes',
-      pacingBalanced: 'Moyennes',
-      pacingFull: 'Complètes',
+      pacingNormal: 'Normal',
       libraryHeading: 'Bibliothèque',
       openLesson: 'Étudier',
       sentencesUnit: 'phrases',
@@ -353,6 +369,7 @@
       navLessons: 'Shadowing',
       navDialogue: 'Dialoge',
       navPronunciation: 'Phonetik',
+      navThinkAloud: 'Think Aloud',
       navExtractor: 'Phrase Miner',
       navLearningLibrary: 'Phrase Builder',
       navVocabulary: 'Vokabeln',
@@ -370,8 +387,7 @@
       startLessonBtn: 'Lektion starten',
       lessonsPacingLabel: 'Zeilen',
       pacingShort: 'Kurz',
-      pacingBalanced: 'Mittel',
-      pacingFull: 'Voll',
+      pacingNormal: 'Normal',
       libraryHeading: 'Bibliothek',
       openLesson: 'Lernen',
       sentencesUnit: 'Sätze',
@@ -384,6 +400,7 @@
       navLessons: 'Gölgeleme',
       navDialogue: 'Diyaloglar',
       navPronunciation: 'Fonetik',
+      navThinkAloud: 'Sesli Düşün',
       navExtractor: 'İfade Çıkarıcı',
       navLearningLibrary: 'İfade Üretici',
       navVocabulary: 'Kelimeler',
@@ -401,8 +418,7 @@
       startLessonBtn: 'Dersi Başlat',
       lessonsPacingLabel: 'Satırlar',
       pacingShort: 'Kısa',
-      pacingBalanced: 'Orta',
-      pacingFull: 'Tam',
+      pacingNormal: 'Normal',
       libraryHeading: 'Ders Kitaplığı',
       openLesson: 'Çalış',
       sentencesUnit: 'cümle',
@@ -441,6 +457,9 @@
     vocabFilter: 'all',
     vocabSearch: '',
     vocabItems: [],
+    selectedVocabIds: new Set(),
+    lifecycleSummary: null,
+    auditEvents: [],
     languages: [],
     flashcardsOpen: false,
     flashcardIndex: 0,
@@ -497,6 +516,103 @@
     U.showToast(message, 'workspace-toast', 3400);
   }
 
+  /**
+   * Synchronizes all client-side storage (localStorage notes/prefs, sessionStorage,
+   * in-memory lookup caches, URL cache banners, and isolated feature stores) after
+   * any deletion, cache purge, logout, or workspace factory reset.
+   */
+  function purgeClientData(opts = {}) {
+    const {
+      feature = 'all',
+      scope = 'item',
+      ids = [],
+      resetAll = false,
+      resetPreferences = false,
+      includeAuth = false,
+    } = opts || {};
+
+    const cleanFeature = String(feature || 'all').toLowerCase();
+    const idList = Array.isArray(ids) ? ids.map((x) => String(x || '').trim()).filter(Boolean) : [];
+
+    try {
+      if (resetAll || includeAuth || cleanFeature === 'lessons' || cleanFeature === 'shadowing' || cleanFeature === 'street_talk' || cleanFeature === 'phonetics') {
+        if (idList.length > 0 && !resetAll && !includeAuth) {
+          for (const id of idList) {
+            localStorage.removeItem(`notes_${id}`);
+          }
+        } else {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.startsWith('notes_')) {
+              localStorage.removeItem(k);
+            }
+          }
+        }
+        state.urlCacheMatch = null;
+        const banner = document.getElementById('url-cache-banner');
+        if (banner) banner.hidden = true;
+      }
+
+      if (resetAll || includeAuth) {
+        [
+          'flaptap:aex-library-scroll:v1',
+          'flaptap:aex-detail-scroll:v1',
+          'flaptap_ll_scroll_v1',
+          'flaptap_shadowing_review_opts',
+        ].forEach((k) => {
+          try {
+            sessionStorage.removeItem(k);
+          } catch {}
+        });
+      }
+
+      if (resetPreferences || includeAuth) {
+        const prefKeys = [
+          'flaptap_shadowing_pacing',
+          'flaptap_seek_step',
+          'flaptap_word_click_mode',
+          'flaptap_word_cushion',
+          'flaptap_karaoke',
+          'flaptap_aex_options',
+          'flaptap_gp_prefs_v1',
+          'flaptap_ll_page_size',
+          'flaptap_ll_view_mode',
+          'flaptap_think_aloud_prefs_v1',
+          'flaptap_trans_lang',
+        ];
+        prefKeys.forEach((k) => localStorage.removeItem(k));
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('flaptap_aisel_')) {
+            localStorage.removeItem(k);
+          }
+        }
+      }
+    } catch {}
+
+    window.FlaptapWordLookup?.clearCache?.();
+
+    if (resetAll || includeAuth) {
+      state.lessons = [];
+      state.vocabItems = [];
+      state.selectedLedgerIds.clear();
+      state.selectedVocabIds.clear();
+      state.usageOverview = null;
+      state.lifecycleSummary = null;
+      if (resetAll && !includeAuth) {
+        // Keep audit events updated from backend on workspace reset
+      } else {
+        state.auditEvents = [];
+      }
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('flaptap:data-purged', {
+        detail: { feature: cleanFeature, scope, ids: idList, resetAll, resetPreferences, includeAuth },
+      }),
+    );
+  }
+
   /* ========================================================================
      STRICT AUTH GATE & PENDING ACTION CONTINUATION
      ======================================================================== */
@@ -547,7 +663,6 @@
     if (act.type === 'video_lesson' && act.url) {
       const qs = new URLSearchParams({ url: act.url });
       if (act.force) qs.set('force', '1');
-      if (act.autoreview) qs.set('autoreview', '1');
       qs.set('pacing', normalizeShadowingPacing(act.pacing || getSavedShadowingPacing()));
       window.location.href = `/studio?${qs.toString()}`;
       return;
@@ -603,6 +718,19 @@
       switchSection('american-extractor');
       if (window.FlaptapAmericanExtractor?.resumePending) {
         await window.FlaptapAmericanExtractor.resumePending(act.payload);
+      }
+      return;
+    }
+
+    if (
+      (act.type === 'think_aloud_prompt' ||
+        act.type === 'think_aloud_evaluate' ||
+        act.type === 'think_aloud_spine') &&
+      act.payload
+    ) {
+      switchSection('think-aloud');
+      if (window.FlaptapThinkAloud?.resumePending) {
+        await window.FlaptapThinkAloud.resumePending(act);
       }
       return;
     }
@@ -689,6 +817,7 @@
       'lessons',
       'dialogue',
       'pronunciation',
+      'think-aloud',
       'vocabulary',
       'history',
       'american-extractor',
@@ -703,6 +832,7 @@
     document.body.classList.toggle('is-lessons-view', section === 'lessons');
     document.body.classList.toggle('is-extractor-view', section === 'american-extractor');
     document.body.classList.toggle('is-library-view', section === 'learning-library');
+    document.body.classList.toggle('is-think-aloud-view', section === 'think-aloud');
     validSections.forEach((name) => {
       const panel = document.getElementById(`section-${name}`);
       if (panel) panel.hidden = name !== section;
@@ -712,6 +842,7 @@
     }
     if (section !== 'lessons') lessonsStickyDock?.disconnect?.();
     if (section !== 'vocabulary') vocabStickyDock?.disconnect?.();
+    if (section !== 'think-aloud') window.FlaptapThinkAloud?.onDeactivate?.();
     return section;
   }
 
@@ -768,6 +899,8 @@
       await window.FlaptapAmericanExtractor?.init?.(routeState);
     } else if (resolved === 'learning-library') {
       await window.FlaptapLearningLibrary?.init?.(routeState);
+    } else if (resolved === 'think-aloud') {
+      await window.FlaptapThinkAloud?.init?.(routeState);
     }
   }
 
@@ -1073,6 +1206,7 @@
 
     urlCheckTimer = setTimeout(async () => {
       try {
+        await window.FlaptapConfirm?.flushPending?.({ keepalive: false });
         const res = await apiFetch(`/api/tracks/shadowing/check-existing?url=${encodeURIComponent(rawUrl)}`, {
           method: 'GET',
         });
@@ -1247,10 +1381,11 @@
   }
 
   const PACING_STORAGE_KEY = 'flaptap_shadowing_pacing';
-  const VALID_PACING_MODES = ['short', 'balanced', 'full'];
+  const VALID_PACING_MODES = ['short', 'normal'];
 
   function normalizeShadowingPacing(raw) {
     const val = String(raw || '').trim().toLowerCase();
+    if (val === 'balanced' || val === 'full') return 'normal'; // Legacy labels
     return VALID_PACING_MODES.includes(val) ? val : 'short';
   }
 
@@ -1293,12 +1428,11 @@
     if (!requireAuthBeforeAction({ type: 'upload_lesson' }, 'Sign in to upload and transcribe audio or video files.')) {
       return;
     }
+    await window.FlaptapConfirm?.flushPending?.({ keepalive: false });
 
     const uploadBtn = document.getElementById('upload-lesson-btn');
     const statusEl = document.getElementById('lessons-upload-status');
-    const autoReview = Boolean(document.getElementById('lessons-auto-review')?.checked);
     const selectedPacing = getSavedShadowingPacing();
-    persistShadowingReviewPrefs();
 
     state.lessonsUploading = true;
     if (uploadBtn) uploadBtn.disabled = true;
@@ -1328,9 +1462,6 @@
         throw new Error('Upload succeeded but returned no lesson ID.');
       }
       const qs = new URLSearchParams({ id: data.id });
-      if (autoReview && data.reviewStatus !== 'ready') {
-        qs.set('autoreview', '1');
-      }
       window.location.href = `/studio?${qs.toString()}`;
     } catch (err) {
       if (statusEl) {
@@ -1667,6 +1798,11 @@
 
     const filtered = state.lessons.filter((item) => item.track === trackName);
     if (countEl) countEl.textContent = String(filtered.length);
+    const clearBtnId = trackName === 'street_talk' ? 'clear-dialogues-btn' : trackName === 'phonetics' ? 'clear-pronunciation-btn' : '';
+    if (clearBtnId) {
+      const clearBtn = document.getElementById(clearBtnId);
+      if (clearBtn) clearBtn.hidden = filtered.length === 0;
+    }
     const isDialogue = trackName === 'street_talk';
     renderSubjectProgressBar(progressId, {
       total: filtered.length,
@@ -1713,6 +1849,7 @@
   const libraryPaginationBar = window.FlaptapPagination?.createBar
     ? window.FlaptapPagination.createBar({
         barId: 'library-pagination',
+        ariaLabel: 'Lesson library pagination',
         onPageChange: (nextPage) => {
           state.libraryPage = nextPage;
           renderLibrary();
@@ -1720,6 +1857,26 @@
         },
       })
     : null;
+
+  function getFilteredLibraryLessons() {
+    const query = state.librarySearch.trim().toLowerCase();
+    return state.lessons.filter((item) => {
+      if (state.libraryFilter !== 'all' && item.track !== state.libraryFilter) return false;
+      if (!matchesPlatformFilter(item, state.libraryPlatformFilter)) return false;
+      if (state.libraryStatusFilter === 'reviewed' && item.reviewStatus !== 'ready') return false;
+      if (state.libraryStatusFilter === 'pending' && item.reviewStatus === 'ready') return false;
+      if (state.libraryStatusFilter === 'done' && !item.isCompleted) return false;
+      if (state.libraryStatusFilter === 'progress') {
+        const done = Number(item.itemProgress?.doneItems ?? 0);
+        if (item.isCompleted || done <= 0) return false;
+      }
+      if (query) {
+        const hay = `${item.title || ''} ${item.creator || ''} ${item.platform || ''} ${item.sourceUrl || ''} ${item.accentDialect || ''}`.toLowerCase();
+        if (!hay.includes(query)) return false;
+      }
+      return true;
+    });
+  }
 
   function renderLibrary() {
     renderTrackShelf(
@@ -1761,22 +1918,7 @@
     if (gateCard) gateCard.hidden = true;
 
     const query = state.librarySearch.trim().toLowerCase();
-    const filtered = state.lessons.filter((item) => {
-      if (state.libraryFilter !== 'all' && item.track !== state.libraryFilter) return false;
-      if (!matchesPlatformFilter(item, state.libraryPlatformFilter)) return false;
-      if (state.libraryStatusFilter === 'reviewed' && item.reviewStatus !== 'ready') return false;
-      if (state.libraryStatusFilter === 'pending' && item.reviewStatus === 'ready') return false;
-      if (state.libraryStatusFilter === 'done' && !item.isCompleted) return false;
-      if (state.libraryStatusFilter === 'progress') {
-        const done = Number(item.itemProgress?.doneItems ?? 0);
-        if (item.isCompleted || done <= 0) return false;
-      }
-      if (query) {
-        const hay = `${item.title || ''} ${item.creator || ''} ${item.platform || ''} ${item.sourceUrl || ''} ${item.accentDialect || ''}`.toLowerCase();
-        if (!hay.includes(query)) return false;
-      }
-      return true;
-    });
+    const filtered = getFilteredLibraryLessons();
 
     if (countLabel) countLabel.textContent = String(filtered.length);
     if (clearBtn) clearBtn.hidden = state.lessons.length === 0;
@@ -1855,16 +1997,22 @@
     renderHistorySectionAuthState();
     if (!state.user) return;
     try {
-      const [usage, items] = await Promise.all([
+      const [usage, items, lifecycleSummary, auditRes] = await Promise.all([
         apiFetch('/api/history/usage', { method: 'GET' }),
         apiFetch('/api/history', { method: 'GET' }),
+        apiFetch('/api/lifecycle/summary', { method: 'GET' }).catch(() => null),
+        apiFetch('/api/lifecycle/audit?limit=50', { method: 'GET' }).catch(() => null),
       ]);
       state.usageOverview = usage;
       state.lessons = Array.isArray(items) ? items : [];
+      if (lifecycleSummary) state.lifecycleSummary = lifecycleSummary;
+      if (auditRes && Array.isArray(auditRes.events)) state.auditEvents = auditRes.events;
       if (usage?.stats) updateStatsDisplay(usage.stats);
       renderUsageOverview();
       renderHistoryLedger();
       renderActivityTimeline();
+      renderLifecycleFeatureGrid();
+      renderAuditLog();
       renderLibrary();
     } catch (err) {
       if (err.status !== 401) showToast(err.message);
@@ -1909,7 +2057,7 @@
       `${Number(stats.dueVocabularyCount) || 0} / ${Number(stats.masteredVocabularyCount) || 0} / ${Number(stats.vocabularyCount) || 0}`,
     );
 
-    set('usage-total-storage', formatBytes(cache.totalStorageBytes || 0));
+    set('usage-total-storage', formatBytes(state.lifecycleSummary?.storage?.totalBytes ?? cache.totalStorageBytes ?? 0));
     set(
       'usage-transcript-caches',
       `${Number(cache.transcriptCacheCount) || 0} (${formatBytes(cache.transcriptCacheBytes || 0)})`,
@@ -1920,6 +2068,170 @@
       `${Number(cache.totalCachedLanguagesCount) || 0} langs (${Number(cache.translationCachedLessonsCount) || 0} lessons)`,
     );
     set('usage-notes-count', String(Number(cache.notesCount) || 0));
+  }
+
+  function renderLifecycleFeatureGrid() {
+    const grid = document.getElementById('lifecycle-feature-grid');
+    const totalLabel = document.getElementById('lifecycle-total-items-label');
+    if (!grid) return;
+
+    const c = state.lifecycleSummary?.counts || {};
+    const st = state.lifecycleSummary?.storage || {};
+
+    const cards = [
+      {
+        feature: 'shadowing',
+        title: 'Shadowing Lessons',
+        count: Number(c.shadowing) || 0,
+        meta: `${Number(c.shadowing) || 0} video/audio lesson(s) + transcript caches`,
+        btnLabel: 'Clear Shadowing',
+      },
+      {
+        feature: 'street_talk',
+        title: 'Dialogues',
+        count: Number(c.street_talk) || 0,
+        meta: `${Number(c.street_talk) || 0} spoken dialogue lesson(s)`,
+        btnLabel: 'Clear Dialogues',
+      },
+      {
+        feature: 'phonetics',
+        title: 'Phonetics Workouts',
+        count: Number(c.phonetics) || 0,
+        meta: `${Number(c.phonetics) || 0} pronunciation workout(s)`,
+        btnLabel: 'Clear Phonetics',
+      },
+      {
+        feature: 'think_aloud',
+        title: 'Think Aloud',
+        count: (Number(c.thinkAloudSessions) || 0) + (Number(c.thinkAloudCustomSpines) || 0),
+        meta: `${Number(c.thinkAloudSessions) || 0} session(s) · ${Number(c.thinkAloudCustomSpines) || 0} custom pack(s)`,
+        btnLabel: 'Clear Think Aloud',
+      },
+      {
+        feature: 'american_extractor',
+        title: 'Phrase Miner',
+        count: Number(c.americanExtractorNotes) || 0,
+        meta: `${Number(c.americanExtractorNotes) || 0} study guide(s) & OCR caches`,
+        btnLabel: 'Clear Phrase Miner',
+      },
+      {
+        feature: 'learning_library',
+        title: 'Phrase Builder',
+        count: Number(c.learningLibraryItems) || 0,
+        meta: `${Number(c.learningLibraryItems) || 0} expression(s) · ${Number(c.learningLibraryBatches) || 0} batch(es)`,
+        btnLabel: 'Clear Phrase Builder',
+      },
+      {
+        feature: 'vocabulary',
+        title: 'Vocabulary Vault',
+        count: Number(c.vocabulary) || 0,
+        meta: `${Number(c.vocabulary) || 0} saved SRS flashcard(s)`,
+        btnLabel: 'Clear Vocabulary',
+      },
+      {
+        feature: 'shared_sources',
+        title: 'Shared Sources & Media',
+        count: (Number(c.sharedSources) || 0) + (Number(st.mediaFilesCount) || 0),
+        meta: `${Number(c.sharedSources) || 0} source(s) · ${formatBytes(st.mediaBytes || 0)} disk media`,
+        btnLabel: 'Purge Sources',
+      },
+    ];
+
+    const totalAll = cards.reduce((sum, item) => sum + item.count, 0);
+    if (totalLabel) totalLabel.textContent = String(totalAll);
+
+    grid.innerHTML = cards
+      .map(
+        (card) => `
+          <div class="lifecycle-feature-card">
+            <div class="lifecycle-feature-top">
+              <div>
+                <div class="lifecycle-feature-title">${escapeHtml(card.title)}</div>
+                <div class="lifecycle-feature-meta ltr-num">${escapeHtml(card.meta)}</div>
+              </div>
+              <span class="cache-pill ltr-num">${card.count}</span>
+            </div>
+            <div class="lifecycle-feature-foot">
+              <span style="font-size:0.74rem;color:var(--ap-text-secondary);">${card.count === 0 ? 'Clean' : 'Active data'}</span>
+              <button type="button" class="apple-action-pill is-danger" data-purge-feature="${escapeHtml(card.feature)}" data-purge-label="${escapeHtml(card.title)}" ${card.count === 0 ? 'disabled' : ''}>
+                ${icon('trash')}
+                <span>${escapeHtml(card.btnLabel)}</span>
+              </button>
+            </div>
+          </div>
+        `,
+      )
+      .join('');
+  }
+
+  function formatPurgePills(purged) {
+    if (!purged || typeof purged !== 'object') return '';
+    const labels = [
+      ['lessons', 'lesson(s)'],
+      ['practiceLogs', 'log(s)'],
+      ['sharedSources', 'source(s)'],
+      ['transcriptCaches', 'transcript cache(s)'],
+      ['mediaCaches', 'media cache(s)'],
+      ['mediaFiles', 'media file(s)'],
+      ['extractorNotes', 'guide(s)'],
+      ['extractorItems', 'phrase(s)'],
+      ['libraryItems', 'expression(s)'],
+      ['libraryBatches', 'batch(es)'],
+      ['thinkAloudSessions', 'session(s)'],
+      ['thinkAloudSpines', 'spine(s)'],
+      ['vocabulary', 'word(s)'],
+      ['aiKeys', 'key(s)'],
+    ];
+    const pills = [];
+    for (const [k, label] of labels) {
+      const val = Number(purged[k]) || 0;
+      if (val > 0) pills.push(`<span class="cache-pill ltr-num">${val} ${label}</span>`);
+    }
+    if (Number(purged.bytesFreed) > 0) {
+      pills.push(`<span class="cache-pill active ltr-num">${escapeHtml(formatBytes(purged.bytesFreed))} freed</span>`);
+    }
+    return pills.join('');
+  }
+
+  function renderAuditLog() {
+    const listEl = document.getElementById('audit-log-list');
+    const emptyEl = document.getElementById('audit-empty-state');
+    const countLabel = document.getElementById('audit-count-label');
+    const clearBtn = document.getElementById('clear-audit-log-btn');
+    if (!listEl) return;
+
+    const events = Array.isArray(state.auditEvents) ? state.auditEvents : [];
+    if (countLabel) countLabel.textContent = String(events.length);
+    if (clearBtn) clearBtn.hidden = events.length === 0;
+
+    if (events.length === 0) {
+      listEl.innerHTML = '';
+      if (emptyEl) emptyEl.hidden = false;
+      return;
+    }
+    if (emptyEl) emptyEl.hidden = true;
+
+    listEl.innerHTML = events
+      .map((ev) => {
+        const pillsHtml = formatPurgePills(ev.purged);
+        return `
+          <div class="audit-row" data-audit-id="${escapeHtml(ev.id)}">
+            <div class="audit-row-main">
+              <div class="audit-row-head">
+                <span class="cache-pill active">${escapeHtml(String(ev.feature || '').replace(/_/g, ' '))}</span>
+                <strong>${escapeHtml(ev.targetLabel || ev.action)}</strong>
+              </div>
+              <div class="audit-row-summary">${escapeHtml(ev.summary)}</div>
+              ${pillsHtml ? `<div class="audit-row-pills">${pillsHtml}</div>` : ''}
+            </div>
+            <div class="audit-row-right">
+              <span>${escapeHtml(formatShortDate(ev.createdAt))}</span>
+              <button type="button" class="icon-action icon-action--xs is-danger" data-delete-audit="${escapeHtml(ev.id)}" aria-label="Remove log receipt" title="Remove log receipt">${icon('trash')}</button>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
   }
 
   function getFilteredSortedLedgerLessons() {
@@ -2185,18 +2497,42 @@
 
     syncFlashcardButtonDom();
 
+    const resetSrsBtn = document.getElementById('vocab-reset-progress-btn');
+    const clearVocabBtn = document.getElementById('vocab-clear-all-btn');
+    const vocabBulkBar = document.getElementById('vocab-bulk-bar');
     if (!state.user) {
       grid.innerHTML = '';
       if (empty) empty.hidden = true;
       if (stage) stage.hidden = true;
       if (gateCard) gateCard.hidden = false;
       if (vocabDock) vocabDock.hidden = true;
+      if (resetSrsBtn) resetSrsBtn.hidden = true;
+      if (clearVocabBtn) clearVocabBtn.hidden = true;
+      if (vocabBulkBar) vocabBulkBar.hidden = true;
       renderSubjectProgressBar('vocab-progress-bar', { total: 0, completed: 0 });
       vocabStickyDock?.disconnect?.();
       return;
     }
 
     if (gateCard) gateCard.hidden = true;
+    const hasWords = state.vocabItems.length > 0;
+    if (resetSrsBtn) resetSrsBtn.hidden = !hasWords;
+    if (clearVocabBtn) clearVocabBtn.hidden = !hasWords;
+    if (vocabBulkBar) vocabBulkBar.hidden = !hasWords;
+
+    const validVocabIds = new Set(state.vocabItems.map((v) => v.id));
+    for (const id of Array.from(state.selectedVocabIds)) {
+      if (!validVocabIds.has(id)) state.selectedVocabIds.delete(id);
+    }
+    const vocabSelCount = document.getElementById('vocab-selected-count');
+    if (vocabSelCount) vocabSelCount.textContent = `(${state.selectedVocabIds.size} selected)`;
+    const vocabSelectAll = document.getElementById('vocab-select-all');
+    if (vocabSelectAll) {
+      vocabSelectAll.checked =
+        hasWords && state.vocabItems.every((v) => state.selectedVocabIds.has(v.id));
+    }
+    const vocabBulkDelBtn = document.getElementById('vocab-bulk-delete-btn');
+    if (vocabBulkDelBtn) vocabBulkDelBtn.disabled = state.selectedVocabIds.size === 0;
 
     const hasVocabOrFilter =
       state.vocabItems.length > 0 || state.vocabFilter !== 'all' || Boolean(state.vocabSearch.trim());
@@ -2245,10 +2581,14 @@
           ? `<a href="/studio?id=${encodeURIComponent(v.lessonId)}&t=${encodeURIComponent(v.timestampSec || 0)}" style="font-weight: 600; color: var(--ink);">${escapeHtml(t('openInContext'))} →</a>`
           : `<span></span>`;
 
+        const isSelected = state.selectedVocabIds.has(v.id);
         return `
           <article class="vocab-card${isDone ? ' is-item-completed' : ''}" data-vocab-id="${escapeHtml(v.id)}">
             <div class="vocab-card-head">
-              <h3 class="vocab-term">${escapeHtml(v.term)}</h3>
+              <div style="display:inline-flex;align-items:center;gap:8px;min-width:0;">
+                <input type="checkbox" class="vocab-select-cb" data-vocab-select="${escapeHtml(v.id)}" ${isSelected ? 'checked' : ''} aria-label="Select ${escapeHtml(v.term)}" />
+                <h3 class="vocab-term">${escapeHtml(v.term)}</h3>
+              </div>
               <div class="vocab-card-top-actions">
                 ${window.FlaptapCopy ? window.FlaptapCopy.buttonHtml(v.term, { className: 'icon-action icon-action--xs' }) : ''}
                 ${v.partOfSpeech ? `<span class="vocab-pos">${escapeHtml(v.partOfSpeech)}</span>` : ''}
@@ -2336,6 +2676,7 @@
      ======================================================================== */
 
   async function executeDialogueGeneration(scenario) {
+    await window.FlaptapConfirm?.flushPending?.({ keepalive: false });
     const btn = document.getElementById('generate-dialogue-btn');
     await withButtonLoading(btn, t('generating'), async () => {
       try {
@@ -2357,6 +2698,7 @@
   }
 
   async function executePronunciationGeneration(topic) {
+    await window.FlaptapConfirm?.flushPending?.({ keepalive: false });
     const btn = document.getElementById('generate-pronunciation-btn');
     await withButtonLoading(btn, t('generating'), async () => {
       try {
@@ -2404,7 +2746,15 @@
       const lessonPip = e.target.closest('[data-ft-jump-lesson]');
       if (lessonPip) {
         const id = lessonPip.getAttribute('data-ft-jump-lesson');
-        const card = id ? document.querySelector(`.history-card[data-lesson-id="${CSS.escape(id)}"]`) : null;
+        let card = id ? document.querySelector(`.history-card[data-lesson-id="${CSS.escape(id)}"]`) : null;
+        if (!card && id && state.section === 'lessons') {
+          const idx = getFilteredLibraryLessons().findIndex((item) => item.id === id);
+          if (idx >= 0) {
+            state.libraryPage = Math.floor(idx / state.libraryPageSize) + 1;
+            renderLibrary();
+            card = document.querySelector(`.history-card[data-lesson-id="${CSS.escape(id)}"]`);
+          }
+        }
         if (card) {
           if (state.section === 'lessons' && lessonsStickyDock?.scrollCardIntoView) {
             lessonsStickyDock.scrollCardIntoView(card);
@@ -2511,7 +2861,7 @@
       handleLessonFileUpload();
     });
 
-    // Shadowing Pacing Preference Segmented Control (Short | Medium | Full)
+    // Shadowing Pacing Preference Segmented Control (Short | Full)
     syncLessonsPacingUi(getSavedShadowingPacing());
     const lessonsPacingGroup = document.getElementById('lessons-pacing-group');
     lessonsPacingGroup?.addEventListener('click', (e) => {
@@ -2576,7 +2926,7 @@
       }
     });
 
-    document.getElementById('video-lesson-form')?.addEventListener('submit', (e) => {
+    document.getElementById('video-lesson-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const input = document.getElementById('youtube-url-input');
       const url = (input?.value || '').trim();
@@ -2585,15 +2935,13 @@
         return;
       }
       const force = Boolean(document.getElementById('force-reextract-checkbox')?.checked);
-      const autoreview = Boolean(document.getElementById('lessons-auto-review')?.checked);
       const selectedPacing = getSavedShadowingPacing();
-      persistShadowingReviewPrefs();
-      if (!requireAuthBeforeAction({ type: 'video_lesson', url, force, autoreview, pacing: selectedPacing })) {
+      if (!requireAuthBeforeAction({ type: 'video_lesson', url, force, pacing: selectedPacing })) {
         return;
       }
+      await window.FlaptapConfirm?.flushPending?.({ keepalive: false });
       const qs = new URLSearchParams({ url, pacing: selectedPacing });
       if (force) qs.set('force', '1');
-      if (autoreview) qs.set('autoreview', '1');
       window.location.href = `/studio?${qs.toString()}`;
     });
 
@@ -2667,51 +3015,62 @@
     }
 
     async function confirmDeleteLesson(id) {
-      if (!window.FlaptapConfirm?.confirmAndUndo) return;
+      if (!window.FlaptapConfirm?.confirmAction) return;
       const target =
         state.lessons.find((l) => l.id === id) ||
         (state.usageOverview?.lessons || []).find((l) => l.id === id);
       const lessonTitle = String(target?.title || 'Lesson').trim();
-      const snapshot = {
-        lessons: [...state.lessons],
-        selectedIds: new Set(state.selectedLedgerIds),
-        overviewLessons: Array.isArray(state.usageOverview?.lessons)
-          ? [...state.usageOverview.lessons]
-          : null,
-      };
 
-      await window.FlaptapConfirm.confirmAndUndo({
-        title: 'Delete lesson?',
-        message: 'This lesson and its saved study history will be removed.',
+      await window.FlaptapConfirm.confirmAction({
+        title: 'Delete lesson permanently?',
+        message: 'Removes this lesson, transcript & media caches, AI Coach, translations, study notes, and progress so re-adding this URL starts 100% fresh.',
         detail: lessonTitle,
-        confirmLabel: 'Delete',
-        undoMessage: `Deleted "${lessonTitle}"`,
-        restoredMessage: `Restored "${lessonTitle}"`,
-        onApply: () => {
+        impactItems: [
+          { label: 'Lesson & progress' },
+          { label: 'Transcript & media cache' },
+          { label: 'AI Coach & translations' },
+          { label: 'Study notes' },
+        ],
+        checkboxes: [
+          {
+            id: 'removeLinkedVocab',
+            label: 'Also delete Vocabulary words saved from this lesson',
+            checked: false,
+          },
+          {
+            id: 'cascadeLinkedNotes',
+            label: 'Also delete linked Phrase Miner study guides',
+            checked: false,
+          },
+        ],
+        confirmLabel: 'Delete Permanently',
+        tone: 'danger',
+        onConfirm: async (opts) => {
+          await apiFetch(`/api/lifecycle/purge/lesson/${encodeURIComponent(id)}`, {
+            method: 'POST',
+            body: JSON.stringify({
+              removeLinkedVocab: Boolean(opts?.removeLinkedVocab),
+              cascadeLinkedNotes: Boolean(opts?.cascadeLinkedNotes),
+            }),
+          });
           state.lessons = state.lessons.filter((l) => l.id !== id);
           state.selectedLedgerIds.delete(id);
           if (state.usageOverview?.lessons) {
             state.usageOverview.lessons = state.usageOverview.lessons.filter((l) => l.id !== id);
           }
-          refreshLessonsAndLedgerViews();
-        },
-        onUndo: () => {
-          state.lessons = snapshot.lessons;
-          state.selectedLedgerIds = snapshot.selectedIds;
-          if (state.usageOverview && snapshot.overviewLessons) {
-            state.usageOverview.lessons = snapshot.overviewLessons;
-          }
-          refreshLessonsAndLedgerViews();
-        },
-        onCommit: async ({ keepalive = false } = {}) => {
-          await apiFetch(`/api/history/${encodeURIComponent(id)}`, {
-            method: 'DELETE',
-            keepalive,
+          purgeClientData({
+            feature: target?.track || 'shadowing',
+            scope: 'item',
+            ids: [id],
           });
-          if (!keepalive) {
+          refreshLessonsAndLedgerViews();
+          if (state.section === 'history') {
             await loadUsageAndHistory();
-            loadSessionAndStats();
           }
+          if (opts?.removeLinkedVocab) {
+            await loadVocabulary();
+          }
+          showToast(`Permanently deleted "${lessonTitle}"`);
         },
         onError: (err) => {
           showToast(err?.message || 'Could not delete lesson.');
@@ -2719,48 +3078,78 @@
       });
     }
 
-    async function confirmClearAllLessons(authTarget) {
+    async function confirmClearAllLessons(authTarget, trackOverride) {
       if (!requireAuthBeforeAction(authTarget)) return;
-      if (!window.FlaptapConfirm?.confirmAndUndo) return;
+      if (!window.FlaptapConfirm?.confirmAction) return;
 
-      const snapshot = {
-        lessons: [...state.lessons],
-        selectedIds: new Set(state.selectedLedgerIds),
-        overviewLessons: Array.isArray(state.usageOverview?.lessons)
-          ? [...state.usageOverview.lessons]
-          : null,
+      const track = trackOverride || (authTarget?.section === 'lessons' ? state.libraryFilter || 'all' : 'all');
+      const matchingLessons =
+        track === 'all' ? state.lessons : state.lessons.filter((l) => l.track === track);
+      const count = matchingLessons.length;
+      const trackTitles = {
+        shadowing: 'Clear all Shadowing lessons?',
+        street_talk: 'Clear all Dialogues?',
+        phonetics: 'Clear all Pronunciation workouts?',
+        all: 'Clear all lessons?',
       };
-      const count = snapshot.lessons.length || snapshot.overviewLessons?.length || 0;
 
-      await window.FlaptapConfirm.confirmAndUndo({
-        title: 'Clear all lessons?',
-        message: t('confirmClear'),
-        detail: count > 0 ? `${count} saved lesson(s)` : '',
-        confirmLabel: 'Clear All',
-        undoMessage: 'Cleared all saved lessons',
-        restoredMessage: 'Restored saved lessons',
-        onApply: () => {
-          state.lessons = [];
-          state.selectedLedgerIds.clear();
-          if (state.usageOverview?.lessons) {
-            state.usageOverview.lessons = [];
+      await window.FlaptapConfirm.confirmAction({
+        title: trackTitles[track] || 'Clear lessons?',
+        message: 'Permanently removes every matching lesson, transcript & media cache, AI Coach, translations, study notes, and progress logs.',
+        detail: count > 0 ? `${count} lesson(s) will be permanently purged` : '',
+        impactItems: [
+          { label: 'Lessons & progress' },
+          { label: 'Disk transcript & media caches' },
+          { label: 'Orphan shared sources' },
+        ],
+        checkboxes: [
+          {
+            id: 'removeLinkedVocab',
+            label: 'Also delete Vocabulary words saved from these lessons',
+            checked: false,
+          },
+          {
+            id: 'cascadeLinked',
+            label: 'Also delete linked Phrase Miner study guides',
+            checked: false,
+          },
+        ],
+        confirmLabel: 'Clear Permanently',
+        tone: 'danger',
+        onConfirm: async (opts) => {
+          const res = await apiFetch('/api/lifecycle/purge/feature', {
+            method: 'POST',
+            body: JSON.stringify({
+              feature: track === 'all' ? 'lessons' : track,
+              removeLinkedVocab: Boolean(opts?.removeLinkedVocab),
+              cascadeLinked: Boolean(opts?.cascadeLinked),
+            }),
+          });
+          const deletedIds = matchingLessons.map((l) => l.id);
+          if (track === 'all') {
+            state.lessons = [];
+            state.selectedLedgerIds.clear();
+          } else {
+            const removedSet = new Set(deletedIds);
+            state.lessons = state.lessons.filter((l) => l.track !== track);
+            deletedIds.forEach((lid) => state.selectedLedgerIds.delete(lid));
+            if (state.usageOverview?.lessons) {
+              state.usageOverview.lessons = state.usageOverview.lessons.filter((l) => !removedSet.has(l.id));
+            }
           }
+          purgeClientData({
+            feature: track === 'all' ? 'lessons' : track,
+            scope: 'feature',
+            ids: deletedIds,
+          });
           refreshLessonsAndLedgerViews();
-        },
-        onUndo: () => {
-          state.lessons = snapshot.lessons;
-          state.selectedLedgerIds = snapshot.selectedIds;
-          if (state.usageOverview && snapshot.overviewLessons) {
-            state.usageOverview.lessons = snapshot.overviewLessons;
-          }
-          refreshLessonsAndLedgerViews();
-        },
-        onCommit: async ({ keepalive = false } = {}) => {
-          await apiFetch('/api/history/clear', { method: 'POST', keepalive });
-          if (!keepalive) {
+          if (state.section === 'history') {
             await loadUsageAndHistory();
-            loadSessionAndStats();
           }
+          if (opts?.removeLinkedVocab) {
+            await loadVocabulary();
+          }
+          showToast(`Cleared ${res.removedCount || count} lesson(s) permanently`);
         },
         onError: (err) => {
           showToast(err?.message || 'Could not clear lessons.');
@@ -2784,14 +3173,16 @@
         const card = e.target.closest('.history-card[data-lesson-id]');
         if (card) {
           const id = card.getAttribute('data-lesson-id');
+          await window.FlaptapConfirm?.flushPending?.({ keepalive: true });
           window.location.href = `/studio?id=${encodeURIComponent(id)}`;
         }
       });
 
-      grid.addEventListener('keydown', (e) => {
+      grid.addEventListener('keydown', async (e) => {
         if (e.key === 'Enter') {
           const card = e.target.closest('.history-card[data-lesson-id]');
           if (card) {
+            await window.FlaptapConfirm?.flushPending?.({ keepalive: true });
             window.location.href = `/studio?id=${encodeURIComponent(card.getAttribute('data-lesson-id'))}`;
           }
         }
@@ -2804,6 +3195,14 @@
 
     document.getElementById('clear-library-btn')?.addEventListener('click', async () => {
       await confirmClearAllLessons({ type: 'section', section: 'lessons' });
+    });
+
+    document.getElementById('clear-dialogues-btn')?.addEventListener('click', async () => {
+      await confirmClearAllLessons({ type: 'section', section: 'dialogue' }, 'street_talk');
+    });
+
+    document.getElementById('clear-pronunciation-btn')?.addEventListener('click', async () => {
+      await confirmClearAllLessons({ type: 'section', section: 'pronunciation' }, 'phonetics');
     });
 
     // Vocabulary Vault Filters, Search, Delete, Flashcards
@@ -2828,7 +3227,121 @@
       if (state.user) loadVocabulary();
     });
 
+    document.getElementById('vocab-grid')?.addEventListener('change', (e) => {
+      const cb = e.target.closest('[data-vocab-select]');
+      if (!cb) return;
+      const id = cb.getAttribute('data-vocab-select');
+      if (cb.checked) state.selectedVocabIds.add(id);
+      else state.selectedVocabIds.delete(id);
+      renderVocabulary();
+    });
+
+    document.getElementById('vocab-select-all')?.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        state.vocabItems.forEach((v) => state.selectedVocabIds.add(v.id));
+      } else {
+        state.selectedVocabIds.clear();
+      }
+      renderVocabulary();
+    });
+
+    document.getElementById('vocab-bulk-delete-btn')?.addEventListener('click', async () => {
+      const ids = Array.from(state.selectedVocabIds);
+      if (!ids.length || !window.FlaptapConfirm?.confirmAction) return;
+      await window.FlaptapConfirm.confirmAction({
+        title: 'Delete selected words?',
+        message: `Remove ${ids.length} selected word(s) from your Vocabulary Vault & Flashcards?`,
+        detail: `${ids.length} word(s) selected`,
+        confirmLabel: 'Delete Selected',
+        tone: 'danger',
+        onConfirm: async () => {
+          await apiFetch('/api/vocabulary/bulk-delete', {
+            method: 'POST',
+            body: JSON.stringify({ ids }),
+          });
+          state.selectedVocabIds.clear();
+          await loadVocabulary();
+          loadSessionAndStats();
+          purgeClientData({ feature: 'vocabulary', scope: 'bulk', ids });
+          showToast(`Removed ${ids.length} word(s)`);
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not remove selected words.');
+        },
+      });
+    });
+
+    document.getElementById('vocab-reset-progress-btn')?.addEventListener('click', async () => {
+      if (!requireAuthBeforeAction({ type: 'section', section: 'vocabulary' })) return;
+      if (!window.FlaptapConfirm?.confirmAction) return;
+      await window.FlaptapConfirm.confirmAction({
+        title: 'Reset SRS mastery progress?',
+        message: 'Resets all saved words back to mastery level 0 and makes them due for review.',
+        detail: `${state.vocabItems.length} word(s)`,
+        confirmLabel: 'Reset SRS',
+        tone: 'primary',
+        onConfirm: async () => {
+          const res = await apiFetch('/api/vocabulary/reset-progress', { method: 'POST' });
+          await loadVocabulary();
+          loadSessionAndStats();
+          showToast(`Reset SRS progress for ${res.resetCount || 0} word(s)`);
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not reset vocabulary SRS.');
+        },
+      });
+    });
+
+    document.getElementById('vocab-clear-all-btn')?.addEventListener('click', async () => {
+      if (!requireAuthBeforeAction({ type: 'section', section: 'vocabulary' })) return;
+      if (!window.FlaptapConfirm?.confirmAction) return;
+      await window.FlaptapConfirm.confirmAction({
+        title: 'Clear all vocabulary?',
+        message: t('confirmClearVocab'),
+        detail: `${state.vocabItems.length} saved word(s)`,
+        confirmLabel: 'Clear All',
+        tone: 'danger',
+        onConfirm: async () => {
+          await apiFetch('/api/vocabulary/clear', { method: 'POST' });
+          state.vocabItems = [];
+          state.selectedVocabIds.clear();
+          setFlashcardsOpen(false);
+          renderVocabulary();
+          loadSessionAndStats();
+          purgeClientData({ feature: 'vocabulary', scope: 'feature' });
+          showToast('Cleared Vocabulary Vault');
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not clear vocabulary.');
+        },
+      });
+    });
+
+    document.getElementById('fc-delete-btn')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const item = state.vocabItems[state.flashcardIndex];
+      if (!item || !window.FlaptapConfirm?.confirmAction) return;
+      await window.FlaptapConfirm.confirmAction({
+        title: 'Delete flashcard word?',
+        message: 'This word will be removed from your Vocabulary Vault & Flashcards.',
+        detail: item.term,
+        confirmLabel: 'Delete',
+        tone: 'danger',
+        onConfirm: async () => {
+          await apiFetch(`/api/vocabulary/${encodeURIComponent(item.id)}`, { method: 'DELETE' });
+          await loadVocabulary();
+          loadSessionAndStats();
+          purgeClientData({ feature: 'vocabulary', scope: 'item', ids: [item.id] });
+          showToast(`Removed "${item.term}"`);
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not delete word.');
+        },
+      });
+    });
+
     document.getElementById('vocab-grid')?.addEventListener('click', async (e) => {
+      if (e.target.closest('[data-vocab-select]')) return;
       const checkBtn = e.target.closest('[data-vocab-complete]');
       if (checkBtn) {
         e.stopPropagation();
@@ -2875,6 +3388,7 @@
               method: 'DELETE',
               keepalive,
             });
+            purgeClientData({ feature: 'vocabulary', scope: 'item', ids: [id] });
             if (!keepalive) {
               await loadVocabulary();
               loadSessionAndStats();
@@ -2915,7 +3429,7 @@
       window.FlaptapWordLookup.bindSelectionLookup(container, {
         maxLength: 320,
         onSelect: (text, meta) => {
-          if (!requireAuthBeforeAction({ type: 'section', section: state.activeSection || 'vocabulary' })) {
+          if (!requireAuthBeforeAction({ type: 'section', section: state.section || 'vocabulary' })) {
             return;
           }
           const node = meta?.range?.startContainer;
@@ -3034,11 +3548,29 @@
       btn.addEventListener('click', async () => {
         if (!requireAuthBeforeAction({ type: 'section', section: 'history' })) return;
         const scope = btn.getAttribute('data-clear-global-cache') || 'all';
+        const scopeLabel =
+          scope === 'translations'
+            ? 'all cached translations'
+            : scope === 'coach'
+              ? 'all AI Coach analyses'
+              : scope === 'transcripts'
+                ? 'all transcript & AI review caches'
+                : 'all cached AI & transcript layers';
+
+        const ok = await window.FlaptapConfirm?.ask({
+          title: 'Clear global caches?',
+          message: `This will clear ${scopeLabel} across your lessons. Your lessons and study notes stay intact.`,
+          confirmLabel: 'Clear Caches',
+          tone: 'warning',
+        });
+        if (!ok) return;
+
         try {
           const res = await apiFetch('/api/history/cache/clear', {
             method: 'POST',
             body: JSON.stringify({ scope }),
           });
+          purgeClientData({ feature: 'shadowing', scope: 'cache' });
           await loadUsageAndHistory();
           showToast(`Cleared ${scope} cache (${res.clearedLessonsCount || 0} lessons updated)`);
         } catch (err) {
@@ -3056,7 +3588,10 @@
         flashcardIndex: state.flashcardIndex,
         flashcardsOpen: state.flashcardsOpen,
       };
-      const total = snapshot.vocabItems.length;
+      const total =
+        Number(state.usageOverview?.stats?.vocabularyCount) ||
+        Number(state.lifecycleSummary?.counts?.vocabulary) ||
+        snapshot.vocabItems.length;
       await window.FlaptapConfirm.confirmAndUndo({
         title: 'Clear all vocabulary?',
         message: t('confirmClearVocab'),
@@ -3066,6 +3601,7 @@
         restoredMessage: 'Restored Vocabulary Vault',
         onApply: () => {
           state.vocabItems = [];
+          state.selectedVocabIds.clear();
           setFlashcardsOpen(false);
           renderVocabulary();
         },
@@ -3077,6 +3613,7 @@
         },
         onCommit: async ({ keepalive = false } = {}) => {
           await apiFetch('/api/vocabulary/clear', { method: 'POST', keepalive });
+          purgeClientData({ feature: 'vocabulary', scope: 'feature' });
           if (!keepalive) {
             await loadUsageAndHistory();
             loadSessionAndStats();
@@ -3142,48 +3679,24 @@
       const ids = Array.from(state.selectedLedgerIds);
       if (ids.length === 0) return;
 
-      if (action === 'delete' && window.FlaptapConfirm?.confirmAndUndo) {
-        const idSet = new Set(ids);
-        const snapshot = {
-          lessons: [...state.lessons],
-          selectedIds: new Set(state.selectedLedgerIds),
-          overviewLessons: Array.isArray(state.usageOverview?.lessons)
-            ? [...state.usageOverview.lessons]
-            : null,
-        };
-        await window.FlaptapConfirm.confirmAndUndo({
-          title: 'Delete selected lessons?',
-          message: `Remove ${ids.length} selected lesson(s) and their history?`,
+      if (action === 'delete' && window.FlaptapConfirm?.confirmAction) {
+        await window.FlaptapConfirm.confirmAction({
+          title: 'Delete selected lessons permanently?',
+          message: `Permanently purge ${ids.length} selected lesson(s), their transcript & media caches, AI Coach, translations, study notes, and practice logs.`,
           detail: `${ids.length} lesson(s) selected`,
-          confirmLabel: 'Delete Selected',
-          undoMessage: `Deleted ${ids.length} lesson(s)`,
-          restoredMessage: `Restored ${ids.length} lesson(s)`,
-          onApply: () => {
-            state.lessons = state.lessons.filter((l) => !idSet.has(l.id));
-            state.selectedLedgerIds.clear();
-            if (state.usageOverview?.lessons) {
-              state.usageOverview.lessons = state.usageOverview.lessons.filter((l) => !idSet.has(l.id));
-            }
-            refreshLessonsAndLedgerViews();
-          },
-          onUndo: () => {
-            state.lessons = snapshot.lessons;
-            state.selectedLedgerIds = snapshot.selectedIds;
-            if (state.usageOverview && snapshot.overviewLessons) {
-              state.usageOverview.lessons = snapshot.overviewLessons;
-            }
-            refreshLessonsAndLedgerViews();
-          },
-          onCommit: async ({ keepalive = false } = {}) => {
-            await apiFetch('/api/history/bulk', {
+          confirmLabel: 'Delete Permanently',
+          tone: 'danger',
+          onConfirm: async () => {
+            const res = await apiFetch('/api/history/bulk', {
               method: 'POST',
-              keepalive,
               body: JSON.stringify({ ids, action: 'delete' }),
             });
-            if (!keepalive) {
-              await loadUsageAndHistory();
-              loadSessionAndStats();
-            }
+            state.lessons = state.lessons.filter((l) => !ids.includes(l.id));
+            state.selectedLedgerIds.clear();
+            purgeClientData({ feature: 'lessons', scope: 'bulk', ids });
+            await loadUsageAndHistory();
+            loadSessionAndStats();
+            showToast(`Permanently deleted ${res.affectedCount || ids.length} lesson(s)`);
           },
           onError: (err) => {
             showToast(err?.message || 'Bulk delete failed.');
@@ -3192,11 +3705,24 @@
         return;
       }
 
+      const isCache = action === 'clear_cache';
+      const ok = await window.FlaptapConfirm?.ask({
+        title: isCache ? 'Clear caches for selected lessons?' : 'Reset progress for selected lessons?',
+        message: isCache
+          ? `Clear AI Coach, translations, AI review, and transcript caches across ${ids.length} lesson(s).`
+          : `Reset all completed sentence checkmarks and drill logs across ${ids.length} lesson(s).`,
+        detail: `${ids.length} lesson(s) selected`,
+        confirmLabel: isCache ? 'Clear Caches' : 'Reset Progress',
+        tone: isCache ? 'warning' : 'primary',
+      });
+      if (!ok) return;
+
       try {
         const res = await apiFetch('/api/history/bulk', {
           method: 'POST',
           body: JSON.stringify({ ids, action }),
         });
+        if (isCache) purgeClientData({ feature: 'lessons', scope: 'cache', ids });
         await loadUsageAndHistory();
         showToast(`Updated ${res.affectedCount || 0} lesson(s)`);
       } catch (err) {
@@ -3230,11 +3756,21 @@
       const clearCacheBtn = e.target.closest('[data-clear-item-cache]');
       if (clearCacheBtn) {
         const id = clearCacheBtn.getAttribute('data-clear-item-cache');
+        const target = state.lessons.find((l) => l.id === id);
+        const ok = await window.FlaptapConfirm?.ask({
+          title: 'Clear lesson caches?',
+          message: 'Clears AI Coach, cached translations, AI Verbatim Review, and disk transcript cache for this lesson.',
+          detail: target?.title || '',
+          confirmLabel: 'Clear Caches',
+          tone: 'warning',
+        });
+        if (!ok) return;
         try {
           await apiFetch(`/api/history/${encodeURIComponent(id)}/cache/clear`, {
             method: 'POST',
             body: JSON.stringify({ scope: 'all' }),
           });
+          purgeClientData({ feature: target?.track || 'shadowing', scope: 'cache', ids: [id] });
           await loadUsageAndHistory();
           showToast('Lesson caches cleared');
         } catch (err) {
@@ -3246,16 +3782,38 @@
       const resetBtn = e.target.closest('[data-reset-item-progress]');
       if (resetBtn) {
         const id = resetBtn.getAttribute('data-reset-item-progress');
-        try {
-          await apiFetch(`/api/history/${encodeURIComponent(id)}/reset-progress`, {
-            method: 'POST',
-            body: JSON.stringify({ clearNotes: false }),
-          });
-          await loadUsageAndHistory();
-          showToast('Drill counter & session logs reset for lesson');
-        } catch (err) {
-          showToast(err.message);
-        }
+        const target = state.lessons.find((l) => l.id === id);
+        await window.FlaptapConfirm?.confirmAction({
+          title: 'Reset lesson progress?',
+          message: 'Clears completed sentence checkmarks and drill logs for this lesson.',
+          detail: target?.title || '',
+          confirmLabel: 'Reset Progress',
+          tone: 'primary',
+          checkboxes: [
+            {
+              id: 'clearNotes',
+              label: 'Also clear personal study notes',
+              checked: false,
+            },
+          ],
+          onConfirm: async (opts) => {
+            const clearNotes = Boolean(opts?.clearNotes);
+            await apiFetch(`/api/history/${encodeURIComponent(id)}/reset-progress`, {
+              method: 'POST',
+              body: JSON.stringify({ clearNotes }),
+            });
+            if (clearNotes) {
+              try {
+                localStorage.removeItem(`notes_${id}`);
+              } catch {}
+            }
+            await loadUsageAndHistory();
+            showToast('Drill counter & session logs reset for lesson');
+          },
+          onError: (err) => {
+            showToast(err?.message || 'Could not reset progress.');
+          },
+        });
         return;
       }
 
@@ -3310,6 +3868,154 @@
         },
       });
     });
+
+    // Cross-Feature Purge Matrix, Audit Log & Workspace Factory Reset
+    document.getElementById('lifecycle-feature-grid')?.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-purge-feature]');
+      if (!btn || btn.disabled) return;
+      if (!requireAuthBeforeAction({ type: 'section', section: 'history' })) return;
+      const feature = btn.getAttribute('data-purge-feature');
+      const label = btn.getAttribute('data-purge-label') || feature;
+
+      await window.FlaptapConfirm?.confirmAction({
+        title: `Clear ${label}?`,
+        message: `Permanently delete all ${label} data and clean up orphaned caches and disk media. This operation will be logged in Operations & Deletion Log.`,
+        detail: label,
+        confirmLabel: 'Purge Permanently',
+        tone: 'danger',
+        onConfirm: async () => {
+          const res = await apiFetch('/api/lifecycle/purge/feature', {
+            method: 'POST',
+            body: JSON.stringify({ feature }),
+          });
+          purgeClientData({ feature, scope: 'feature' });
+          await loadUsageAndHistory();
+          await loadVocabulary();
+          loadSessionAndStats();
+          showToast(`Cleared ${label} (${res.removedCount || 0} item(s))`);
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Feature purge failed.');
+        },
+      });
+    });
+
+    document.getElementById('audit-log-list')?.addEventListener('click', async (e) => {
+      const delBtn = e.target.closest('[data-delete-audit]');
+      if (!delBtn) return;
+      const id = delBtn.getAttribute('data-delete-audit');
+      const ok = await window.FlaptapConfirm?.ask({
+        title: 'Remove log receipt?',
+        message: 'This operational log receipt will be deleted.',
+        confirmLabel: 'Remove',
+        tone: 'danger',
+      });
+      if (!ok) return;
+      try {
+        await apiFetch(`/api/lifecycle/audit/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        state.auditEvents = state.auditEvents.filter((ev) => ev.id !== id);
+        renderAuditLog();
+        showToast('Log receipt removed');
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+
+    document.getElementById('clear-audit-log-btn')?.addEventListener('click', async () => {
+      if (!requireAuthBeforeAction({ type: 'section', section: 'history' })) return;
+      const ok = await window.FlaptapConfirm?.ask({
+        title: 'Clear Operations & Deletion Log?',
+        message: 'Permanently remove all recorded operational receipts.',
+        detail: `${state.auditEvents.length} receipt(s)`,
+        confirmLabel: 'Clear Log',
+        tone: 'danger',
+      });
+      if (!ok) return;
+      try {
+        await apiFetch('/api/lifecycle/audit/clear', { method: 'POST' });
+        state.auditEvents = [];
+        renderAuditLog();
+        showToast('Operations log cleared');
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+
+    async function runWorkspaceFactoryReset() {
+      if (!requireAuthBeforeAction({ type: 'section', section: 'history' })) return;
+      if (!window.FlaptapConfirm?.confirmAction) return;
+
+      let summary = state.lifecycleSummary;
+      try {
+        summary = await apiFetch('/api/lifecycle/summary', { method: 'GET' });
+        state.lifecycleSummary = summary;
+      } catch {}
+      const c = summary?.counts || {};
+      const impactItems = [
+        { label: 'Lessons', value: Number(c.lessonsTotal) || 0 },
+        { label: 'Think Aloud', value: Number(c.thinkAloudSessions) || 0 },
+        { label: 'Phrase Miner', value: Number(c.americanExtractorNotes) || 0 },
+        { label: 'Phrase Builder', value: Number(c.learningLibraryItems) || 0 },
+        { label: 'Vocabulary', value: Number(c.vocabulary) || 0 },
+        { label: 'Sources & Media', value: Number(c.sharedSources) || 0 },
+      ];
+
+      await window.FlaptapConfirm.confirmAction({
+        title: 'Reset Entire Workspace?',
+        message: 'Permanently wipes all study data, transcript & media caches, disk media, and practice history so your workspace starts fresh like Day 1. Your login account stays intact.',
+        detail: state.user?.email || '',
+        impactItems,
+        requirePhrase: 'RESET',
+        checkboxes: [
+          {
+            id: 'includeAuditLog',
+            label: 'Also wipe Operations & Deletion Log',
+            description: 'Leave unchecked to keep one final Factory Reset receipt in the Operations Log.',
+            checked: false,
+          },
+          {
+            id: 'resetPreferences',
+            label: 'Also reset daily goal, language & studio preferences',
+            checked: false,
+          },
+          {
+            id: 'includeAiKeys',
+            label: 'Also remove saved BYOK AI provider keys',
+            checked: false,
+          },
+        ],
+        confirmLabel: 'Factory Reset Workspace',
+        tone: 'danger',
+        onConfirm: async (opts) => {
+          await apiFetch('/api/lifecycle/workspace-reset', {
+            method: 'POST',
+            body: JSON.stringify({
+              confirmPhrase: 'RESET',
+              includeAuditLog: Boolean(opts?.includeAuditLog),
+              resetPreferences: Boolean(opts?.resetPreferences),
+              includeAiKeys: Boolean(opts?.includeAiKeys),
+            }),
+          });
+          purgeClientData({
+            resetAll: true,
+            resetPreferences: Boolean(opts?.resetPreferences),
+          });
+          if (opts?.resetPreferences) {
+            applyUiLanguage('en');
+          }
+          closeAccountDrawer();
+          await Promise.all([loadSessionAndStats(), loadVocabulary(), loadUsageAndHistory()]);
+          renderLibrary();
+          showToast('Workspace reset to Day-1 clean state');
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Workspace reset failed.');
+        },
+      });
+    }
+
+    document.getElementById('workspace-factory-reset-btn')?.addEventListener('click', runWorkspaceFactoryReset);
+    document.getElementById('drawer-workspace-reset-btn')?.addEventListener('click', runWorkspaceFactoryReset);
 
     document.getElementById('clear-activity-log-btn')?.addEventListener('click', async () => {
       if (!requireAuthBeforeAction({ type: 'section', section: 'history' })) return;
@@ -3524,15 +4230,9 @@
       } catch {}
       state.user = null;
       state.authToken = '';
-      state.lessons = [];
-      state.vocabItems = [];
-      state.usageOverview = null;
-      state.selectedLedgerIds.clear();
-      state.urlCacheMatch = null;
       localStorage.removeItem('flaptap_auth_token');
       savePendingAction(null);
-      const banner = document.getElementById('url-cache-banner');
-      if (banner) banner.hidden = true;
+      purgeClientData({ resetAll: true, includeAuth: true });
       updateAccountHeader();
       updateStatsDisplay(null);
       closeAccountDrawer();
@@ -3549,18 +4249,16 @@
         message: t('confirmDeleteAccount'),
         detail: state.user?.email || '',
         confirmLabel: 'Delete Permanently',
+        requirePhrase: 'DELETE',
       });
       if (!ok) return;
       try {
         await apiFetch('/api/auth/account', { method: 'DELETE' });
         state.user = null;
         state.authToken = '';
-        state.lessons = [];
-        state.vocabItems = [];
-        state.usageOverview = null;
-        state.selectedLedgerIds.clear();
         localStorage.removeItem('flaptap_auth_token');
         savePendingAction(null);
+        purgeClientData({ resetAll: true, resetPreferences: true, includeAuth: true });
         updateAccountHeader();
         updateStatsDisplay(null);
         closeAccountDrawer();
@@ -3684,9 +4382,13 @@
       await loadVocabulary();
       await loadSessionAndStats({ silent: true });
     },
+    refreshStats: async () => {
+      await loadSessionAndStats({ silent: true });
+    },
     renderSubjectProgressBar,
     renderCheckButtonHtml,
     setCheckButtonState,
     isVocabularySaved,
+    purgeClientData,
   };
 })();

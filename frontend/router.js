@@ -37,6 +37,15 @@
       group: 'Studio',
       groupI18nKey: 'navGroupStudio',
     },
+    'think-aloud': {
+      section: 'think-aloud',
+      path: '/think',
+      aliases: ['/think-aloud', '/spontaneous', '/thinking'],
+      title: 'Think Aloud',
+      i18nKey: 'navThinkAloud',
+      group: 'Studio',
+      groupI18nKey: 'navGroupStudio',
+    },
     'american-extractor': {
       section: 'american-extractor',
       path: '/extractor',
@@ -90,6 +99,9 @@
     if (val === 'shadowing' || val === 'lessons') return 'lessons';
     if (val === 'dialogue' || val === 'dialogues') return 'dialogue';
     if (val === 'pronunciation' || val === 'phonetics') return 'pronunciation';
+    if (val === 'think' || val === 'think-aloud' || val === 'spontaneous' || val === 'thinking') {
+      return 'think-aloud';
+    }
     if (val === 'library' || val === 'builder' || val === 'phrase-builder' || val === 'learning-library') {
       return 'learning-library';
     }
@@ -188,6 +200,55 @@
       };
     }
 
+    // Sub-routes: Think Aloud (/think, /think/spines, /think/sessions, /think/session/:id)
+    if (
+      pathname === '/think/spines' ||
+      pathname === '/think-aloud/spines' ||
+      pathname === '/spontaneous/spines' ||
+      pathname === '/thinking/spines'
+    ) {
+      return {
+        section: 'think-aloud',
+        subview: 'spines',
+        domainId: '',
+        noteId: '',
+        searchParams: params,
+        canonicalizedFromQuery: false,
+      };
+    }
+    if (
+      pathname === '/think/sessions' ||
+      pathname === '/think-aloud/sessions' ||
+      pathname === '/spontaneous/sessions' ||
+      pathname === '/thinking/sessions'
+    ) {
+      return {
+        section: 'think-aloud',
+        subview: 'sessions',
+        domainId: '',
+        noteId: '',
+        searchParams: params,
+        canonicalizedFromQuery: false,
+      };
+    }
+    if (
+      pathname.startsWith('/think/session/') ||
+      pathname.startsWith('/think-aloud/session/') ||
+      pathname.startsWith('/spontaneous/session/') ||
+      pathname.startsWith('/thinking/session/')
+    ) {
+      const parts = pathname.split('/');
+      const sessionId = decodeURIComponent(parts[parts.length - 1] || '');
+      return {
+        section: 'think-aloud',
+        subview: sessionId ? 'detail' : 'sessions',
+        domainId: '',
+        noteId: sessionId,
+        searchParams: params,
+        canonicalizedFromQuery: false,
+      };
+    }
+
     // Exact path lookup across canonical routes + aliases
     for (const def of Object.values(ROUTE_TABLE)) {
       if (def.path === pathname || def.aliases.includes(pathname)) {
@@ -257,6 +318,16 @@
       } else {
         pathname = '/extractor';
       }
+    } else if (section === 'think-aloud') {
+      if (options.subview === 'spines') {
+        pathname = '/think/spines';
+      } else if (options.subview === 'sessions') {
+        pathname = '/think/sessions';
+      } else if (options.subview === 'detail' && options.noteId) {
+        pathname = `/think/session/${encodeURIComponent(options.noteId)}`;
+      } else {
+        pathname = '/think';
+      }
     } else if (section === 'vocabulary') {
       if (options.subview === 'flashcards') {
         nextParams.set('view', 'flashcards');
@@ -293,6 +364,12 @@
     if (route.section === 'american-extractor') {
       if (route.subview === 'library') return 'Library';
       if (route.subview === 'detail' || route.subview === 'note') return 'Study Guide';
+      return '';
+    }
+    if (route.section === 'think-aloud') {
+      if (route.subview === 'spines') return 'Spines';
+      if (route.subview === 'sessions') return 'Sessions';
+      if (route.subview === 'detail') return 'Session Review';
       return '';
     }
     if (route.section === 'vocabulary') {
@@ -443,6 +520,9 @@
     '/phrase-miner',
     '/american-english',
     '/phrases',
+    '/think-aloud',
+    '/spontaneous',
+    '/thinking',
     '/activity',
   ]);
 

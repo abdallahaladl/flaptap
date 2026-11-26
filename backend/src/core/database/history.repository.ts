@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { SqliteService } from './sqlite.service';
 import { escapeTranscriptHtml, highlightsAreVerbatim, sanitizeVerbatimHtml } from '../linguistics/highlights';
 import {
+  formatTimestampMs,
   segmentParagraphs,
   segmentSentences,
   ShadowingPacingMode,
@@ -13,6 +14,7 @@ import type {
   ShadowingMediaPlayback,
   ShadowingTranscriptData,
   TimedWordMs,
+  TranscriptAvailabilityStatus,
   TranscriptReviewStatus,
 } from '../../modules/tracks/shadowing/shadowing.types';
 
@@ -53,6 +55,7 @@ export interface SentenceItem {
   repaired?: boolean;
   repairNote?: string;
   isOverlap?: boolean;
+  isInterrupted?: boolean;
   paragraphIndex?: number;
   ideaIndex?: number;
   words?: TimedWordMs[];
@@ -139,6 +142,8 @@ export interface HistoryItem {
   platform?: string;
   media?: ShadowingMediaPlayback;
   transcriptData?: ShadowingTranscriptData;
+  transcriptStatus?: TranscriptAvailabilityStatus;
+  transcriptError?: string;
   reviewStatus?: TranscriptReviewStatus;
   speakerCount?: number;
   repairCount?: number;
@@ -920,7 +925,11 @@ export class HistoryRepository {
     return undefined;
   }
 
-  create(item: HistoryItem, scope?: RequestIdentityScope): HistoryItem {
+  create(
+    item: HistoryItem,
+    scope?: RequestIdentityScope,
+    options?: { replaceExisting?: boolean },
+  ): HistoryItem {
     const existing =
       (item.id ? this.findById(item.id, scope) : undefined) ||
       this.findByUrlOrVideoId(item.sourceUrl, item.videoId, scope);
@@ -928,24 +937,28 @@ export class HistoryRepository {
     if (existing) {
       item.id = existing.id;
       item.userId = existing.userId ?? scope?.userId ?? null;
-      item.createdAt = existing.createdAt;
-      item.completedDrills = Math.max(item.completedDrills || 0, existing.completedDrills || 0);
-      item.studyNotes = item.studyNotes || existing.studyNotes || '';
-      if (!item.completionProgress && existing.completionProgress) {
-        item.completionProgress = existing.completionProgress;
-      }
-      if (!item.aiAnalysis && existing.aiAnalysis) {
-        item.aiAnalysis = existing.aiAnalysis;
-        item.analysisStatus = existing.analysisStatus;
-      }
-      if (!item.translationsCache && existing.translationsCache) {
-        item.translationsCache = existing.translationsCache;
-      }
-      if (!item.translationsByText && existing.translationsByText) {
-        item.translationsByText = existing.translationsByText;
-      }
-      if (!item.coachGlosses && existing.coachGlosses) {
-        item.coachGlosses = existing.coachGlosses;
+      if (options?.replaceExisting) {
+        item.createdAt = new Date().toISOString();
+      } else {
+        item.createdAt = existing.createdAt;
+        item.completedDrills = Math.max(item.completedDrills || 0, existing.completedDrills || 0);
+        item.studyNotes = item.studyNotes || existing.studyNotes || '';
+        if (!item.completionProgress && existing.completionProgress) {
+          item.completionProgress = existing.completionProgress;
+        }
+        if (!item.aiAnalysis && existing.aiAnalysis) {
+          item.aiAnalysis = existing.aiAnalysis;
+          item.analysisStatus = existing.analysisStatus;
+        }
+        if (!item.translationsCache && existing.translationsCache) {
+          item.translationsCache = existing.translationsCache;
+        }
+        if (!item.translationsByText && existing.translationsByText) {
+          item.translationsByText = existing.translationsByText;
+        }
+        if (!item.coachGlosses && existing.coachGlosses) {
+          item.coachGlosses = existing.coachGlosses;
+        }
       }
       this.insertOrReplaceRow(item, scope);
       this.logger.log(`Updated lesson in SQLite: ${item.title} (${item.id})`);
@@ -1013,9 +1026,34 @@ export class HistoryRepository {
     return Number(res.changes) > 0;
   }
 
-  clearAll(scope?: RequestIdentityScope): number {
+  clearAll(scope?: RequestIdentityScope, track?: string): number {
     const where = this.scopeWhereClause(scope);
-    const res = this.sqlite.db.prepare(`DELETE FROM lessons WHERE ${where.sql}`).run(...where.params);
+    const cleanTrack = String(track || '').trim();
+    const hasTrack = cleanTrack && cleanTrack !== 'all';
+
+    const lessonRows = hasTrack
+      ? (this.sqlite.db
+          .prepare(`SELECT id FROM lessons WHERE ${where.sql} AND track = ?`)
+          .all(...where.params, cleanTrack) as Array<{ id?: string }>)
+      : (this.sqlite.db
+          .prepare(`SELECT id FROM lessons WHERE ${where.sql}`)
+          .all(...where.params) as Array<{ id?: string }>);
+
+    const res = hasTrack
+      ? this.sqlite.db
+          .prepare(`DELETE FROM lessons WHERE ${where.sql} AND track = ?`)
+          .run(...where.params, cleanTrack)
+      : this.sqlite.db.prepare(`DELETE FROM lessons WHERE ${where.sql}`).run(...where.params);
+
+    if (scope?.userId && lessonRows.length > 0) {
+      const delLog = this.sqlite.db.prepare(
+        'DELETE FROM practice_logs WHERE user_id = ? AND lesson_id = ?',
+      );
+      for (const row of lessonRows) {
+        if (row.id) delLog.run(scope.userId, String(row.id));
+      }
+    }
+
     this.logger.log('Cleared scoped lesson library.');
     return Number(res.changes) || 0;
   }
@@ -1068,6 +1106,54 @@ export class HistoryRepository {
 
     if ((cacheScope === 'transcript' || cacheScope === 'all') && item.videoId) {
       this.deleteTranscriptCacheFile(item.videoId);
+    }
+
+    if (cacheScope === 'transcript' || cacheScope === 'all') {
+      if (item.transcriptData) {
+        item.transcriptData.reviewed = null;
+        item.transcriptData.reviewStatus = 'pending';
+        item.transcriptData.reviewError = '';
+        item.transcriptData.speakerOverrides = {};
+
+        const raw = item.transcriptData.raw;
+        if (raw && Array.isArray(raw.sentences) && raw.sentences.length > 0) {
+          item.sentences = raw.sentences.map((s) => ({
+            id: s.id || `s-${s.index}`,
+            index: s.index,
+            timeRange: `${formatTimestampMs(s.startSec)} - ${formatTimestampMs(s.endSec)}`,
+            startSec: s.startSec,
+            endSec: s.endSec,
+            startMs: s.startMs,
+            endMs: s.endMs,
+            durationSec: Math.max(0.1, Number((s.endSec - s.startSec).toFixed(3))),
+            text: s.text,
+            rawText: s.rawText,
+            speakerId: s.speakerId,
+            speaker: s.speaker,
+            repaired: false,
+            repairNote: '',
+            isOverlap: false,
+            paragraphIndex: s.paragraphIndex,
+            ideaIndex: s.ideaIndex,
+            words: s.words,
+            highlightedHtml: escapeTranscriptHtml(s.text),
+          }));
+          item.chunks = (raw.paragraphs || []).map((p) => ({
+            index: p.index,
+            timeRange: `${formatTimestampMs(p.startSec)} - ${formatTimestampMs(p.endSec)}`,
+            startSec: p.startSec,
+            endSec: p.endSec,
+            sentenceIndices: p.sentenceIndices,
+            speakerId: p.speakerId,
+            speaker: p.speaker,
+            text: p.text,
+            highlightedHtml: escapeTranscriptHtml(p.text),
+          }));
+        }
+      }
+      item.reviewStatus = 'pending';
+      item.speakerCount = 1;
+      item.repairCount = 0;
     }
 
     item.noteMarkdown = this.buildCleanMarkdown(
@@ -1445,15 +1531,50 @@ export class HistoryRepository {
       .prepare('SELECT * FROM practice_logs WHERE user_id = ? ORDER BY created_at DESC')
       .all(scope.userId);
 
+    const thinkAloudSessions = this.sqlite.db
+      .prepare('SELECT * FROM think_aloud_sessions WHERE user_id = ? ORDER BY created_at DESC')
+      .all(scope.userId);
+
+    const thinkAloudSpinePacks = this.sqlite.db
+      .prepare('SELECT * FROM think_aloud_spine_packs WHERE user_id = ? ORDER BY created_at DESC')
+      .all(scope.userId);
+
+    const americanExtractorNotes = this.sqlite.db
+      .prepare('SELECT * FROM american_extractor_notes WHERE user_id = ? ORDER BY created_at DESC')
+      .all(scope.userId);
+
+    const learningLibraryItems = this.sqlite.db
+      .prepare('SELECT * FROM learning_library_items WHERE user_id = ? ORDER BY created_at DESC')
+      .all(scope.userId);
+
+    const learningLibraryBatches = this.sqlite.db
+      .prepare('SELECT * FROM learning_library_batches WHERE user_id = ? ORDER BY created_at DESC')
+      .all(scope.userId);
+
+    const sharedSources = this.sqlite.db
+      .prepare('SELECT * FROM shared_sources WHERE user_id = ? ORDER BY created_at DESC')
+      .all(scope.userId);
+
+    const auditEvents = this.sqlite.db
+      .prepare('SELECT * FROM audit_events WHERE user_id = ? ORDER BY created_at DESC LIMIT 500')
+      .all(scope.userId);
+
     return {
       exportedAt: new Date().toISOString(),
       platform: 'Flaptap Spoken English Studio',
-      version: 2,
+      version: 3,
       user,
       stats: this.getStats(scope),
       lessons,
       vocabulary,
       practiceLogs,
+      thinkAloudSessions,
+      thinkAloudSpinePacks,
+      americanExtractorNotes,
+      learningLibraryItems,
+      learningLibraryBatches,
+      sharedSources,
+      auditEvents,
     };
   }
 }

@@ -178,6 +178,31 @@
     });
   }
 
+  async function bulkDeleteNotes(ids) {
+    return apiFetch(`${BASE}/notes/bulk-delete`, {
+      method: 'POST',
+      body: JSON.stringify({ ids: Array.isArray(ids) ? ids : [] }),
+    });
+  }
+
+  async function clearAllNotes() {
+    return apiFetch(`${BASE}/notes/clear`, {
+      method: 'POST',
+    });
+  }
+
+  async function deleteNoteItem(id, index) {
+    return apiFetch(`${BASE}/notes/${encodeURIComponent(id)}/items/${Number(index)}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async function resetNoteProgress(id) {
+    return apiFetch(`${BASE}/notes/${encodeURIComponent(id)}/reset-progress`, {
+      method: 'POST',
+    });
+  }
+
   async function saveVocabularyItem(payload) {
     return apiFetch('/api/vocabulary', {
       method: 'POST',
@@ -223,6 +248,10 @@
     renameNote,
     setItemCompletion,
     deleteNote,
+    bulkDeleteNotes,
+    clearAllNotes,
+    deleteNoteItem,
+    resetNoteProgress,
     saveVocabularyItem,
     extractStream,
     extractUploadStream,

@@ -341,6 +341,89 @@ export class AmericanExtractorRepository {
     return { id, completionProgress: progress, isCompleted };
   }
 
+  deleteNoteItem(
+    userId: string,
+    id: string,
+    index: number,
+  ): {
+    note: ExtractionResult;
+    removedPhrase: string;
+    completionProgress: ExtractorCompletionProgress;
+    isCompleted: boolean;
+  } | null {
+    const note = this.findById(userId, id);
+    if (!note) return null;
+    if (!Number.isInteger(index) || index < 0 || index >= note.items.length) {
+      throw new Error('Invalid study item index.');
+    }
+    const removedPhrase = String(note.items[index]?.term || '').trim();
+    const nextItems = note.items
+      .filter((_, idx) => idx !== index)
+      .map((item, newIdx) => ({ ...item, index: newIdx }));
+    const prevCompleted = Array.isArray(note.completionProgress?.items)
+      ? note.completionProgress.items
+      : [];
+    const shiftedCompleted = prevCompleted
+      .map(Number)
+      .filter((n) => Number.isInteger(n) && n >= 0 && n !== index && n < note.items.length)
+      .map((n) => (n > index ? n - 1 : n))
+      .sort((a, b) => a - b);
+
+    const nextProgress: ExtractorCompletionProgress = { items: shiftedCompleted };
+    const nextCompleted = nextItems.length > 0 && shiftedCompleted.length >= nextItems.length;
+    const updatedAt = new Date().toISOString();
+
+    this.sqlite.db
+      .prepare(
+        `UPDATE american_extractor_notes
+         SET items_json = ?, item_count = ?, completion_json = ?, is_completed = ?, updated_at = ?
+         WHERE id = ? AND user_id = ?`,
+      )
+      .run(
+        JSON.stringify(nextItems),
+        nextItems.length,
+        JSON.stringify(nextProgress),
+        nextCompleted ? 1 : 0,
+        updatedAt,
+        id,
+        userId,
+      );
+
+    const refreshed = this.findById(userId, id)!;
+    return {
+      note: refreshed,
+      removedPhrase,
+      completionProgress: nextProgress,
+      isCompleted: nextCompleted,
+    };
+  }
+
+  resetProgress(
+    userId: string,
+    id: string,
+  ): { id: string; title: string; completionProgress: ExtractorCompletionProgress; isCompleted: boolean } | null {
+    const row = this.sqlite.db
+      .prepare('SELECT id, title FROM american_extractor_notes WHERE id = ? AND user_id = ?')
+      .get(id, userId) as { id: string; title?: string } | undefined;
+    if (!row) return null;
+
+    const updatedAt = new Date().toISOString();
+    this.sqlite.db
+      .prepare(
+        `UPDATE american_extractor_notes
+         SET completion_json = '{}', is_completed = 0, updated_at = ?
+         WHERE id = ? AND user_id = ?`,
+      )
+      .run(updatedAt, id, userId);
+
+    return {
+      id,
+      title: String(row.title || 'Study Guide'),
+      completionProgress: {},
+      isCompleted: false,
+    };
+  }
+
   delete(userId: string, id: string): boolean {
     const result = this.sqlite.db
       .prepare('DELETE FROM american_extractor_notes WHERE id = ? AND user_id = ?')

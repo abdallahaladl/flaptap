@@ -1,14 +1,18 @@
-import { Controller, Get, Res, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Res, HttpStatus, Optional } from '@nestjs/common';
 import { Response } from 'express';
 import { execFileSync } from 'child_process';
 import { SqliteService } from '../../core/database/sqlite.service';
 import { getPythonBinaryPath } from '../../core/config/paths';
+import { TranscriptProviderGuard } from '../../core/media/transcript-provider-guard.service';
 
 @Controller()
 export class HealthController {
   private pythonVersionCache: string | null = null;
 
-  constructor(private readonly sqlite: SqliteService) {}
+  constructor(
+    private readonly sqlite: SqliteService,
+    @Optional() private readonly transcriptGuard?: TranscriptProviderGuard,
+  ) {}
 
   private checkPython(): { available: boolean; version: string } {
     if (this.pythonVersionCache) {
@@ -66,6 +70,7 @@ export class HealthController {
             model: process.env.OPENCODE_GO_MODEL || 'deepseek-v4.1-flash',
             provider: 'OpenCode Go',
           },
+          transcript_guard: this.transcriptGuard?.getStatusSnapshot() || null,
         },
         memory: {
           rss_mb: Math.round((memory.rss / (1024 * 1024)) * 10) / 10,

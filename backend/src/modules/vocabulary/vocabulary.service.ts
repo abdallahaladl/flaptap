@@ -18,6 +18,7 @@ import { SqliteService } from '../../core/database/sqlite.service';
 import { RequestIdentityScope } from '../../core/database/history.repository';
 import { AuthService } from '../auth/auth.service';
 import { requireAuthenticatedUser } from '../auth/auth.request';
+import { DataLifecycleService } from '../data-lifecycle/data-lifecycle.service';
 
 export interface VocabularyItem {
   id: string;
@@ -284,6 +285,7 @@ export class VocabularyController {
   constructor(
     private readonly vocabularyService: VocabularyService,
     private readonly authService: AuthService,
+    private readonly dataLifecycle: DataLifecycleService,
   ) {}
 
   @Get()
@@ -302,11 +304,29 @@ export class VocabularyController {
     return this.vocabularyService.save(body, identity);
   }
 
+  @Post('bulk-delete')
+  bulkDelete(@Body() body: { ids?: string[] } | undefined, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return {
+      success: true,
+      ...this.dataLifecycle.purgeVocabularyBulk(identity.userId, body?.ids || []),
+    };
+  }
+
+  @Post('reset-progress')
+  resetProgress(@Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return {
+      success: true,
+      ...this.dataLifecycle.resetVocabularyProgress(identity.userId),
+    };
+  }
+
   @Post('clear')
   clearAll(@Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    const removed = this.vocabularyService.clearAll(identity);
-    return { success: true, removedCount: removed };
+    const res = this.dataLifecycle.purgeAllVocabulary(identity.userId);
+    return { success: true, removedCount: res.removedCount, purged: res.purged };
   }
 
   @Patch(':id/review')
@@ -338,6 +358,7 @@ export class VocabularyController {
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return { success: this.vocabularyService.delete(id, identity) };
+    const res = this.dataLifecycle.purgeVocabularyItem(identity.userId, id);
+    return { success: res.deleted, purged: res.purged };
   }
 }

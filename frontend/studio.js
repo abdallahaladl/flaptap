@@ -37,7 +37,7 @@
 
   const I18N = {
     en: {
-      preparingLesson: 'Preparing your lesson...',
+      preparingLesson: 'Preparing Studio',
       extractingTimings: 'Extracting verbatim speech and exact word timings.',
       backToLibrary: 'Back to Library',
       tryAgain: 'Try Again',
@@ -99,6 +99,7 @@
       keyZoom: 'Zoom in / out / reset',
       keyPan: 'Pan when zoomed',
       keyModes: 'Switch modes',
+      keyLayoutPicker: 'Layout picker / cycle',
       keyDictReplay: 'Dictation replay',
       keyHelpEsc: 'Shortcuts / Close',
       shortcutsAnyLayout: 'Any layout',
@@ -131,6 +132,18 @@
       legendExpressions: 'Expressions',
       legendVocab: 'Key Vocabulary',
       clickWordTip: 'Tip: Click any word for contextual definition',
+      toolsTitle: 'Transcript Tools',
+      wordClickLabel: 'Word click',
+      wordClickDefine: 'Define',
+      wordClickWord: 'Play word',
+      wordClickFromHere: 'Play from here',
+      copyViewBtn: 'Copy transcript',
+      speakerRenameBtn: 'Rename speaker',
+      legendLabel: 'Legend',
+      highlightOnTitle: 'Live word highlight is ON (click to turn off)',
+      highlightOffTitle: 'Live word highlight is OFF (click to turn on)',
+      highlightOnToast: 'Live word highlight on',
+      highlightOffToast: 'Live word highlight off',
       prevBtn: 'Prev',
       nextBtn: 'Next',
       dictEasy: 'Easy',
@@ -180,6 +193,8 @@
       errNoCaptionsDetail: 'This video does not expose an English caption track for verbatim timing.',
       errRateLimitHeadline: 'YouTube is temporarily limiting requests',
       errRateLimitDetail: 'YouTube is rate-limiting caption requests right now. Please wait a moment and try again.',
+      errLiveFetchDisabledHeadline: 'Live transcript fetching is paused',
+      errLiveFetchDisabledDetail: 'Live fetching is disabled by guard policy. Open a cached lesson or import a transcript instead.',
       errTimeoutHeadline: 'Connection timed out',
       errTimeoutDetail: 'YouTube took too long to respond. Please try again.',
       markComplete: 'Mark done',
@@ -192,13 +207,14 @@
       emptyCompleted: 'No completed items here yet.',
       jumpActiveTitle: 'Jump to active line',
       pacingShort: 'Short',
-      pacingBalanced: 'Medium',
-      pacingFull: 'Full',
+      pacingNormal: 'Normal',
       pacingSwitched: 'Switched line length',
       pacingSwitchFailed: 'Could not switch sentence length.',
+      clearLessonCachesBtn: 'Clear Caches',
+      deleteLessonBtn: 'Delete Lesson',
     },
     ar: {
-      preparingLesson: 'جارٍ تجهيز الدرس...',
+      preparingLesson: 'تجهيز الاستوديو',
       extractingTimings: 'استخراج النص الحرفي والتوقيت الدقيق لكل كلمة.',
       backToLibrary: 'العودة للمكتبة',
       tryAgain: 'إعادة المحاولة',
@@ -258,6 +274,7 @@
       keyZoom: 'تكبير / تصغير / إعادة',
       keyPan: 'تحريك الفيديو المكبّر',
       keyModes: 'تبديل الأوضاع',
+      keyLayoutPicker: 'اختيار / تبديل التخطيط',
       keyDictReplay: 'إعادة الجملة بالإملاء',
       keyHelpEsc: 'الاختصارات / إغلاق',
       shortcutsAnyLayout: 'أي لغة لوحة مفاتيح',
@@ -290,6 +307,18 @@
       legendExpressions: 'التعبيرات',
       legendVocab: 'المفردات',
       clickWordTip: 'اضغط على أي كلمة لمعرفة معناها في السياق',
+      toolsTitle: 'أدوات النص',
+      wordClickLabel: 'النقر على الكلمة',
+      wordClickDefine: 'تعريف',
+      wordClickWord: 'تشغيل الكلمة',
+      wordClickFromHere: 'من هنا',
+      copyViewBtn: 'نسخ النص',
+      speakerRenameBtn: 'إعادة تسمية المتحدث',
+      legendLabel: 'المفتاح',
+      highlightOnTitle: 'التظليل الحي للكلمات مفعّل (اضغط لإيقافه)',
+      highlightOffTitle: 'التظليل الحي للكلمات متوقف (اضغط لتفعيله)',
+      highlightOnToast: 'التظليل الحي مفعّل',
+      highlightOffToast: 'التظليل الحي متوقف',
       prevBtn: 'السابق',
       nextBtn: 'التالي',
       dictEasy: 'سهل',
@@ -339,15 +368,18 @@
       errNoCaptionsDetail: 'لا يحتوي هذا الفيديو على مسار نصي إنجليزي للتوقيت الصوتي.',
       errRateLimitHeadline: 'يوتيوب يحدّد الطلبات مؤقتًا',
       errRateLimitDetail: 'يوتيوب يحدّد مؤقتًا طلبات النصوص. يرجى المحاولة بعد قليل.',
+      errLiveFetchDisabledHeadline: 'تم إيقاف جلب النصوص المباشر مؤقتًا',
+      errLiveFetchDisabledDetail: 'تم تعطيل الجلب المباشر بسياسة الحماية. افتح درسًا محفوظًا أو استورد النص يدويًا.',
       errTimeoutHeadline: 'انتهت مهلة الاتصال',
       errTimeoutDetail: 'استغرق يوتيوب وقتاً طويلاً للاستجابة. يرجى المحاولة مرة أخرى.',
       markComplete: 'تم',
       completedLabel: 'مكتمل',
       pacingShort: 'قصيرة',
-      pacingBalanced: 'متوسطة',
-      pacingFull: 'كاملة',
+      pacingNormal: 'عادية',
       pacingSwitched: 'تم تبديل طول السطور',
       pacingSwitchFailed: 'تعذر تغيير طول السطور.',
+      clearLessonCachesBtn: 'مسح الكاش',
+      deleteLessonBtn: 'حذف الدرس',
     },
     es: {
       libraryBack: 'Biblioteca',
@@ -369,10 +401,21 @@
       completeSession: 'Completar',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
       pacingShort: 'Cortas',
-      pacingBalanced: 'Medias',
-      pacingFull: 'Completas',
+      pacingNormal: 'Normal',
       pacingSwitched: 'Longitud de líneas actualizada',
       pacingSwitchFailed: 'No se pudo cambiar la longitud.',
+      toolsTitle: 'Herramientas de transcripción',
+      wordClickLabel: 'Clic en palabra',
+      wordClickDefine: 'Definir',
+      wordClickWord: 'Reproducir palabra',
+      wordClickFromHere: 'Desde aquí',
+      copyViewBtn: 'Copiar transcripción',
+      speakerRenameBtn: 'Renombrar hablante',
+      legendLabel: 'Leyenda',
+      highlightOnTitle: 'El resaltado en vivo está activado (clic para desactivar)',
+      highlightOffTitle: 'El resaltado en vivo está desactivado (clic para activar)',
+      highlightOnToast: 'Resaltado en vivo activado',
+      highlightOffToast: 'Resaltado en vivo desactivado',
     },
     fr: {
       libraryBack: 'Bibliothèque',
@@ -394,10 +437,21 @@
       completeSession: 'Terminer',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
       pacingShort: 'Courtes',
-      pacingBalanced: 'Moyennes',
-      pacingFull: 'Complètes',
+      pacingNormal: 'Normal',
       pacingSwitched: 'Longueur des lignes mise à jour',
       pacingSwitchFailed: 'Impossible de changer la longueur.',
+      toolsTitle: 'Outils de transcription',
+      wordClickLabel: 'Clic sur un mot',
+      wordClickDefine: 'Définir',
+      wordClickWord: 'Lire le mot',
+      wordClickFromHere: "Lire à partir d'ici",
+      copyViewBtn: 'Copier la transcription',
+      speakerRenameBtn: "Renommer l’intervenant",
+      legendLabel: 'Légende',
+      highlightOnTitle: 'Surbrillance en direct activée (cliquer pour désactiver)',
+      highlightOffTitle: 'Surbrillance en direct désactivée (cliquer pour activer)',
+      highlightOnToast: 'Surbrillance en direct activée',
+      highlightOffToast: 'Surbrillance en direct désactivée',
     },
     de: {
       libraryBack: 'Bibliothek',
@@ -419,10 +473,21 @@
       completeSession: 'Abschließen',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
       pacingShort: 'Kurz',
-      pacingBalanced: 'Mittel',
-      pacingFull: 'Voll',
+      pacingNormal: 'Normal',
       pacingSwitched: 'Zeilenlänge gewechselt',
       pacingSwitchFailed: 'Zeilenlänge konnte nicht geändert werden.',
+      toolsTitle: 'Transkript-Werkzeuge',
+      wordClickLabel: 'Wortklick',
+      wordClickDefine: 'Definieren',
+      wordClickWord: 'Wort abspielen',
+      wordClickFromHere: 'Ab hier abspielen',
+      copyViewBtn: 'Transkript kopieren',
+      speakerRenameBtn: 'Sprecher umbenennen',
+      legendLabel: 'Legende',
+      highlightOnTitle: 'Live-Worthervorhebung ist AN (zum Ausschalten klicken)',
+      highlightOffTitle: 'Live-Worthervorhebung ist AUS (zum Einschalten klicken)',
+      highlightOnToast: 'Live-Hervorhebung an',
+      highlightOffToast: 'Live-Hervorhebung aus',
     },
     tr: {
       libraryBack: 'Kitaplık',
@@ -444,18 +509,30 @@
       completeSession: 'Tamamla',
       mdExportedToast: 'Study sheet downloaded successfully (.md)',
       pacingShort: 'Kısa',
-      pacingBalanced: 'Orta',
-      pacingFull: 'Tam',
+      pacingNormal: 'Normal',
       pacingSwitched: 'Satır uzunluğu değiştirildi',
       pacingSwitchFailed: 'Satır uzunluğu değiştirilemedi.',
+      toolsTitle: 'Transkript Araçları',
+      wordClickLabel: 'Kelime tıklaması',
+      wordClickDefine: 'Tanımla',
+      wordClickWord: 'Kelimeyi oynat',
+      wordClickFromHere: 'Buradan oynat',
+      copyViewBtn: 'Transkripti kopyala',
+      speakerRenameBtn: 'Konuşmacıyı yeniden adlandır',
+      legendLabel: 'Gösterge',
+      highlightOnTitle: 'Canlı kelime vurgusu AÇIK (kapatmak için tıkla)',
+      highlightOffTitle: 'Canlı kelime vurgusu KAPALI (açmak için tıkla)',
+      highlightOnToast: 'Canlı vurgu açık',
+      highlightOffToast: 'Canlı vurgu kapalı',
     },
   };
 
-  const VALID_PACING_MODES = ['short', 'balanced', 'full'];
+  const VALID_PACING_MODES = ['short', 'normal'];
   const PACING_STORAGE_KEY = 'flaptap_shadowing_pacing';
 
   function normalizePacingMode(raw) {
     const val = String(raw || '').trim().toLowerCase();
+    if (val === 'balanced' || val === 'full') return 'normal'; // Legacy labels
     return VALID_PACING_MODES.includes(val) ? val : 'short';
   }
 
@@ -521,6 +598,15 @@
     reviewing: false,
     reviewAbort: null,
     reviewAiSelector: null,
+    enhancementsInFlight: false,
+    transcriptActionInFlight: false,
+    retryCountdownTimer: null,
+    autoCloudTranscribing: false,
+    autoCloudAttemptedIds: new Set(),
+    shadowingConfig: {
+      aiConfigured: true,
+      cloudStt: { available: false, provider: null, model: '' },
+    },
     isSwitchingPacing: false,
     infoPopoverPinned: false,
     infoPopoverCloseTimer: null,
@@ -552,6 +638,110 @@
   };
 
   window.studioState = studioState;
+
+  const MC = window.FlaptapStudioModeController;
+  const modeState = MC ? MC.createModeState() : null;
+
+  function hasLessonVideo(item = studioState.item) {
+    if (!item) return false;
+    const media = item.media || null;
+    const vidId = String(media?.youtubeId || item.videoId || item.video_id || '').trim();
+    const isYtId = /^[a-zA-Z0-9_-]{11}$/.test(vidId);
+    if ((media?.mediaKind === 'youtube' || (!media?.mediaKind && isYtId)) && isYtId) return true;
+    const streamUrl =
+      media?.streamUrl || (media?.mediaId ? `/api/sources/media/${encodeURIComponent(media.mediaId)}` : '');
+    return Boolean(media?.mediaKind === 'video' && streamUrl && media?.hasVideo !== false);
+  }
+
+  function hasTimedMedia(item = studioState.item) {
+    if (!item) return false;
+    const media = item.media || null;
+    const vidId = String(media?.youtubeId || item.videoId || item.video_id || '').trim();
+    const isYtId = /^[a-zA-Z0-9_-]{11}$/.test(vidId);
+    if (isYtId) return true;
+    const streamUrl =
+      media?.streamUrl || (media?.mediaId ? `/api/sources/media/${encodeURIComponent(media.mediaId)}` : '');
+    return Boolean(streamUrl);
+  }
+
+  function getCanonicalReadParagraphs(item = studioState.item, speakerFilter = 'all') {
+    if (!item) return [];
+    const flowParas = window.FlaptapStudioReaderFlow?.getParagraphs?.(item, {
+      source: 'reviewed',
+      speakerFilter,
+    });
+    if (Array.isArray(flowParas) && flowParas.length > 0) return flowParas;
+    return Array.isArray(item.chunks) ? item.chunks : [];
+  }
+
+  function getActiveCompletionFilter() {
+    if (MC && modeState) {
+      return MC.getCompletionFilter(modeState, studioState.mode);
+    }
+    return studioState.completionFilter || 'all';
+  }
+
+  function applyStudioModeChrome() {
+    const item = studioState.item;
+    const mode = studioState.mode || 'shadow';
+    const readView = studioState.readView || 'paragraphs';
+    const canvas = document.querySelector('.studio-canvas');
+    if (canvas) {
+      canvas.dataset.activeMode = mode;
+      canvas.dataset.readView = mode === 'read' ? readView : '';
+    }
+
+    if (!MC) return null;
+    const TT = window.FlaptapStudioTranscriptTools;
+    const repairCount = Number(
+      item?.repairCount ||
+        item?.transcriptData?.reviewed?.quality?.repairedWords ||
+        item?.transcriptData?.reviewed?.quality?.repairedSentences ||
+        0,
+    );
+    const speakers = item && TT ? TT.getSpeakersList(item) : [];
+    const bm = window.FlaptapStudioReaderFlow?.getBookmark?.() || item?.transcriptData?.readingBookmark || null;
+
+    const caps = MC.resolveCapabilities({
+      mode,
+      readView,
+      item,
+      hasVideo: hasLessonVideo(item),
+      hasTimedMedia: hasTimedMedia(item),
+      repairCount,
+      speakerCount: speakers.length,
+      speakerEditorOpen: Boolean(studioState.speakerEditorOpen),
+      hasBookmark: Boolean(bm && Number(bm.sentenceIndex) >= 1),
+    });
+
+    const searchInput = document.getElementById('studio-search-input');
+    MC.applyChrome(caps, {
+      toolsBar: document.getElementById('studio-transcript-tools'),
+      readSubbarWrap: document.getElementById('studio-read-subbar-wrap'),
+      readSubbar: document.getElementById('studio-read-subbar'),
+      searchWrap: document.querySelector('.studio-search-wrap'),
+      mobileSearchToggle: document.getElementById('studio-mobile-search-toggle'),
+      searchInput,
+      pacingGroup: document.getElementById('studio-pacing-group'),
+      karaokeBtn: document.getElementById('studio-toggle-karaoke'),
+      repairsBtn: document.getElementById('studio-toggle-repairs'),
+      toolsMenuBtn: document.getElementById('studio-tools-menu-btn'),
+      speakerBar: document.getElementById('studio-speaker-bar'),
+      progressDock: document.getElementById('canvas-progress-dock'),
+      compFilter: document.querySelector('.studio-comp-filter'),
+      activeJumpBtn: document.getElementById('canvas-active-jump-btn'),
+      transTrigger: document.getElementById('trans-trigger-btn'),
+      transDeck: document.getElementById('translation-control-deck'),
+      bookmarkPill: document.getElementById('reader-bookmark-pill'),
+      videoToggleBtn: document.getElementById('studio-video-toggle-btn'),
+    });
+
+    if (caps.showSpeakerBar) {
+      renderSpeakerBar();
+    }
+    syncDeckLiveSubtitle();
+    return caps;
+  }
 
   function t(key) {
     const dict = I18N[studioState.uiLang] || I18N.en;
@@ -635,11 +825,17 @@
     refreshAllStudioProgressBars();
     syncCompletionFilter();
     syncDeckLiveSubtitle();
+    const karaokeLangBtn = document.getElementById('studio-toggle-karaoke');
+    if (karaokeLangBtn) {
+      karaokeLangBtn.title = t(studioState.karaokeEnabled ? 'highlightOnTitle' : 'highlightOffTitle');
+    }
 
     const coachContent = document.getElementById('coach-content-box');
     if (studioState.item?.aiAnalysis && coachContent && !coachContent.hidden) {
       renderCoachAnalysis(studioState.item.aiAnalysis);
     }
+
+    window.FlaptapStudioLayouts?.onUiLanguageChange(studioState.uiLang);
   }
 
   /* ========================================================================
@@ -739,6 +935,24 @@
       const aria = `${label} #${String(idx).padStart(2, '0')}`;
       btn.setAttribute('aria-label', aria);
       btn.title = aria;
+    });
+
+    // 5b. Range Play buttons (Paragraphs, Ideas, Speaker Turns, Raw Original)
+    const activeRangeKey = isPlaying && studioState.activeRange ? studioState.activeRange.rangeKey : '';
+    document.querySelectorAll('[data-play-range-start]').forEach((btn) => {
+      const s = Number(btn.getAttribute('data-play-range-start'));
+      const e = Number(btn.getAttribute('data-play-range-end'));
+      const btnKey = btn.getAttribute('data-play-range-key') || `${s.toFixed(3)}-${e.toFixed(3)}`;
+      const isThisRangePlaying = Boolean(activeRangeKey && activeRangeKey === btnKey);
+      btn.classList.toggle('active', isThisRangePlaying);
+      btn.classList.toggle('is-playing', isThisRangePlaying);
+      btn.setAttribute('aria-pressed', isThisRangePlaying ? 'true' : 'false');
+      const idleLabel = btn.getAttribute('data-idle-label') || 'Play';
+      const nextLabel = isThisRangePlaying ? t('pauseBtn') : idleLabel;
+      if (btn.textContent !== nextLabel) {
+        btn.textContent = nextLabel;
+      }
+      btn.setAttribute('aria-label', nextLabel);
     });
 
     // 6. Listen Mode Dictation Play button
@@ -901,14 +1115,20 @@
   }
 
   /* ========================================================================
-     THEATER VIDEO DOCKING (Locked to Theater Mode)
+     MULTI-LAYOUT ENGINE DELEGATION (Zero-Remount CSS Grid Orchestration)
      ======================================================================== */
 
-  function setStudioLayout() {
+  function setStudioLayout(nextLayout = 'theater', options = {}) {
+    if (window.FlaptapStudioLayouts) {
+      const meta = window.FlaptapStudioLayouts.setLayout(nextLayout, options);
+      studioState.layout = meta?.id || nextLayout;
+      return meta;
+    }
     const workspace = document.getElementById('studio-main-content');
-    if (!workspace) return;
-    studioState.layout = 'theater';
-    workspace.setAttribute('data-layout', 'theater');
+    if (!workspace) return null;
+    studioState.layout = nextLayout || 'theater';
+    workspace.setAttribute('data-layout', studioState.layout);
+    return null;
   }
 
   window.setStudioLayout = setStudioLayout;
@@ -920,6 +1140,7 @@
 
   const SCB_POPOVER_PAIRS = [
     { triggerId: 'studio-progress-pill', popoverId: 'studio-progress-popover' },
+    { triggerId: 'studio-layout-btn', popoverId: 'studio-layout-popover' },
     { triggerId: 'studio-review-btn', popoverId: 'studio-review-popover' },
     { triggerId: 'studio-export-btn', popoverId: 'studio-export-popover' },
     { triggerId: 'scb-more-btn', popoverId: 'studio-more-popover' },
@@ -955,6 +1176,32 @@
         trg.setAttribute('aria-expanded', 'false');
       }
     }
+    if (exceptPopoverId !== 'studio-layout-popover') {
+      window.FlaptapStudioLayouts?.onPopoverStateChange(false);
+    }
+  }
+
+  function closeStudioToolsPopover() {
+    const pop = document.getElementById('studio-tools-popover');
+    const btn = document.getElementById('studio-tools-menu-btn');
+    if (pop) pop.hidden = true;
+    if (btn) {
+      btn.classList.remove('is-open');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  function toggleStudioToolsPopover() {
+    const pop = document.getElementById('studio-tools-popover');
+    const btn = document.getElementById('studio-tools-menu-btn');
+    if (!pop) return;
+    const willOpen = pop.hidden;
+    closeAllControlPopovers();
+    pop.hidden = !willOpen;
+    if (btn) {
+      btn.classList.toggle('is-open', willOpen);
+      btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    }
   }
 
   function positionControlPopover(popoverEl, triggerEl) {
@@ -988,6 +1235,7 @@
     const trg = document.getElementById(triggerId);
     if (!pop || !trg) return;
     const willOpen = Boolean(pop.hidden);
+    closeStudioToolsPopover();
     closeAllControlPopovers(willOpen ? popoverId : null);
     if (willOpen) {
       if (popoverId === 'translation-control-deck' && studioState.mode !== 'shadow') return;
@@ -998,11 +1246,26 @@
       }
       if (popoverId === 'studio-review-popover') {
         ensureStudioReviewAiSelector();
+        void fetchShadowingConfig().then(() => syncEnhancementsPopoverUi());
+        syncEnhancementsPopoverUi();
+        loadLanguagesCatalog().then(() => {
+          syncEnhancementsPopoverUi();
+          if (!pop.hidden) positionControlPopover(pop, trg);
+        });
       }
       pop.style.display = '';
-      positionControlPopover(pop, trg);
+      if (popoverId === 'studio-layout-popover' && (window.innerWidth || 1024) <= 640) {
+        pop.style.left = '';
+        pop.style.top = '';
+        pop.hidden = false;
+      } else {
+        positionControlPopover(pop, trg);
+      }
       trg.classList.add('is-open', 'is-popover-open');
       trg.setAttribute('aria-expanded', 'true');
+      if (popoverId === 'studio-layout-popover') {
+        window.FlaptapStudioLayouts?.onPopoverStateChange(true);
+      }
       const morePop = document.getElementById('studio-more-popover');
       const moreBtn = document.getElementById('scb-more-btn');
       if (morePop && moreBtn && morePop.contains(trg)) {
@@ -1012,6 +1275,9 @@
       pop.hidden = true;
       trg.classList.remove('is-open', 'is-popover-open');
       trg.setAttribute('aria-expanded', 'false');
+      if (popoverId === 'studio-layout-popover') {
+        window.FlaptapStudioLayouts?.onPopoverStateChange(false);
+      }
     }
   }
 
@@ -1045,7 +1311,7 @@
     return window.FlaptapCopy.buttonHtml(text, className ? { className } : undefined);
   }
 
-  function renderStudioProgressBar(targetId, { total = 0, completed = 0 } = {}) {
+  function renderStudioProgressBar(targetId, { total = 0, completed = 0, compact = false } = {}) {
     const el = document.getElementById(targetId);
     if (!el) return;
     const safeTotal = Math.max(0, Number(total) || 0);
@@ -1058,13 +1324,19 @@
     const safeCompleted = Math.max(0, Math.min(safeTotal, Number(completed) || 0));
     const remaining = Math.max(0, safeTotal - safeCompleted);
     const pct = Math.round((safeCompleted / safeTotal) * 100);
+
+    el.hidden = false;
+    el.classList.toggle('is-all-done', remaining === 0 && safeTotal > 0);
+    if (compact) {
+      el.innerHTML = `<span class="coach-mini-prog ltr-num" aria-label="${safeCompleted} of ${safeTotal} completed"><strong data-sp-completed>${safeCompleted}</strong><span class="coach-mini-sep">/</span><span data-sp-total>${safeTotal}</span></span>`;
+      return;
+    }
+
     const isAr = studioState.uiLang === 'ar';
     const totalLabel = isAr ? 'الإجمالي' : 'Total';
     const doneLabel = isAr ? 'مكتمل' : 'Completed';
     const remLabel = isAr ? 'المتبقي' : 'Remaining';
 
-    el.hidden = false;
-    el.classList.toggle('is-all-done', remaining === 0 && safeTotal > 0);
     el.innerHTML = `
       <div class="subject-progress-stats">
         <span class="sp-stat">
@@ -1092,11 +1364,29 @@
   }
 
   function syncStudioDeckStickyHeightVar() {
+    const topbar = document.querySelector('.studio-topbar');
+    if (topbar) {
+      const th = Math.max(0, Math.round(topbar.getBoundingClientRect().height));
+      if (th > 0) {
+        document.documentElement.style.setProperty('--studio-topbar-h', `${th}px`);
+      }
+    }
     const deck = document.querySelector('.studio-deck');
+    const consoleEl = document.querySelector('.studio-media-console');
+    if (consoleEl) {
+      const ch = Math.max(0, Math.round(consoleEl.getBoundingClientRect().height));
+      if (ch > 0) {
+        document.documentElement.style.setProperty('--studio-bottom-dock-h', `${ch}px`);
+      }
+    }
     if (!deck) return;
-    const isStackedSticky =
-      (window.innerWidth <= 768 && window.innerHeight >= 551) || false;
-    if (!isStackedSticky) {
+    const ws = document.getElementById('studio-main-content');
+    const mobileLayout = ws?.getAttribute('data-mobile-layout') || 'docked';
+    const isScrollDock =
+      window.innerWidth <= 768 &&
+      window.innerHeight >= 551 &&
+      mobileLayout === 'scroll-dock';
+    if (!isScrollDock) {
       document.documentElement.style.removeProperty('--studio-deck-sticky-h');
       return;
     }
@@ -1106,13 +1396,14 @@
   }
 
   function applyCompletionFilterDom() {
-    const filter = studioState.completionFilter || 'all';
+    const mode = studioState.mode || 'shadow';
+    const filter = getActiveCompletionFilter();
     const emptyMsg =
       filter === 'remaining'
         ? t('emptyRemaining')
         : filter === 'completed'
-        ? t('emptyCompleted')
-        : '';
+          ? t('emptyCompleted')
+          : '';
 
     const matchVisible = (isDone) => {
       if (filter === 'remaining') return !isDone;
@@ -1120,68 +1411,88 @@
       return true;
     };
 
-    // Shadow sentences
-    const sentList = document.getElementById('subview-sentences-list');
-    const shadowEmpty = document.getElementById('shadow-filter-empty');
-    if (sentList) {
-      let visibleCount = 0;
-      let totalCount = 0;
-      sentList.querySelectorAll('.sentence-driller-card').forEach((card) => {
-        totalCount++;
-        const show = matchVisible(card.classList.contains('is-item-completed'));
-        card.hidden = !show;
-        if (show) visibleCount++;
-      });
-      if (shadowEmpty) {
-        shadowEmpty.hidden = totalCount === 0 || visibleCount > 0 || filter === 'all';
-        const p = shadowEmpty.querySelector('[data-filter-empty-msg]');
-        if (p) p.textContent = emptyMsg;
+    if (mode === 'shadow') {
+      const sentList = document.getElementById('subview-sentences-list');
+      const shadowEmpty = document.getElementById('shadow-filter-empty');
+      if (sentList) {
+        let visibleCount = 0;
+        let totalCount = 0;
+        sentList.querySelectorAll('.sentence-driller-card').forEach((card) => {
+          totalCount++;
+          const show = matchVisible(card.classList.contains('is-item-completed'));
+          card.hidden = !show;
+          if (show) visibleCount++;
+        });
+        if (shadowEmpty) {
+          shadowEmpty.hidden = totalCount === 0 || visibleCount > 0 || filter === 'all';
+          const p = shadowEmpty.querySelector('[data-filter-empty-msg]');
+          if (p) p.textContent = emptyMsg;
+        }
       }
+      indexKaraokeWords();
+      return;
     }
 
-    // Read paragraphs
-    const chunkList = document.getElementById('subview-chunks-list');
-    const readEmpty = document.getElementById('read-filter-empty');
-    if (chunkList) {
-      let visibleCount = 0;
-      let totalCount = 0;
-      chunkList.querySelectorAll('.editorial-paragraph-block').forEach((blk) => {
-        totalCount++;
-        const show = matchVisible(blk.classList.contains('is-item-completed'));
-        blk.hidden = !show;
-        if (show) visibleCount++;
-      });
-      if (readEmpty) {
-        readEmpty.hidden = totalCount === 0 || visibleCount > 0 || filter === 'all';
-        const p = readEmpty.querySelector('[data-filter-empty-msg]');
-        if (p) p.textContent = emptyMsg;
+    if (mode === 'read') {
+      const chunkList = document.getElementById('subview-chunks-list');
+      const readEmpty = document.getElementById('read-filter-empty');
+      const isParas = (studioState.readView || 'paragraphs') === 'paragraphs';
+      if (chunkList && isParas) {
+        let visibleCount = 0;
+        let totalCount = 0;
+        chunkList.querySelectorAll('.editorial-paragraph-block').forEach((blk) => {
+          totalCount++;
+          const show = matchVisible(blk.classList.contains('is-item-completed'));
+          blk.hidden = !show;
+          if (show) visibleCount++;
+        });
+        if (readEmpty) {
+          readEmpty.hidden = totalCount === 0 || visibleCount > 0 || filter === 'all';
+          const p = readEmpty.querySelector('[data-filter-empty-msg]');
+          if (p) p.textContent = emptyMsg;
+        }
+      } else if (readEmpty) {
+        readEmpty.hidden = true;
       }
+      indexKaraokeWords();
+      return;
     }
 
-    // Coach grids
-    const coachEmpty = document.getElementById('coach-filter-empty');
-    const coachGridIds = Object.values(COACH_SECTIONS).map((section) => section.gridId);
-    let coachVisible = 0;
-    let coachTotal = 0;
-    coachGridIds.forEach((gridId) => {
-      const grid = document.getElementById(gridId);
-      if (!grid) return;
-      grid.querySelectorAll('.coach-item-card').forEach((card) => {
-        coachTotal++;
-        const show = matchVisible(card.classList.contains('is-item-completed'));
-        card.hidden = !show;
-        if (show) coachVisible++;
+    if (mode === 'coach') {
+      const coachEmpty = document.getElementById('coach-filter-empty');
+      let coachVisible = 0;
+      let coachTotal = 0;
+      Object.values(COACH_SECTIONS).forEach((section) => {
+        const grid = document.getElementById(section.gridId);
+        const secEl = grid?.closest('.coach-section');
+        if (!grid) return;
+        let secVisible = 0;
+        let secTotal = 0;
+        grid.querySelectorAll('.coach-item-card').forEach((card) => {
+          secTotal++;
+          coachTotal++;
+          const show = matchVisible(card.classList.contains('is-item-completed'));
+          card.hidden = !show;
+          if (show) {
+            secVisible++;
+            coachVisible++;
+          }
+        });
+        if (secEl) {
+          secEl.hidden = secTotal > 0 && secVisible === 0 && filter !== 'all';
+        }
       });
-    });
-    if (coachEmpty) {
-      coachEmpty.hidden = coachTotal === 0 || coachVisible > 0 || filter === 'all';
-      const p = coachEmpty.querySelector('[data-filter-empty-msg]');
-      if (p) p.textContent = emptyMsg;
+      if (coachEmpty) {
+        coachEmpty.hidden = coachTotal === 0 || coachVisible > 0 || filter === 'all';
+        const p = coachEmpty.querySelector('[data-filter-empty-msg]');
+        if (p) p.textContent = emptyMsg;
+      }
     }
   }
 
   function syncCompletionFilter() {
-    const filter = studioState.completionFilter || 'all';
+    const filter = getActiveCompletionFilter();
+    studioState.completionFilter = filter;
     document.querySelectorAll('[data-studio-comp-filter]').forEach((btn) => {
       const active = btn.dataset.studioCompFilter === filter;
       btn.classList.toggle('active', active);
@@ -1191,19 +1502,35 @@
   }
 
   function setCompletionFilter(nextFilter) {
-    studioState.completionFilter =
-      nextFilter === 'remaining' || nextFilter === 'completed' ? nextFilter : 'all';
+    const valid = nextFilter === 'remaining' || nextFilter === 'completed' ? nextFilter : 'all';
+    if (MC && modeState) {
+      MC.setCompletionFilter(modeState, studioState.mode, valid);
+    }
+    studioState.completionFilter = valid;
     syncCompletionFilter();
   }
 
   function syncDeckLiveSubtitle() {
     const box = document.getElementById('deck-live-subtitle');
-    if (!box) return;
     const item = studioState.item;
+    const isListenMode = studioState.mode === 'listen';
     const ttsStage = document.getElementById('tts-audio-stage');
     const isTtsDeck = Boolean(ttsStage && !ttsStage.hidden);
     const active = studioState.activeSentence || item?.sentences?.[0] || null;
-    if (!item || !active || isTtsDeck) {
+
+    if (isTtsDeck) {
+      const quoteEl = document.getElementById('tts-active-quote');
+      if (quoteEl) {
+        if (isListenMode) {
+          quoteEl.textContent = 'Listen carefully and type the missing words.';
+        } else if (active?.text) {
+          quoteEl.textContent = `“${active.text}”`;
+        }
+      }
+    }
+
+    if (!box) return;
+    if (!item || !active || isTtsDeck || isListenMode) {
       box.hidden = true;
       return;
     }
@@ -1247,10 +1574,10 @@
     const shadowTotal = uniqueSentIndices.size;
     const shadowDone = Array.from(uniqueSentIndices).filter((idx) => sentSet.has(idx)).length;
 
-    const chunks = Array.isArray(item.chunks) ? item.chunks : [];
+    const paragraphs = getCanonicalReadParagraphs(item);
     const paraSet = getStudioCompletedSet('paragraphs');
-    const readTotal = chunks.length;
-    const readDone = chunks.filter((_, idx) => paraSet.has(idx + 1)).length;
+    const readTotal = paragraphs.length;
+    const readDone = paragraphs.filter((p, idx) => paraSet.has(Number(p.index) || idx + 1)).length;
 
     const listenSet = getStudioCompletedSet('listen');
     const listenTotal = uniqueSentIndices.size;
@@ -1374,10 +1701,21 @@
     }
 
     if (popFoot) {
-      popFoot.hidden = computed.doneItems <= 0;
+      popFoot.hidden = false;
     }
-    if (resetBtn && !resetBtn.dataset.armed) {
-      resetBtn.textContent = studioState.uiLang === 'ar' ? 'إعادة ضبط التقدّم' : 'Reset Progress';
+    if (resetBtn) {
+      resetBtn.hidden = computed.doneItems <= 0;
+      if (!resetBtn.dataset.armed) {
+        resetBtn.textContent = studioState.uiLang === 'ar' ? 'إعادة ضبط التقدّم' : 'Reset Progress';
+      }
+    }
+    const clearCacheBtn = document.getElementById('sp-clear-cache-btn');
+    if (clearCacheBtn) {
+      clearCacheBtn.textContent = t('clearLessonCachesBtn');
+    }
+    const deleteLessonBtn = document.getElementById('sp-delete-lesson-btn');
+    if (deleteLessonBtn) {
+      deleteLessonBtn.textContent = t('deleteLessonBtn');
     }
   }
 
@@ -1392,11 +1730,11 @@
       completed: sentences.filter((s) => sentSet.has(Number(s.index))).length,
     });
 
-    const chunks = Array.isArray(item.chunks) ? item.chunks : [];
+    const paragraphs = getCanonicalReadParagraphs(item);
     const paraSet = getStudioCompletedSet('paragraphs');
     renderStudioProgressBar('studio-read-progress-bar', {
-      total: chunks.length,
-      completed: chunks.filter((_, idx) => paraSet.has(idx + 1)).length,
+      total: paragraphs.length,
+      completed: paragraphs.filter((p, idx) => paraSet.has(Number(p.index) || idx + 1)).length,
     });
 
     const listenSet = getStudioCompletedSet('listen');
@@ -1414,6 +1752,7 @@
       renderStudioProgressBar('studio-coach-connected-progress-bar', {
         total: conn.length,
         completed: connDoneCount,
+        compact: true,
       });
 
       const expr = analysis.expressions || [];
@@ -1422,6 +1761,7 @@
       renderStudioProgressBar('studio-coach-expressions-progress-bar', {
         total: expr.length,
         completed: exprDoneCount,
+        compact: true,
       });
 
       const vocab = analysis.vocabulary || [];
@@ -1430,6 +1770,7 @@
       renderStudioProgressBar('studio-coach-vocab-progress-bar', {
         total: vocab.length,
         completed: vocabDoneCount,
+        compact: true,
       });
 
       renderStudioProgressBar('studio-coach-progress-bar', {
@@ -1437,26 +1778,16 @@
         completed: connDoneCount + exprDoneCount + vocabDoneCount,
       });
     } else {
-      renderStudioProgressBar('studio-coach-connected-progress-bar', { total: 0, completed: 0 });
-      renderStudioProgressBar('studio-coach-expressions-progress-bar', { total: 0, completed: 0 });
-      renderStudioProgressBar('studio-coach-vocab-progress-bar', { total: 0, completed: 0 });
+      renderStudioProgressBar('studio-coach-connected-progress-bar', { total: 0, completed: 0, compact: true });
+      renderStudioProgressBar('studio-coach-expressions-progress-bar', { total: 0, completed: 0, compact: true });
+      renderStudioProgressBar('studio-coach-vocab-progress-bar', { total: 0, completed: 0, compact: true });
       renderStudioProgressBar('studio-coach-progress-bar', { total: 0, completed: 0 });
     }
 
     const canvas = document.querySelector('.studio-canvas');
     const mode = studioState.mode || 'shadow';
     if (canvas) canvas.dataset.activeMode = mode;
-    const dock = document.getElementById('canvas-progress-dock');
-    if (dock) {
-      const barMap = {
-        shadow: 'studio-shadow-progress-bar',
-        read: 'studio-read-progress-bar',
-        listen: 'studio-listen-progress-bar',
-        coach: 'studio-coach-progress-bar',
-      };
-      const activeBar = barMap[mode] ? document.getElementById(barMap[mode]) : null;
-      dock.hidden = mode === 'notes' || (activeBar ? activeBar.hidden : false);
-    }
+    applyStudioModeChrome();
     syncCompletionFilter();
     syncStudioTopProgressDom();
   }
@@ -1591,10 +1922,17 @@
       }
     });
 
+    ensureActiveViewRendered();
+    applyStudioModeChrome();
+    refreshAllStudioProgressBars();
+
     const readEmpty = document.getElementById('read-filter-empty');
     if (readEmpty && target !== 'paragraphs') readEmpty.hidden = true;
 
+    window.FlaptapStudioReaderFlow?.syncReaderToolbar(studioState.item);
     syncSearchMatchesDom();
+    indexKaraokeWords();
+    requestAnimationFrame(syncStudioDeckStickyHeightVar);
 
     if (!opts.skipUrlSync) {
       try {
@@ -1624,9 +1962,36 @@
     }
     if (!STUDIO_MODES.includes(target)) target = 'shadow';
 
+    const prevMode = studioState.mode || 'shadow';
+    const plan = MC
+      ? MC.computeTransitionPlan(prevMode, target, {
+          activeSentence: studioState.activeSentence,
+          dictationIndex: studioState.dictationIndex,
+          isPlaying: studioState.isPlaying,
+          activeRange: studioState.activeRange,
+        })
+      : {
+          cancelShadowPause: prevMode === 'shadow' && target !== 'shadow',
+          syncDictationToActive: target === 'listen',
+          pauseIfPlayingMismatch: false,
+          resetUserScrolledAway: target === 'shadow' && prevMode !== 'shadow',
+          scrollActiveIfAutoFollow: prevMode !== target && (target === 'shadow' || target === 'read'),
+        };
+
+    if (plan.cancelShadowPause) {
+      cancelShadowPause();
+    }
+    if (plan.syncDictationToActive && studioState.activeSentence?.index) {
+      studioState.dictationIndex = Number(studioState.activeSentence.index) || 1;
+    }
+    if (plan.pauseIfPlayingMismatch && studioState.isPlaying) {
+      pauseCurrentPlayback();
+    }
+
     studioState.mode = target;
     closeWordLookupPopover();
     closeAllControlPopovers();
+    closeStudioToolsPopover();
 
     document.querySelectorAll('.mode-tab-btn[data-mode]').forEach((btn) => {
       const isActive = btn.dataset.mode === target;
@@ -1644,52 +2009,66 @@
     const sentList = document.getElementById('subview-sentences-list');
     if (sentList) sentList.style.display = target === 'shadow' ? '' : 'none';
 
-    const toolsBar = document.getElementById('studio-transcript-tools');
-    if (toolsBar) toolsBar.hidden = !(target === 'shadow' || target === 'read');
-
-    const readSubbar = document.getElementById('studio-read-subbar');
-    if (readSubbar) readSubbar.hidden = target !== 'read';
-
     if (target === 'read') {
       switchReadView(forcedReadView || studioState.readView || 'paragraphs', { skipUrlSync: true });
     } else {
       const chunkList = document.getElementById('subview-chunks-list');
       if (chunkList) chunkList.style.display = 'none';
+      ensureActiveViewRendered();
     }
 
-    const transTrigger = document.getElementById('trans-trigger-btn');
-    if (transTrigger) {
-      transTrigger.hidden = target !== 'shadow';
-    }
-    const transDeck = document.getElementById('translation-control-deck');
-    if (transDeck) {
-      transDeck.hidden = true;
-      transDeck.style.display = target === 'shadow' ? '' : 'none';
-    }
-
-    const legendStrip = document.getElementById('transcript-legend-strip');
-    if (legendStrip) {
-      legendStrip.style.display = target === 'shadow' || target === 'read' ? '' : 'none';
-    }
-
-    const canvas = document.querySelector('.studio-canvas');
-    if (canvas) {
-      canvas.dataset.activeMode = target;
+    const searchInput = document.getElementById('studio-search-input');
+    if (searchInput && MC && modeState) {
+      const restoredQuery = MC.getSearchQuery(modeState, target);
+      if (searchInput.value !== restoredQuery) {
+        searchInput.value = restoredQuery;
+      }
+      studioState.searchQuery = restoredQuery;
     }
 
     if (target === 'listen') {
       renderDictationCard();
     } else if (target === 'coach' && studioState.item) {
-      // Cached analysis renders synchronously; only an uncached lesson calls AI.
-      const coachContent = document.getElementById('coach-content-box');
-      if (!coachContent || coachContent.hidden) {
-        triggerDynamicCoachAnalysis(false);
+      if ((studioState.item.sentences || []).length === 0) {
+        const loadingBox = document.getElementById('coach-loading-box');
+        const errorBox = document.getElementById('coach-error-box');
+        const contentBox = document.getElementById('coach-content-box');
+        if (loadingBox) loadingBox.hidden = true;
+        if (contentBox) contentBox.hidden = true;
+        if (errorBox) {
+          errorBox.hidden = false;
+          const title = document.getElementById('coach-error-title');
+          const msg = document.getElementById('coach-error-msg');
+          if (title) title.textContent = 'Waiting for Transcript';
+          if (msg) msg.textContent = 'Fetch captions or paste a transcript in Shadow mode first to unlock AI Prosody Coach.';
+        }
+      } else {
+        const coachContent = document.getElementById('coach-content-box');
+        if (!coachContent || coachContent.hidden) {
+          triggerDynamicCoachAnalysis(false);
+        }
       }
     }
 
+    applyStudioModeChrome();
     syncPlaybackButtonsDom();
     refreshAllStudioProgressBars();
     syncSearchMatchesDom();
+    indexKaraokeWords();
+
+    if (plan.resetUserScrolledAway) {
+      studioState.userScrolledAway = false;
+    }
+    if (plan.scrollActiveIfAutoFollow && studioState.autoFollow && studioState.activeSentence?.index) {
+      const targetIdx = studioState.activeSentence.index;
+      requestAnimationFrame(() => {
+        scrollSentenceIntoView(targetIdx, false);
+        syncFloatingJumpButton();
+      });
+    } else {
+      syncFloatingJumpButton();
+    }
+
     requestAnimationFrame(syncStudioDeckStickyHeightVar);
 
     if (!opts.skipUrlSync) {
@@ -1746,7 +2125,7 @@
     if (singleBtn) {
       singleBtn.hidden = speakers.length !== 1;
       if (speakers.length === 1) {
-        singleBtn.textContent = `Speaker: ${speakers[0].name}`;
+        singleBtn.title = `${t('speakerRenameBtn')}: ${speakers[0].name}`;
       }
     }
 
@@ -1772,31 +2151,23 @@
       platEl.hidden = !platLabel;
     }
 
+    const hasSentences = Array.isArray(item.sentences) && item.sentences.length > 0;
     const revStatus = item.reviewStatus || (item.transcriptData?.reviewed ? 'ready' : 'pending');
     const isReviewed = revStatus === 'ready';
     const revPill = document.getElementById('studio-review-status-pill');
     if (revPill) {
-      revPill.hidden = !item.transcriptData;
+      revPill.hidden = !item.transcriptData && hasSentences;
+      const pillText = !hasSentences ? 'Video Ready' : isReviewed ? 'AI Reviewed' : 'Raw Ready';
       const textSpan = revPill.querySelector('.studio-review-pill-text');
-      if (textSpan) textSpan.textContent = isReviewed ? 'AI Reviewed' : 'Raw Ready';
-      else revPill.textContent = isReviewed ? 'AI Reviewed' : 'Raw Ready';
-      revPill.classList.toggle('is-reviewed', isReviewed);
+      if (textSpan) textSpan.textContent = pillText;
+      else revPill.textContent = pillText;
+      revPill.classList.toggle('is-reviewed', isReviewed && hasSentences);
     }
 
     const revDot = document.getElementById('studio-review-dot');
     if (revDot) {
-      revDot.hidden = !isReviewed;
+      revDot.hidden = !isReviewed && hasSentences;
     }
-
-    const popStatus = document.getElementById('studio-review-popover-status');
-    if (popStatus) {
-      popStatus.textContent = isReviewed ? 'AI Reviewed' : 'Raw Ready';
-      popStatus.classList.toggle('is-reviewed', isReviewed);
-    }
-    const runBtn = document.getElementById('studio-run-review-btn');
-    const rerunBtn = document.getElementById('studio-rerun-review-btn');
-    if (runBtn) runBtn.hidden = isReviewed;
-    if (rerunBtn) rerunBtn.hidden = !isReviewed;
 
     const repairCount = Number(
       item.repairCount ||
@@ -1812,27 +2183,206 @@
       repToggle.classList.toggle('active', studioState.showRepairs);
       repToggle.setAttribute('aria-pressed', studioState.showRepairs ? 'true' : 'false');
     }
+
+    syncEnhancementsPopoverUi();
   }
 
-  function renderSentencesAndParagraphs() {
+  async function fetchShadowingConfig() {
+    try {
+      const cfg = await apiFetch('/api/tracks/shadowing/config', { method: 'GET' });
+      if (cfg && typeof cfg === 'object') {
+        studioState.shadowingConfig = {
+          aiConfigured: cfg.aiConfigured !== false,
+          cloudStt: cfg.cloudStt || { available: false, provider: null, model: '' },
+        };
+      }
+    } catch {}
+    return studioState.shadowingConfig;
+  }
+
+  function syncEnhancementsPopoverUi() {
     const item = studioState.item;
     if (!item) return;
-    const TT = window.FlaptapStudioTranscriptTools;
 
     const sentences = Array.isArray(item.sentences) ? item.sentences : [];
-    const chunks = Array.isArray(item.chunks) ? item.chunks : [];
+    const hasSentences = sentences.length > 0;
+    const isReviewed =
+      (item.reviewStatus || (item.transcriptData?.reviewed ? 'ready' : 'pending')) === 'ready';
+    const hasCoach = Boolean(item.aiAnalysis);
+    const isYoutube =
+      (item.platform || '').toLowerCase() === 'youtube' ||
+      (Boolean(item.videoId) && !item.media?.streamUrl);
+    const platformLabel =
+      window.FlaptapStudioTranscriptTools?.formatPlatformLabel?.(item.platform || '') || '';
+
+    const sourceBadge = document.getElementById('studio-enhance-source-badge');
+    if (sourceBadge) {
+      const engine = item.transcriptData?.providerEngine || '';
+      let label = hasSentences ? 'Transcript Ready' : 'Captions Pending';
+      if (hasSentences) {
+        if (engine.startsWith('cloud_whisper')) label = 'Cloud Whisper';
+        else if (engine.startsWith('manual_')) label = 'Imported';
+        else if (engine === 'faster_whisper') label = 'Speech-to-Text';
+        else if (isYoutube) label = 'YouTube Captions';
+        else if (platformLabel) label = `${platformLabel} Captions`;
+      }
+      sourceBadge.textContent = label;
+      sourceBadge.classList.toggle('is-reviewed', hasSentences);
+    }
+
+    const retryRow = document.getElementById('enhance-row-retry-captions');
+    const retryCheck = document.getElementById('enhance-check-retry-captions');
+    const retryTitle = document.getElementById('enhance-retry-title');
+    if (retryRow) retryRow.hidden = !isYoutube && !item.sourceUrl;
+    if (retryTitle) {
+      retryTitle.textContent = hasSentences ? 'Re-fetch Source Captions' : 'Retry YouTube Captions';
+    }
+    if (retryCheck) retryCheck.disabled = Boolean(studioState.enhancementsInFlight);
+
+    const cloudStt = studioState.shadowingConfig?.cloudStt;
+    const providerLabel =
+      cloudStt?.provider === 'groq'
+        ? 'Groq'
+        : cloudStt?.provider === 'openai'
+          ? 'OpenAI'
+          : cloudStt?.provider || '';
+    const trBadge = document.getElementById('enhance-transcribe-badge');
+    const trSub = document.getElementById('enhance-transcribe-sub');
+    const trCheck = document.getElementById('enhance-check-transcribe');
+    if (trBadge) {
+      if (cloudStt?.available) {
+        trBadge.textContent = `${providerLabel} Cloud · 0% CPU`;
+        trBadge.className = 'studio-enhance-badge is-cloud';
+      } else {
+        trBadge.textContent = 'Uses Device CPU';
+        trBadge.className = 'studio-enhance-badge is-cpu';
+      }
+    }
+    if (trSub) {
+      trSub.textContent = cloudStt?.available
+        ? `Fast speech-to-text via ${providerLabel} cloud API (zero laptop fan spin).`
+        : 'Runs local Whisper on this device only when you check this option.';
+    }
+    if (trCheck) trCheck.disabled = Boolean(studioState.enhancementsInFlight);
+
+    const willHaveTranscript =
+      hasSentences || Boolean(retryCheck?.checked);
+
+    const popStatus = document.getElementById('studio-review-popover-status');
+    const revCheck = document.getElementById('enhance-check-review');
+    const revRow = document.getElementById('enhance-row-review');
+    if (popStatus) {
+      popStatus.textContent = isReviewed ? 'Done' : 'Pending';
+      popStatus.classList.toggle('is-reviewed', isReviewed);
+    }
+    if (revCheck) revCheck.disabled = Boolean(studioState.enhancementsInFlight) || !willHaveTranscript;
+    revRow?.classList.toggle('is-disabled', !willHaveTranscript);
+
+    const coachStatus = document.getElementById('studio-enhance-coach-status');
+    const coachCheck = document.getElementById('enhance-check-coach');
+    const coachRow = document.getElementById('enhance-row-coach');
+    if (coachStatus) {
+      coachStatus.textContent = hasCoach ? 'Ready' : 'Pending';
+      coachStatus.className = `studio-enhance-badge${hasCoach ? ' is-ready' : ''}`;
+    }
+    if (coachCheck) coachCheck.disabled = Boolean(studioState.enhancementsInFlight) || !willHaveTranscript;
+    coachRow?.classList.toggle('is-disabled', !willHaveTranscript);
+
+    const langCode = studioState.translationLang || 'ar';
+    const langObj = (studioState.languages || []).find((l) => l.code === langCode);
+    const langLabel = langObj ? langObj.name : langCode.toUpperCase();
+    const langMap = getLangTranslationMap(langCode);
+    const transDoneCount = sentences.filter((s) => Boolean(langMap[Number(s.index)])).length;
+    const transTitle = document.getElementById('studio-enhance-trans-title');
+    const transStatus = document.getElementById('studio-enhance-trans-status');
+    const transSub = document.getElementById('enhance-enhance-trans-sub') || document.getElementById('studio-enhance-trans-sub');
+    const transCheck = document.getElementById('enhance-check-translate');
+    const transRow = document.getElementById('enhance-row-translate');
+    const canTrans = willHaveTranscript && langCode !== 'none';
+    if (transTitle) transTitle.textContent = `Translate All (${langLabel})`;
+    if (transStatus) {
+      transStatus.textContent = hasSentences ? `${transDoneCount}/${sentences.length}` : 'Pending';
+      transStatus.className = `studio-enhance-badge ltr-num${hasSentences && transDoneCount >= sentences.length ? ' is-ready' : ''}`;
+    }
+    if (transSub) {
+      transSub.textContent = langCode === 'none'
+        ? 'Select a target language in the Translation menu first.'
+        : `Translate missing lines to ${langLabel}.`;
+    }
+    if (transCheck) transCheck.disabled = Boolean(studioState.enhancementsInFlight) || !canTrans;
+    transRow?.classList.toggle('is-disabled', !canTrans);
+
+    syncEnhancementsRunButton();
+  }
+
+  function syncEnhancementsRunButton() {
+    const btn = document.getElementById('studio-run-enhancements-btn');
+    const cancelBtn = document.getElementById('studio-cancel-enhancements-btn');
+    const checks = Array.from(document.querySelectorAll('#studio-enhance-list .studio-enhance-check'));
+    const selectedCount = checks.filter((c) => !c.disabled && c.checked).length;
+
+    if (cancelBtn) {
+      cancelBtn.hidden = !studioState.enhancementsInFlight;
+    }
+    if (btn) {
+      btn.disabled = Boolean(studioState.enhancementsInFlight) || selectedCount === 0;
+      btn.textContent = studioState.enhancementsInFlight
+        ? 'Running...'
+        : selectedCount > 0
+          ? `Run Selected (${selectedCount})`
+          : 'Run Selected';
+    }
+  }
+
+  function renderShadowView() {
+    const item = studioState.item;
+    const sentContainer = document.getElementById('subview-sentences-list');
+    if (!item || !sentContainer) return;
+    const TT = window.FlaptapStudioTranscriptTools;
+    const sentences = Array.isArray(item.sentences) ? item.sentences : [];
     const spkFilter = studioState.speakerFilter || 'all';
     const speakers = TT ? TT.getSpeakersList(item) : [];
     const showSpkChipOnLines = speakers.length > 1;
-
-    document.getElementById('badge-sentences-count').textContent = String(sentences.length);
-    document.getElementById('badge-paragraphs-count').textContent = String(chunks.length);
-
     const activeIdx = studioState.activeSentence?.index || null;
 
-    // 1. Render Shadow Mode Sentence Cards
-    const sentContainer = document.getElementById('subview-sentences-list');
-    if (sentContainer) {
+    if (sentences.length === 0) {
+      const pendingStatus = item.transcriptStatus || item.transcriptData?.transcriptStatus || 'pending';
+      const pendingTitle =
+        pendingStatus === 'no_captions'
+          ? 'No Captions on Source Video'
+          : pendingStatus === 'rate_limited'
+            ? 'Provider Captions Rate-Limited'
+            : 'Original Provider Transcript Required';
+      const pendingReason =
+        item.transcriptError ||
+        item.transcriptData?.transcriptError ||
+        'Shadowing only uses original transcripts directly from the source provider. Retry fetching source captions or paste the original transcript.';
+
+      sentContainer.innerHTML = `
+        <div class="studio-pending-transcript-card" id="studio-pending-transcript-card">
+          <div class="studio-pending-head">
+            <div class="studio-pending-icon" aria-hidden="true">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </div>
+            <div>
+              <h2 class="studio-pending-title">${escapeHtml(pendingTitle)}</h2>
+              <p class="studio-pending-desc">${escapeHtml(pendingReason)}</p>
+            </div>
+          </div>
+          <div class="studio-pending-actions">
+            <button type="button" class="btn-vox btn-sm" data-pending-action="retry-captions">Retry Source Captions</button>
+            <button type="button" class="btn-secondary btn-sm" data-pending-action="toggle-paste">Paste Transcript / SRT</button>
+          </div>
+          <div class="studio-pending-paste-wrap" id="studio-pending-paste-wrap" hidden>
+            <textarea id="studio-pending-paste-input" class="studio-enhance-paste-input" rows="5" placeholder="Paste SRT, WebVTT, [00:12] lines, or plain transcript text..."></textarea>
+            <div class="studio-enhance-paste-actions">
+              <button type="button" class="btn-vox btn-xs" data-pending-action="apply-paste">Apply Transcript</button>
+              <button type="button" class="btn-secondary btn-xs" data-pending-action="toggle-paste">Cancel</button>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
       const sentDoneSet = getStudioCompletedSet('sentences');
       const visibleSentences =
         spkFilter === 'all' ? sentences : sentences.filter((s) => s.speakerId === spkFilter);
@@ -1937,85 +2487,181 @@
         })
         .join('');
     }
-
     syncTranslationUiState();
+  }
 
-    // 2. Render Read Mode Cohesive Editorial Paragraphs (with Play Paragraph & Speaker Chips)
+  function renderReadParagraphsView() {
+    const item = studioState.item;
     const chunkContainer = document.getElementById('subview-chunks-list');
-    if (chunkContainer) {
-      const sentenceMap = new Map(sentences.map((s) => [s.index, s]));
-      const paraDoneSet = getStudioCompletedSet('paragraphs');
-      chunkContainer.innerHTML = chunks
-        .map((chunk, idx) => {
-          const paraNum = idx + 1;
-          const isDone = paraDoneSet.has(paraNum);
-          let proseHtml = '';
-          let matchedSents = [];
-          if (Array.isArray(chunk.sentenceIndices) && chunk.sentenceIndices.length > 0) {
-            matchedSents = chunk.sentenceIndices
-              .map((sIdx) => sentenceMap.get(sIdx))
-              .filter(Boolean)
-              .filter((s) => spkFilter === 'all' || s.speakerId === spkFilter);
-            if (spkFilter !== 'all' && matchedSents.length === 0) return '';
-            proseHtml = matchedSents
-              .map((s) => {
-                const sHtml = decorateClickableWords(s.highlightedHtml || escapeHtml(s.text), s.index, s);
-                const readingCls = activeIdx === s.index ? 'active-reading' : '';
-                return `<span class="read-sentence ${readingCls}" data-read-sent="${s.index}">${sHtml}</span>`;
-              })
-              .filter(Boolean)
-              .join(' ');
-          } else {
-            proseHtml = chunk.highlightedHtml || escapeHtml(chunk.text);
-          }
+    if (!item || !chunkContainer) return;
+    const TT = window.FlaptapStudioTranscriptTools;
+    const sentences = Array.isArray(item.sentences) ? item.sentences : [];
+    const chunks = Array.isArray(item.chunks) ? item.chunks : [];
+    const spkFilter = studioState.speakerFilter || 'all';
+    const speakers = TT ? TT.getSpeakersList(item) : [];
+    const showSpkChipOnLines = speakers.length > 1;
+    const activeIdx = studioState.activeSentence?.index || null;
+    const paraDoneSet = getStudioCompletedSet('paragraphs');
 
-          const pStart = Number(chunk.startSec ?? matchedSents[0]?.startSec ?? 0);
-          const pEnd = Number(chunk.endSec ?? matchedSents[matchedSents.length - 1]?.endSec ?? pStart + 2);
-          const spkChipHtml =
-            showSpkChipOnLines && chunk.speakerId && TT
-              ? `<span class="studio-spk-chip is-mini" style="--spk-color:${TT.speakerColor(item, chunk.speakerId)}">${escapeHtml(TT.speakerName(item, chunk.speakerId, chunk.speaker || chunk.speakerName))}</span>`
-              : '';
+    if (window.FlaptapStudioReaderFlow) {
+      chunkContainer.innerHTML = window.FlaptapStudioReaderFlow.renderContinuousParagraphsView(
+        item,
+        {
+          speakerFilter: spkFilter,
+          showRepairs: studioState.showRepairs,
+          searchQuery: studioState.searchQuery,
+          activeSentenceIndex: activeIdx,
+          paraDoneSet,
+          renderCopyBtnHtml: renderStudioCopyBtnHtml,
+          renderCheckBtnHtml: renderStudioCheckBtnHtml,
+        },
+      );
+      window.FlaptapStudioReaderFlow.syncReaderToolbar(item);
+      return;
+    }
 
-          return `
-            <section class="editorial-paragraph-block${isDone ? ' is-item-completed' : ''}" data-paragraph-index="${paraNum}">
-              <div class="editorial-paragraph-head">
-                <div class="paragraph-head-left">
-                  ${spkChipHtml}
-                  <span class="paragraph-time-margin">${escapeHtml(chunk.timeRange || '')}</span>
-                </div>
-                <div class="paragraph-head-actions">
-                  <button type="button" class="btn-secondary btn-xs paragraph-play-btn" data-play-range-start="${pStart.toFixed(3)}" data-play-range-end="${pEnd.toFixed(3)}" data-play-range-label="Paragraph ${paraNum}">Play</button>
-                  ${renderStudioCopyBtnHtml(chunk.text, 'paragraph-copy-btn')}
-                  ${renderStudioCheckBtnHtml({ checked: isDone, subject: 'paragraphs', index: paraNum })}
-                </div>
+    const sentenceMap = new Map(sentences.map((s) => [s.index, s]));
+    chunkContainer.innerHTML = chunks
+      .map((chunk, idx) => {
+        const paraNum = idx + 1;
+        const isDone = paraDoneSet.has(paraNum);
+        let proseHtml = '';
+        let matchedSents = [];
+        if (Array.isArray(chunk.sentenceIndices) && chunk.sentenceIndices.length > 0) {
+          matchedSents = chunk.sentenceIndices
+            .map((sIdx) => sentenceMap.get(sIdx))
+            .filter(Boolean)
+            .filter((s) => spkFilter === 'all' || s.speakerId === spkFilter);
+          if (spkFilter !== 'all' && matchedSents.length === 0) return '';
+          proseHtml = matchedSents
+            .map((s) => {
+              const sHtml = decorateClickableWords(s.highlightedHtml || escapeHtml(s.text), s.index, s);
+              const readingCls = activeIdx === s.index ? 'active-reading' : '';
+              return `<span class="read-sentence ${readingCls}" data-read-sent="${s.index}">${sHtml}</span>`;
+            })
+            .filter(Boolean)
+            .join(' ');
+        } else {
+          proseHtml = chunk.highlightedHtml || escapeHtml(chunk.text);
+        }
+
+        const pStart = Number(chunk.startSec ?? matchedSents[0]?.startSec ?? 0);
+        const pEnd = Number(chunk.endSec ?? matchedSents[matchedSents.length - 1]?.endSec ?? pStart + 2);
+        const spkChipHtml =
+          showSpkChipOnLines && chunk.speakerId && TT
+            ? `<span class="studio-spk-chip is-mini" style="--spk-color:${TT.speakerColor(item, chunk.speakerId)}">${escapeHtml(TT.speakerName(item, chunk.speakerId, chunk.speaker || chunk.speakerName))}</span>`
+            : '';
+
+        return `
+          <section class="editorial-paragraph-block${isDone ? ' is-item-completed' : ''}" data-paragraph-index="${paraNum}">
+            <div class="editorial-paragraph-head">
+              <div class="paragraph-head-left">
+                ${spkChipHtml}
+                <span class="paragraph-time-margin">${escapeHtml(chunk.timeRange || '')}</span>
               </div>
-              <p class="paragraph-prose">${proseHtml}</p>
-            </section>
-          `;
-        })
-        .filter(Boolean)
-        .join('');
-    }
+              <div class="paragraph-head-actions">
+                <button type="button" class="btn-secondary btn-xs paragraph-play-btn" data-play-range-start="${pStart.toFixed(3)}" data-play-range-end="${pEnd.toFixed(3)}" data-idle-label="Play" data-play-range-label="Paragraph ${paraNum}">Play</button>
+                ${renderStudioCopyBtnHtml(chunk.text, 'paragraph-copy-btn')}
+                ${renderStudioCheckBtnHtml({ checked: isDone, subject: 'paragraphs', index: paraNum })}
+              </div>
+            </div>
+            <p class="paragraph-prose">${proseHtml}</p>
+          </section>
+        `;
+      })
+      .filter(Boolean)
+      .join('');
+  }
 
-    // 3. Render Ideas, Speakers & Raw Original Read Sub-Views
-    if (TT) {
-      const renderOpts = {
-        speakerFilter: spkFilter,
-        showRepairs: studioState.showRepairs,
-        searchQuery: studioState.searchQuery,
-      };
-      const ideasEl = document.getElementById('subview-ideas-list');
-      if (ideasEl) ideasEl.innerHTML = TT.renderIdeasView(item, renderOpts);
-      const speakersEl = document.getElementById('subview-speakers-list');
-      if (speakersEl) speakersEl.innerHTML = TT.renderSpeakersView(item, renderOpts);
-      const rawEl = document.getElementById('subview-raw-list');
-      if (rawEl) rawEl.innerHTML = TT.renderRawView(item, renderOpts);
-    }
+  function renderReadIdeasView() {
+    const item = studioState.item;
+    const TT = window.FlaptapStudioTranscriptTools;
+    const ideasEl = document.getElementById('subview-ideas-list');
+    if (!item || !TT || !ideasEl) return;
+    ideasEl.innerHTML = TT.renderIdeasView(item, {
+      speakerFilter: studioState.speakerFilter || 'all',
+      showRepairs: studioState.showRepairs,
+      searchQuery: studioState.searchQuery,
+    });
+  }
 
+  function renderReadSpeakersView() {
+    const item = studioState.item;
+    const TT = window.FlaptapStudioTranscriptTools;
+    const speakersEl = document.getElementById('subview-speakers-list');
+    if (!item || !TT || !speakersEl) return;
+    speakersEl.innerHTML = TT.renderSpeakersView(item, {
+      speakerFilter: studioState.speakerFilter || 'all',
+      showRepairs: studioState.showRepairs,
+      searchQuery: studioState.searchQuery,
+    });
+  }
+
+  function renderReadRawView() {
+    const item = studioState.item;
+    const TT = window.FlaptapStudioTranscriptTools;
+    const rawEl = document.getElementById('subview-raw-list');
+    if (!item || !rawEl) return;
+    const activeIdx = studioState.activeSentence?.index || null;
+    const renderOpts = {
+      speakerFilter: studioState.speakerFilter || 'all',
+      showRepairs: false,
+      searchQuery: studioState.searchQuery,
+      activeSentenceIndex: activeIdx,
+    };
+    rawEl.innerHTML = window.FlaptapStudioReaderFlow
+      ? window.FlaptapStudioReaderFlow.renderContinuousRawView(item, renderOpts)
+      : TT?.renderRawView(item, renderOpts) || '';
+  }
+
+  function invalidateTranscriptViews() {
+    const item = studioState.item;
+    if (!item) return;
+    if (MC && modeState) MC.markAllViewsDirty(modeState);
+    const sentences = Array.isArray(item.sentences) ? item.sentences : [];
+    const paragraphs = getCanonicalReadParagraphs(item);
+    const sentBadge = document.getElementById('badge-sentences-count');
+    const paraBadge = document.getElementById('badge-paragraphs-count');
+    if (sentBadge) sentBadge.textContent = String(sentences.length);
+    if (paraBadge) paraBadge.textContent = String(paragraphs.length);
+    window.FlaptapStudioReaderFlow?.syncReaderToolbar(item);
     renderSpeakerBar();
     syncReviewStatusChrome();
-    syncSearchMatchesDom();
+  }
+
+  function ensureActiveViewRendered() {
+    const item = studioState.item;
+    if (!item) return;
+    const mode = studioState.mode || 'shadow';
+    const readView = studioState.readView || 'paragraphs';
+    const key = MC ? MC.getViewKey(mode, readView) : mode === 'read' ? `read:${readView}` : mode;
+
+    if (!MC || !modeState || MC.isViewDirty(modeState, key)) {
+      if (key === 'shadow') {
+        renderShadowView();
+      } else if (key === 'read:paragraphs') {
+        renderReadParagraphsView();
+      } else if (key === 'read:ideas') {
+        renderReadIdeasView();
+      } else if (key === 'read:speakers') {
+        renderReadSpeakersView();
+      } else if (key === 'read:raw') {
+        renderReadRawView();
+      }
+      if (MC && modeState) MC.markViewClean(modeState, key);
+    }
+
+    applyStudioModeChrome();
     refreshAllStudioProgressBars();
+    syncSearchMatchesDom();
+    syncPlaybackButtonsDom();
+    indexKaraokeWords();
+  }
+
+  function renderSentencesAndParagraphs() {
+    if (!studioState.item) return;
+    invalidateTranscriptViews();
+    ensureActiveViewRendered();
   }
 
   /* ========================================================================
@@ -2593,6 +3239,8 @@
     const videoToggleBtn = document.getElementById('studio-video-toggle-btn');
     const timelineBar = document.getElementById('studio-timeline-bar');
 
+    const playerCard = document.querySelector('.player-frame-card');
+
     const media = item.media || null;
     const vidId = String(media?.youtubeId || item.videoId || item.video_id || '').trim();
     const isYtId = /^[a-zA-Z0-9_-]{11}$/.test(vidId);
@@ -2606,6 +3254,7 @@
     }
 
     if (mediaKind === 'youtube' && vidId) {
+      playerCard?.classList.remove('is-audio-only-media');
       if (ttsStage) ttsStage.hidden = true;
       if (audioStage) audioStage.hidden = true;
       if (zoomViewport) zoomViewport.hidden = false;
@@ -2616,8 +3265,12 @@
       const aTitle = document.getElementById('studio-audio-stage-title');
       if (aTitle) aTitle.textContent = item.title || 'Audio Focus Mode';
       loadYouTubeIframeApi(vidId);
+      if (localStorage.getItem('flaptap_studio_video_hidden') === '1') {
+        toggleVideoVisibility(true, { persist: false });
+      }
     } else if ((mediaKind === 'video' || mediaKind === 'audio') && streamUrl) {
       const isVideo = mediaKind === 'video' && media?.hasVideo !== false;
+      playerCard?.classList.toggle('is-audio-only-media', !isVideo);
       if (ttsStage) ttsStage.hidden = true;
       if (ytDiv) ytDiv.hidden = true;
       if (zoomViewport) zoomViewport.hidden = !isVideo;
@@ -2635,7 +3288,11 @@
       if (videoToggleBtn) videoToggleBtn.hidden = !isVideo;
       if (timelineBar) timelineBar.hidden = false;
       createHtml5Player(streamUrl, isVideo);
+      if (isVideo && localStorage.getItem('flaptap_studio_video_hidden') === '1') {
+        toggleVideoVisibility(true, { persist: false });
+      }
     } else {
+      playerCard?.classList.remove('is-audio-only-media');
       if (zoomViewport) zoomViewport.hidden = true;
       if (zoomHud) zoomHud.hidden = true;
       if (ytDiv) ytDiv.hidden = true;
@@ -2646,7 +3303,10 @@
         ttsStage.hidden = false;
         document.getElementById('tts-stage-tag').textContent = item.trackTitle || 'Spoken Audio Deck';
         if (item.sentences?.[0]) {
-          document.getElementById('tts-active-quote').textContent = `“${item.sentences[0].text}”`;
+          document.getElementById('tts-active-quote').textContent =
+            studioState.mode === 'listen'
+              ? 'Listen carefully and type the missing words.'
+              : `“${item.sentences[0].text}”`;
         }
       }
     }
@@ -2665,8 +3325,10 @@
       mediaEl = document.createElement(isVideo ? 'video' : 'audio');
       mediaEl.id = 'studio-html5-player';
       mediaEl.className = isVideo ? 'studio-html5-video' : 'studio-html5-audio';
-      if (isVideo) mediaEl.setAttribute('playsinline', '');
-      mediaEl.setAttribute('controls', '');
+      if (isVideo) {
+        mediaEl.setAttribute('playsinline', '');
+        mediaEl.setAttribute('controls', '');
+      }
       mediaEl.setAttribute('preload', 'auto');
       mediaEl.src = streamUrl;
       const mountParent = isVideo
@@ -2687,11 +3349,22 @@
         }
       });
 
+      mediaEl.addEventListener('seeking', () => {
+        resetPlaybackClockAnchor(mediaEl.currentTime);
+        clearActiveKaraokeWord();
+      });
+
+      mediaEl.addEventListener('seeked', () => {
+        resetPlaybackClockAnchor(mediaEl.currentTime);
+        clearActiveKaraokeWord();
+      });
+
       mediaEl.addEventListener('play', () => {
         if (handleInitialNativePlayStart(studioState.ytPlayer)) return;
         studioState.isPlaying = true;
         syncPlaybackButtonsDom();
         startPlaybackTicker();
+        startKaraokeRaf();
       });
 
       mediaEl.addEventListener('pause', () => {
@@ -2898,6 +3571,7 @@
             studioState.isPlaying = true;
             syncPlaybackButtonsDom();
             startPlaybackTicker();
+            startKaraokeRaf();
           } else if (ev?.data === 2 || ev?.data === 0) {
             // Ignore transient PAUSED (2) emitted by YouTube while an async seekTo()+playVideo() is settling.
             if (
@@ -2927,7 +3601,6 @@
   }
 
   function updateActiveSentenceDom(index) {
-    clearActiveKaraokeWord();
     document.querySelectorAll('.sentence-driller-card.active-drilling').forEach((el) =>
       el.classList.remove('active-drilling'),
     );
@@ -3005,6 +3678,62 @@
     }
   }
 
+  /**
+   * Live word-highlight index for the currently visible transcript view.
+   *
+   * The transcript provider already ships native millisecond word timings
+   * (YouTube JSON3 `tOffsetMs`, Whisper word offsets for uploaded media), and
+   * they are persisted on every sentence as `words[i].startMs/endMs`. We index
+   * the rendered word spans once per render and then only run a binary search
+   * against that index while the media clock advances — no per-frame DOM
+   * queries and no re-tokenizing.
+   */
+  const karaokeIndex = {
+    root: null,
+    spans: [], // Sorted { key, startMs, endMs } for O(log n) lookup
+    byKey: new Map(), // key -> word span element
+  };
+
+  function getKaraokeScopeSelector() {
+    if (studioState.mode === 'shadow') return '#subview-sentences-list';
+    if (studioState.mode !== 'read') return null;
+    if (studioState.readView === 'ideas') return '#subview-ideas-list';
+    if (studioState.readView === 'speakers') return '#subview-speakers-list';
+    if (studioState.readView === 'raw') return '#subview-raw-list';
+    return '#subview-chunks-list';
+  }
+
+  function indexKaraokeWords() {
+    const selector = getKaraokeScopeSelector();
+    const root = selector ? document.querySelector(selector) : null;
+    const spans = [];
+    const byKey = new Map();
+
+    if (root) {
+      root.querySelectorAll('.studio-word[data-word-i]').forEach((el) => {
+        const startMs = Number(el.dataset.startMs);
+        const endMs = Number(el.dataset.endMs);
+        if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) return;
+        if (el.closest('[hidden]')) return;
+        const key = `${el.dataset.sentIndex || 0}:${el.dataset.wordI}`;
+        if (byKey.has(key)) return;
+        byKey.set(key, el);
+        spans.push({ key, startMs, endMs });
+      });
+    }
+
+    spans.sort((a, b) => a.startMs - b.startMs || a.endMs - b.endMs);
+    karaokeIndex.root = root;
+    karaokeIndex.spans = spans;
+    karaokeIndex.byKey = byKey;
+
+    if (studioState.activeWordEl) {
+      studioState.activeWordEl.classList.remove('is-speaking');
+      studioState.activeWordEl = null;
+    }
+    studioState.activeWordIndex = -1;
+  }
+
   function clearActiveKaraokeWord() {
     if (studioState.activeWordEl) {
       studioState.activeWordEl.classList.remove('is-speaking');
@@ -3013,63 +3742,74 @@
     studioState.activeWordIndex = -1;
   }
 
-  const playbackClockAnchor = {
-    rawSec: 0,
-    anchorSec: 0,
-    perfMs: 0,
+  /**
+   * Media clock: native HTML5 media reports an exact `currentTime` every frame.
+   * The YouTube IFrame bridge reports the same media clock, sometimes quantized.
+   * We only bridge a stale/quantized reading forward (never backward, never more
+   * than 220ms ahead of the provider's own time), so the word highlight follows
+   * the real speech clock instead of an independent dead-reckoning timer.
+   */
+  const playbackClock = {
+    estimateSec: 0,
+    lastRawSec: -1,
+    lastChangePerf: 0,
+    lastTickPerf: 0,
     speed: 1,
     active: false,
   };
 
   function resetPlaybackClockAnchor(sec = 0) {
     const cleanSec = Math.max(0, Number(sec) || 0);
-    playbackClockAnchor.rawSec = cleanSec;
-    playbackClockAnchor.anchorSec = cleanSec;
-    playbackClockAnchor.perfMs = typeof performance !== 'undefined' ? performance.now() : Date.now();
-    playbackClockAnchor.speed = Math.max(0.25, Number(studioState.speed) || 1);
-    playbackClockAnchor.active = false;
+    const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    playbackClock.estimateSec = cleanSec;
+    playbackClock.lastRawSec = cleanSec;
+    playbackClock.lastChangePerf = nowPerf;
+    playbackClock.lastTickPerf = nowPerf;
+    playbackClock.speed = Math.max(0.25, Number(studioState.speed) || 1);
+    playbackClock.active = false;
   }
 
-  /**
-   * Dead-reckoning playback clock between YouTube IFrame's ~250ms getCurrentTime() updates.
-   * For native HTML5 media whose currentTime updates every frame, rawSec advances continuously
-   * so anchor resets every frame without extrapolation.
-   */
-  function getInterpolatedPlaybackTimeSec(rawSec) {
-    const cleanRaw = Math.max(0, Number(rawSec) || 0);
+  function getSmoothedPlaybackTimeSec(rawSec) {
+    const raw = Math.max(0, Number(rawSec) || 0);
     const nowPerf = typeof performance !== 'undefined' ? performance.now() : Date.now();
     const speed = Math.max(0.25, Number(studioState.speed) || 1);
-    let ytPlaying = Boolean(studioState.isPlaying) && !studioState.pendingSeek;
-    if (ytPlaying && typeof studioState.ytPlayer?.getPlayerState === 'function') {
+    let playing = Boolean(studioState.isPlaying) && !studioState.pendingSeek;
+    if (playing && typeof studioState.ytPlayer?.getPlayerState === 'function') {
       try {
-        ytPlaying = studioState.ytPlayer.getPlayerState() === 1;
+        playing = studioState.ytPlayer.getPlayerState() === 1;
       } catch {}
     }
 
-    if (!ytPlaying) {
-      playbackClockAnchor.rawSec = cleanRaw;
-      playbackClockAnchor.anchorSec = cleanRaw;
-      playbackClockAnchor.perfMs = nowPerf;
-      playbackClockAnchor.speed = speed;
-      playbackClockAnchor.active = false;
-      return cleanRaw;
+    if (!playing) {
+      resetPlaybackClockAnchor(raw);
+      return raw;
     }
 
-    if (
-      !playbackClockAnchor.active ||
-      speed !== playbackClockAnchor.speed ||
-      Math.abs(cleanRaw - playbackClockAnchor.rawSec) > 0.002
-    ) {
-      playbackClockAnchor.rawSec = cleanRaw;
-      playbackClockAnchor.anchorSec = cleanRaw;
-      playbackClockAnchor.perfMs = nowPerf;
-      playbackClockAnchor.speed = speed;
-      playbackClockAnchor.active = true;
-      return cleanRaw;
+    // A real seek (backwards jump) or a rate change invalidates the bridge.
+    if (!playbackClock.active || raw < playbackClock.lastRawSec - 0.25 || speed !== playbackClock.speed) {
+      resetPlaybackClockAnchor(raw);
+      playbackClock.active = true;
+      return raw;
     }
 
-    const dtSec = Math.min(0.32, Math.max(0, (nowPerf - playbackClockAnchor.perfMs) / 1000));
-    return playbackClockAnchor.anchorSec + dtSec * speed;
+    if (raw > playbackClock.lastRawSec + 0.0005) {
+      playbackClock.lastRawSec = raw;
+      playbackClock.lastChangePerf = nowPerf;
+      playbackClock.estimateSec = Math.max(playbackClock.estimateSec, raw);
+    } else if (nowPerf - playbackClock.lastChangePerf > 60) {
+      const dtSec = Math.min(0.06, Math.max(0, (nowPerf - playbackClock.lastTickPerf) / 1000));
+      playbackClock.estimateSec = Math.min(raw + 0.22, playbackClock.estimateSec + dtSec * speed);
+    }
+    playbackClock.lastTickPerf = nowPerf;
+    return Math.max(raw, playbackClock.estimateSec);
+  }
+
+  function readPlaybackTimeSec() {
+    try {
+      return Number(studioState.ytPlayer?.getCurrentTime?.() || 0);
+    } catch {
+      return 0;
+    }
   }
 
   function updateTimelineAndKaraoke(currentSec) {
@@ -3107,85 +3847,32 @@
       return;
     }
 
-    const isRawView = studioState.mode === 'read' && studioState.readView === 'raw';
-    const isDrillingSingle =
-      studioState.loopSentenceIndex !== null ||
-      studioState.endAction === 'loop' ||
-      studioState.endAction === 'pause';
-    const activeSent = studioState.activeSentence;
-    const nowMsEstimate = Math.round(nowMs);
-
-    let scopedSent = null;
-    if (
-      !isRawView &&
-      activeSent &&
-      Array.isArray(activeSent.words) &&
-      activeSent.words.length > 0 &&
-      studioState.activeRange?.mode !== 'range'
-    ) {
-      const aFirst = Number(activeSent.words[0].startMs || 0);
-      const aLast = Number(activeSent.words[activeSent.words.length - 1].endMs || 0);
-      const withinActiveWindow = nowMsEstimate >= aFirst - 60 && nowMsEstimate <= aLast + 220;
-      if (isDrillingSingle || withinActiveWindow) {
-        scopedSent = activeSent;
-      } else if (Array.isArray(studioState.item?.sentences)) {
-        const playheadSent = studioState.item.sentences.find(
-          (s) =>
-            Array.isArray(s.words) &&
-            s.words.length > 0 &&
-            nowMsEstimate >= Number(s.words[0].startMs || 0) - 40 &&
-            nowMsEstimate <= Number(s.words[s.words.length - 1].endMs || 0) + 180,
-        );
-        if (playheadSent) scopedSent = playheadSent;
-      }
-    }
-
-    const scopeToActiveSentence = Boolean(scopedSent);
-    const words = scopeToActiveSentence
-      ? scopedSent.words
-      : TT.getActiveWordStream(studioState.item, studioState.readView, studioState.mode);
-    if (!words.length) {
+    if (!karaokeIndex.spans.length) {
       clearActiveKaraokeWord();
       return;
     }
 
-    // Strict guard: never highlight words before the current sentence's first word or past its last word
-    if (scopeToActiveSentence) {
-      const firstStartMs = Number(words[0].startMs || 0);
-      const lastEndMs = Number(words[words.length - 1].endMs || 0);
-      if (nowMs < firstStartMs - 30 || nowMs > lastEndMs + 260) {
-        clearActiveKaraokeWord();
-        return;
-      }
-    }
-
-    const hitIdx = TT.findWordAtTimeMs(words, nowMs);
+    const hitIdx = TT.findWordAtTimeMs(karaokeIndex.spans, nowMs);
     if (hitIdx < 0) {
       clearActiveKaraokeWord();
       return;
     }
-    const hitWord = words[hitIdx];
-    const hitWordKey = scopeToActiveSentence ? `${activeSent.index}:${hitWord.i}` : `all:${hitWord.i}`;
-    if (hitWordKey === studioState.activeWordIndex) return;
-    clearActiveKaraokeWord();
 
-    const scopeSelector =
-      studioState.mode === 'shadow'
-        ? '#subview-sentences-list'
-        : studioState.readView === 'ideas'
-        ? '#subview-ideas-list'
-        : studioState.readView === 'speakers'
-        ? '#subview-speakers-list'
-        : studioState.readView === 'raw'
-        ? '#subview-raw-list'
-        : '#subview-chunks-list';
-    const sentFilter = scopeToActiveSentence ? `[data-sent-index="${scopedSent.index}"]` : '';
-    const el = document.querySelector(`${scopeSelector} .studio-word${sentFilter}[data-word-i="${hitWord.i}"]`);
-    if (el) {
-      el.classList.add('is-speaking');
-      studioState.activeWordEl = el;
-      studioState.activeWordIndex = hitWordKey;
+    const hit = karaokeIndex.spans[hitIdx];
+    if (hit.key === studioState.activeWordIndex) return;
+
+    const el = karaokeIndex.byKey.get(hit.key);
+    if (!el) {
+      clearActiveKaraokeWord();
+      return;
     }
+
+    if (studioState.activeWordEl && studioState.activeWordEl !== el) {
+      studioState.activeWordEl.classList.remove('is-speaking');
+    }
+    el.classList.add('is-speaking');
+    studioState.activeWordEl = el;
+    studioState.activeWordIndex = hit.key;
   }
 
   function startKaraokeRaf() {
@@ -3196,9 +3883,8 @@
         return;
       }
       try {
-        const rawCur = Number(studioState.ytPlayer.getCurrentTime?.() || 0);
-        const smoothCur = getInterpolatedPlaybackTimeSec(rawCur);
-        updateTimelineAndKaraoke(smoothCur);
+        const rawCur = readPlaybackTimeSec();
+        updateTimelineAndKaraoke(getSmoothedPlaybackTimeSec(rawCur));
       } catch {}
       studioState.karaokeRaf = requestAnimationFrame(step);
     };
@@ -3245,20 +3931,30 @@
     cancelShadowPause();
     const s = Math.max(0, Number(startSec) || 0);
     const e = Math.max(s + 0.08, Number(endSec) || s + 0.4);
+    const rangeKey = opts.rangeKey || `${s.toFixed(3)}-${e.toFixed(3)}`;
     studioState.activeRange = {
       startSec: s,
       endSec: e,
+      rangeKey,
       label: opts.label || 'Clip',
       mode: opts.mode || 'range',
       wordObj: opts.wordObj || null,
     };
+    const sentences = studioState.item?.sentences || [];
+    const matchedSent = opts.sentIndex
+      ? sentences.find((x) => Number(x.index) === Number(opts.sentIndex))
+      : sentences.find((x) => s >= Number(x.startSec) - 0.15 && s <= Number(x.endSec) + 0.15);
+    if (matchedSent) {
+      studioState.activeSentence = matchedSent;
+      updateActiveSentenceDom(matchedSent.index);
+    }
     studioState.hasStartedPlaybackOnce = true;
     studioState.endedNaturally = false;
     studioState.isPlaying = true;
     const preSeekTime = Number(player.getCurrentTime?.() || 0);
     studioState.pendingSeek = {
       targetSec: s,
-      sentenceIndex: opts.sentIndex || studioState.activeSentence?.index || 1,
+      sentenceIndex: matchedSent?.index || opts.sentIndex || studioState.activeSentence?.index || 1,
       issuedAt: Date.now(),
       preSeekTime,
     };
@@ -3278,6 +3974,25 @@
     syncPlaybackButtonsDom();
     startPlaybackTicker();
     startKaraokeRaf();
+  }
+
+  function handleRangePlayButtonClick(rangeBtn) {
+    if (!rangeBtn) return;
+    const s = Number(rangeBtn.getAttribute('data-play-range-start'));
+    const e = Number(rangeBtn.getAttribute('data-play-range-end'));
+    const rangeKey = rangeBtn.getAttribute('data-play-range-key') || `${s.toFixed(3)}-${e.toFixed(3)}`;
+    if (
+      studioState.isPlaying &&
+      studioState.activeRange &&
+      studioState.activeRange.rangeKey === rangeKey
+    ) {
+      pauseCurrentPlayback();
+      return;
+    }
+    playRange(s, e, {
+      rangeKey,
+      label: rangeBtn.getAttribute('data-play-range-label') || 'Section',
+    });
   }
 
   function playWord(wordObj) {
@@ -3700,18 +4415,27 @@
     const currIdx = getActiveShortcutSentenceIndex();
 
     if (studioState.mode === 'read') {
-      const chunks = studioState.item?.chunks || [];
-      const chunkPos = chunks.findIndex(
-        (c) => Array.isArray(c.sentenceIndices) && c.sentenceIndices.includes(currIdx),
-      );
-      if (chunkPos >= 0) {
-        const paraNum = chunkPos + 1;
+      const paragraphs = getCanonicalReadParagraphs(studioState.item);
+      const activeSentObj = sentences.find((s) => Number(s.index) === currIdx) || null;
+      const paraPos = paragraphs.findIndex((p) => {
+        if (Array.isArray(p.sentenceIndices) && p.sentenceIndices.includes(currIdx)) return true;
+        if (Array.isArray(p.sentences) && p.sentences.some((s) => Number(s.index) === currIdx)) return true;
+        if (activeSentObj && Number.isFinite(p.startSec) && Number.isFinite(p.endSec)) {
+          const mid = (Number(activeSentObj.startSec) + Number(activeSentObj.endSec)) / 2;
+          return mid >= Number(p.startSec) - 0.05 && mid <= Number(p.endSec) + 0.05;
+        }
+        return false;
+      });
+      if (paraPos >= 0) {
+        const targetPara = paragraphs[paraPos];
+        const paraNum = Number(targetPara.index) || paraPos + 1;
         if (advanceAfter) {
           setStudioItemCompletion('paragraphs', paraNum, true);
-          const nextChunk = chunks[chunkPos + 1];
-          const nextSentIdx = Array.isArray(nextChunk?.sentenceIndices)
-            ? Number(nextChunk.sentenceIndices[0])
-            : NaN;
+          const nextPara = paragraphs[paraPos + 1];
+          const nextSentIdx =
+            (Array.isArray(nextPara?.sentenceIndices) && Number(nextPara.sentenceIndices[0])) ||
+            (Array.isArray(nextPara?.sentences) && Number(nextPara.sentences[0]?.index)) ||
+            NaN;
           if (Number.isFinite(nextSentIdx) && nextSentIdx > 0) {
             closeWordLookupPopover();
             playSentence(nextSentIdx);
@@ -3955,17 +4679,28 @@
       } else {
         const elapsed = Date.now() - pending.issuedAt;
         const target = pending.targetSec;
+        const isHtml5 = Boolean(player.isHtml5);
+        const mediaEl = isHtml5 ? document.getElementById('studio-html5-player') : null;
+        const html5Arrived =
+          isHtml5 &&
+          current >= target - 0.15 &&
+          (!mediaEl?.seeking || elapsed >= 80);
         const arrivedTight = current >= target - 0.15 && current <= target + 0.45;
         const isBackwardSeek = pending.preSeekTime > target + 0.08;
         const movedFromPreSeek = isBackwardSeek
           ? current <= Math.min(target + 0.15, pending.preSeekTime - 0.04)
           : Math.abs(current - pending.preSeekTime) > 0.015;
-        // Treat preSeek as already in zone across the whole arrival band so short (<= 0.45s)
-        // loop restarts wait for an actual backward jump rather than settling on stale pre-seek time.
         const preSeekInZone =
           pending.preSeekTime >= target - 0.15 && pending.preSeekTime <= target + 0.55;
         const settledWaitMs = isBackwardSeek ? 380 : 120;
+        const pastCutoffSafety =
+          elapsed >= 250 &&
+          active &&
+          current >= getSentenceEndCutoff(active) &&
+          Math.abs(current - pending.preSeekTime) > 0.05;
         const arrived =
+          html5Arrived ||
+          pastCutoffSafety ||
           (arrivedTight && (!preSeekInZone || movedFromPreSeek || elapsed >= settledWaitMs)) ||
           (elapsed >= 450 && movedFromPreSeek && current >= target - 1.0 && current <= target + 0.85) ||
           elapsed >= 2500;
@@ -3985,10 +4720,13 @@
       return;
     }
 
-    if (active && studioState.awaitingOnsetUnmute) {
+    const onsetRef = studioState.activeRange
+      ? studioState.activeRange.startSec
+      : active?.startSec;
+    if (studioState.awaitingOnsetUnmute && Number.isFinite(onsetRef)) {
       const arrivedAtOnset =
-        Math.abs(current - active.startSec) <= 0.15 ||
-        (current >= active.startSec - 0.05 && current <= active.startSec + 0.20);
+        Math.abs(current - onsetRef) <= 0.15 ||
+        (current >= onsetRef - 0.05 && current <= onsetRef + 0.25);
       if (arrivedAtOnset) {
         if (!studioState.userMuted && typeof player.unMute === 'function') player.unMute();
         studioState.awaitingOnsetUnmute = false;
@@ -3996,13 +4734,15 @@
     }
 
     const sentences = studioState.item?.sentences || [];
+    const effectiveFlow = MC
+      ? MC.resolveEffectiveFlow(studioState.mode, studioState.endAction)
+      : studioState.endAction;
 
     // 1.5 Active Word or Section Range Boundary Enforcement (Paragraph, Idea, Speaker Turn, Raw Cue, Word Clip)
     const activeRange = studioState.activeRange;
     if (activeRange) {
-      updateTimelineAndKaraoke(current);
       if (current >= activeRange.endSec) {
-        if (activeRange.mode === 'word' && studioState.endAction === 'word') {
+        if (activeRange.mode === 'word' && effectiveFlow === 'word') {
           studioState.pendingSeek = {
             targetSec: activeRange.startSec,
             sentenceIndex: studioState.activeSentence?.index || 1,
@@ -4029,15 +4769,13 @@
       return;
     }
 
-    updateTimelineAndKaraoke(current);
-
     // 2. Playback Boundary Enforcement (runs FIRST to guarantee loop, shadow pause & auto-pause boundaries)
     if (active) {
       const nextSentence = sentences.find((s) => s.index === active.index + 1);
       const endCutoff = getSentenceEndCutoff(active);
 
       if (current >= endCutoff) {
-        if (studioState.endAction === 'shadow') {
+        if (effectiveFlow === 'shadow') {
           if (typeof player.pauseVideo === 'function') player.pauseVideo();
           if (studioState.playbackTicker) {
             clearInterval(studioState.playbackTicker);
@@ -4048,7 +4786,7 @@
           syncPlaybackButtonsDom();
           const durSec = Math.max(0.8, active.endSec - active.startSec);
           startShadowPause(durSec, () => {
-            if (studioState.endAction === 'shadow') {
+            if (MC ? MC.resolveEffectiveFlow(studioState.mode, studioState.endAction) === 'shadow' : studioState.endAction === 'shadow') {
               playSentence(active.index, { forceMode: 'once' });
             }
           });
@@ -4056,7 +4794,8 @@
         }
 
         const shouldLoop =
-          studioState.loopSentenceIndex === active.index || studioState.endAction === 'loop';
+          effectiveFlow === 'loop' ||
+          (studioState.mode === 'shadow' && studioState.loopSentenceIndex === active.index);
 
         if (shouldLoop) {
           clearActiveKaraokeWord();
@@ -4079,7 +4818,7 @@
           return;
         }
 
-        if (studioState.endAction === 'pause') {
+        if (effectiveFlow === 'pause') {
           if (typeof player.pauseVideo === 'function') player.pauseVideo();
           if (studioState.playbackTicker) {
             clearInterval(studioState.playbackTicker);
@@ -4122,10 +4861,7 @@
     // 3. Real-Time Playhead Tracking: Update active sentence as video progresses naturally
     // Only track across sentences when in Continuous mode, or when playhead is manually scrubbed far away.
     if (sentences.length > 0) {
-      const isDrillingSentence =
-        studioState.loopSentenceIndex !== null ||
-        studioState.endAction === 'loop' ||
-        studioState.endAction === 'pause';
+      const isDrillingSentence = effectiveFlow === 'loop' || effectiveFlow === 'pause';
 
       const msSinceSeek = studioState.lastSeekTime > 0 ? Date.now() - studioState.lastSeekTime : Infinity;
       const isInitialSeekJitter =
@@ -4179,61 +4915,84 @@
   function scrollElementIntoViewSafe(el, behavior = 'smooth') {
     if (!el) return;
     const deck = document.querySelector('.studio-deck');
-    const isStickyMobile =
-      window.innerWidth <= 768 &&
-      deck &&
-      window.getComputedStyle(deck).position === 'sticky';
     const headerDock = document.getElementById('canvas-header-dock');
+    const headerDockStyle = headerDock ? window.getComputedStyle(headerDock) : null;
     const headerDockH =
-      headerDock && window.getComputedStyle(headerDock).position === 'sticky'
+      headerDock && headerDockStyle?.position === 'sticky'
         ? headerDock.getBoundingClientRect().height || 0
         : 0;
     const prevEl = getPreviousVisibleListItem(el);
     const listTopGap = 10;
 
-    if (!isStickyMobile) {
-      const canvas = document.querySelector('.studio-canvas');
-      if (canvas && canvas.contains(el) && canvas.scrollHeight > canvas.clientHeight) {
-        const canvasRect = canvas.getBoundingClientRect();
-        const elRect = el.getBoundingClientRect();
-        const elTopInCanvas = elRect.top - canvasRect.top + canvas.scrollTop;
-        const elBottomInCanvas = elTopInCanvas + elRect.height;
+    const canvas = document.querySelector('.studio-canvas');
+    const canvasStyle = canvas ? window.getComputedStyle(canvas) : null;
+    const canvasIsScroller = Boolean(
+      canvas &&
+      canvas.contains(el) &&
+      canvasStyle &&
+      canvasStyle.overflowY !== 'visible' &&
+      canvas.scrollHeight > canvas.clientHeight + 2,
+    );
 
-        const hasPrev = Boolean(prevEl && canvas.contains(prevEl));
-        const anchorEl = hasPrev ? prevEl : el;
-        const anchorRect = anchorEl.getBoundingClientRect();
-        const anchorTopInCanvas = anchorRect.top - canvasRect.top + canvas.scrollTop;
+    if (canvasIsScroller) {
+      const canvasRect = canvas.getBoundingClientRect();
+      const elRect = el.getBoundingClientRect();
+      const elTopInCanvas = elRect.top - canvasRect.top + canvas.scrollTop;
+      const elBottomInCanvas = elTopInCanvas + elRect.height;
 
-        const prevPrevEl = hasPrev ? getPreviousVisibleListItem(anchorEl) : null;
-        let targetScrollTop = Math.max(
-          0,
-          Math.round(anchorTopInCanvas - headerDockH - (prevPrevEl ? 6 : listTopGap)),
-        );
-        if (prevPrevEl && canvas.contains(prevPrevEl)) {
-          const prevPrevRect = prevPrevEl.getBoundingClientRect();
-          const prevPrevBottomInCanvas = prevPrevRect.bottom - canvasRect.top + canvas.scrollTop;
-          const minPastPrevPrev = Math.max(0, Math.ceil(prevPrevBottomInCanvas - headerDockH + 3));
-          if (targetScrollTop < minPastPrevPrev) {
-            targetScrollTop = minPastPrevPrev;
-          }
+      const hasPrev = Boolean(prevEl && canvas.contains(prevEl));
+      const anchorEl = hasPrev ? prevEl : el;
+      const anchorRect = anchorEl.getBoundingClientRect();
+      const anchorTopInCanvas = anchorRect.top - canvasRect.top + canvas.scrollTop;
+
+      const prevPrevEl = hasPrev ? getPreviousVisibleListItem(anchorEl) : null;
+      let targetScrollTop = Math.max(
+        0,
+        Math.round(anchorTopInCanvas - headerDockH - (prevPrevEl ? 6 : listTopGap)),
+      );
+      if (prevPrevEl && canvas.contains(prevPrevEl)) {
+        const prevPrevRect = prevPrevEl.getBoundingClientRect();
+        const prevPrevBottomInCanvas = prevPrevRect.bottom - canvasRect.top + canvas.scrollTop;
+        const minPastPrevPrev = Math.max(0, Math.ceil(prevPrevBottomInCanvas - headerDockH + 3));
+        if (targetScrollTop < minPastPrevPrev) {
+          targetScrollTop = minPastPrevPrev;
         }
-
-        const minScrollToShowEl = Math.max(0, Math.round(elBottomInCanvas - canvasRect.height + 14));
-        if (targetScrollTop < minScrollToShowEl) {
-          targetScrollTop = Math.min(
-            minScrollToShowEl,
-            Math.max(0, Math.round(elTopInCanvas - headerDockH - listTopGap)),
-          );
-        }
-        canvas.scrollTo({ top: targetScrollTop, behavior });
-        return;
       }
+
+      const minScrollToShowEl = Math.max(0, Math.round(elBottomInCanvas - canvasRect.height + 14));
+      if (targetScrollTop < minScrollToShowEl) {
+        targetScrollTop = Math.min(
+          minScrollToShowEl,
+          Math.max(0, Math.round(elTopInCanvas - headerDockH - listTopGap)),
+        );
+      }
+      canvas.scrollTo({ top: targetScrollTop, behavior });
+      return;
+    }
+
+    const isWindowScrollLayout =
+      window.innerWidth <= 768 ||
+      (canvasStyle && canvasStyle.overflowY === 'visible');
+    if (!isWindowScrollLayout) {
       el.scrollIntoView({ behavior, block: 'start' });
       return;
     }
 
-    const dockHeight = (deck.getBoundingClientRect().height || 0) + headerDockH;
-    const vh = window.innerHeight || document.documentElement.clientHeight || 800;
+    const deckStickyH =
+      deck && window.getComputedStyle(deck).position === 'sticky'
+        ? deck.getBoundingClientRect().height || 0
+        : 0;
+    const headerStickyTop =
+      headerDock && headerDockStyle?.position === 'sticky'
+        ? (parseFloat(headerDockStyle.top) || 0) + headerDockH
+        : 0;
+    const dockHeight = Math.max(deckStickyH, headerStickyTop);
+    const consoleEl = document.querySelector('.studio-media-console');
+    const bottomDockH =
+      consoleEl && window.getComputedStyle(consoleEl).position === 'fixed'
+        ? consoleEl.getBoundingClientRect().height || 0
+        : 0;
+    const vh = (window.innerHeight || document.documentElement.clientHeight || 800) - bottomDockH;
     const elRect = el.getBoundingClientRect();
     const elAbsTop = elRect.top + window.scrollY;
     const elAbsBottom = elAbsTop + elRect.height;
@@ -4262,21 +5021,38 @@
       return document.getElementById(`sent-card-${index}`);
     }
     if (studioState.mode === 'read') {
-      const readSent = document.querySelector(`.read-sentence[data-read-sent="${index}"]`);
+      const readView = studioState.readView || 'paragraphs';
+      if (readView === 'ideas') {
+        const row = document.querySelector(`#subview-ideas-list .studio-idea-sent-row[data-sentence-index="${index}"]`);
+        return row?.closest('.studio-idea-card') || row || null;
+      }
+      if (readView === 'speakers') {
+        const cards = Array.from(document.querySelectorAll('#subview-speakers-list .studio-turn-card[data-turn-sents]'));
+        const match = cards.find((c) => (c.getAttribute('data-turn-sents') || '').split(',').map(Number).includes(Number(index)));
+        return match || cards[0] || null;
+      }
+      if (readView === 'raw') {
+        return (
+          document.querySelector(`#subview-raw-list .read-sentence[data-read-sent="${index}"]`) ||
+          document.querySelector(`#subview-raw-list .read-sentence[data-canon-index="${index}"]`) ||
+          null
+        );
+      }
+      const readSent = document.querySelector(`#subview-chunks-list .read-sentence[data-read-sent="${index}"]`);
       if (readSent) return readSent;
       const paraDoneSet = getStudioCompletedSet('paragraphs');
-      const chunks = studioState.item?.chunks || [];
-      const firstParaIdx = chunks.findIndex((_, idx) => !paraDoneSet.has(idx + 1)) + 1;
+      const paragraphs = getCanonicalReadParagraphs(studioState.item);
+      const firstParaIdx = paragraphs.findIndex((p, idx) => !paraDoneSet.has(Number(p.index) || idx + 1)) + 1;
       return firstParaIdx > 0
         ? document.querySelector(`.editorial-paragraph-block[data-paragraph-index="${firstParaIdx}"]`)
         : null;
     }
     if (studioState.mode === 'coach') {
       const firstUncheckedCoach = document.querySelector(
-        '#mode-panel-coach [data-studio-check-subject="coach"]:not(.is-checked)',
+        '#mode-panel-coach [data-studio-check-subject^="coach"]:not(.is-checked)',
       );
       return (
-        firstUncheckedCoach?.closest('.coach-card, .coach-item, section') ||
+        firstUncheckedCoach?.closest('.coach-item-card, section') ||
         firstUncheckedCoach ||
         null
       );
@@ -5028,6 +5804,7 @@
 
       if (res.analysis) {
         studioState.item.aiAnalysis = res.analysis;
+        studioState.item.analysisStatus = 'ready';
         if (Array.isArray(res.sentences) && res.sentences.length > 0) {
           const oldSentences = studioState.item.sentences || [];
           studioState.item.sentences = res.sentences.map((s, idx) => ({
@@ -5038,6 +5815,8 @@
           syncPlaybackButtonsDom();
         }
         renderCoachAnalysis(res.analysis);
+        syncReviewStatusChrome();
+        applyStudioModeChrome();
       }
     } catch (error) {
       if (loadingBox) loadingBox.hidden = true;
@@ -5784,11 +6563,36 @@
      LOADER & ACCURATE FAILURE CLASSIFICATION
      ======================================================================== */
 
+  function clearRetryCountdown() {
+    if (studioState.retryCountdownTimer) {
+      clearInterval(studioState.retryCountdownTimer);
+      studioState.retryCountdownTimer = null;
+    }
+    const retryBtn = document.getElementById('loader-retry-btn');
+    if (retryBtn) {
+      retryBtn.disabled = false;
+      retryBtn.textContent = t('tryAgain');
+    }
+  }
+
+  function formatCooldownDuration(sec) {
+    const s = Math.max(0, Math.ceil(Number(sec) || 0));
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    if (m < 60) return rem > 0 ? `${m}m ${rem}s` : `${m}m`;
+    const h = Math.floor(m / 60);
+    const remM = m % 60;
+    return remM > 0 ? `${h}h ${remM}m` : `${h}h`;
+  }
+
   function showFatalLoaderError(error) {
     if (Number(error?.status) === 401 || error?.code === 'auth_required') {
       redirectToSignInGate();
       return;
     }
+
+    clearRetryCountdown();
 
     const overlay = document.getElementById('loader-overlay');
     const headline = document.getElementById('loader-headline');
@@ -5799,15 +6603,21 @@
     if (!overlay) return;
     overlay.hidden = false;
     overlay.classList.add('loader-error');
+    if (sub) sub.hidden = false;
     if (actions) actions.style.display = 'flex';
 
     const code = error?.code || '';
     const status = Number(error?.status) || 0;
+    const retryAfterSec = Math.max(0, Math.ceil(Number(error?.retryAfterSec) || 0));
 
     let isRetryable = false;
     if (code === 'video_unavailable' || status === 404) {
       headline.textContent = t('errUnavailableHeadline');
       sub.textContent = error?.message || t('errUnavailableDetail');
+      isRetryable = false;
+    } else if (code === 'live_fetch_disabled') {
+      headline.textContent = t('errLiveFetchDisabledHeadline');
+      sub.textContent = error?.message || t('errLiveFetchDisabledDetail');
       isRetryable = false;
     } else if (code === 'no_captions' || code === 'invalid_url' || status === 422 || status === 400) {
       headline.textContent = t('errNoCaptionsHeadline');
@@ -5815,11 +6625,11 @@
       isRetryable = false;
     } else if (code === 'rate_limited') {
       headline.textContent = t('errRateLimitHeadline');
-      sub.textContent = t('errRateLimitDetail');
+      sub.textContent = error?.message || t('errRateLimitDetail');
       isRetryable = true;
     } else if (code === 'timeout') {
       headline.textContent = t('errTimeoutHeadline');
-      sub.textContent = t('errTimeoutDetail');
+      sub.textContent = error?.message || t('errTimeoutDetail');
       isRetryable = true;
     } else {
       headline.textContent = t('errRateLimitHeadline');
@@ -5829,6 +6639,19 @@
 
     if (retryBtn) {
       retryBtn.style.display = isRetryable ? 'inline-flex' : 'none';
+      if (isRetryable && code === 'rate_limited' && retryAfterSec > 0) {
+        let remaining = retryAfterSec;
+        retryBtn.disabled = true;
+        retryBtn.textContent = `${t('tryAgain')} (${formatCooldownDuration(remaining)})`;
+        studioState.retryCountdownTimer = setInterval(() => {
+          remaining -= 1;
+          if (remaining <= 0) {
+            clearRetryCountdown();
+            return;
+          }
+          retryBtn.textContent = `${t('tryAgain')} (${formatCooldownDuration(remaining)})`;
+        }, 1000);
+      }
     }
   }
 
@@ -5936,6 +6759,154 @@
     }
   }
 
+  function applyUpdatedTranscriptItem(nextItem) {
+    if (!nextItem) return;
+    studioState.item = nextItem;
+    studioState.translationsByLang = {};
+    if (nextItem.translationsCache && typeof nextItem.translationsCache === 'object') {
+      for (const [lang, map] of Object.entries(nextItem.translationsCache)) {
+        studioState.translationsByLang[lang] = Object.assign({}, map || {});
+      }
+    }
+    studioState.translatingAllByLang = {};
+    studioState.translatingSentencesByLang = {};
+
+    document.title = `${nextItem.title || 'Lesson'} — Flaptap Studio`;
+    const titleEl = document.getElementById('studio-title');
+    if (titleEl) titleEl.textContent = nextItem.title || 'English Lesson';
+    const creatorEl = document.getElementById('studio-creator');
+    if (creatorEl) creatorEl.textContent = nextItem.creator || 'Speaker';
+    const wpmEl = document.getElementById('studio-wpm');
+    if (wpmEl) wpmEl.textContent = `${Number(nextItem.pacingWpm || 145)} WPM`;
+
+    const sentences = Array.isArray(nextItem.sentences) ? nextItem.sentences : [];
+    const sentTotalEl = document.getElementById('studio-sentence-total');
+    if (sentTotalEl) sentTotalEl.textContent = `${sentences.length} ${t('sentencesUnit')}`;
+
+    const prevIdx = Number(studioState.activeSentence?.index || 1);
+    const nextActive = sentences.find((s) => Number(s.index) === prevIdx) || sentences[0] || null;
+    studioState.activeSentence = nextActive;
+    studioState.dictationIndex = nextActive ? Number(nextActive.index) || 1 : 1;
+
+    syncStudioPacingUi(nextItem);
+    renderSentencesAndParagraphs();
+    syncPlaybackButtonsDom();
+    syncStudioTopProgressDom();
+    if (nextActive) {
+      updateActiveSentenceDom(nextActive.index);
+    } else {
+      syncDeckLiveSubtitle();
+    }
+    if (studioState.mode === 'listen') {
+      renderDictationCard();
+    }
+    syncEnhancementsPopoverUi();
+  }
+
+  async function retryLessonCaptions({ silentToast = false } = {}) {
+    const item = studioState.item;
+    if (!item?.id || studioState.transcriptActionInFlight) return null;
+    studioState.transcriptActionInFlight = true;
+    try {
+      const updated = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/captions/retry`, {
+        method: 'POST',
+      });
+      if (updated) {
+        applyUpdatedTranscriptItem(updated);
+        if (!silentToast) showToast('Source captions loaded');
+      }
+      return updated;
+    } catch (err) {
+      showToast(err?.message || 'Could not fetch source captions right now.');
+      throw err;
+    } finally {
+      studioState.transcriptActionInFlight = false;
+      syncEnhancementsPopoverUi();
+    }
+  }
+
+  async function importLessonTranscript(rawText) {
+    const item = studioState.item;
+    if (!item?.id || studioState.transcriptActionInFlight) return null;
+    const clean = String(rawText || '').trim();
+    if (!clean) {
+      showToast('Paste transcript text, SRT, or WebVTT first.');
+      return null;
+    }
+    studioState.transcriptActionInFlight = true;
+    try {
+      const updated = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/transcript/import`, {
+        method: 'POST',
+        body: JSON.stringify({ rawText: clean }),
+      });
+      if (updated) {
+        const pasteBox = document.getElementById('studio-enhance-paste-box');
+        if (pasteBox) pasteBox.hidden = true;
+        applyUpdatedTranscriptItem(updated);
+        showToast(`Loaded ${(updated.sentences || []).length} lines`);
+      }
+      return updated;
+    } catch (err) {
+      showToast(err?.message || 'Could not import transcript.');
+      throw err;
+    } finally {
+      studioState.transcriptActionInFlight = false;
+      syncEnhancementsPopoverUi();
+    }
+  }
+
+  async function runExplicitTranscription() {
+    showToast(
+      'Third-party transcription (Whisper / Groq) is disabled. Shadowing only uses original transcripts from the source provider.',
+    );
+    return null;
+  }
+
+  async function maybeAutoCloudTranscribe() {
+    return;
+  }
+
+  async function runSelectedEnhancements() {
+    if (studioState.enhancementsInFlight || !studioState.item?.id) return;
+    const doRetry = Boolean(document.getElementById('enhance-check-retry-captions')?.checked);
+    const doReview = Boolean(document.getElementById('enhance-check-review')?.checked);
+    const doCoach = Boolean(document.getElementById('enhance-check-coach')?.checked);
+    const doTranslate = Boolean(document.getElementById('enhance-check-translate')?.checked);
+
+    if (!doRetry && !doReview && !doCoach && !doTranslate) return;
+
+    closeAllControlPopovers();
+    studioState.enhancementsInFlight = true;
+    syncEnhancementsPopoverUi();
+
+    try {
+      if (doRetry) {
+        await retryLessonCaptions({ silentToast: doReview || doCoach || doTranslate });
+      }
+      if ((studioState.item?.sentences || []).length === 0) {
+        showToast('Load or paste a transcript first.');
+        return;
+      }
+      if (doReview) {
+        await runTranscriptReview({ force: studioState.item?.reviewStatus === 'ready' });
+      }
+      if (doCoach) {
+        await triggerDynamicCoachAnalysis(studioState.item?.analysisStatus === 'ready');
+      }
+      if (doTranslate) {
+        await translateAllSentences();
+      }
+      document.querySelectorAll('#studio-enhance-list .studio-enhance-check').forEach((c) => {
+        c.checked = false;
+      });
+    } catch {
+      // Individual task helpers show concise error toast
+    } finally {
+      studioState.enhancementsInFlight = false;
+      syncEnhancementsPopoverUi();
+    }
+  }
+
   function syncStudioPacingUi(item, modeOverride = null) {
     const group = document.getElementById('studio-pacing-group');
     if (!group) return;
@@ -5953,11 +6924,10 @@
   function formatPacingSwitchedToast(mode, count) {
     const n = Number(count) || 0;
     if (studioState.uiLang === 'en') {
-      const label =
-        mode === 'balanced' ? 'Medium lines' : mode === 'full' ? 'Full sentences' : 'Short lines';
+      const label = mode === 'normal' ? 'Normal lines' : 'Short lines';
       return `${label} · ${n} ${n === 1 ? 'line' : 'lines'}`;
     }
-    const key = mode === 'balanced' ? 'pacingBalanced' : mode === 'full' ? 'pacingFull' : 'pacingShort';
+    const key = mode === 'normal' ? 'pacingNormal' : 'pacingShort';
     return `${t(key)} · ${n} ${t('sentencesUnit')}`;
   }
 
@@ -6142,17 +7112,33 @@
     });
   }
 
-  function toggleVideoVisibility() {
+  function toggleVideoVisibility(forcedState, opts = {}) {
+    const ws = document.getElementById('studio-main-content');
     const card = document.querySelector('.player-frame-card');
     const btn = document.getElementById('studio-video-toggle-btn');
     const audioStage = document.getElementById('studio-audio-stage');
-    if (!card || !btn) return;
-    studioState.videoHidden = !studioState.videoHidden;
-    card.classList.toggle('is-video-hidden', studioState.videoHidden);
-    if (audioStage) audioStage.hidden = !studioState.videoHidden;
-    btn.textContent = studioState.videoHidden ? 'Show Video' : 'Hide Video';
-    btn.classList.toggle('active', studioState.videoHidden);
-    requestAnimationFrame(syncStudioDeckStickyHeightVar);
+    const zoomHud = document.getElementById('video-zoom-hud');
+    if (!card) return;
+    const nextHidden =
+      typeof forcedState === 'boolean' ? forcedState : !studioState.videoHidden;
+    studioState.videoHidden = nextHidden;
+    if (ws) ws.setAttribute('data-video-hidden', nextHidden ? '1' : '0');
+    card.classList.toggle('is-video-hidden', nextHidden);
+    if (audioStage) audioStage.hidden = !nextHidden;
+    if (zoomHud) zoomHud.hidden = nextHidden;
+    if (btn) {
+      btn.textContent = nextHidden ? 'Show Video' : 'Hide Video';
+      btn.classList.toggle('active', nextHidden);
+    }
+    if (opts.persist !== false) {
+      try {
+        localStorage.setItem('flaptap_studio_video_hidden', nextHidden ? '1' : '0');
+      } catch {}
+    }
+    requestAnimationFrame(() => {
+      syncStudioDeckStickyHeightVar();
+      window.FlaptapStudioLayouts?.updateSplitResizerGeometry();
+    });
   }
 
   function hideInfoPopover(immediate = false) {
@@ -6190,31 +7176,45 @@
   }
 
   function syncSearchMatchesDom() {
-    const q = studioState.searchQuery.trim().toLowerCase();
+    const activeQ =
+      MC && modeState ? MC.getSearchQuery(modeState, studioState.mode) : studioState.searchQuery;
+    studioState.searchQuery = activeQ;
+    const q = activeQ.trim().toLowerCase();
     const countEl = document.getElementById('studio-search-count');
     const prevBtn = document.getElementById('studio-search-prev');
     const nextBtn = document.getElementById('studio-search-next');
     const clearBtn = document.getElementById('studio-search-clear');
 
-    const scopeSelector =
-      studioState.mode === 'shadow'
-        ? '#subview-sentences-list'
-        : studioState.readView === 'ideas'
-        ? '#subview-ideas-list'
-        : studioState.readView === 'speakers'
-        ? '#subview-speakers-list'
-        : studioState.readView === 'raw'
-        ? '#subview-raw-list'
-        : '#subview-chunks-list';
-
-    const root = document.querySelector(scopeSelector);
-    const words = root ? Array.from(root.querySelectorAll('.studio-word')) : [];
     const hits = [];
-    for (const el of words) {
-      el.classList.remove('is-search-current');
-      const isHit = Boolean(q && (el.textContent || '').toLowerCase().includes(q));
-      el.classList.toggle('is-search-hit', isHit);
-      if (isHit) hits.push(el);
+    if (studioState.mode === 'coach') {
+      const coachBox = document.getElementById('coach-content-box');
+      const cards = coachBox ? Array.from(coachBox.querySelectorAll('.coach-item-card')) : [];
+      for (const card of cards) {
+        card.classList.remove('is-search-current');
+        const isHit = Boolean(q && !card.hidden && (card.textContent || '').toLowerCase().includes(q));
+        card.classList.toggle('is-search-hit', isHit);
+        if (isHit) hits.push(card);
+      }
+    } else {
+      const scopeSelector =
+        studioState.mode === 'shadow'
+          ? '#subview-sentences-list'
+          : studioState.readView === 'ideas'
+            ? '#subview-ideas-list'
+            : studioState.readView === 'speakers'
+              ? '#subview-speakers-list'
+              : studioState.readView === 'raw'
+                ? '#subview-raw-list'
+                : '#subview-chunks-list';
+
+      const root = document.querySelector(scopeSelector);
+      const words = root ? Array.from(root.querySelectorAll('.studio-word')) : [];
+      for (const el of words) {
+        el.classList.remove('is-search-current');
+        const isHit = Boolean(q && (el.textContent || '').toLowerCase().includes(q));
+        el.classList.toggle('is-search-hit', isHit);
+        if (isHit) hits.push(el);
+      }
     }
 
     studioState.searchMatches = hits;
@@ -6466,6 +7466,8 @@
     }
 
     renderSentencesAndParagraphs();
+    window.FlaptapStudioReaderFlow?.hydrate(item);
+    window.FlaptapStudioReaderAi?.hydrate(item);
     syncStudioPacingUi(item);
     mountMediaDeck(item);
     syncPlaybackButtonsDom();
@@ -6481,7 +7483,20 @@
     requestAnimationFrame(syncStudioDeckStickyHeightVar);
 
     if (studioState.mode === 'coach') {
-      if (item.aiAnalysis) {
+      if ((item.sentences || []).length === 0) {
+        const loadingBox = document.getElementById('coach-loading-box');
+        const errorBox = document.getElementById('coach-error-box');
+        const contentBox = document.getElementById('coach-content-box');
+        if (loadingBox) loadingBox.hidden = true;
+        if (contentBox) contentBox.hidden = true;
+        if (errorBox) {
+          errorBox.hidden = false;
+          const title = document.getElementById('coach-error-title');
+          const msg = document.getElementById('coach-error-msg');
+          if (title) title.textContent = 'Waiting for Transcript';
+          if (msg) msg.textContent = 'Fetch captions or paste a transcript in Shadow mode first to unlock AI Prosody Coach.';
+        }
+      } else if (item.aiAnalysis) {
         renderCoachAnalysis(item.aiAnalysis);
       } else {
         triggerDynamicCoachAnalysis(false);
@@ -6491,6 +7506,7 @@
       syncCoachBadgeFromAnalysis(item.aiAnalysis);
     }
 
+    clearRetryCountdown();
     const overlay = document.getElementById('loader-overlay');
     if (overlay) {
       overlay.classList.remove('loader-error');
@@ -6507,6 +7523,30 @@
     if (initialTarget && (targetSentence || studioState.autoFollow)) {
       jumpToActiveItem({ index: initialTarget.index });
     }
+  }
+
+  /**
+   * Legacy lessons (`balanced` from the old Medium mode, or `full` from the old
+   * uncapped Full mode) heal once to the smart `normal` mode on open. The server
+   * preserves completion coverage and translations through the regroup.
+   */
+  async function healLegacyLessonPacing(item) {
+    if (!item || item.track !== 'shadowing' || !item.id) return item;
+    const stored = String(item.pacingMode || '').trim().toLowerCase();
+    if (stored !== 'balanced' && stored !== 'full') return item;
+    try {
+      const res = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/pacing`, {
+        method: 'PATCH',
+        body: JSON.stringify({ pacingMode: 'normal' }),
+      });
+      if (res?.item) {
+        try {
+          localStorage.setItem(PACING_STORAGE_KEY, 'normal');
+        } catch {}
+        return res.item;
+      }
+    } catch {}
+    return item;
   }
 
   async function loadStudioSession() {
@@ -6537,6 +7577,7 @@
         const [me, item] = await Promise.all([
           apiFetch('/api/auth/me', { method: 'GET' }),
           apiFetch(`/api/history/${encodeURIComponent(id)}`, { method: 'GET' }),
+          fetchShadowingConfig(),
         ]);
         if (!me?.authenticated || !me?.user) {
           redirectToSignInGate();
@@ -6544,6 +7585,48 @@
         }
         studioState.user = me.user;
         renderStudioUserProfile(me);
+        const healedItem = await healLegacyLessonPacing(item);
+        hydrateStudioItem(healedItem);
+        maybeAutoReview(healedItem);
+      } catch (error) {
+        showFatalLoaderError(error);
+      }
+      return;
+    }
+
+    if (rawUrl && studioState.authToken) {
+      try {
+        const pacingMode = normalizePacingMode(params.get('pacing') || getSavedPacingMode());
+        const [me, item] = await Promise.all([
+          apiFetch('/api/auth/me', { method: 'GET' }),
+          apiFetch('/api/tracks/shadowing/process', {
+            method: 'POST',
+            body: JSON.stringify({
+              url: rawUrl,
+              force: forceExtract,
+              pacingMode,
+            }),
+          }),
+          fetchShadowingConfig(),
+        ]);
+        if (!me?.authenticated || !me?.user) {
+          redirectToSignInGate();
+          return;
+        }
+        studioState.user = me.user;
+        renderStudioUserProfile(me);
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.delete('url');
+        nextUrl.searchParams.delete('force');
+        nextUrl.searchParams.delete('autoreview');
+        nextUrl.searchParams.delete('pacing');
+        nextUrl.searchParams.set('id', item.id);
+        nextUrl.searchParams.set('mode', studioState.mode);
+        if (studioState.mode === 'read') {
+          nextUrl.searchParams.set('view', studioState.readView || 'paragraphs');
+        }
+        window.history.replaceState({}, '', nextUrl.toString());
+
         hydrateStudioItem(item);
         maybeAutoReview(item);
       } catch (error) {
@@ -6568,9 +7651,13 @@
 
     if (id) {
       try {
-        const item = await apiFetch(`/api/history/${encodeURIComponent(id)}`, { method: 'GET' });
-        hydrateStudioItem(item);
-        maybeAutoReview(item);
+        const [item] = await Promise.all([
+          apiFetch(`/api/history/${encodeURIComponent(id)}`, { method: 'GET' }),
+          fetchShadowingConfig(),
+        ]);
+        const healedItem = await healLegacyLessonPacing(item);
+        hydrateStudioItem(healedItem);
+        maybeAutoReview(healedItem);
       } catch (error) {
         showFatalLoaderError(error);
       }
@@ -6580,10 +7667,17 @@
     if (rawUrl) {
       try {
         const pacingMode = normalizePacingMode(params.get('pacing') || getSavedPacingMode());
-        const item = await apiFetch('/api/tracks/shadowing/process', {
-          method: 'POST',
-          body: JSON.stringify({ url: rawUrl, force: forceExtract, pacingMode }),
-        });
+        const [item] = await Promise.all([
+          apiFetch('/api/tracks/shadowing/process', {
+            method: 'POST',
+            body: JSON.stringify({
+              url: rawUrl,
+              force: forceExtract,
+              pacingMode,
+            }),
+          }),
+          fetchShadowingConfig(),
+        ]);
         const nextUrl = new URL(window.location.href);
         nextUrl.searchParams.delete('url');
         nextUrl.searchParams.delete('force');
@@ -6624,11 +7718,16 @@
     });
 
     document.getElementById('loader-retry-btn')?.addEventListener('click', () => {
+      clearRetryCountdown();
       const overlay = document.getElementById('loader-overlay');
       overlay?.classList.remove('loader-error');
       document.getElementById('loader-error-actions').style.display = 'none';
       document.getElementById('loader-headline').textContent = t('preparingLesson');
-      document.getElementById('loader-subheadline').textContent = t('extractingTimings');
+      const subEl = document.getElementById('loader-subheadline');
+      if (subEl) {
+        subEl.hidden = true;
+        subEl.textContent = t('extractingTimings');
+      }
       loadStudioSession();
     });
 
@@ -6656,6 +7755,13 @@
     window.addEventListener('resize', syncStudioDeckStickyHeightVar, { passive: true });
     requestAnimationFrame(syncStudioDeckStickyHeightVar);
 
+    // Resume the media clock instantly after a backgrounded tab (rAF is paused while hidden)
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) return;
+      resetPlaybackClockAnchor(readPlaybackTimeSec());
+      if (studioState.isPlaying) startKaraokeRaf();
+    });
+
     // Unified Single-Icon Sentence Flow Cycling (#studio-flow-btn)
     document.getElementById('studio-flow-btn')?.addEventListener('click', () => {
       cycleSentenceFlow();
@@ -6669,14 +7775,46 @@
       });
     });
 
+    // Compact Transcript Tools Popover
+    document.getElementById('studio-tools-menu-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleStudioToolsPopover();
+    });
+    document.getElementById('studio-tools-pop-close')?.addEventListener('click', () => {
+      closeStudioToolsPopover();
+      document.getElementById('studio-tools-menu-btn')?.focus();
+    });
+    document.getElementById('studio-tools-popover')?.addEventListener('click', (e) => {
+      if (e.target.closest('#studio-copy-view-btn, #studio-single-spk-btn')) {
+        closeStudioToolsPopover();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      const pop = document.getElementById('studio-tools-popover');
+      if (!pop || pop.hidden) return;
+      e.preventDefault();
+      closeStudioToolsPopover();
+      document.getElementById('studio-tools-menu-btn')?.focus();
+    });
+
     document.addEventListener('click', (e) => {
       const clickedInsideAny = SCB_POPOVER_PAIRS.some(({ triggerId, popoverId }) => {
         const pop = document.getElementById(popoverId);
         const trg = document.getElementById(triggerId);
         return (pop && !pop.hidden && pop.contains(e.target)) || (trg && trg.contains(e.target));
       });
+      const toolsPop = document.getElementById('studio-tools-popover');
+      const toolsBtn = document.getElementById('studio-tools-menu-btn');
+      const clickedInsideTools =
+        (toolsPop && !toolsPop.hidden && toolsPop.contains(e.target)) ||
+        (toolsBtn && toolsBtn.contains(e.target));
       if (!clickedInsideAny) {
         closeAllControlPopovers();
+      }
+      if (!clickedInsideTools) {
+        closeStudioToolsPopover();
       }
     });
 
@@ -6841,8 +7979,24 @@
       }
     });
 
-    // Read Mode Paragraph Interactions (Check Complete, Play Paragraph, Word Click, Click Sentence)
+    // Read Mode Paragraph Interactions (Bookmark, Check Complete, Play Paragraph, Word Click, Click Sentence)
     document.getElementById('subview-chunks-list')?.addEventListener('click', (e) => {
+      const bmBtn = e.target.closest('[data-bookmark-sent]');
+      if (bmBtn) {
+        e.stopPropagation();
+        const sentEl = bmBtn.closest('.reader-flow-sent');
+        window.FlaptapStudioReaderFlow?.setBookmark(
+          {
+            sentenceIndex: Number(bmBtn.getAttribute('data-bookmark-sent')),
+            startMs: Number(bmBtn.getAttribute('data-bookmark-ms') || 0),
+            view: bmBtn.getAttribute('data-bookmark-view') || 'reviewed',
+            excerpt: sentEl?.textContent || '',
+          },
+          studioState.item,
+        );
+        return;
+      }
+
       const checkBtn = e.target.closest('[data-studio-check-subject]');
       if (checkBtn) {
         e.stopPropagation();
@@ -6856,23 +8010,32 @@
       const rangeBtn = e.target.closest('[data-play-range-start]');
       if (rangeBtn) {
         e.stopPropagation();
-        playRange(
-          Number(rangeBtn.getAttribute('data-play-range-start')),
-          Number(rangeBtn.getAttribute('data-play-range-end')),
-          { label: rangeBtn.getAttribute('data-play-range-label') || 'Paragraph' },
-        );
+        handleRangePlayButtonClick(rangeBtn);
         return;
       }
 
       const wordEl = e.target.closest('.studio-word');
-      if (wordEl && handleStudioWordInteraction(wordEl, e)) return;
+      if (wordEl) {
+        if (handleStudioWordInteraction(wordEl, e)) return;
+        return; // Let FlaptapWordLookup show the selection action bar on single-word click
+      }
 
       const sel = window.getSelection();
       if (sel && !sel.isCollapsed && String(sel.toString() || '').trim().length > 0) return;
 
       const sentSpan = e.target.closest('.read-sentence[data-read-sent]');
       if (sentSpan) {
-        playSentence(Number(sentSpan.dataset.readSent));
+        const sMs = Number(sentSpan.getAttribute('data-start-ms'));
+        const eMs = Number(sentSpan.getAttribute('data-end-ms'));
+        if (Number.isFinite(sMs) && Number.isFinite(eMs) && eMs > sMs && studioState.ytPlayer) {
+          playRange(sMs / 1000, eMs / 1000, {
+            mode: 'range',
+            label: `Line #${sentSpan.getAttribute('data-canon-index') || sentSpan.dataset.readSent}`,
+            sentIndex: Number(sentSpan.dataset.readSent),
+          });
+        } else {
+          playSentence(Number(sentSpan.dataset.readSent));
+        }
       }
     });
 
@@ -6889,6 +8052,22 @@
       if (!el) return;
 
       el.addEventListener('click', (e) => {
+        const bmBtn = e.target.closest('[data-bookmark-sent]');
+        if (bmBtn && panelId !== 'subview-chunks-list') {
+          e.stopPropagation();
+          const sentEl = bmBtn.closest('.reader-flow-sent');
+          window.FlaptapStudioReaderFlow?.setBookmark(
+            {
+              sentenceIndex: Number(bmBtn.getAttribute('data-bookmark-sent')),
+              startMs: Number(bmBtn.getAttribute('data-bookmark-ms') || 0),
+              view: bmBtn.getAttribute('data-bookmark-view') || 'raw',
+              excerpt: sentEl?.textContent || '',
+            },
+            studioState.item,
+          );
+          return;
+        }
+
         const infoBtn = e.target.closest('[data-info-kind]');
         if (infoBtn) {
           e.stopPropagation();
@@ -6918,11 +8097,7 @@
           const rangeBtn = e.target.closest('[data-play-range-start]');
           if (rangeBtn) {
             e.stopPropagation();
-            playRange(
-              Number(rangeBtn.getAttribute('data-play-range-start')),
-              Number(rangeBtn.getAttribute('data-play-range-end')),
-              { label: rangeBtn.getAttribute('data-play-range-label') || 'Section' },
-            );
+            handleRangePlayButtonClick(rangeBtn);
             return;
           }
         }
@@ -6986,7 +8161,7 @@
       btn.addEventListener('click', () => setWordCushion(btn.getAttribute('data-word-cushion')));
     });
 
-    // Real-time Shadowing Pacing Switcher (Short | Medium | Full)
+    // Real-time Shadowing Pacing Switcher (Short | Full)
     const studioPacingGroup = document.getElementById('studio-pacing-group');
     studioPacingGroup?.addEventListener('click', (e) => {
       const btn = e.target.closest('[data-pacing]');
@@ -7015,9 +8190,8 @@
       if (!karaokeBtn) return;
       karaokeBtn.classList.toggle('active', studioState.karaokeEnabled);
       karaokeBtn.setAttribute('aria-pressed', studioState.karaokeEnabled ? 'true' : 'false');
-      karaokeBtn.title = studioState.karaokeEnabled
-        ? 'Word-by-word live highlight is ON (click to turn off)'
-        : 'Word-by-word live highlight is OFF (click to turn on)';
+      karaokeBtn.title = t(studioState.karaokeEnabled ? 'highlightOnTitle' : 'highlightOffTitle');
+      karaokeBtn.setAttribute('aria-label', 'Live word highlight');
     };
     syncKaraokeBtn();
     karaokeBtn?.addEventListener('click', () => {
@@ -7025,7 +8199,7 @@
       localStorage.setItem('flaptap_karaoke', studioState.karaokeEnabled ? 'on' : 'off');
       if (!studioState.karaokeEnabled) clearActiveKaraokeWord();
       syncKaraokeBtn();
-      showToast(studioState.karaokeEnabled ? 'Live word highlight on' : 'Live word highlight off');
+      showToast(t(studioState.karaokeEnabled ? 'highlightOnToast' : 'highlightOffToast'));
     });
 
     document.getElementById('studio-toggle-repairs')?.addEventListener('click', () => {
@@ -7052,7 +8226,31 @@
       openWordLookup(w.word, w.sentIndex, document.getElementById('studio-define-word-btn'));
     });
 
-    document.getElementById('studio-video-toggle-btn')?.addEventListener('click', toggleVideoVisibility);
+    document.getElementById('studio-video-toggle-btn')?.addEventListener('click', () => toggleVideoVisibility());
+    document.getElementById('studio-ask-ai-btn')?.addEventListener('click', () => {
+      window.FlaptapStudioReaderAi?.toggle();
+    });
+    document.getElementById('reader-bookmark-resume-btn')?.addEventListener('click', () => {
+      window.FlaptapStudioReaderFlow?.jumpToBookmark();
+    });
+    document.getElementById('reader-bookmark-clear-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.FlaptapStudioReaderFlow?.setBookmark(null, studioState.item);
+    });
+
+    window.FlaptapStudioReaderFlow?.configure({
+      apiFetch,
+      showToast,
+      switchReadView,
+    });
+    window.FlaptapStudioReaderAi?.configure({
+      apiFetch,
+      apiHeaders,
+      showToast,
+      playRange,
+      speakText: window.FlaptapWordLookup?.speakText,
+    });
+    window.FlaptapStudioReaderAi?.bindDomEvents();
     document.getElementById('studio-skip-pause-btn')?.addEventListener('click', () => {
       const fn = studioState.shadowPauseResumeFn;
       cancelShadowPause();
@@ -7104,11 +8302,67 @@
       saveRenamedSpeakers(form);
     });
 
-    // AI Verbatim Review Trigger & Cancel
-    document.getElementById('studio-run-review-btn')?.addEventListener('click', () => runTranscriptReview({ force: false }));
-    document.getElementById('studio-rerun-review-btn')?.addEventListener('click', () => runTranscriptReview({ force: true }));
+    // Unified Studio Enhancements Checklist & Cancel
+    document.getElementById('studio-enhance-list')?.addEventListener('change', (e) => {
+      if (e.target.closest('.studio-enhance-check')) {
+        syncEnhancementsPopoverUi();
+      }
+    });
+    document.getElementById('studio-enhance-model-toggle')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const wrap = document.getElementById('studio-review-ai-mount');
+      if (!wrap) return;
+      const open = wrap.hidden;
+      wrap.hidden = !open;
+      e.currentTarget.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) ensureStudioReviewAiSelector();
+    });
+    document.getElementById('studio-enhance-paste-toggle')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const box = document.getElementById('studio-enhance-paste-box');
+      if (!box) return;
+      const open = box.hidden;
+      box.hidden = !open;
+      e.currentTarget.setAttribute('aria-expanded', open ? 'true' : 'false');
+      if (open) document.getElementById('studio-enhance-paste-input')?.focus();
+    });
+    document.getElementById('studio-enhance-paste-cancel')?.addEventListener('click', () => {
+      const box = document.getElementById('studio-enhance-paste-box');
+      if (box) box.hidden = true;
+    });
+    document.getElementById('studio-enhance-paste-apply')?.addEventListener('click', () => {
+      const inp = document.getElementById('studio-enhance-paste-input');
+      if (inp) void importLessonTranscript(inp.value);
+    });
+    document.getElementById('studio-run-enhancements-btn')?.addEventListener('click', () => {
+      void runSelectedEnhancements();
+    });
+    document.getElementById('studio-cancel-enhancements-btn')?.addEventListener('click', () => {
+      studioState.reviewAbort?.abort?.();
+    });
     document.getElementById('studio-review-cancel-btn')?.addEventListener('click', () => {
       studioState.reviewAbort?.abort?.();
+    });
+
+    // Pending-Captions Instant Empty Card Actions inside #subview-sentences-list
+    document.getElementById('subview-sentences-list')?.addEventListener('click', (e) => {
+      const actionBtn = e.target.closest('[data-pending-action]');
+      if (!actionBtn) return;
+      const act = actionBtn.getAttribute('data-pending-action');
+      if (act === 'retry-captions') {
+        void retryLessonCaptions();
+      } else if (act === 'toggle-paste') {
+        const wrap = document.getElementById('studio-pending-paste-wrap');
+        if (wrap) {
+          wrap.hidden = !wrap.hidden;
+          if (!wrap.hidden) document.getElementById('studio-pending-paste-input')?.focus();
+        }
+      } else if (act === 'apply-paste') {
+        const inp = document.getElementById('studio-pending-paste-input');
+        if (inp) void importLessonTranscript(inp.value);
+      } else if (act === 'transcribe') {
+        void runExplicitTranscription({ allowLocalWhisper: false });
+      }
     });
 
     // Unified 7-Format Export Popover Actions
@@ -7138,7 +8392,9 @@
     // Live In-Transcript Search
     const searchInput = document.getElementById('studio-search-input');
     searchInput?.addEventListener('input', (e) => {
-      studioState.searchQuery = e.target.value || '';
+      const q = e.target.value || '';
+      if (MC && modeState) MC.setSearchQuery(modeState, studioState.mode, q);
+      studioState.searchQuery = q;
       studioState.searchMatchIdx = 0;
       syncSearchMatchesDom();
       if (studioState.searchMatches.length > 0) {
@@ -7152,6 +8408,7 @@
       } else if (e.key === 'Escape') {
         e.preventDefault();
         searchInput.value = '';
+        if (MC && modeState) MC.setSearchQuery(modeState, studioState.mode, '');
         studioState.searchQuery = '';
         syncSearchMatchesDom();
         searchInput.blur();
@@ -7161,6 +8418,7 @@
     document.getElementById('studio-search-next')?.addEventListener('click', () => jumpSearchMatch(1));
     document.getElementById('studio-search-clear')?.addEventListener('click', () => {
       if (searchInput) searchInput.value = '';
+      if (MC && modeState) MC.setSearchQuery(modeState, studioState.mode, '');
       studioState.searchQuery = '';
       syncSearchMatchesDom();
     });
@@ -7333,7 +8591,7 @@
         if (studioState.isPlaying && studioState.activeSentence?.index === idx) {
           pauseCurrentPlayback();
         } else {
-          playSentence(idx);
+          playSentence(idx, { forceMode: 'once' });
         }
         return;
       }
@@ -7364,23 +8622,142 @@
 
     });
 
-    // Select text in every Studio learning mode for a contextual lookup.
+    // Select text in every Studio learning mode for Play (ms-exact), Ask AI, Translate, Bookmark, Copy.
     const bindStudioSelectionLookup = (container, sentenceSelector) => {
       if (!container || !window.FlaptapWordLookup?.bindSelectionLookup) return;
+      const resolveMeta = (text, range, sourceEl) => {
+        const node = range?.startContainer;
+        const element = node?.nodeType === 1 ? node : node?.parentElement;
+        const word = element?.closest?.('.clickable-word');
+        const sentence = element?.closest?.(sentenceSelector);
+        const fallbackIdx =
+          Number(word?.dataset?.sentIndex) ||
+          Number(sentence?.dataset?.sentenceIndex) ||
+          Number(sentence?.dataset?.readSent) ||
+          Number(sentence?.dataset?.canonIndex) ||
+          studioState.activeSentence?.index ||
+          studioState.item?.sentences?.[0]?.index ||
+          1;
+        const timing = window.FlaptapStudioReaderFlow?.resolveSelectionTimeRange?.(range, fallbackIdx) || null;
+        return {
+          text,
+          range,
+          sourceEl: sourceEl || null,
+          sentenceIndex: timing?.sentenceIndex || fallbackIdx,
+          startMs: timing?.startMs,
+          endMs: timing?.endMs,
+          speaker: timing?.speaker || sentence?.getAttribute?.('data-speaker') || '',
+          view: timing?.view || (container.id === 'subview-raw-list' ? 'raw' : 'reviewed'),
+        };
+      };
+
       window.FlaptapWordLookup.bindSelectionLookup(container, {
-        onSelect: (text, meta) => {
-          const node = meta?.range?.startContainer;
-          const element = node?.nodeType === 1 ? node : node?.parentElement;
-          const word = element?.closest('.clickable-word');
-          const sentence = element?.closest(sentenceSelector);
-          const sentenceIndex =
-            Number(word?.dataset.sentIndex) ||
-            Number(sentence?.dataset.sentenceIndex) ||
-            Number(sentence?.dataset.readSent) ||
-            studioState.activeSentence?.index ||
-            studioState.item?.sentences?.[0]?.index ||
-            1;
-          openWordLookup(text, sentenceIndex, meta?.sourceEl || null);
+        maxLength: 1500,
+        actions: ({ text, range }) => {
+          const preview = text.length > 24 ? `${text.slice(0, 23)}…` : text;
+          const timing = window.FlaptapStudioReaderFlow?.resolveSelectionTimeRange?.(range) || null;
+          const hasAudioTiming = Boolean(
+            timing && Number.isFinite(timing.startMs) && Number.isFinite(timing.endMs) && timing.endMs > timing.startMs,
+          );
+          const isReadSurface =
+            container.id === 'subview-chunks-list' || container.id === 'subview-raw-list';
+
+          const list = [
+            {
+              id: 'play-selection',
+              label: 'Play',
+              title: hasAudioTiming ? 'Hear speaker pronounce this exact excerpt' : 'Speak excerpt aloud',
+              icon: 'play',
+              emphasis: 'accent',
+              run: ({ text: selText, range: selRange }) => {
+                const m = resolveMeta(selText, selRange, null);
+                if (
+                  Number.isFinite(m.startMs) &&
+                  Number.isFinite(m.endMs) &&
+                  m.endMs > m.startMs &&
+                  studioState.ytPlayer
+                ) {
+                  const exact = studioState.wordCushion === 'exact';
+                  const startSec = Math.max(0, (m.startMs - (exact ? 0 : 25)) / 1000);
+                  const endSec = Math.max(startSec + 0.12, (m.endMs + (exact ? 0 : 75)) / 1000);
+                  playRange(startSec, endSec, {
+                    mode: 'range',
+                    label: preview,
+                    sentIndex: m.sentenceIndex,
+                  });
+                } else {
+                  window.FlaptapWordLookup?.speakText?.(selText);
+                }
+              },
+            },
+            {
+              id: 'ask-ai',
+              label: 'Ask AI',
+              title: 'Ask AI Companion (voice or text) with full transcript context',
+              icon: 'sparkles',
+              run: ({ text: selText, range: selRange }) => {
+                const m = resolveMeta(selText, selRange, null);
+                window.FlaptapStudioReaderAi?.openWithSelection({
+                  text: selText,
+                  startMs: m.startMs,
+                  endMs: m.endMs,
+                  sentenceIndex: m.sentenceIndex,
+                  speaker: m.speaker,
+                  view: m.view,
+                });
+              },
+            },
+            {
+              id: 'translate',
+              label: 'Translate',
+              title: 'Quick contextual definition & translation',
+              icon: 'languages',
+              emphasis: 'subtle',
+              run: ({ text: selText, range: selRange, sourceEl }) => {
+                const m = resolveMeta(selText, selRange, sourceEl);
+                openWordLookup(selText, m.sentenceIndex, sourceEl || null);
+              },
+            },
+          ];
+
+          if (isReadSurface) {
+            list.push({
+              id: 'bookmark-selection',
+              label: 'Bookmark',
+              title: 'Mark reading position ("where I left off") here',
+              icon: 'bookmark',
+              variant: 'secondary',
+              iconOnly: true,
+              run: ({ text: selText, range: selRange }) => {
+                const m = resolveMeta(selText, selRange, null);
+                window.FlaptapStudioReaderFlow?.setBookmark(
+                  {
+                    sentenceIndex: m.sentenceIndex,
+                    startMs: m.startMs || 0,
+                    view: m.view === 'raw' ? 'raw' : 'reviewed',
+                    excerpt: selText,
+                  },
+                  studioState.item,
+                );
+              },
+            });
+          }
+
+          list.push({
+            id: 'copy-selection',
+            label: 'Copy',
+            title: 'Copy selected text',
+            icon: 'copy',
+            variant: 'secondary',
+            iconOnly: true,
+            run: ({ text: selText }) => {
+              if (navigator.clipboard?.writeText) {
+                navigator.clipboard.writeText(selText).then(() => showToast('Copied selection')).catch(() => {});
+              }
+            },
+          });
+
+          return list;
         },
       });
     };
@@ -7403,7 +8780,7 @@
     );
     bindStudioSelectionLookup(
       document.getElementById('subview-raw-list'),
-      '.studio-raw-row[data-raw-index]',
+      '.read-sentence[data-canon-index], .studio-raw-row[data-raw-index]',
     );
 
     // Select any text inside Coach for an instant contextual lookup.
@@ -7462,58 +8839,151 @@
       e.stopPropagation();
       const btn = e.currentTarget;
       const lessonId = studioState.item?.id;
-      if (!lessonId || !window.FlaptapConfirm?.confirmAndUndo) return;
+      if (!lessonId || !window.FlaptapConfirm?.confirmAction) return;
 
       closeAllControlPopovers();
-      const snapshot = {
-        completionProgress: JSON.parse(JSON.stringify(studioState.item.completionProgress || {})),
-        isCompleted: Boolean(studioState.item.isCompleted),
-        completedDrills: Number(studioState.item.completedDrills || 0),
-      };
-      const rerenderProgress = () => {
-        renderSentencesAndParagraphs();
-        renderDictationCard();
-        if (studioState.item.aiAnalysis) {
-          renderCoachAnalysis(studioState.item.aiAnalysis);
-        }
-        refreshAllStudioProgressBars();
-      };
-
+      const isAr = studioState.uiLang === 'ar';
       btn.disabled = true;
-      await window.FlaptapConfirm.confirmAndUndo({
-        title: studioState.uiLang === 'ar' ? 'إعادة ضبط تقدّم الدرس؟' : 'Reset lesson progress?',
-        message:
-          studioState.uiLang === 'ar'
-            ? 'سيتم مسح علامات إكمال الجمل والتمارين لهذا الدرس.'
-            : 'Completed checkmarks and drill progress for this lesson will be reset.',
+      await window.FlaptapConfirm.confirmAction({
+        title: isAr ? 'إعادة ضبط تقدّم الدرس؟' : 'Reset lesson progress?',
+        message: isAr
+          ? 'سيتم مسح علامات إكمال الجمل والتمارين لهذا الدرس.'
+          : 'Completed checkmarks and drill progress for this lesson will be reset.',
         detail: studioState.item?.title || '',
-        confirmLabel: studioState.uiLang === 'ar' ? 'إعادة الضبط' : 'Reset Progress',
+        confirmLabel: isAr ? 'إعادة الضبط' : 'Reset Progress',
+        cancelLabel: isAr ? 'إلغاء' : 'Cancel',
         tone: 'primary',
-        undoMessage:
-          studioState.uiLang === 'ar' ? 'تمت إعادة ضبط التقدّم' : 'Lesson progress reset',
-        restoredMessage:
-          studioState.uiLang === 'ar' ? 'تم استرجاع التقدّم' : 'Lesson progress restored',
-        onApply: () => {
+        checkboxes: [
+          {
+            id: 'clearNotes',
+            label: isAr ? 'حذف ملاحظات الدراسة أيضاً' : 'Also clear personal study notes',
+            checked: false,
+          },
+        ],
+        onConfirm: async (opts) => {
+          const clearNotes = Boolean(opts?.clearNotes);
+          await apiFetch(`/api/history/${encodeURIComponent(lessonId)}/reset-progress`, {
+            method: 'POST',
+            body: JSON.stringify({ clearNotes }),
+          });
           studioState.item.completionProgress = {};
           studioState.item.isCompleted = false;
           studioState.item.completedDrills = 0;
-          rerenderProgress();
-        },
-        onUndo: () => {
-          studioState.item.completionProgress = snapshot.completionProgress;
-          studioState.item.isCompleted = snapshot.isCompleted;
-          studioState.item.completedDrills = snapshot.completedDrills;
-          rerenderProgress();
-        },
-        onCommit: async ({ keepalive = false } = {}) => {
-          await apiFetch(`/api/history/${encodeURIComponent(lessonId)}/reset-progress`, {
-            method: 'POST',
-            keepalive,
-            body: JSON.stringify({ clearNotes: false }),
-          });
+          if (clearNotes) {
+            studioState.item.studyNotes = '';
+            try {
+              localStorage.removeItem(`notes_${lessonId}`);
+            } catch {}
+            const notesArea = document.getElementById('study-notes-textarea');
+            if (notesArea) notesArea.value = '';
+          }
+          renderSentencesAndParagraphs();
+          renderDictationCard();
+          if (studioState.item.aiAnalysis) {
+            renderCoachAnalysis(studioState.item.aiAnalysis);
+          }
+          refreshAllStudioProgressBars();
+          showToast(isAr ? 'تمت إعادة ضبط التقدّم' : 'Lesson progress reset');
         },
         onError: (err) => {
           showToast(err?.message || 'Could not reset progress.');
+        },
+      });
+      btn.disabled = false;
+    });
+
+    document.getElementById('sp-clear-cache-btn')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const btn = e.currentTarget;
+      const lessonId = studioState.item?.id;
+      if (!lessonId || !window.FlaptapConfirm?.confirmAction) return;
+
+      closeAllControlPopovers();
+      const isAr = studioState.uiLang === 'ar';
+      btn.disabled = true;
+      await window.FlaptapConfirm.confirmAction({
+        title: isAr ? 'مسح ذاكرة الدرس المؤقتة؟' : 'Clear lesson caches?',
+        message: isAr
+          ? 'سيتم مسح تحليلات المدرب، الترجمات، المراجعة بالذكاء الاصطناعي، وكاش النص لإعادة التوليد من جديد.'
+          : 'Clears AI Coach, cached translations, AI Verbatim Review, and disk transcript cache so you can regenerate fresh.',
+        detail: studioState.item?.title || '',
+        impactItems: [
+          { label: isAr ? 'تحليل المدرب' : 'AI Coach' },
+          { label: isAr ? 'الترجمات' : 'Translations' },
+          { label: isAr ? 'كاش النص' : 'Transcript cache' },
+        ],
+        confirmLabel: isAr ? 'مسح الكاش' : 'Clear Caches',
+        cancelLabel: isAr ? 'إلغاء' : 'Cancel',
+        tone: 'warning',
+        onConfirm: async () => {
+          await apiFetch(`/api/history/${encodeURIComponent(lessonId)}/cache/clear`, {
+            method: 'POST',
+            body: JSON.stringify({ scope: 'all' }),
+          });
+          window.FlaptapWordLookup?.clearCache?.();
+          studioState.translationsByLang = {};
+          studioState.coachGlosses = {};
+          showToast(isAr ? 'تم مسح كاش الدرس' : 'Lesson caches cleared');
+          await loadStudioSession();
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not clear lesson caches.');
+        },
+      });
+      btn.disabled = false;
+    });
+
+    document.getElementById('sp-delete-lesson-btn')?.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const btn = e.currentTarget;
+      const lessonId = studioState.item?.id;
+      if (!lessonId || !window.FlaptapConfirm?.confirmAction) return;
+
+      closeAllControlPopovers();
+      const isAr = studioState.uiLang === 'ar';
+      btn.disabled = true;
+      await window.FlaptapConfirm.confirmAction({
+        title: isAr ? 'حذف الدرس نهائياً؟' : 'Delete lesson permanently?',
+        message: isAr
+          ? 'سيتم حذف الدرس وجميع ملفات الكاش والتقدم والملاحظات بالكامل حتى يبدأ الرابط كأنه جديد تماماً.'
+          : 'Removes this lesson, transcript & media caches, AI Coach, translations, study notes, and progress completely.',
+        detail: studioState.item?.title || '',
+        impactItems: [
+          { label: isAr ? 'الدرس والتقدم' : 'Lesson & progress' },
+          { label: isAr ? 'كاش النص والوسائط' : 'Transcript & media cache' },
+          { label: isAr ? 'الملاحظات والترجمات' : 'Notes & translations' },
+        ],
+        confirmLabel: isAr ? 'حذف نهائي' : 'Delete Permanently',
+        cancelLabel: isAr ? 'إلغاء' : 'Cancel',
+        tone: 'danger',
+        checkboxes: [
+          {
+            id: 'removeLinkedVocab',
+            label: isAr ? 'حذف المفردات المرتبطة بهذا الدرس أيضاً' : 'Also delete Vocabulary words saved from this lesson',
+            checked: false,
+          },
+          {
+            id: 'cascadeLinkedNotes',
+            label: isAr ? 'حذف أدلة استخراج العبارات المرتبطة أيضاً' : 'Also delete linked Phrase Miner study guides',
+            checked: false,
+          },
+        ],
+        onConfirm: async (opts) => {
+          await apiFetch(`/api/lifecycle/purge/lesson/${encodeURIComponent(lessonId)}`, {
+            method: 'POST',
+            body: JSON.stringify({
+              removeLinkedVocab: Boolean(opts?.removeLinkedVocab),
+              cascadeLinkedNotes: Boolean(opts?.cascadeLinkedNotes),
+            }),
+          });
+          try {
+            localStorage.removeItem(`notes_${lessonId}`);
+          } catch {}
+          window.FlaptapWordLookup?.clearCache?.();
+          window.location.href = '/';
+        },
+        onError: (err) => {
+          showToast(err?.message || 'Could not delete lesson.');
         },
       });
       btn.disabled = false;
@@ -7655,8 +9125,13 @@
       const code = e.code || '';
       const key = e.key || '';
 
-      // 1. Escape: close popovers first, otherwise exit focused text input/select
+      // 1. Escape: close AI drawer or popovers first, otherwise exit focused text input/select
       if (code === 'Escape' || key === 'Escape') {
+        if (window.FlaptapStudioReaderAi?.isOpen?.()) {
+          e.preventDefault();
+          window.FlaptapStudioReaderAi.close();
+          return;
+        }
         const hasOpenCtrlPopover = SCB_POPOVER_PAIRS.some(({ popoverId }) => {
           const p = document.getElementById(popoverId);
           return p && !p.hidden;
@@ -7936,7 +9411,40 @@
         return;
       }
 
-      // 9. Instant Learning Mode Switching (1–5)
+      // 9. Layout Picker / Cycle (Y / Shift+Y)
+      if (code === 'KeyY') {
+        e.preventDefault();
+        if (e.repeat) return;
+        if (shift) {
+          const meta = window.FlaptapStudioLayouts?.cycleLayout();
+          if (meta?.name) {
+            showToast(`${t('keyLayout')}: ${meta.name}`);
+          }
+        } else {
+          toggleControlPopover('studio-layout-btn', 'studio-layout-popover');
+        }
+        return;
+      }
+
+      // 9.5 Audio-Only Focus Toggle (H) & Ask AI Companion (I)
+      if (code === 'KeyH' && !shift) {
+        const videoToggle = document.getElementById('studio-video-toggle-btn');
+        if (videoToggle && !videoToggle.hidden) {
+          e.preventDefault();
+          if (e.repeat) return;
+          toggleVideoVisibility();
+        }
+        return;
+      }
+
+      if (code === 'KeyI' && !shift) {
+        e.preventDefault();
+        if (e.repeat) return;
+        window.FlaptapStudioReaderAi?.toggle();
+        return;
+      }
+
+      // 10. Instant Learning Mode Switching (1–5)
       if (!shift) {
         const modeMap = {
           Digit1: 'shadow',
@@ -7983,7 +9491,28 @@
   document.addEventListener('DOMContentLoaded', () => {
     applyTheme(studioState.theme);
     applyUiLanguage(studioState.uiLang);
-    setStudioLayout('theater');
+    if (window.FlaptapStudioLayouts) {
+      const activeMeta = window.FlaptapStudioLayouts.init({
+        uiLang: studioState.uiLang,
+        onChange: (meta) => {
+          studioState.layout = meta?.id || studioState.layout;
+          requestAnimationFrame(() => {
+            syncStudioDeckStickyHeightVar();
+            const layoutPop = document.getElementById('studio-layout-popover');
+            const layoutBtn = document.getElementById('studio-layout-btn');
+            if (layoutPop && !layoutPop.hidden && layoutBtn && (window.innerWidth || 1024) > 640) {
+              positionControlPopover(layoutPop, layoutBtn);
+            }
+          });
+        },
+        onClosePopover: () => {
+          closeAllControlPopovers();
+        },
+      });
+      studioState.layout = activeMeta?.id || 'theater';
+    } else {
+      setStudioLayout('theater');
+    }
     setStudioSpeed(studioState.speed);
     setStudioSeekStep(studioState.seekStepSec);
     syncFlowButtonDom();

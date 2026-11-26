@@ -387,6 +387,8 @@ async function run() {
     env: Object.assign({}, process.env, {
       PORT: String(PORT),
       FLAPTAP_SQLITE_PATH: DB_PATH,
+      FLAPTAP_LIVE_TRANSCRIPTS: 'off',
+      FLAPTAP_GUARD_STATE_PATH: path.join(TMP_DIR, 'guard-state.json'),
     }),
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -406,7 +408,8 @@ async function run() {
     assert.strictEqual(cfg.status, 200);
     assert.ok(Array.isArray(cfg.json.exportFormats) && cfg.json.exportFormats.length === 7);
     assert.ok(Array.isArray(cfg.json.views) && cfg.json.views.length === 5);
-    ok('GET /api/tracks/shadowing/config exposes all 7 export formats & 5 views');
+    assert.ok(cfg.json.providerGuard && cfg.json.providerGuard.liveFetchEnabled === false, 'Config must expose providerGuard with liveFetchEnabled: false under kill-switch');
+    ok('GET /api/tracks/shadowing/config exposes all 7 export formats, 5 views & providerGuard');
 
     const unauthExport = await api('/api/tracks/shadowing/fake/export?view=sentences&format=txt');
     assert.strictEqual(unauthExport.status, 401);
@@ -414,7 +417,7 @@ async function run() {
     assert.strictEqual(unauthStream.status, 401);
     const unauthTitle = await api('/api/tracks/shadowing/fake/title', { method: 'PATCH', body: '{"title":"x"}' });
     assert.strictEqual(unauthTitle.status, 401);
-    const unauthPacing = await api('/api/tracks/shadowing/fake/pacing', { method: 'PATCH', body: '{"pacingMode":"full"}' });
+    const unauthPacing = await api('/api/tracks/shadowing/fake/pacing', { method: 'PATCH', body: '{"pacingMode":"normal"}' });
     assert.strictEqual(unauthPacing.status, 401);
     ok('Auth gates strictly return 401 on consolidated Shadowing endpoints');
 
@@ -446,25 +449,26 @@ async function run() {
     assert.ok(bobGet.status === 404 || bobGet.status === 403, `Expected 404/403 for User B, got ${bobGet.status}`);
     const bobExport = await api(`/api/tracks/shadowing/${seeded.id}/export?view=sentences&format=txt`, {}, tokenB);
     assert.strictEqual(bobExport.status, 404);
-    const bobPacing = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"full"}' }, tokenB);
+    const bobPacing = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"normal"}' }, tokenB);
     assert.strictEqual(bobPacing.status, 404);
     ok('Strict user isolation verified across consolidated Shadowing endpoints');
 
-    // Verify dynamic pacing API validation & round-trip (short -> balanced -> full -> short)
+    // Verify dynamic pacing API validation & round-trip (short -> normal -> short)
     const badPacing = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"giant"}' }, tokenA);
     assert.strictEqual(badPacing.status, 400);
-    const fullRes = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"full"}' }, tokenA);
-    assert.strictEqual(fullRes.status, 200);
-    assert.strictEqual(fullRes.json.pacingMode, 'full');
-    assert.ok(fullRes.json.sentenceCount <= 2, `Expected full pacing <=2 lines, got ${fullRes.json.sentenceCount}`);
-    const balRes = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"balanced"}' }, tokenA);
-    assert.strictEqual(balRes.status, 200);
-    assert.strictEqual(balRes.json.pacingMode, 'balanced');
+    const normalRes = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"normal"}' }, tokenA);
+    assert.strictEqual(normalRes.status, 200);
+    assert.strictEqual(normalRes.json.pacingMode, 'normal');
+    assert.ok(normalRes.json.sentenceCount <= 3, `Expected normal pacing <=3 lines, got ${normalRes.json.sentenceCount}`);
+    const legacyBalRes = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"balanced"}' }, tokenA);
+    assert.strictEqual(legacyBalRes.status, 200);
+    assert.strictEqual(legacyBalRes.json.pacingMode, 'normal', 'Legacy balanced input must normalize to normal');
+    assert.strictEqual(legacyBalRes.json.sentenceCount, normalRes.json.sentenceCount, 'Legacy balanced must equal normal sentence count');
     const shortRes = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"short"}' }, tokenA);
     assert.strictEqual(shortRes.status, 200);
     assert.strictEqual(shortRes.json.pacingMode, 'short');
     assert.ok(shortRes.json.sentenceCount >= 4, `Expected short pacing >=4 lines, got ${shortRes.json.sentenceCount}`);
-    ok('PATCH /api/tracks/shadowing/:id/pacing switches short <-> balanced <-> full cleanly with strict validation');
+    ok('PATCH /api/tracks/shadowing/:id/pacing switches short <-> normal cleanly with strict validation');
 
     // 4. Test all 7 export formats + Raw Original view via live HTTP API
     for (const fmt of ['txt', 'md', 'srt', 'vtt', 'json', 'csv', 'html']) {
@@ -527,13 +531,14 @@ async function run() {
       'lessons',
       'dialogue',
       'pronunciation',
+      'think-aloud',
       'american-extractor',
       'learning-library',
       'vocabulary',
       'history',
     ]);
     assert.strictEqual(await page.$('#section-transcript-lab'), null, 'Obsolete #section-transcript-lab still exists!');
-    ok('Sidebar consolidated cleanly to 7 links with zero Transcripts leftovers');
+    ok('Sidebar consolidated cleanly to 8 links with zero Transcripts leftovers');
 
     // Sign in via localStorage token & reload Home
     await page.evaluate((tok) => localStorage.setItem('flaptap_auth_token', tok), tokenA);
@@ -548,14 +553,14 @@ async function run() {
     const dropVisible = await page.$eval('[data-lessons-panel="upload"]', (el) => !el.hidden);
     assert.ok(dropVisible, 'Upload panel did not open');
 
-    await page.click('#lessons-ai-model-toggle');
-    const aiSelVisible = await page.$eval('#lessons-ai-selector-wrap', (el) => !el.hidden);
-    assert.ok(aiSelVisible, 'AI Review Model selector did not open');
+    // Home link screen must keep auto-review opt-in removed for instant Studio opening
+    assert.strictEqual(await page.$('#lessons-auto-review'), null, 'Home auto-review checkbox should be removed for instant Studio load');
+    assert.strictEqual(await page.$('#lessons-ai-model-toggle'), null, 'Home AI model toggle should live inside Studio Enhancements');
 
     // Test Shadowing Home pre-start pacing control (#lessons-pacing-group)
-    await page.click('#lessons-pacing-group [data-pacing="full"]');
-    const savedPacingFull = await page.evaluate(() => localStorage.getItem('flaptap_shadowing_pacing'));
-    assert.strictEqual(savedPacingFull, 'full', 'Home pacing pill did not persist full preference');
+    await page.click('#lessons-pacing-group [data-pacing="normal"]');
+    const savedPacingNormal = await page.evaluate(() => localStorage.getItem('flaptap_shadowing_pacing'));
+    assert.strictEqual(savedPacingNormal, 'normal', 'Home pacing pill did not persist normal preference');
     await page.click('#lessons-pacing-group [data-pacing="short"]');
     const savedPacingShort = await page.evaluate(() => localStorage.getItem('flaptap_shadowing_pacing'));
     assert.strictEqual(savedPacingShort, 'short', 'Home pacing pill did not restore short preference');
@@ -584,7 +589,10 @@ async function run() {
     ok('Repair diff popover displays original ASR vs repaired word');
 
     // Test Word Click Mode ('word') -> clicking timed word reveals Define pill
+    await page.click('#studio-tools-menu-btn');
+    await page.waitForSelector('#studio-tools-popover', { visible: true });
     await page.click('[data-word-click-mode="word"]');
+    await page.click('#studio-tools-pop-close');
     await page.click('.studio-word[data-word="PyTorch"]');
     const defPillText = await page.$eval('#studio-define-word-btn', (el) => (el.hidden ? '' : el.textContent));
     assert.ok(defPillText.includes('PyTorch'), `Define word pill not updated: ${defPillText}`);
@@ -608,12 +616,64 @@ async function run() {
     await page.click('#studio-search-clear');
     ok('Live in-transcript search highlights match and updates counter');
 
+    // Verify lazy rendering (Read paragraphs not rendered while in Shadow mode) & zero duplicate toolbar
+    const initialLazyAudit = await page.evaluate(() => ({
+      noReaderToolbar: !document.getElementById('studio-reader-toolbar'),
+      readChunksLen: document.getElementById('subview-chunks-list')?.children?.length || 0,
+      isAudioOnlyCard: document.querySelector('.player-frame-card')?.classList.contains('is-audio-only-media'),
+      audioHasControls: document.getElementById('studio-html5-player')?.hasAttribute('controls') || false,
+    }));
+    assert.ok(initialLazyAudit.noReaderToolbar, 'Duplicate #studio-reader-toolbar should be removed');
+    assert.strictEqual(initialLazyAudit.readChunksLen, 0, 'Read sub-view should lazy-render only when visited');
+    assert.strictEqual(initialLazyAudit.audioHasControls, false, 'Audio-only track should not render duplicate native <audio controls>');
+    ok('Lazy rendering & streamlined toolbar verified on initial Studio load');
+
+    // Test Per-Mode Completion Filter Isolation (Shadow Completed does NOT bleed into Read)
+    await page.click('.sentence-driller-card[data-sentence-index="1"] [data-studio-check-subject="sentences"]');
+    await page.click('[data-studio-comp-filter="completed"]');
+    const shadowCompletedCount = await page.$$eval('.sentence-driller-card:not([hidden])', (els) => els.length);
+    assert.strictEqual(shadowCompletedCount, 1, `Expected 1 visible completed sentence in Shadow, got ${shadowCompletedCount}`);
+
+    await page.click('.mode-tab-btn[data-mode="read"]');
+    await page.waitForSelector('#subview-chunks-list .editorial-paragraph-block', { timeout: 5000 });
+    const readFilterIsolation = await page.evaluate(() => ({
+      readVisibleParas: document.querySelectorAll('#subview-chunks-list .editorial-paragraph-block:not([hidden])').length,
+      readFilterActive: document.querySelector('[data-studio-comp-filter].active')?.getAttribute('data-studio-comp-filter'),
+      pacingHiddenInRead: Boolean(document.getElementById('studio-pacing-group')?.hidden),
+      badgeParaCount: Number(document.getElementById('badge-paragraphs-count')?.textContent || 0),
+      barParaTotal: Number(document.querySelector('#studio-read-progress-bar [data-sp-total]')?.textContent || 0),
+      domParaCount: document.querySelectorAll('#subview-chunks-list .editorial-paragraph-block').length,
+    }));
+    assert.ok(readFilterIsolation.readVisibleParas > 0, 'Shadow Completed filter bled into Read mode and hid paragraphs');
+    assert.strictEqual(readFilterIsolation.readFilterActive, 'all', 'Read mode filter should remain "all" independently');
+    assert.strictEqual(readFilterIsolation.pacingHiddenInRead, true, 'Short|Normal pacing toggle must be hidden in Read mode');
+    assert.strictEqual(readFilterIsolation.badgeParaCount, readFilterIsolation.domParaCount, 'Read tab badge must match rendered paragraph count');
+    assert.strictEqual(readFilterIsolation.barParaTotal, readFilterIsolation.domParaCount, 'Read progress bar total must match rendered paragraph count');
+
+    // Reset Shadow completion & filter back to clean baseline for downstream bookmark/completion assertions
+    await page.click('.mode-tab-btn[data-mode="shadow"]');
+    const shadowFilterRestored = await page.$eval('[data-studio-comp-filter].active', (el) => el.getAttribute('data-studio-comp-filter'));
+    assert.strictEqual(shadowFilterRestored, 'completed', 'Shadow mode should remember its own filter state');
+    await page.click('[data-studio-comp-filter="all"]');
+    await page.click('.sentence-driller-card[data-sentence-index="1"] [data-studio-check-subject="sentences"]');
+    ok('Per-mode filter isolation & paragraph count parity verified');
+
     // Test all 4 Read sub-views + Hard Refresh persistence on ?mode=read&view=raw
     await page.click('.mode-tab-btn[data-mode="read"]');
     for (const viewId of ['paragraphs', 'ideas', 'speakers', 'raw']) {
       await page.click(`[data-read-view="${viewId}"]`);
-      const visible = await page.$eval(`[data-read-panel="${viewId}"]`, (el) => !el.hidden);
-      assert.ok(visible, `Read sub-view "${viewId}" failed to become visible`);
+      const subAudit = await page.evaluate((vid) => ({
+        visible: !document.querySelector(`[data-read-panel="${vid}"]`)?.hidden,
+        progressDockHidden: Boolean(document.getElementById('canvas-progress-dock')?.hidden),
+        repairsHidden: Boolean(document.getElementById('studio-toggle-repairs')?.hidden),
+      }), viewId);
+      assert.ok(subAudit.visible, `Read sub-view "${viewId}" failed to become visible`);
+      if (viewId !== 'paragraphs') {
+        assert.strictEqual(subAudit.progressDockHidden, true, `Progress dock must be hidden in Read -> ${viewId}`);
+      }
+      if (viewId === 'raw') {
+        assert.strictEqual(subAudit.repairsHidden, true, 'Repairs toggle must be hidden in Read -> Raw Original');
+      }
     }
     assert.ok(page.url().includes('mode=read') && page.url().includes('view=raw'), `URL did not persist view=raw: ${page.url()}`);
 
@@ -624,6 +684,119 @@ async function run() {
     assert.ok(rawVisibleAfterReload, 'Hard refresh did not preserve Read -> Raw Original view');
     assert.strictEqual(titleAfterReload, 'Renamed Consolidated Studio', 'Inline renamed title did not persist after reload');
     ok('All 4 Read sub-views (Paragraphs/Ideas/Speakers/Raw) & hard refresh state verified');
+
+    // Test Reading Bookmark SQLite Persistence, Zero Inline Gap, Multi-Action Selection Menu & Ask AI Drawer
+    await page.click('[data-read-view="paragraphs"]');
+    await page.waitForSelector('#subview-chunks-list .reader-flow-sent', { timeout: 5000 });
+    const bmBtnGapCheck = await page.evaluate(() => {
+      const sents = Array.from(document.querySelectorAll('#subview-chunks-list .reader-flow-sent'));
+      const nonActive = sents.find((s) => !s.classList.contains('active-reading')) || sents[1];
+      const btn = nonActive?.querySelector('.reader-bm-btn');
+      return btn ? Math.round(btn.getBoundingClientRect().width) : -1;
+    });
+    assert.strictEqual(bmBtnGapCheck, 0, `Idle .reader-bm-btn should collapse to 0px width (got ${bmBtnGapCheck}px)`);
+
+    await page.click('#subview-chunks-list .reader-bm-btn');
+    await page.waitForFunction(() => {
+      const pill = document.getElementById('reader-bookmark-pill');
+      return pill && !pill.hidden;
+    }, { timeout: 5000 });
+    await new Promise((r) => setTimeout(r, 250));
+    await page.reload({ waitUntil: 'networkidle0' });
+    await page.waitForSelector('#reader-bookmark-pill', { visible: true, timeout: 10000 });
+    const lessonAfterBm = await page.evaluate(async (id) => {
+      const token = localStorage.getItem('flaptap_auth_token');
+      const res = await fetch(`/api/history/${encodeURIComponent(id)}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      return res.json();
+    }, 'lesson_e2e_consolidated');
+    assert.ok(lessonAfterBm?.transcriptData?.readingBookmark?.sentenceIndex >= 1, 'Reading bookmark did not persist to SQLite');
+    assert.strictEqual(Boolean(lessonAfterBm?.isCompleted), false, 'Reading bookmark must not falsify derived completion');
+    ok('Reading bookmark persists in SQLite across reload without inline text gap or false completion');
+
+    // Select multi-word span inside continuous transcript -> verify Play + Ask AI + Translate + Bookmark + Copy
+    await page.click('[data-read-view="paragraphs"]');
+    await page.evaluate(() => {
+      const words = Array.from(document.querySelectorAll('#subview-chunks-list .studio-word'));
+      if (words.length >= 2) {
+        const range = document.createRange();
+        range.setStartBefore(words[0]);
+        range.setEndAfter(words[1]);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        document.dispatchEvent(new Event('selectionchange'));
+      }
+    });
+    await page.waitForSelector('#selection-action-menu', { visible: true, timeout: 5000 });
+    const selBtns = await page.$$eval('#selection-action-menu [data-selection-action]', (els) =>
+      els.map((e) => e.getAttribute('data-selection-action')),
+    );
+    assert.ok(selBtns.includes('play-selection') && selBtns.includes('ask-ai') && selBtns.includes('translate'), `Missing expected selection actions: ${selBtns.join(', ')}`);
+    await page.click('#selection-action-menu [data-selection-action="ask-ai"]');
+    await page.waitForSelector('#studio-ask-drawer', { visible: true, timeout: 5000 });
+    const quoteVisible = await page.$eval('#studio-ask-quote-card', (el) => !el.hidden && (el.textContent || '').trim().length > 0);
+    const hasMicBtn = Boolean(await page.$('#studio-ask-mic-btn'));
+    assert.ok(quoteVisible && hasMicBtn, 'Ask AI drawer missing attached quote card or voice mic button');
+    await page.click('#studio-ask-close-btn');
+    await page.waitForFunction(() => document.getElementById('studio-ask-drawer')?.hidden === true, { timeout: 3000 });
+    ok('Multi-action selection menu (Play / Ask AI / Translate) & Context-Aware AI Companion drawer verified');
+
+    // Verify Listen mode non-spoiling & sentence sync + Range Play button state toggle
+    await page.evaluate(() => {
+      window.studioState.ytPlayer = {
+        getCurrentTime: () => 0.2,
+        getDuration: () => 4,
+        seekTo: () => {},
+        playVideo: () => {},
+        pauseVideo: () => {},
+        mute: () => {},
+        unMute: () => {},
+        setPlaybackRate: () => {},
+        getPlayerState: () => 1,
+      };
+    });
+    await page.click('#subview-chunks-list .paragraph-play-btn');
+    const rangePlayActive = await page.$eval('#subview-chunks-list .paragraph-play-btn', (el) => ({
+      isPlaying: el.classList.contains('is-playing'),
+      text: el.textContent?.trim(),
+    }));
+    assert.ok(rangePlayActive.isPlaying && rangePlayActive.text === 'Pause', `Range Play button did not toggle to Pause: ${JSON.stringify(rangePlayActive)}`);
+    await page.click('#subview-chunks-list .paragraph-play-btn');
+    const rangePlayIdle = await page.$eval('#subview-chunks-list .paragraph-play-btn', (el) => ({
+      isPlaying: el.classList.contains('is-playing'),
+      text: el.textContent?.trim(),
+    }));
+    assert.ok(!rangePlayIdle.isPlaying && rangePlayIdle.text === 'Play', `Range Play button did not pause cleanly: ${JSON.stringify(rangePlayIdle)}`);
+
+    await page.evaluate(() => {
+      window.studioState.activeSentence = window.studioState.item.sentences[1];
+    });
+    await page.click('.mode-tab-btn[data-mode="listen"]');
+    const listenAudit = await page.evaluate(() => ({
+      dictIdx: window.studioState.dictationIndex,
+      liveSubHidden: Boolean(document.getElementById('deck-live-subtitle')?.hidden),
+      ttsQuote: document.getElementById('tts-active-quote')?.textContent || '',
+      compFilterHidden: Boolean(document.querySelector('.studio-comp-filter')?.hidden),
+    }));
+    assert.strictEqual(listenAudit.dictIdx, 2, 'Listen mode must sync dictationIndex to active sentence #2');
+    assert.strictEqual(listenAudit.liveSubHidden, true, 'Listen mode must hide #deck-live-subtitle to avoid spoiling answers');
+    assert.ok(!listenAudit.ttsQuote.includes('Every word plays fast'), 'Listen mode must mask #tts-active-quote');
+    assert.strictEqual(listenAudit.compFilterHidden, true, 'Listen mode must hide completion filter pills');
+    ok('Listen mode non-spoiling, active sentence sync & Range Play toggle verified');
+
+    // Audio-Only Focus mode toggle (Hide Video -> Show Video) without remounting media deck (visible on video lessons)
+    const hasVideoToggle = await page.$eval('#studio-video-toggle-btn', (el) => !el.hidden);
+    if (hasVideoToggle) {
+      await page.click('#studio-video-toggle-btn');
+      const isHiddenAttr = await page.$eval('#studio-main-content', (el) => el.getAttribute('data-video-hidden'));
+      assert.strictEqual(isHiddenAttr, '1', 'Audio-Only toggle did not set data-video-hidden="1"');
+      await page.click('#studio-video-toggle-btn');
+      const isRestoredAttr = await page.$eval('#studio-main-content', (el) => el.getAttribute('data-video-hidden'));
+      assert.strictEqual(isRestoredAttr, '0', 'Audio-Only toggle did not restore data-video-hidden="0"');
+      ok('Audio-Only focus toggle verified cleanly without remounting');
+    }
 
     // Test Unified Export Popover
     await page.click('#studio-export-btn');
@@ -646,7 +819,7 @@ async function run() {
     assert.ok(seenFlowStates.has('shadow') && seenFlowStates.has('word') && seenFlowStates.has('loop'), `Missing flow states: ${Array.from(seenFlowStates)}`);
     ok('Sentence Flow cycles cleanly through Loop, Auto-Pause, Shadow Pause, Word Loop & Continuous');
 
-    // Test Live Studio Pacing Switcher (Short -> Full -> Balanced -> Short) without remounting media deck
+    // Test Live Studio Pacing Switcher (Short -> Normal -> Short) without remounting media deck
     await page.goto(`${BASE}/studio?id=${pacingLesson.id}`, { waitUntil: 'networkidle0' });
     await page.waitForSelector('#studio-pacing-group .studio-tool-pill[data-pacing="short"].active', { timeout: 10000 });
     const initialShortCards = await page.$$eval('.sentence-driller-card', (els) => els.length);
@@ -656,26 +829,21 @@ async function run() {
       if (deck) deck.dataset.pacingKeepAlive = 'intact';
     });
 
-    await page.click('#studio-pacing-group [data-pacing="full"]');
+    await page.click('#studio-pacing-group [data-pacing="normal"]');
     await page.waitForFunction(
       (prev) => document.querySelectorAll('.sentence-driller-card').length < prev &&
-        document.querySelector('#studio-pacing-group [data-pacing="full"]')?.classList.contains('active'),
+        document.querySelector('#studio-pacing-group [data-pacing="normal"]')?.classList.contains('active'),
       { timeout: 8000 },
       initialShortCards,
     );
-    const fullCards = await page.$$eval('.sentence-driller-card', (els) => els.length);
-    assert.ok(fullCards <= 2, `Expected <=2 full sentence cards, got ${fullCards}`);
+    const normalCards = await page.$$eval('.sentence-driller-card', (els) => els.length);
+    assert.ok(normalCards <= 3, `Expected <=3 normal sentence cards, got ${normalCards}`);
     const deckIntact = await page.evaluate(() => {
       const deck = document.getElementById('studio-media-deck') || document.querySelector('.video-player-stage');
       return deck ? deck.dataset.pacingKeepAlive === 'intact' : true;
     });
     assert.ok(deckIntact, 'Media deck must NOT remount during real-time pacing switch');
 
-    await page.click('#studio-pacing-group [data-pacing="balanced"]');
-    await page.waitForFunction(
-      () => document.querySelector('#studio-pacing-group [data-pacing="balanced"]')?.classList.contains('active'),
-      { timeout: 8000 },
-    );
     await page.click('#studio-pacing-group [data-pacing="short"]');
     await page.waitForFunction(
       (expected) => document.querySelectorAll('.sentence-driller-card').length === expected &&
@@ -683,9 +851,106 @@ async function run() {
       { timeout: 8000 },
       initialShortCards,
     );
-    ok('Real-time Studio pacing switcher (Short <-> Full <-> Medium) updates cards & persists without remounting media deck');
+    ok('Real-time Studio pacing switcher (Short <-> Normal) updates cards & persists without remounting media deck');
 
-    // Test Mobile 390px & 360px zero overflow & control bar <= 140px
+    // Test Multi-Layout Engine (6 Desktop Layouts + Zero-Remount + Persistence + Split + Mobile Modes)
+    await page.setViewport({ width: 1440, height: 900 });
+    await new Promise((r) => setTimeout(r, 180));
+    await page.evaluate(() => {
+      const card = document.querySelector('.player-frame-card');
+      const sent = document.querySelector('.sentence-driller-card');
+      if (card) card.dataset.layoutKeepAlive = 'intact';
+      if (sent) sent.dataset.layoutKeepAlive = 'intact';
+    });
+
+    await page.click('#studio-layout-btn');
+    await page.waitForSelector('#studio-layout-popover', { visible: true });
+    await page.focus('#studio-layout-popover [data-studio-layout-option]');
+    await page.keyboard.press('Escape');
+    const layoutClosedOnEsc = await page.$eval('#studio-layout-popover', (el) => Boolean(el.hidden));
+    assert.strictEqual(layoutClosedOnEsc, true, 'Escape key did not close #studio-layout-popover');
+    await page.click('#studio-layout-btn');
+    await page.waitForSelector('#studio-layout-popover', { visible: true });
+    const desktopLayoutCount = await page.$$eval('#studio-layout-popover [data-studio-layout-option]', (els) => els.length);
+    const previewStagesCount = await page.$$eval('#studio-layout-popover .slp-stage', (els) => els.length);
+    assert.strictEqual(desktopLayoutCount, 6, `Expected 6 desktop layouts in picker, got ${desktopLayoutCount}`);
+    assert.strictEqual(previewStagesCount, 6, `Expected 6 animated wireframe previews, got ${previewStagesCount}`);
+
+    for (const layoutId of ['split-right', 'transcript', 'cinema-stack', 'cockpit', 'zen', 'theater']) {
+      await page.click(`#studio-layout-popover [data-studio-layout-option="${layoutId}"]`);
+      await new Promise((r) => setTimeout(r, 120));
+      const check = await page.evaluate(() => {
+        const ws = document.getElementById('studio-main-content');
+        const canvas = document.querySelector('.studio-canvas');
+        const consoleEl = document.querySelector('.studio-media-console');
+        const playerCard = document.querySelector('.player-frame-card');
+        const sent = document.querySelector('.sentence-driller-card');
+        return {
+          layout: ws?.getAttribute('data-layout'),
+          overflow: document.documentElement.scrollWidth - window.innerWidth,
+          canvasH: canvas ? Math.round(canvas.getBoundingClientRect().height) : 0,
+          consoleH: consoleEl ? Math.round(consoleEl.getBoundingClientRect().height) : 0,
+          playerAlive: playerCard?.dataset.layoutKeepAlive,
+          sentAlive: sent?.dataset.layoutKeepAlive,
+        };
+      });
+      assert.strictEqual(check.layout, layoutId, `Layout did not switch to ${layoutId}`);
+      assert.ok(check.overflow <= 4, `Desktop overflow in ${layoutId}: +${check.overflow}px`);
+      assert.ok(check.canvasH >= 240, `Canvas height too small in ${layoutId}: ${check.canvasH}px`);
+      assert.ok(check.consoleH >= 46, `Console height too small in ${layoutId}: ${check.consoleH}px`);
+      assert.strictEqual(check.playerAlive, 'intact', `Player remounted in ${layoutId}`);
+      assert.strictEqual(check.sentAlive, 'intact', `Sentence card remounted in ${layoutId}`);
+    }
+
+    // Verify Cockpit persistence across reload & Shift+Y cycle
+    await page.click('#studio-layout-popover [data-studio-layout-option="cockpit"]');
+    await page.reload({ waitUntil: 'networkidle0' });
+    await page.waitForSelector('.sentence-driller-card', { timeout: 10000 });
+    const persistedLayout = await page.$eval('#studio-main-content', (el) => el.getAttribute('data-layout'));
+    assert.strictEqual(persistedLayout, 'cockpit', 'Selected layout did not persist across reload');
+
+    await page.keyboard.down('Shift');
+    await page.keyboard.press('KeyY');
+    await page.keyboard.up('Shift');
+    const cycledLayout = await page.$eval('#studio-main-content', (el) => el.getAttribute('data-layout'));
+    assert.strictEqual(cycledLayout, 'zen', 'Shift+Y did not cycle cockpit -> zen');
+
+    // Reset back to default theater and verify single-row control bar
+    await page.evaluate(() => window.setStudioLayout('theater', { animate: false }));
+    const theaterBar = await page.evaluate(() => {
+      const bar = document.getElementById('studio-control-bar');
+      const btns = Array.from(bar?.querySelectorAll('.scb-btn') || []).filter((b) => {
+        const r = b.getBoundingClientRect();
+        return getComputedStyle(b).display !== 'none' && r.width > 0 && r.height > 0;
+      });
+      const tops = btns.map((b) => Math.round(b.getBoundingClientRect().top));
+      const bottoms = btns.map((b) => Math.round(b.getBoundingClientRect().bottom));
+      return {
+        barHeight: bottoms.length ? Math.max(...bottoms) - Math.min(...tops) : 999,
+        barOverflow: bar ? bar.scrollWidth - bar.clientWidth : 999,
+      };
+    });
+    assert.ok(theaterBar.barHeight <= 44 && theaterBar.barOverflow <= 2, `Theater control bar broke single row: ${JSON.stringify(theaterBar)}`);
+    ok('All 6 desktop layouts, zero-remount morphing, reload persistence & Shift+Y cycle verified');
+
+    // Test Tablet 768x1024 & Mobile 390px/360px zero overflow, spacious canvas & 4 mobile layouts
+    await page.setViewport({ width: 768, height: 1024 });
+    await new Promise((r) => setTimeout(r, 200));
+    const tabletCheck = await page.evaluate(() => ({
+      overflow: document.documentElement.scrollWidth - window.innerWidth,
+      canvasH: Math.round(document.querySelector('.studio-canvas')?.getBoundingClientRect().height || 0),
+      htmlOverflowY: getComputedStyle(document.documentElement).overflowY,
+      bodyOverflowY: getComputedStyle(document.body).overflowY,
+    }));
+    assert.ok(
+      tabletCheck.overflow <= 4 &&
+      tabletCheck.canvasH >= 380 &&
+      tabletCheck.htmlOverflowY === 'hidden' &&
+      tabletCheck.bodyOverflowY === 'hidden',
+      `Tablet 768x1024 layout check failed: ${JSON.stringify(tabletCheck)}`,
+    );
+
+    // Test Mobile 390px & 360px zero overflow, title legibility, canvas space & control bar <= 140px
     for (const width of [390, 360]) {
       await page.setViewport({ width, height: 844 });
       await new Promise((r) => setTimeout(r, 200));
@@ -701,12 +966,35 @@ async function run() {
           overflow: document.documentElement.scrollWidth - window.innerWidth,
           barHeight: bottoms.length ? Math.max(...bottoms) - Math.min(...tops) : 0,
           barOverflow: bar ? bar.scrollWidth - bar.clientWidth : 0,
+          titleW: Math.round(document.getElementById('studio-title')?.getBoundingClientRect().width || 0),
+          canvasH: Math.round(document.querySelector('.studio-canvas')?.getBoundingClientRect().height || 0),
         };
       });
       assert.ok(metrics.overflow <= 4, `Mobile ${width}px horizontal overflow: +${metrics.overflow}px`);
       assert.ok(metrics.barHeight <= 140 && metrics.barOverflow <= 2, `Mobile ${width}px control bar budget exceeded: ${JSON.stringify(metrics)}`);
+      assert.ok(metrics.titleW >= 80, `Mobile ${width}px title severely clipped (${metrics.titleW}px)`);
+      assert.ok(metrics.canvasH >= 320, `Mobile ${width}px sentence canvas squeezed (${metrics.canvasH}px)`);
     }
-    ok('Mobile 390px & 360px layouts pass zero-overflow & control-bar budget checks');
+
+    // Verify mobile layout picker renders 4 mobile layouts and switches cleanly
+    await page.setViewport({ width: 390, height: 844 });
+    await new Promise((r) => setTimeout(r, 150));
+    await page.click('#studio-layout-btn');
+    await page.waitForSelector('#studio-layout-popover', { visible: true });
+    const mobileOptCount = await page.$$eval('#studio-layout-popover [data-studio-layout-option]', (els) => els.length);
+    assert.strictEqual(mobileOptCount, 4, `Expected 4 mobile layouts in sheet, got ${mobileOptCount}`);
+    for (const mLayout of ['mini', 'scroll-dock', 'zen', 'docked']) {
+      await page.click(`#studio-layout-popover [data-studio-layout-option="${mLayout}"]`);
+      await new Promise((r) => setTimeout(r, 120));
+      const mRes = await page.evaluate(() => ({
+        mobileLayout: document.getElementById('studio-main-content')?.getAttribute('data-mobile-layout'),
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+      }));
+      assert.strictEqual(mRes.mobileLayout, mLayout);
+      assert.ok(mRes.overflow <= 4, `Mobile ${mLayout} overflow: +${mRes.overflow}px`);
+    }
+    await page.click('#slp-close-btn');
+    ok('Tablet 768px & Mobile 390px/360px layouts, readable title, spacious canvas & 4 mobile modes verified');
 
     assert.strictEqual(consoleErrors.length, 0, `Uncaught browser page errors: ${consoleErrors.join(' | ')}`);
     // 10. Regression check: DOM word timing decoration handles numbers, currency, URLs, curly apostrophes & [ __ ] tokens
@@ -783,6 +1071,58 @@ async function run() {
     assert.deepStrictEqual(karaokeToggle.off, { pressed: 'false', stored: 'off' });
     assert.deepStrictEqual(karaokeToggle.on, { pressed: 'true', stored: 'on' });
     ok('Live word Highlight toggle disables/enables and persists preference');
+
+    // Verify Unified Studio Enhancements Checklist Popover & Manual Transcript Import API
+    await page.click('#studio-review-btn');
+    await page.waitForSelector('#studio-review-popover', { visible: true });
+    const enhanceAudit = await page.evaluate(() => {
+      const checks = Array.from(document.querySelectorAll('#studio-enhance-list .studio-enhance-check'));
+      return {
+        totalChecks: checks.length,
+        anyCheckedByDefault: checks.some((c) => c.checked),
+        runDisabled: document.getElementById('studio-run-enhancements-btn')?.disabled,
+      };
+    });
+    assert.strictEqual(await page.$('#enhance-row-transcribe'), null, 'Third-party Whisper/Groq transcribe checkbox must not be present');
+    assert.ok(enhanceAudit.totalChecks >= 4, `Expected >=4 enhancement checklist tasks, got ${enhanceAudit.totalChecks}`);
+    assert.strictEqual(enhanceAudit.anyCheckedByDefault, false, 'All deferred enhancements must start unchecked by default');
+    assert.strictEqual(enhanceAudit.runDisabled, true, 'Run Selected button must start disabled until user checks an option');
+
+    await page.click('#studio-enhance-model-toggle');
+    const aiMountVisible = await page.$eval('#studio-review-ai-mount', (el) => !el.hidden);
+    assert.ok(aiMountVisible, 'FlaptapAiSelector disclosure failed to expand inside Enhancements popover');
+    await page.click('#studio-review-btn'); // Close popover
+    ok('Unified Studio Enhancements checklist renders all deferred options unchecked by default');
+
+    const importRes = await api(
+      `/api/tracks/shadowing/${seeded.id}/transcript/import`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ rawText: 'Hello there. Welcome back to instant shadowing!' }),
+      },
+      tokenA,
+    );
+    assert.strictEqual(importRes.status, 201);
+    assert.ok(Array.isArray(importRes.json.sentences) && importRes.json.sentences.length === 2, 'Manual transcript import should produce 2 sentences');
+    ok('POST /api/tracks/shadowing/:id/transcript/import deterministically populates sentences with 0% CPU');
+
+    const sttDisabledRes = await api(
+      `/api/tracks/shadowing/${seeded.id}/transcribe`,
+      { method: 'POST', body: JSON.stringify({ allowLocalWhisper: true }) },
+      tokenA,
+    );
+    assert.strictEqual(sttDisabledRes.status, 400);
+    assert.strictEqual(sttDisabledRes.json?.code, 'third_party_stt_disabled');
+    ok('Third-party Whisper/Groq transcription endpoint strictly returns 400 third_party_stt_disabled');
+
+    const guardBlockedRes = await api(
+      '/api/tracks/shadowing/process',
+      { method: 'POST', body: JSON.stringify({ url: 'https://www.youtube.com/watch?v=zzGuardTest9' }) },
+      tokenA,
+    );
+    assert.strictEqual(guardBlockedRes.status, 503);
+    assert.strictEqual(guardBlockedRes.json?.code, 'live_fetch_disabled');
+    ok('Uncached live YouTube process is blocked at 503 live_fetch_disabled under FLAPTAP_LIVE_TRANSCRIPTS=off (0 outbound calls)');
 
     ok('Zero uncaught browser errors across entire E2E flow');
 

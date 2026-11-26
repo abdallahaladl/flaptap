@@ -836,6 +836,23 @@ export class AmericanExtractorService {
     }
   }
 
+  deleteNoteItem(userId: string, id: string, index: number) {
+    try {
+      const updated = this.repository.deleteNoteItem(userId, id, index);
+      if (!updated) throw new NotFoundException('Extraction not found.');
+      return updated;
+    } catch (error: any) {
+      if (error instanceof NotFoundException) throw error;
+      throw new BadRequestException(error?.message || 'Could not remove phrase.');
+    }
+  }
+
+  resetNoteProgress(userId: string, id: string) {
+    const updated = this.repository.resetProgress(userId, id);
+    if (!updated) throw new NotFoundException('Extraction not found.');
+    return updated;
+  }
+
   deleteNote(userId: string, id: string): void {
     if (!this.repository.delete(userId, id)) {
       throw new NotFoundException('Extraction not found.');

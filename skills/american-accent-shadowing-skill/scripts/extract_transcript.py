@@ -15,6 +15,7 @@ import html
 import json
 import re
 import argparse
+import concurrent.futures
 import tempfile
 import subprocess
 import socket
@@ -32,6 +33,7 @@ NO_CAPTIONS = "no_captions"
 RATE_LIMITED = "rate_limited"
 TIMEOUT = "timeout"
 INVALID_URL = "invalid_url"
+LIVE_FETCH_DISABLED = "live_fetch_disabled"
 
 VIDEO_UNAVAILABLE_MESSAGE = (
     "This video is unavailable. It may have been removed, made private, or "
@@ -43,6 +45,9 @@ RATE_LIMITED_MESSAGE = (
     "Please try again in a few minutes."
 )
 TIMEOUT_MESSAGE = "YouTube took too long to respond. Please try again."
+LIVE_FETCH_DISABLED_MESSAGE = (
+    "Live transcript fetching is disabled by guard policy (FLAPTAP_LIVE_TRANSCRIPTS=off)."
+)
 
 
 class TranscriptError(RuntimeError):
@@ -528,12 +533,22 @@ def _fetch_oembed(video_id: str) -> Optional[Dict[str, str]]:
         return None
 
 
+def _assert_live_fetch_allowed() -> None:
+    flag = (os.environ.get("FLAPTAP_LIVE_TRANSCRIPTS") or "").strip().lower()
+    if flag in ("off", "0", "false"):
+        raise TranscriptError(LIVE_FETCH_DISABLED, LIVE_FETCH_DISABLED_MESSAGE)
+    if flag not in ("on", "1", "true") and (os.environ.get("NODE_ENV") or "").strip().lower() == "test":
+        raise TranscriptError(LIVE_FETCH_DISABLED, LIVE_FETCH_DISABLED_MESSAGE)
+
+
 def fetch_youtube_transcript(url: str, interval: int = 30) -> Dict[str, Any]:
     """
     Ultra-fast verbatim transcript extraction:
     Directly retrieves the exact original subtitles provided by the video itself
     via YouTubeTranscriptApi in ~0.5-1.5s, with clean yt-dlp subtitle fallback.
     """
+    _assert_live_fetch_allowed()
+
     video_id = extract_youtube_id(url)
     if not video_id:
         raise TranscriptError(
@@ -541,140 +556,186 @@ def fetch_youtube_transcript(url: str, interval: int = 30) -> Dict[str, Any]:
             f"Invalid YouTube URL or Video ID: '{url}'. Please provide a valid YouTube link.",
         )
 
-    # 1. Fetch metadata via fast YouTube oEmbed
+    # 1. Start fast YouTube oEmbed concurrently with caption extraction
     title = "YouTube Shadowing Session"
     uploader = "Content Creator"
-    metadata = _fetch_oembed(video_id)
-    if metadata:
-        title = metadata.get("title") or title
-        uploader = metadata.get("creator") or uploader
+    saw_rate_limit = False
+    saw_no_captions = False
+    saw_unavailable = False
 
-    # 2. Direct YouTubeTranscriptApi: exact original video subtitles
-    try:
-        from youtube_transcript_api import YouTubeTranscriptApi
-        api = YouTubeTranscriptApi()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        oembed_future = executor.submit(_fetch_oembed, video_id)
 
-        tr = None
+        def resolve_oembed() -> None:
+            nonlocal title, uploader
+            metadata = oembed_future.result()
+            if metadata:
+                title = metadata.get("title") or title
+                uploader = metadata.get("creator") or uploader
+
+        # 2. Direct YouTubeTranscriptApi: exact original video subtitles
         try:
-            t_list = api.list(video_id)
-            try:
-                tr = t_list.find_manually_created_transcript(['en', 'en-US', 'en-GB', 'en-orig'])
-            except Exception:
-                tr = t_list.find_generated_transcript(['en', 'en-US', 'en-GB', 'en-orig'])
-        except Exception:
+            from youtube_transcript_api import YouTubeTranscriptApi
+            api = YouTubeTranscriptApi()
+
             tr = None
+            has_list = hasattr(api, "list")
+            if has_list:
+                try:
+                    t_list = api.list(video_id)
+                    try:
+                        tr = t_list.find_manually_created_transcript(['en', 'en-US', 'en-GB', 'en-orig'])
+                    except Exception:
+                        tr = t_list.find_generated_transcript(['en', 'en-US', 'en-GB', 'en-orig'])
+                except Exception as list_err:
+                    list_msg = str(list_err).lower()
+                    if any(k in list_msg for k in ("ipblocked", "requestblocked", "too many requests", "429", "rate limit")):
+                        saw_rate_limit = True
+                    elif "videounavailable" in list_msg or "invalidvideoid" in list_msg:
+                        saw_unavailable = True
+                    elif "transcriptsdisabled" in list_msg or "notranscriptfound" in list_msg:
+                        saw_no_captions = True
+                    tr = None
 
-        # Prefer per-word JSON3 timedtext track directly from YouTube
-        if tr and getattr(tr, '_url', None):
-            try:
-                timedtext_url = tr._url
-                if '&fmt=' not in timedtext_url:
-                    timedtext_url += '&fmt=json3'
-                else:
-                    timedtext_url = re.sub(r'&fmt=[^&]+', '&fmt=json3', timedtext_url)
-                req = urllib.request.Request(timedtext_url, headers={"User-Agent": "Mozilla/5.0"})
-                with urllib.request.urlopen(req, timeout=5) as resp:
-                    json3_payload = json.loads(resp.read().decode("utf-8"))
-                    events = json3_payload.get("events", [])
-                    if events:
-                        cues, timed_words = parse_json3_events(events)
-                        if cues and timed_words:
-                            grouped_chunks = group_cues_by_interval(cues, interval_sec=interval)
-                            sentences = group_cues_into_sentences(cues)
-                            full_text = " ".join(c["text"] for c in cues)
-                            duration = int(cues[-1]["end_sec"]) if cues else 180
-                            return {
-                                "title": title,
-                                "creator": uploader,
-                                "url": url,
-                                "video_id": video_id,
-                                "duration_seconds": duration,
-                                "total_cues": len(cues),
-                                "chunks": grouped_chunks,
-                                "sentences": sentences,
-                                "cues": cues,
-                                "timed_words": timed_words,
-                                "full_raw_transcript": full_text,
-                            }
-            except Exception:
-                pass
+            # Prefer per-word JSON3 timedtext track directly from YouTube
+            if tr and getattr(tr, '_url', None) and not saw_rate_limit:
+                try:
+                    timedtext_url = tr._url
+                    if '&fmt=' not in timedtext_url:
+                        timedtext_url += '&fmt=json3'
+                    else:
+                        timedtext_url = re.sub(r'&fmt=[^&]+', '&fmt=json3', timedtext_url)
+                    req = urllib.request.Request(timedtext_url, headers={"User-Agent": "Mozilla/5.0"})
+                    with urllib.request.urlopen(req, timeout=4) as resp:
+                        json3_payload = json.loads(resp.read().decode("utf-8"))
+                        events = json3_payload.get("events", [])
+                        if events:
+                            cues, timed_words = parse_json3_events(events)
+                            if cues and timed_words:
+                                resolve_oembed()
+                                grouped_chunks = group_cues_by_interval(cues, interval_sec=interval)
+                                sentences = group_cues_into_sentences(cues)
+                                full_text = " ".join(c["text"] for c in cues)
+                                duration = int(cues[-1]["end_sec"]) if cues else 180
+                                return {
+                                    "title": title,
+                                    "creator": uploader,
+                                    "url": url,
+                                    "video_id": video_id,
+                                    "duration_seconds": duration,
+                                    "total_cues": len(cues),
+                                    "chunks": grouped_chunks,
+                                    "sentences": sentences,
+                                    "cues": cues,
+                                    "timed_words": timed_words,
+                                    "full_raw_transcript": full_text,
+                                }
+                except urllib.error.HTTPError as http_err:
+                    if http_err.code == 429:
+                        saw_rate_limit = True
+                except Exception:
+                    pass
 
-        transcripts = None
-        if tr:
-            try:
-                transcripts = tr.fetch()
-            except Exception:
-                transcripts = None
-        if not transcripts:
-            try:
-                transcripts = api.fetch(video_id)
-            except Exception:
-                transcripts = None
+            transcripts = None
+            if tr and not saw_rate_limit:
+                try:
+                    transcripts = tr.fetch()
+                except Exception as fetch_err:
+                    fetch_msg = str(fetch_err).lower()
+                    if any(k in fetch_msg for k in ("ipblocked", "requestblocked", "too many requests", "429", "rate limit")):
+                        saw_rate_limit = True
+                    transcripts = None
+            elif not has_list and not saw_rate_limit and hasattr(api, "fetch"):
+                try:
+                    transcripts = api.fetch(video_id)
+                except Exception as api_err:
+                    api_msg = str(api_err).lower()
+                    if any(k in api_msg for k in ("ipblocked", "requestblocked", "too many requests", "429", "rate limit")):
+                        saw_rate_limit = True
+                    transcripts = None
 
-        if transcripts:
-            raw_snippets = []
-            for s in transcripts:
-                txt = s.text.replace("\n", " ").strip()
-                if txt:
-                    raw_snippets.append({
-                        "start_sec": round(s.start, 3),
-                        "duration": round(s.duration, 3),
-                        "text": txt,
+            if transcripts:
+                raw_snippets = []
+                for s in transcripts:
+                    txt = s.text.replace("\n", " ").strip()
+                    if txt:
+                        raw_snippets.append({
+                            "start_sec": round(s.start, 3),
+                            "duration": round(s.duration, 3),
+                            "text": txt,
+                        })
+
+                cues = []
+                for i, snip in enumerate(raw_snippets):
+                    s_sec = snip["start_sec"]
+                    if i + 1 < len(raw_snippets):
+                        next_start = raw_snippets[i + 1]["start_sec"]
+                        e_sec = round(min(s_sec + snip["duration"], next_start), 3)
+                        if e_sec <= s_sec:
+                            e_sec = round(s_sec + min(snip["duration"], 2.0), 3)
+                    else:
+                        e_sec = round(s_sec + min(snip["duration"], 4.0), 3)
+
+                    cues.append({
+                        "start": format_seconds_str(s_sec),
+                        "end": format_seconds_str(e_sec),
+                        "start_sec": s_sec,
+                        "end_sec": e_sec,
+                        "text": snip["text"],
                     })
 
-            cues = []
-            for i, snip in enumerate(raw_snippets):
-                s_sec = snip["start_sec"]
-                if i + 1 < len(raw_snippets):
-                    next_start = raw_snippets[i + 1]["start_sec"]
-                    e_sec = round(min(s_sec + snip["duration"], next_start), 3)
-                    if e_sec <= s_sec:
-                        e_sec = round(s_sec + min(snip["duration"], 2.0), 3)
-                else:
-                    e_sec = round(s_sec + min(snip["duration"], 4.0), 3)
+                if cues:
+                    resolve_oembed()
+                    grouped_chunks = group_cues_by_interval(cues, interval_sec=interval)
+                    sentences = group_cues_into_sentences(cues)
+                    full_text = " ".join(c["text"] for c in cues)
+                    duration = int(cues[-1]["end_sec"]) if cues else 180
+                    timed_words = extract_timed_words(cues)
 
-                cues.append({
-                    "start": format_seconds_str(s_sec),
-                    "end": format_seconds_str(e_sec),
-                    "start_sec": s_sec,
-                    "end_sec": e_sec,
-                    "text": snip["text"],
-                })
+                    return {
+                        "title": title,
+                        "creator": uploader,
+                        "url": url,
+                        "video_id": video_id,
+                        "duration_seconds": duration,
+                        "total_cues": len(cues),
+                        "chunks": grouped_chunks,
+                        "sentences": sentences,
+                        "cues": cues,
+                        "timed_words": timed_words,
+                        "full_raw_transcript": full_text,
+                    }
+        except TranscriptError:
+            raise
+        except Exception as error:
+            err_msg = str(error).lower()
+            if "videounavailable" in err_msg or "invalidvideoid" in err_msg:
+                raise TranscriptError(VIDEO_UNAVAILABLE, VIDEO_UNAVAILABLE_MESSAGE)
+            if "transcriptsdisabled" in err_msg or "notranscriptfound" in err_msg:
+                raise TranscriptError(NO_CAPTIONS, NO_CAPTIONS_MESSAGE)
+            if any(k in err_msg for k in ("ipblocked", "requestblocked", "too many requests", "429", "rate limit")):
+                saw_rate_limit = True
 
-            if cues:
-                grouped_chunks = group_cues_by_interval(cues, interval_sec=interval)
-                sentences = group_cues_into_sentences(cues)
-                full_text = " ".join(c["text"] for c in cues)
-                duration = int(cues[-1]["end_sec"]) if cues else 180
-                timed_words = extract_timed_words(cues)
+        resolve_oembed()
 
-                return {
-                    "title": title,
-                    "creator": uploader,
-                    "url": url,
-                    "video_id": video_id,
-                    "duration_seconds": duration,
-                    "total_cues": len(cues),
-                    "chunks": grouped_chunks,
-                    "sentences": sentences,
-                    "cues": cues,
-                    "timed_words": timed_words,
-                    "full_raw_transcript": full_text,
-                }
-    except TranscriptError:
-        raise
-    except Exception as error:
-        err_msg = str(error).lower()
-        if "videounavailable" in err_msg or "invalidvideoid" in err_msg:
-            raise TranscriptError(VIDEO_UNAVAILABLE, VIDEO_UNAVAILABLE_MESSAGE)
-        if "transcriptsdisabled" in err_msg or "notranscriptfound" in err_msg:
-            raise TranscriptError(NO_CAPTIONS, NO_CAPTIONS_MESSAGE)
+    if saw_rate_limit:
+        raise TranscriptError(RATE_LIMITED, RATE_LIMITED_MESSAGE)
+    if saw_unavailable:
+        raise TranscriptError(VIDEO_UNAVAILABLE, VIDEO_UNAVAILABLE_MESSAGE)
+    if saw_no_captions:
+        raise TranscriptError(NO_CAPTIONS, NO_CAPTIONS_MESSAGE)
 
-    # 3. Clean yt-dlp fallback to download the exact video caption file
+    # 3. Clean yt-dlp fallback to download the exact video caption file (never retries on 429/disabled/unavailable)
     with tempfile.TemporaryDirectory() as tmpdir:
         sub_prefix = os.path.join(tmpdir, "caption")
         dl_cmd = [
             "yt-dlp",
+            "--no-playlist",
+            "--retries", "0",
+            "--extractor-retries", "0",
+            "--fragment-retries", "0",
+            "--sleep-requests", "1.5",
+            "--sleep-subtitles", "1.5",
             "--extractor-args", "youtube:player_client=android",
             "--skip-download",
             "--write-subs",
@@ -729,6 +790,12 @@ def fetch_youtube_transcript(url: str, interval: int = 30) -> Dict[str, Any]:
 
         vtt_files = [f for f in os.listdir(tmpdir) if f.endswith(".vtt")]
         if not vtt_files:
+            stderr_low = (res.stderr or "").lower()
+            if saw_rate_limit or any(
+                k in stderr_low
+                for k in ("429", "too many requests", "sign in to confirm", "not a bot", "captcha", "rate limit")
+            ):
+                raise TranscriptError(RATE_LIMITED, RATE_LIMITED_MESSAGE)
             raise TranscriptError(NO_CAPTIONS, NO_CAPTIONS_MESSAGE)
 
         # Pick original / standard English vtt file

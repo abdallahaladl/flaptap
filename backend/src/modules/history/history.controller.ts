@@ -20,12 +20,16 @@ import {
 } from '../../core/database/history.repository';
 import { AuthService } from '../auth/auth.service';
 import { requireAuthenticatedUser } from '../auth/auth.request';
+import { AuditLogRepository } from '../data-lifecycle/audit-log.repository';
+import { DataLifecycleService } from '../data-lifecycle/data-lifecycle.service';
 
 @Controller('api/history')
 export class HistoryController {
   constructor(
     private readonly historyRepo: HistoryRepository,
     private readonly authService: AuthService,
+    private readonly dataLifecycle: DataLifecycleService,
+    private readonly auditLog: AuditLogRepository,
   ) {}
 
   @Get()
@@ -53,16 +57,26 @@ export class HistoryController {
   }
 
   @Post('clear')
-  clearHistory(@Req() req: Request) {
+  clearHistory(
+    @Body() body: { track?: 'shadowing' | 'street_talk' | 'phonetics' | 'all' } | undefined,
+    @Req() req: Request,
+  ) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    const removedCount = this.historyRepo.clearAll(identity);
-    return { success: true, removedCount, message: 'Lesson library cleared.' };
+    const track = body?.track || 'all';
+    const res = this.dataLifecycle.purgeLessonsByTrack(identity.userId, track);
+    return {
+      success: true,
+      removedCount: res.removedCount,
+      purged: res.purged,
+      message: 'Lesson library cleared.',
+    };
   }
 
   @Post('reset')
   resetWebsite(@Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return this.historyRepo.resetToDefaultShowcase(identity);
+    this.dataLifecycle.purgeLessonsByTrack(identity.userId, 'all');
+    return [];
   }
 
   @Post('cache/clear')
@@ -78,7 +92,7 @@ export class HistoryController {
     return {
       success: true,
       scope,
-      ...this.historyRepo.clearAllCaches(scope, identity),
+      ...this.dataLifecycle.clearLessonCaches(identity.userId, 'all', scope),
     };
   }
 
@@ -96,10 +110,38 @@ export class HistoryController {
     if (!action || !['delete', 'clear_cache', 'reset_progress'].includes(action)) {
       throw new BadRequestException('Invalid bulk action.');
     }
+    const ids = Array.isArray(body?.ids) ? body.ids : [];
+    if (action === 'delete') {
+      return {
+        success: true,
+        action,
+        ...this.dataLifecycle.purgeLessonsBulk(identity.userId, ids),
+      };
+    }
+    if (action === 'clear_cache') {
+      const res = this.dataLifecycle.clearLessonCaches(identity.userId, ids, 'all');
+      return {
+        success: true,
+        action,
+        affectedCount: res.clearedLessonsCount,
+        purged: res.purged,
+      };
+    }
+    const result = this.historyRepo.bulkManage(ids, action, identity);
+    if (result.affectedCount > 0) {
+      this.auditLog.record(identity.userId, {
+        action: 'bulk_reset_lesson_progress',
+        feature: 'shadowing',
+        scope: 'bulk',
+        targetLabel: `${result.affectedCount} lesson(s)`,
+        summary: `Reset study progress for ${result.affectedCount} lesson(s)`,
+        purged: { lessons: result.affectedCount },
+      });
+    }
     return {
       success: true,
       action,
-      ...this.historyRepo.bulkManage(body?.ids || [], action, identity),
+      ...result,
     };
   }
 
@@ -107,13 +149,35 @@ export class HistoryController {
   clearActivityLogs(@Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
     const removedCount = this.historyRepo.clearActivityLogs(identity);
+    if (removedCount > 0) {
+      this.auditLog.record(identity.userId, {
+        action: 'clear_activity_logs',
+        feature: 'activity',
+        scope: 'feature',
+        targetLabel: 'Practice Timeline & Streak',
+        summary: `Cleared ${removedCount} practice logs and reset streak`,
+        purged: { practiceLogs: removedCount },
+      });
+    }
     return { success: true, removedCount };
   }
 
   @Delete('activity/:logId')
   deleteActivityLog(@Param('logId') logId: string, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return { success: this.historyRepo.deleteActivityLog(logId, identity) };
+    const deleted = this.historyRepo.deleteActivityLog(logId, identity);
+    if (deleted) {
+      this.auditLog.record(identity.userId, {
+        action: 'delete_activity_log',
+        feature: 'activity',
+        scope: 'item',
+        targetId: logId,
+        targetLabel: 'Practice Log',
+        summary: 'Removed practice session log entry',
+        purged: { practiceLogs: 1 },
+      });
+    }
+    return { success: deleted };
   }
 
   @Get(':id')
@@ -203,7 +267,10 @@ export class HistoryController {
     if (!['all', 'coach', 'translations', 'transcript'].includes(scope)) {
       throw new BadRequestException('Invalid lesson cache scope.');
     }
-    const summary = this.historyRepo.clearLessonCache(id, scope, identity);
+    const existing = this.historyRepo.findById(id, identity);
+    if (!existing) throw new NotFoundException(`Lesson "${id}" not found`);
+    this.dataLifecycle.clearLessonCaches(identity.userId, [id], scope);
+    const summary = this.historyRepo.findSummaries(undefined, identity).find((s) => s.id === id);
     if (!summary) throw new NotFoundException(`Lesson "${id}" not found`);
     return { success: true, scope, item: summary };
   }
@@ -221,13 +288,23 @@ export class HistoryController {
       identity,
     );
     if (!summary) throw new NotFoundException(`Lesson "${id}" not found`);
+    this.auditLog.record(identity.userId, {
+      action: 'reset_lesson_progress',
+      feature: summary.track === 'street_talk' ? 'street_talk' : summary.track === 'phonetics' ? 'phonetics' : 'shadowing',
+      scope: 'progress',
+      targetId: id,
+      targetLabel: summary.title,
+      summary: `Reset study progress${body?.clearNotes ? ' and notes' : ''} for "${summary.title}"`,
+      purged: { lessons: 1 },
+    });
     return { success: true, item: summary };
   }
 
   @Delete(':id')
   deleteItem(@Param('id') id: string, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return { success: this.historyRepo.delete(id, identity) };
+    const res = this.dataLifecycle.purgeLesson(identity.userId, id);
+    return { success: res.deleted, purged: res.purged };
   }
 
   @Post(':id/drill')

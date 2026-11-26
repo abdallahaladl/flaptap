@@ -2,18 +2,32 @@ import { escapeTranscriptHtml } from './highlights';
 import { TimedWord, TranscriptResult } from '../../modules/tracks/shadowing/transcript.service';
 import { ChunkItem, SentenceItem } from '../database/history.repository';
 
-export type ShadowingPacingMode = 'short' | 'balanced' | 'full';
+export type ShadowingPacingMode = 'short' | 'normal';
 
-export function isValidPacingMode(raw: unknown): raw is ShadowingPacingMode {
-  return raw === 'short' || raw === 'balanced' || raw === 'full';
+/**
+ * Legacy pacing labels fold into the current two-mode model:
+ * - `balanced` was the old "Medium" mode; it only split sentences longer than
+ *   ~13 words, so it rendered identically to the old Full mode.
+ * - `full` was the old complete-sentence mode; it allowed 45-word walls.
+ * Both now resolve to `normal`, the smart complete-sentence mode.
+ */
+const LEGACY_PACING_ALIASES: Record<string, ShadowingPacingMode> = {
+  balanced: 'normal',
+  full: 'normal',
+};
+
+export function isValidPacingMode(raw: unknown): boolean {
+  if (typeof raw !== 'string') return false;
+  const clean = raw.trim().toLowerCase();
+  return clean === 'short' || clean === 'normal' || Boolean(LEGACY_PACING_ALIASES[clean]);
 }
 
 export function normalizePacingMode(raw?: unknown): ShadowingPacingMode {
   if (typeof raw === 'string') {
     const clean = raw.trim().toLowerCase();
-    if (clean === 'short' || clean === 'balanced' || clean === 'full') {
-      return clean;
-    }
+    if (clean === 'short') return 'short';
+    if (clean === 'normal') return 'normal';
+    if (LEGACY_PACING_ALIASES[clean]) return LEGACY_PACING_ALIASES[clean];
   }
   return 'short';
 }
@@ -117,6 +131,9 @@ const OBJECT_TAKING_VERBS = new Set([
   'accumulate', 'accumulating', 'checking', 'doing', 'getting', 'making', 'taking',
   'telling', 'giving', 'showing', 'helping', 'guiding', 'finding', 'learning',
 ]);
+
+/** Pronouns that, when left at the end of a mid-sentence slice, strand a verb/preposition. */
+const CHUNK_TAIL_PRONOUNS = new Set(['me', 'you', 'him', 'her', 'us', 'them', 'it']);
 
 /** Object pronouns, articles, determiners, and verb particles bound to an immediately preceding verb. */
 const OBJECT_OR_COMPLEMENT_NEXT = new Set([
@@ -437,15 +454,67 @@ const KNOWN_BINOMIAL_PAIRS = new Set([
   'again and again',
 ]);
 
+interface PacingProfile {
+  /** Sentences at or below this many words never split, regardless of pace. */
+  wholeAlwaysWords: number;
+  /** Sentences within this word + duration budget stay as one complete line. */
+  wholeMaxWords: number;
+  wholeMaxDurSec: number;
+  minWords: number;
+  maxWords: number;
+  idealDurSec: number;
+  minDurSec: number;
+  splitBaseCost: number;
+  anchorTwoWordChunks: boolean;
+  /** Length penalty for a slice; zero inside the mode's sweet spot. */
+  chunkCost: (length: number) => number;
+}
+
+const PACING_PROFILES: Record<ShadowingPacingMode, PacingProfile> = {
+  short: {
+    // Never cut a complete short thought. Up to 11 words stays whole (or 4.5s
+    // for slow speech); longer sentences break into 4–9 word drill units.
+    wholeAlwaysWords: 6,
+    wholeMaxWords: 11,
+    wholeMaxDurSec: 4.5,
+    minWords: 2,
+    maxWords: 9,
+    idealDurSec: 2.6,
+    minDurSec: 0.8,
+    splitBaseCost: 2.8,
+    anchorTwoWordChunks: true,
+    // 4–8 words is the zero-penalty sweet spot for effortless active shadowing.
+    chunkCost: (len) => (len === 2 ? 3.2 : len === 3 ? 2.2 : len === 9 ? 1.4 : 0),
+  },
+  normal: {
+    wholeAlwaysWords: 0,
+    // Complete-sentence budget: one normal spoken sentence fits on one line.
+    // A 40-word run-on is not a "normal" line, so only genuinely long
+    // sentences are broken — at their strongest clause boundary.
+    wholeMaxWords: 20,
+    wholeMaxDurSec: 9.5,
+    minWords: 6,
+    maxWords: 18,
+    idealDurSec: 5.5,
+    minDurSec: 2.0,
+    splitBaseCost: 6.5,
+    anchorTwoWordChunks: false,
+    // 9–15 words per line: two balanced clauses, never a 3-word fragment.
+    chunkCost: (len) => (len < 9 ? (9 - len) * 0.9 : len > 15 ? (len - 15) * 1.0 : 0),
+  },
+};
+
 /**
- * Splits a long grammatical sentence into rhythmically cohesive units optimized
- * for the requested shadowing pacing mode (`short` | `balanced` | `full`) using
- * globally optimal dynamic programming over linguistic & acoustic boundaries.
+ * Splits a grammatical sentence into shadowing units using one shared DP over
+ * linguistic & acoustic boundaries. The profile only tunes the goals; the
+ * boundary intelligence (punctuation, clause starters, pauses, verb-object
+ * integrity) is shared by both modes, so there is no duplicated splitter.
  *
  * Guarantees:
- * - `short`: fast-path unsplit if `n < 6 || (n <= 7 && totalDur <= 3.2)`; DP window 3–8 words, 4–7 sweet spot, 3.2s ideal.
- * - `balanced`: fast-path unsplit if `n < 8 || (n <= 12 && totalDur <= 4.8)`; DP window 4–14 words, 7–12 sweet spot, 4.8s ideal.
- * - `full`: preserves complete grammatical sentences intact (`n <= 28 && totalDur <= 12.0`); only splits extreme run-ons (8–24 words, 9.0s ideal).
+ * - `short`: 4–9 word drill units (4–8 sweet spot); complete thoughts up to 11 words stay intact.
+ * - `normal`: a complete sentence of up to ~20 words / 9.5s stays intact;
+ *   longer sentences split only at their strongest clause boundary into
+ *   balanced 9–15 word halves instead of arbitrary word-count chunks.
  * - Preserves exact word order and millisecond timestamps without mutating any word timing.
  */
 function splitLongSentence(
@@ -455,23 +524,12 @@ function splitLongSentence(
   const n = words.length;
   if (n === 0) return [];
   const mode = normalizePacingMode(pacingMode);
+  const profile = PACING_PROFILES[mode];
   const totalDur = Math.max(0, words[n - 1].end - words[0].start);
 
-  if (mode === 'short') {
-    if (n <= 5 || (n <= 6 && totalDur <= 2.6)) return [words];
-  } else if (mode === 'balanced') {
-    if (n <= 13 || (n <= 16 && totalDur <= 5.2)) return [words];
-  } else {
-    if (n <= 45 && totalDur <= 18.0) return [words];
-  }
-
-  const MIN_WORDS = mode === 'short' ? 2 : mode === 'balanced' ? 5 : 12;
-  const MAX_WORDS = mode === 'short' ? 8 : mode === 'balanced' ? 17 : 36;
-  const IDEAL_DUR = mode === 'short' ? 2.6 : mode === 'balanced' ? 5.5 : 10.5;
-  const MIN_DUR = mode === 'short' ? 0.8 : mode === 'balanced' ? 1.6 : 2.5;
-  const SPLIT_BASE_COST = mode === 'full' ? 7.5 : mode === 'balanced' ? 5.6 : 2.8;
-
-  if (n < (mode === 'short' ? 3 : MIN_WORDS)) return [words];
+  if (n <= profile.wholeAlwaysWords) return [words];
+  if (n <= profile.wholeMaxWords && totalDur <= profile.wholeMaxDurSec) return [words];
+  if (n < profile.minWords) return [words];
 
   // Precompute boundary quality cost for cutting right after words[k - 1] (before words[k])
   const boundaryCost = new Array<number>(n + 1).fill(0);
@@ -547,6 +605,9 @@ function splitLongSentence(
     if (!hasPunctuation && effectivePause < 0.22 && BARE_SUBJECT_PRONOUNS.has(prev.clean)) {
       cost += 10; // Never strand bare subject pronouns ("where I | envision")
     }
+    if (!hasPunctuation && CHUNK_TAIL_PRONOUNS.has(prev.clean)) {
+      cost += 14; // Never end a slice on an object/subject pronoun ("help you | out", "if you | want")
+    }
 
     if (hasPunctuation) {
       cost -= 11; // Strongest preference: natural comma/semicolon/dash pause
@@ -581,42 +642,28 @@ function splitLongSentence(
   const back = new Array<number>(n + 1).fill(-1);
   dp[0] = 0;
 
-  for (let end = MIN_WORDS; end <= n; end++) {
-    const minStart = Math.max(0, end - MAX_WORDS);
-    const maxStart = end - MIN_WORDS;
+  for (let end = profile.minWords; end <= n; end++) {
+    const minStart = Math.max(0, end - profile.maxWords);
+    const maxStart = end - profile.minWords;
     for (let start = minStart; start <= maxStart; start++) {
       if (dp[start] >= INF) continue;
       const len = end - start;
-      // Only allow a 2-word slice in 'short' mode when anchored on both edges by comma/pause/sentence boundary
+      // Short mode may only use a 2-word slice when anchored on both edges by a
+      // comma/pause/sentence boundary.
       if (
         len === 2 &&
-        (mode !== 'short' ||
-          !(start === 0 || boundaryHasBreak[start]) ||
-          !(end === n || boundaryHasBreak[end]))
+        profile.anchorTwoWordChunks &&
+        (!(start === 0 || boundaryHasBreak[start]) || !(end === n || boundaryHasBreak[end]))
       ) {
         continue;
       }
       const dur = Math.max(0, words[end - 1].end - words[start].start);
 
-      let chunkCost = 0;
-      if (mode === 'short') {
-        if (len === 2) chunkCost += 3.2;
-        else if (len === 3) chunkCost += 2.2;
-        else if (len === 8) chunkCost += 1.4;
-        // 4–7 words is the zero-penalty sweet spot for effortless active shadowing
-      } else if (mode === 'balanced') {
-        if (len < 7) chunkCost += (7 - len) * 1.25;
-        else if (len > 13) chunkCost += (len - 13) * 1.3;
-        // 7–13 words is the sweet spot for balanced natural breath cadence
-      } else {
-        if (len < 14) chunkCost += (14 - len) * 1.0;
-        else if (len > 28) chunkCost += (len - 28) * 1.0;
-      }
+      let chunkCost = profile.chunkCost(len);
+      if (dur > profile.idealDurSec) chunkCost += (dur - profile.idealDurSec) * 5;
+      else if (dur < profile.minDurSec) chunkCost += (profile.minDurSec - dur) * 4;
 
-      if (dur > IDEAL_DUR) chunkCost += (dur - IDEAL_DUR) * 5;
-      else if (dur < MIN_DUR) chunkCost += (MIN_DUR - dur) * 4;
-
-      const splitPenalty = start === 0 ? 0 : SPLIT_BASE_COST + boundaryCost[start];
+      const splitPenalty = start === 0 ? 0 : profile.splitBaseCost + boundaryCost[start];
       const total = dp[start] + splitPenalty + chunkCost;
       if (total < dp[end]) {
         dp[end] = total;
@@ -678,7 +725,7 @@ export function splitTimedWordsForShadowing<
  *
  * Guarantee:
  * - On punctuated transcripts: extracts true sentences and divides long multi-clause
- *   run-ons according to `pacingMode` (`short` | `balanced` | `full`) at natural clause,
+ *   run-ons according to `pacingMode` (`short` | `normal`) at natural clause,
  *   list, or breath boundaries.
  * - On unpunctuated ASR auto-captions: combines acoustic phrase-final pause
  *   detection with syntactic completeness checks scaled to `pacingMode`.

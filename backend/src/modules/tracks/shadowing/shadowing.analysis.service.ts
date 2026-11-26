@@ -211,6 +211,11 @@ export class ShadowingAnalysisService {
       item.studyNotes,
     );
 
+    // Guard against resurrecting or writing back to a lesson deleted mid-analysis
+    if (!this.historyRepo.findById(item.id)) {
+      return analysis;
+    }
+
     this.historyRepo.update(item.id, {
       aiAnalysis: analysis,
       analysisStatus: 'ready',

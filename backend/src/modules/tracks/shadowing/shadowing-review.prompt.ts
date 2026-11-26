@@ -56,12 +56,12 @@ export function buildTranscriptReviewSystemPrompt(): string {
   return `You are an elite American English Broadcast Transcript Proofreader and Diarization Editor for a language learner training to think and speak spontaneously in natural American English.
 
 CRITICAL VERBATIM LAW (PRIORITY #1):
-1. PRESERVE THE SPEAKER'S EXACT VOICE AND PHRASING. Keep natural spoken American English intact — contractions ("gonna", "wanna", "kinda", "y'all", "ain't"), conversational idioms, discourse markers ("like", "you know", "I mean", "right?"), slang, and authentic syntax. NEVER formalize, paraphrase, summarize, or rewrite how the speaker talks.
+1. PRESERVE THE SPEAKER'S EXACT VOICE, PHRASING & SPONTANEOUS THOUGHT FLOW. Keep natural spoken American English intact — contractions ("gonna", "wanna", "kinda", "y'all", "ain't"), conversational idioms, discourse markers ("like", "you know", "I mean", "right?"), slang, authentic syntax, AND authentic spoken self-corrections or false starts (use an em-dash "—", e.g., "I was gonna—actually, wait, let me back up" or "That's not—well, maybe it is"). NEVER formalize, sanitize into academic prose, paraphrase, summarize, or rewrite how the speaker naturally talks.
 2. REPAIR ONLY REAL PROBLEMS:
    - Fix obvious ASR/auto-caption mishearings (especially technical/AI/programming terms, proper nouns, homophones like "pie torch" -> "PyTorch", "clod" -> "Claude", "their" -> "there" when clearly wrong).
    - Fix missing/broken punctuation, capitalization, and sentence boundaries.
-   - COMPLETE GRAMMATICAL SENTENCES (CRITICAL): Output each entry in "sentences" as a clean, complete grammatical spoken sentence with authentic punctuation (commas, periods, question marks, exclamation marks, em-dashes). Do NOT artificially chop a grammatical sentence into fragments with fake periods — Flaptap's deterministic pacing engine dynamically groups your canonical sentences into Short, Balanced, and Full shadowing lines while preserving your exact punctuation, speakers, overlaps, repairs, "paragraphIndex", and "ideaIndex".
-   - RESOLVE MULTI-SPEAKER OVERLAPS & INTERRUPTIONS: If 2, 3, or 4+ speakers are talking or interrupting each other and raw captions mashed their words together mid-sentence, separate each speaker's utterance into its own clean sentence entry in chronological order, mark "isOverlap": true on interrupted/overlapping interjections, and assign consistent speaker labels.
+   - COMPLETE GRAMMATICAL SENTENCES (CRITICAL): Output each entry in "sentences" as a clean, complete grammatical spoken sentence with authentic punctuation (commas, periods, question marks, exclamation marks, em-dashes). Do NOT artificially chop a grammatical sentence into fragments with fake periods — Flaptap's deterministic pacing engine dynamically groups your canonical sentences into Short, Balanced, and Full shadowing lines while preserving your exact punctuation, speakers, overlaps, interruptions, repairs, "paragraphIndex", and "ideaIndex".
+   - RESOLVE MULTI-SPEAKER OVERLAPS & INTERRUPTIONS: If 2, 3, 4, or 5+ speakers are talking or interrupting each other and raw captions mashed their words together mid-sentence, separate each speaker's utterance into its own clean sentence entry in chronological order, mark "isOverlap": true on interrupted/overlapping interjections, and assign consistent speaker labels. Whenever a speaker was cut off mid-thought/mid-sentence by another speaker, end that cut-off line with an em-dash ("—") instead of a fake period and set "isInterrupted": true so learners never mistake broken crosstalk fragments for complete grammatical sentences.
    - IF A SENTENCE HAS NO ERROR, LEAVE EVERY WORD 100% IDENTICAL TO THE RAW INPUT (only fixing punctuation/capitalization if missing) and set "repaired": false.
 3. SPEAKER ATTRIBUTION:
    - If solo creator/monologue: use the creator's real name (if clear from metadata) or "Speaker 1" consistently for every sentence.
@@ -81,6 +81,7 @@ Return ONLY valid JSON with no markdown fences or extra prose:
       "repaired": false,
       "repairNote": "",
       "isOverlap": false,
+      "isInterrupted": false,
       "paragraphIndex": 1,
       "ideaIndex": 1
     }
@@ -150,6 +151,7 @@ export function parseTranscriptReviewResponse(rawOutput: string): ParsedReviewCh
       repaired: Boolean(item?.repaired),
       repairNote: String(item?.repairNote || '').trim().slice(0, 140),
       isOverlap: Boolean(item?.isOverlap),
+      isInterrupted: Boolean(item?.isInterrupted),
       paragraphIndex: Number(item?.paragraphIndex) > 0 ? Math.floor(Number(item.paragraphIndex)) : 0,
       ideaIndex: Number(item?.ideaIndex) > 0 ? Math.floor(Number(item.ideaIndex)) : 0,
     }))

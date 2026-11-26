@@ -12,6 +12,7 @@ import {
 import { Request, Response } from 'express';
 import { AuthService, LoginInput, RegisterInput, UpdatePreferencesInput } from './auth.service';
 import { HistoryRepository } from '../../core/database/history.repository';
+import { DataLifecycleService } from '../data-lifecycle/data-lifecycle.service';
 import {
   clearSessionCookie,
   extractClientMeta,
@@ -26,6 +27,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly historyRepo: HistoryRepository,
+    private readonly dataLifecycle: DataLifecycleService,
   ) {}
 
   @Post('register')
@@ -177,11 +179,14 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    this.authService.deleteAccount(identity.userId);
+    const purged = this.dataLifecycle.purgeAccountExternalArtifacts(identity.userId, () =>
+      this.authService.deleteAccount(identity.userId),
+    );
     clearSessionCookie(res, req);
     return {
       success: true,
       authenticated: false,
+      purged,
       message: 'Your account and all personal history have been permanently deleted.',
     };
   }

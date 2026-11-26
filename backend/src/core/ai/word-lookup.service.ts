@@ -37,6 +37,15 @@ export interface WordLookupRequest {
 
 const VALID_SCOPES = new Set<WordLookupScope>(['word', 'phrase', 'sentence']);
 
+// Module-level cache shared across NestJS module instances so lifecycle purges clear every entry.
+const sharedWordLookupCache = new Map<string, WordDefinitionResponse>();
+
+export function clearWordLookupCache(): number {
+  const count = sharedWordLookupCache.size;
+  sharedWordLookupCache.clear();
+  return count;
+}
+
 function countWords(text: string): number {
   const matches = text.match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu);
   return matches ? matches.length : 0;
@@ -51,10 +60,14 @@ function inferScope(text: string): WordLookupScope {
 
 @Injectable()
 export class WordLookupService {
-  private readonly cache = new Map<string, WordDefinitionResponse>();
+  private readonly cache = sharedWordLookupCache;
   private readonly maxCacheEntries = 400;
 
   constructor(private readonly ai: AiClient) {}
+
+  clearCache(): number {
+    return clearWordLookupCache();
+  }
 
   async defineWordInContext(req: WordLookupRequest): Promise<WordDefinitionResponse> {
     const cleanWord = (req.word || '')

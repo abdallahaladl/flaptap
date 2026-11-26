@@ -149,6 +149,7 @@
     recallMaskMode: false,
     revealedCardIds: new Set(),
     translatingItemIds: new Set(),
+    selectedIds: new Set(),
     activeStudyItemId: null,
   };
 
@@ -318,6 +319,8 @@
     state.hasLoadedOnce = false;
     state.isLoadingList = false;
     state.justGeneratedIds.clear();
+    state.revealedCardIds.clear();
+    state.selectedIds.clear();
     state.latestBatchResult = null;
     state.categoryCounts = {};
     state.registerCounts = {};

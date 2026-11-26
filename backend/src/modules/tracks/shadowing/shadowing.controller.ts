@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   HttpException,
   HttpStatus,
@@ -24,8 +25,9 @@ import {
 } from '../../../core/linguistics/segmentation';
 import { requireAuthenticatedUser } from '../../auth/auth.request';
 import { AuthService } from '../../auth/auth.service';
+import { AskLessonDto, ShadowingAskService } from './shadowing.ask.service';
 import { ShadowingService } from './shadowing.service';
-import { TranscriptExportFormat, TranscriptViewMode } from './shadowing.types';
+import { ReadingBookmark, TranscriptExportFormat, TranscriptViewMode } from './shadowing.types';
 
 const MAX_MEDIA_UPLOAD_BYTES = 120 * 1024 * 1024;
 
@@ -33,6 +35,7 @@ export class ProcessVideoDto {
   url: string;
   force?: boolean;
   pacingMode?: ShadowingPacingMode;
+  allowInstantOpen?: boolean;
 }
 
 export class TranslateSentencesDto {
@@ -66,12 +69,19 @@ interface ReviewLessonBody {
 export class ShadowingController {
   constructor(
     private readonly shadowingService: ShadowingService,
+    private readonly shadowingAskService: ShadowingAskService,
     private readonly authService: AuthService,
   ) {}
 
   @Get('config')
-  getConfig() {
-    return { success: true, ...this.shadowingService.getConfig() };
+  getConfig(@Req() req: Request) {
+    let userId: string | null = null;
+    try {
+      userId = requireAuthenticatedUser(req, this.authService).userId;
+    } catch {
+      userId = null;
+    }
+    return { success: true, ...this.shadowingService.getConfig(userId) };
   }
 
   @Get('check-existing')
@@ -86,7 +96,43 @@ export class ShadowingController {
     const identity = requireAuthenticatedUser(req, this.authService);
     const pacingMode =
       dto?.pacingMode !== undefined ? normalizePacingMode(dto.pacingMode) : undefined;
-    return this.shadowingService.process(dto?.url, Boolean(dto?.force), identity, pacingMode);
+    return this.shadowingService.process(
+      dto?.url,
+      Boolean(dto?.force),
+      identity,
+      pacingMode,
+      { allowInstantOpen: Boolean(dto?.allowInstantOpen) },
+    );
+  }
+
+  @Post(':id/captions/retry')
+  retryCaptions(@Param('id') id: string, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return this.shadowingService.retryYoutubeCaptions(id, identity);
+  }
+
+  @Post(':id/transcript/import')
+  importTranscript(
+    @Param('id') id: string,
+    @Body('rawText') rawText: string,
+    @Req() req: Request,
+  ) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return this.shadowingService.importManualTranscript(id, rawText, identity);
+  }
+
+  @Post(':id/transcribe')
+  transcribeLesson(
+    @Param('id') id: string,
+    @Body('allowLocalWhisper') allowLocalWhisper: boolean | undefined,
+    @Req() req: Request,
+  ) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return this.shadowingService.transcribeLessonExplicit(
+      id,
+      { allowLocalWhisper: Boolean(allowLocalWhisper) },
+      identity,
+    );
   }
 
   @Post('upload')
@@ -264,6 +310,113 @@ export class ShadowingController {
     };
   }
 
+  @Patch(':id/reading-progress')
+  updateReadingProgress(
+    @Param('id') id: string,
+    @Body('bookmark') bookmark: Partial<ReadingBookmark> | null,
+    @Req() req: Request,
+  ) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    const data = this.shadowingService.updateReadingBookmark(id, bookmark ?? null, identity);
+    return { success: true, ...data };
+  }
+
+  @Post('transcribe-question')
+  @UseInterceptors(
+    FileInterceptor('audio', {
+      storage: memoryStorage(),
+      limits: { fileSize: 15 * 1024 * 1024 },
+    }),
+  )
+  async transcribeQuestion(
+    @UploadedFile() file: { buffer: Buffer; mimetype?: string; originalname?: string } | undefined,
+    @Req() req: Request,
+  ) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    if (!file) {
+      throw new BadRequestException('No audio recording uploaded.');
+    }
+    const result = await this.shadowingAskService.transcribeQuestionAudio(file, identity);
+    return { success: true, ...result };
+  }
+
+  @Post(':id/ask')
+  async askLesson(
+    @Param('id') id: string,
+    @Body() body: AskLessonDto,
+    @Req() req: Request,
+  ) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    const data = await this.shadowingAskService.askLesson(id, body, identity);
+    return { success: true, data };
+  }
+
+  @Post(':id/ask/stream')
+  async askLessonStream(
+    @Param('id') id: string,
+    @Body() body: AskLessonDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    let identity: ReturnType<typeof requireAuthenticatedUser>;
+    try {
+      identity = requireAuthenticatedUser(req, this.authService);
+    } catch (authErr: any) {
+      const status =
+        authErr instanceof HttpException ? authErr.getStatus() : HttpStatus.UNAUTHORIZED;
+      const payload =
+        authErr instanceof HttpException
+          ? authErr.getResponse()
+          : { code: 'auth_required', message: 'Authentication required.' };
+      res.status(status).json(payload);
+      return;
+    }
+
+    res.status(HttpStatus.OK);
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders?.();
+
+    const ac = new AbortController();
+    let closed = false;
+    res.on('close', () => {
+      if (!res.writableEnded) {
+        closed = true;
+        ac.abort(new Error('Client closed stream connection.'));
+      }
+    });
+
+    const emit = (event: string, payload: unknown) => {
+      if (closed || res.writableEnded || res.destroyed) return;
+      res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    try {
+      emit('meta', { status: 'streaming' });
+      const data = await this.shadowingAskService.askLesson(id, body, identity, {
+        signal: ac.signal,
+        onDelta: (delta, accumulated) => emit('delta', { delta, accumulated }),
+      });
+      emit('done', { success: true, data });
+    } catch (err: any) {
+      const message =
+        err instanceof HttpException
+          ? (err.getResponse() as any)?.message || err.message
+          : err?.message || 'Could not generate an answer.';
+      emit('error', { success: false, message });
+    } finally {
+      if (!res.writableEnded) res.end();
+    }
+  }
+
+  @Delete(':id/ask/history')
+  clearAskHistory(@Param('id') id: string, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    return this.shadowingAskService.clearHistory(id, identity);
+  }
+
   @Patch(':id/pacing')
   updatePacing(
     @Param('id') id: string,
@@ -273,13 +426,18 @@ export class ShadowingController {
     const identity = requireAuthenticatedUser(req, this.authService);
     if (!isValidPacingMode(pacingMode)) {
       throw new BadRequestException(
-        'Invalid pacingMode. Expected one of: "short", "balanced", "full".',
+        'Invalid pacingMode. Expected one of: "short", "normal".',
       );
     }
-    const updated = this.shadowingService.updateLessonPacing(id, pacingMode, identity);
+    const normalizedPacingMode = normalizePacingMode(pacingMode);
+    const updated = this.shadowingService.updateLessonPacing(
+      id,
+      normalizedPacingMode,
+      identity,
+    );
     return {
       success: true,
-      pacingMode,
+      pacingMode: normalizedPacingMode,
       sentenceCount: updated.sentences?.length ?? 0,
       item: updated,
     };

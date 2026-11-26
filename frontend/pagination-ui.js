@@ -246,7 +246,10 @@
       totalPages: 1,
       pageSize: pageSizeOptions ? pageSizeOptions[0] : DEFAULT_PAGE_SIZE,
     };
-    let handlers = { onPageChange: null, onPageSizeChange: null };
+    let handlers = {
+      onPageChange: typeof config.onPageChange === 'function' ? config.onPageChange : null,
+      onPageSizeChange: typeof config.onPageSizeChange === 'function' ? config.onPageSizeChange : null,
+    };
 
     function resolveBarEl() {
       if (config.barEl) return config.barEl;

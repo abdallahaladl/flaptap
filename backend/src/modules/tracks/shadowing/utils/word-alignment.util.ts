@@ -428,7 +428,9 @@ export function coalesceToCanonicalSentences(
       prev!.speakerId === s.speakerId &&
       prev!.ideaIndex === s.ideaIndex &&
       !prev!.isOverlap &&
-      !s.isOverlap;
+      !s.isOverlap &&
+      !prev!.isInterrupted &&
+      !s.isInterrupted;
 
     let canMerge = false;
     let recoveredPunct: string | null = null;
@@ -1065,6 +1067,7 @@ export interface DraftReviewedSentence {
   repaired?: boolean;
   repairNote?: string;
   isOverlap?: boolean;
+  isInterrupted?: boolean;
   paragraphIndex?: number;
   ideaIndex?: number;
 }
@@ -1155,6 +1158,7 @@ export function assembleAlignedReviewedViews(params: {
       repaired: Boolean(s?.repaired),
       repairNote: String(s?.repairNote || '').trim(),
       isOverlap: Boolean(s?.isOverlap),
+      isInterrupted: Boolean(s?.isInterrupted),
       paragraphIndex: Number(s?.paragraphIndex) > 0 ? Math.floor(Number(s.paragraphIndex)) : 0,
       ideaIndex: Number(s?.ideaIndex) > 0 ? Math.floor(Number(s.ideaIndex)) : 0,
     }))
@@ -1209,12 +1213,14 @@ export function assembleAlignedReviewedViews(params: {
       .filter(Boolean)
       .join(' ')
       .trim();
-    const canonRepaired = words.some((w) => w.repaired) || draft.isOverlap;
+    const canonRepaired = words.some((w) => w.repaired) || draft.isOverlap || draft.isInterrupted;
     const canonRepairNote = canonRepaired
       ? draft.repairNote ||
-        (draft.isOverlap
-          ? 'Separated overlapping speaker turn'
-          : 'Corrected ASR transcription wording')
+        (draft.isInterrupted
+          ? 'Cut-off speaker interruption preserved accurately'
+          : draft.isOverlap
+            ? 'Separated overlapping speaker turn'
+            : 'Corrected ASR transcription wording')
       : '';
 
     const canonIndex = canonicalSentences.length + 1;
@@ -1228,6 +1234,7 @@ export function assembleAlignedReviewedViews(params: {
       repaired: canonRepaired,
       repairNote: canonRepairNote,
       isOverlap: draft.isOverlap,
+      isInterrupted: draft.isInterrupted,
       paragraphIndex: draft.paragraphIndex || 0,
       ideaIndex: draft.ideaIndex || 0,
       startMs: canonStartMs,
@@ -1257,7 +1264,7 @@ export function assembleAlignedReviewedViews(params: {
         .join(' ')
         .trim();
       const hasWordRepair = sliceWords.some((w) => w.repaired);
-      const substantiveRepair = hasWordRepair || draft.isOverlap;
+      const substantiveRepair = hasWordRepair || draft.isOverlap || draft.isInterrupted;
 
       const nextIndex = sentences.length + 1;
       mappedActiveIndices.push(nextIndex);
@@ -1272,11 +1279,14 @@ export function assembleAlignedReviewedViews(params: {
         repairNote:
           substantiveRepair
             ? draft.repairNote ||
-              (draft.isOverlap
-                ? 'Separated overlapping speaker turn'
-                : 'Corrected ASR transcription wording')
+              (draft.isInterrupted
+                ? 'Cut-off speaker interruption preserved accurately'
+                : draft.isOverlap
+                  ? 'Separated overlapping speaker turn'
+                  : 'Corrected ASR transcription wording')
             : '',
         isOverlap: draft.isOverlap,
+        isInterrupted: draft.isInterrupted,
         paragraphIndex: draft.paragraphIndex || 0,
         ideaIndex: draft.ideaIndex || 0,
         startMs,
@@ -1370,8 +1380,8 @@ export function buildParagraphsFromSentences(
 ): TranscriptParagraph[] {
   if (sentences.length === 0) return [];
   const mode = normalizePacingMode(pacingMode);
-  const explicitCap = mode === 'short' ? 12 : mode === 'balanced' ? 8 : 6;
-  const implicitCap = mode === 'short' ? 8 : mode === 'balanced' ? 5 : 4;
+  const explicitCap = mode === 'short' ? 12 : 6;
+  const implicitCap = mode === 'short' ? 8 : 4;
 
   const hasExplicitParas = sentences.some((s) => s.paragraphIndex > 0);
   const groups: TranscriptSentence[][] = [];

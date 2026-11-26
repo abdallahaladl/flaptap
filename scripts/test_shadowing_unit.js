@@ -25,8 +25,14 @@ const {
   assembleAlignedReviewedViews,
   applySpeakerOverridesToReviewed,
   buildRawTranscriptSnapshot,
+  coalesceToCanonicalSentences,
   regroupShadowingLessonByPacing,
 } = require(path.join(distRoot, 'modules/tracks/shadowing/utils/word-alignment.util.js'));
+
+const {
+  buildShadowingAskSystemPrompt,
+  buildShadowingAskContextBundle,
+} = require(path.join(distRoot, 'modules/tracks/shadowing/shadowing.ask.service.js'));
 
 const {
   exportShadowingLesson,
@@ -39,6 +45,23 @@ const {
   parseTranscriptReviewResponse,
 } = require(path.join(distRoot, 'modules/tracks/shadowing/shadowing-review.prompt.js'));
 
+const { parseManualTranscriptInput } = require(path.join(
+  distRoot,
+  'modules/tracks/shadowing/utils/manual-transcript.util.js',
+));
+const { ShadowingService } = require(path.join(
+  distRoot,
+  'modules/tracks/shadowing/shadowing.service.js',
+));
+const { ServiceUnavailableException } = require(path.join(
+  distRoot,
+  '../node_modules/@nestjs/common',
+));
+
+const { TranscriptProviderGuard } = require(path.join(
+  distRoot,
+  'core/media/transcript-provider-guard.service.js',
+));
 const { classifyMediaUrl } = require(path.join(distRoot, 'core/media/media-url.js'));
 const { SqliteService } = require(path.join(distRoot, 'core/database/sqlite.service.js'));
 const { HistoryRepository } = require(path.join(distRoot, 'core/database/history.repository.js'));
@@ -173,7 +196,7 @@ test('assembleAlignedReviewedViews resolves multi-speaker overlaps, honors 50ms 
   assert.ok(assembled.ideas[0].speakers.includes('Andrej Karpathy'));
 });
 
-test('assembleAlignedReviewedViews automatically splits long 20+ word rambling sentences into short shadowing bites (<=8 words)', () => {
+test('assembleAlignedReviewedViews automatically splits long 20+ word rambling sentences into short shadowing bites (<=9 words)', () => {
   const tokens =
     "But what I'm not going to do is repeat the past, where I envision myself living a completely different life and not creating a plan to take action on that.".split(
       /\s+/,
@@ -206,7 +229,7 @@ test('assembleAlignedReviewedViews automatically splits long 20+ word rambling s
   );
   for (const s of assembled.sentences) {
     assert.ok(
-      s.words.length <= 8,
+      s.words.length <= 9,
       `Shadowing line too long (${s.words.length} words): "${s.text}"`,
     );
     assert.strictEqual(s.paragraphIndex, 1, 'Split lines must stay grouped in the same paragraph');
@@ -216,7 +239,7 @@ test('assembleAlignedReviewedViews automatically splits long 20+ word rambling s
   assert.strictEqual(rejoined, tokens.join(' '));
 });
 
-test('regroupShadowingLessonByPacing dynamically switches short <-> balanced <-> full with zero hard cuts, completion & translation preservation', () => {
+test('regroupShadowingLessonByPacing dynamically switches short <-> normal with zero hard cuts, completion & translation preservation', () => {
   const s1Tokens =
     "But what I'm not going to do is repeat the past, where I envision myself living a completely different life and not creating a plan to take action on that.".split(
       /\s+/,
@@ -299,7 +322,7 @@ test('regroupShadowingLessonByPacing dynamically switches short <-> balanced <->
 
   const shortCount = lesson.sentences.length;
   assert.ok(shortCount >= 8, `Expected >=8 short lines across 54 words, got ${shortCount}`);
-  assert.ok(lesson.sentences.every((s) => s.words.length <= 8), 'Every short line must be <= 8 words');
+  assert.ok(lesson.sentences.every((s) => s.words.length <= 9), 'Every short line must be <= 9 words');
 
   // Seed translation for short line #1 and mark all short lines belonging to canonical sentence #1 complete
   const firstShortText = lesson.sentences[0].text;
@@ -310,29 +333,31 @@ test('regroupShadowingLessonByPacing dynamically switches short <-> balanced <->
     .filter((s) => s.words.every((w) => w.i <= s1MaxWordI))
     .map((s) => s.index);
 
-  // Switch short -> full
-  regroupShadowingLessonByPacing(lesson, 'full');
-  assert.strictEqual(lesson.pacingMode, 'full');
-  assert.ok(lesson.sentences.length <= 3, `Expected full mode to keep grammatical sentences (<=3), got ${lesson.sentences.length}`);
+  // Switch short -> normal
+  regroupShadowingLessonByPacing(lesson, 'normal');
+  assert.strictEqual(lesson.pacingMode, 'normal');
+  assert.ok(
+    lesson.sentences.length >= 2 && lesson.sentences.length < shortCount,
+    `Expected normal mode to keep complete clauses while merging short bites, got ${lesson.sentences.length}`,
+  );
+  assert.ok(
+    lesson.sentences.every((s) => s.words.length <= 20),
+    'Every normal line must respect the 20-word spoken-sentence ceiling',
+  );
   // Sentence #1 should remain completed under Real Derived Completion Law
-  assert.ok(lesson.completionProgress.sentences.includes(1), 'Full sentence #1 must remain completed when all constituent short bites were completed');
-  // Mismatched short translation must NOT leak onto full sentence #1
-  assert.strictEqual(lesson.translationsCache.ar?.[1], undefined, 'Mismatched short translation must not attach to different full sentence');
+  assert.ok(lesson.completionProgress.sentences.includes(1), 'Normal sentence #1 must remain completed when all constituent short bites were completed');
+  // Mismatched short translation must NOT leak onto normal sentence #1
+  assert.strictEqual(lesson.translationsCache.ar?.[1], undefined, 'Mismatched short translation must not attach to different normal sentence');
   // 50ms Playback Boundary Law check
   for (let i = 0; i < lesson.sentences.length - 1; i++) {
     assert.ok(
       lesson.sentences[i].endMs <= lesson.sentences[i + 1].startMs - 50,
-      `Full mode boundary violation between #${i + 1} and #${i + 2}`,
+      `Normal mode boundary violation between #${i + 1} and #${i + 2}`,
     );
   }
 
-  // Switch full -> balanced
-  regroupShadowingLessonByPacing(lesson, 'balanced');
-  assert.strictEqual(lesson.pacingMode, 'balanced');
-  assert.ok(lesson.sentences.length > 2 && lesson.sentences.length < shortCount, `Expected balanced count between full and short, got ${lesson.sentences.length}`);
-  assert.ok(lesson.sentences.every((s) => s.words.length <= 14), 'Every balanced line must be <= 14 words');
-
-  // Switch balanced -> short (round-trip)
+  // Switch normal -> short (round-trip)
+  const normalTexts = lesson.sentences.map((s) => s.text);
   regroupShadowingLessonByPacing(lesson, 'short');
   assert.strictEqual(lesson.pacingMode, 'short');
   assert.strictEqual(lesson.sentences.length, shortCount, 'Round-trip back to short must match exact short count');
@@ -346,6 +371,11 @@ test('regroupShadowingLessonByPacing dynamically switches short <-> balanced <->
   for (const idx of restoredS1Shorts) {
     assert.ok(lesson.completionProgress.sentences.includes(idx), `Short bite #${idx} completion lost on round-trip`);
   }
+
+  // Legacy "Medium" alias resolves to the same complete sentences as normal
+  regroupShadowingLessonByPacing(lesson, 'balanced');
+  assert.strictEqual(lesson.pacingMode, 'normal', 'Legacy balanced must persist as normal');
+  assert.deepStrictEqual(lesson.sentences.map((s) => s.text), normalTexts, 'Legacy balanced must not re-introduce arbitrary middle splits');
   // Exact verbatim text check across entire transcript
   assert.strictEqual(lesson.sentences.map((s) => s.text).join(' '), allTokens.join(' '));
 });
@@ -611,7 +641,7 @@ test('normalizeRawTimedWords & alignReviewedWordsToRawTiming eliminate same-onse
   }
 });
 
-test('Short / Medium / Full pacing modes produce distinct natural boundaries without fake periods or verb-object cuts', () => {
+test('Short / Normal pacing modes produce distinct natural boundaries without fake periods or verb-object cuts', () => {
   const {
     segmentSentences,
   } = require(path.join(distRoot, 'core/linguistics/segmentation.js'));
@@ -641,12 +671,18 @@ test('Short / Medium / Full pacing modes produce distinct natural boundaries wit
   };
 
   const shortSents = segmentSentences(transcript, 'short');
-  const balancedSents = segmentSentences(transcript, 'balanced');
-  const fullSents = segmentSentences(transcript, 'full');
+  const normalSents = segmentSentences(transcript, 'normal');
 
-  assert.strictEqual(fullSents.length, 3, 'Full mode keeps all 3 complete grammatical sentences intact');
-  assert(balancedSents.length > fullSents.length, 'Medium splits the 16-word multi-clause sentence cleanly');
-  assert(shortSents.length > balancedSents.length, 'Short breaks further into bite-sized drills');
+  assert.strictEqual(normalSents.length, 3, 'Normal mode keeps all 3 complete grammatical sentences intact');
+  assert(shortSents.length > normalSents.length, 'Short breaks sentences into bite-sized drills');
+
+  // Legacy "Medium" (`balanced`) is folded into the accurate normal-sentence mode
+  const legacyBalanced = segmentSentences(transcript, 'balanced');
+  assert.deepStrictEqual(
+    legacyBalanced.map((s) => s.text),
+    normalSents.map((s) => s.text),
+    'Legacy balanced input must resolve to complete Normal sentences',
+  );
 
   for (let i = 0; i < shortSents.length - 1; i++) {
     assert(
@@ -766,4 +802,529 @@ test('coalesceToCanonicalSentences + regroupShadowingLessonByPacing recovers leg
   );
 });
 
-console.log(`\n🎉 Consolidated Shadowing Unit Suite: ${passed} / ${passed} passed!\n`);
+test('parseManualTranscriptInput parses SRT, VTT, and plain text with monotonic word timings', () => {
+  const srt = parseManualTranscriptInput(
+    '1\n00:00:01,000 --> 00:00:03,200\nWelcome back to the channel.\n\n2\n00:00:03,500 --> 00:00:05,900\nLet us practice natural speech.',
+  );
+  assert.strictEqual(srt.format, 'srt');
+  assert.strictEqual(srt.cues.length, 2);
+  assert.strictEqual(srt.cues[0].start_sec, 1);
+  assert.ok(srt.timedWords.length >= 10);
+
+  const vtt = parseManualTranscriptInput(
+    'WEBVTT\n\n00:00.500 --> 00:02.100\nFirst line here.\n\n00:02.400 --> 00:04.200\nSecond line here.',
+  );
+  assert.strictEqual(vtt.format, 'vtt');
+  assert.strictEqual(vtt.cues.length, 2);
+
+  const plain = parseManualTranscriptInput('First spoken sentence. Second spoken sentence!');
+  assert.strictEqual(plain.format, 'plain');
+  assert.strictEqual(plain.cues.length, 2);
+  for (let i = 1; i < plain.timedWords.length; i++) {
+    assert.ok(plain.timedWords[i].start_sec >= plain.timedWords[i - 1].start_sec);
+  }
+});
+
+const asyncTests = [];
+function testAsync(name, fn) {
+  asyncTests.push({ name, fn });
+}
+
+testAsync('ShadowingService strictly enforces original provider transcripts (blocks Whisper/Groq and stops on errors)', async () => {
+  const savedItems = new Map();
+  let whisperCalled = false;
+  const fakeHistoryRepo = {
+    findBySourceKey: () => undefined,
+    findByUrlOrVideoId: () => undefined,
+    create: (item) => {
+      savedItems.set(item.id, item);
+      return item;
+    },
+    findById: (id) => savedItems.get(id),
+    update: () => undefined,
+    buildCleanMarkdown: (t) => `# ${t}`,
+  };
+  const fakeTranscript = {
+    extract: async () => {
+      throw new ServiceUnavailableException({ code: 'rate_limited', message: 'YouTube 429 limit' });
+    },
+  };
+  const fakeMediaTx = {
+    transcribeUrl: async () => {
+      whisperCalled = true;
+      throw new Error('Should never be called on YouTube 429');
+    },
+  };
+  const fakeShared = {
+    findByKey: () => null,
+    getMediaDir: () => os.tmpdir(),
+    linkLessonToSource: () => undefined,
+    upsert: () => ({ id: 'src_1' }),
+  };
+  const fakeAiProviders = {
+    hasAnyConfiguredKey: () => true,
+    resolvePreferredCloudSttKey: () => ({ provider: 'groq', apiKey: 'gsk_test', baseUrl: 'https://api.groq.com', model: 'whisper-large-v3-turbo' }),
+  };
+  const svc = new ShadowingService(
+    fakeHistoryRepo,
+    fakeTranscript,
+    {},
+    {},
+    {},
+    {},
+    fakeShared,
+    fakeMediaTx,
+    fakeAiProviders,
+  );
+
+  const cfg = svc.getConfig('u1');
+  assert.strictEqual(cfg.cloudStt.available, false, 'cloudStt must be disabled for Shadowing');
+  assert.strictEqual(cfg.strictProviderTranscriptsOnly, true);
+
+  // 1. Even with allowInstantOpen: true, caption error MUST reject immediately and NEVER open/persist an empty fallback
+  await assert.rejects(
+    () => svc.process('https://www.youtube.com/watch?v=dQw4w9WgXcQ', false, { userId: 'u1' }, 'short', { allowInstantOpen: true }),
+    (err) => err?.getStatus?.() === 503 && !whisperCalled,
+  );
+  assert.strictEqual(whisperCalled, false, 'Whisper/Groq fallback must NEVER trigger on YouTube errors');
+  assert.strictEqual(savedItems.size, 0, 'Must NOT proceed or persist a pending lesson when provider captions fail');
+
+  // 2. Explicit third-party / Whisper transcribe endpoint is strictly disabled
+  await assert.rejects(
+    () => svc.transcribeLessonExplicit('any_id', { allowLocalWhisper: true }, { userId: 'u1' }),
+    (err) => err?.getStatus?.() === 400 && err?.getResponse?.()?.code === 'third_party_stt_disabled',
+  );
+});
+
+// 13. Interrupted utterances & self-corrections in AI Review + Alignment
+test('parseTranscriptReviewResponse & assembleAlignedReviewedViews preserve isInterrupted and never merge interrupted turns', () => {
+  const parsed = parseTranscriptReviewResponse(JSON.stringify({
+    sentences: [
+      {
+        text: 'I was gonna—actually, hold on—',
+        speaker: 'Alex',
+        repaired: false,
+        isOverlap: true,
+        isInterrupted: true,
+        paragraphIndex: 1,
+        ideaIndex: 1,
+      },
+      {
+        text: 'Wait let me jump in real quick.',
+        speaker: 'Alex',
+        repaired: false,
+        isOverlap: false,
+        isInterrupted: false,
+        paragraphIndex: 1,
+        ideaIndex: 1,
+      },
+    ],
+    ideas: [{ index: 1, title: 'Quick Pivot', summary: 'Speaker interrupts.', keyTakeaway: 'Self-correction flow' }],
+  }));
+
+  assert.strictEqual(parsed.sentences[0].isInterrupted, true);
+  assert.strictEqual(parsed.sentences[1].isInterrupted, false);
+
+  const rawWords = [
+    { i: 0, word: 'i', clean: 'i', startMs: 0, endMs: 100 },
+    { i: 1, word: 'was', clean: 'was', startMs: 110, endMs: 250 },
+    { i: 2, word: 'gonna', clean: 'gonna', startMs: 260, endMs: 500 },
+    { i: 3, word: 'actually', clean: 'actually', startMs: 510, endMs: 800 },
+    { i: 4, word: 'hold', clean: 'hold', startMs: 810, endMs: 1000 },
+    { i: 5, word: 'on', clean: 'on', startMs: 1010, endMs: 1200 },
+    { i: 6, word: 'wait', clean: 'wait', startMs: 1300, endMs: 1500 },
+    { i: 7, word: 'let', clean: 'let', startMs: 1510, endMs: 1650 },
+    { i: 8, word: 'me', clean: 'me', startMs: 1660, endMs: 1780 },
+    { i: 9, word: 'jump', clean: 'jump', startMs: 1790, endMs: 2000 },
+    { i: 10, word: 'in', clean: 'in', startMs: 2010, endMs: 2150 },
+    { i: 11, word: 'real', clean: 'real', startMs: 2160, endMs: 2350 },
+    { i: 12, word: 'quick', clean: 'quick', startMs: 2360, endMs: 2600 },
+  ];
+
+  const assembled = assembleAlignedReviewedViews({
+    rawWords,
+    draftSentences: parsed.sentences,
+    draftIdeas: parsed.ideas,
+    defaultSpeaker: 'Host',
+    pacingMode: 'normal',
+  });
+
+  assert.strictEqual(assembled.canonicalSentences.length, 2);
+  assert.strictEqual(assembled.canonicalSentences[0].isInterrupted, true);
+  assert.strictEqual(assembled.sentences[0].isInterrupted, true);
+
+  const coalesced = coalesceToCanonicalSentences(assembled.canonicalSentences, rawWords);
+  assert.strictEqual(coalesced.length, 2, 'Interrupted sentence must not coalesce into next turn');
+});
+
+// 14. Context-Aware AI Companion Prompt & Context Grounding
+test('buildShadowingAskSystemPrompt & buildShadowingAskContextBundle include excerpt, ±5 surrounding lines, ideas & history', () => {
+  const sys = buildShadowingAskSystemPrompt('ar');
+  assert.ok(sys.includes('Native American English'), 'System prompt establishes native mentor persona');
+  assert.ok(sys.includes('"ar"'), 'System prompt includes learner native language code');
+
+  const fakeLesson = {
+    id: 'les_ask_1',
+    title: 'How Founders Think Out Loud',
+    creator: 'Alex',
+    platform: 'YouTube',
+    pacingWpm: 162,
+    cefrLevel: 'C1',
+    sentences: [],
+    transcriptData: {
+      reviewed: {
+        canonicalSentences: Array.from({ length: 12 }, (_, idx) => ({
+          index: idx + 1,
+          text: `Sentence number ${idx + 1} with natural phrasing.`,
+          speaker: idx % 2 === 0 ? 'Alex' : 'Sam',
+          startMs: idx * 2000,
+          endMs: idx * 2000 + 1800,
+          isInterrupted: idx === 5,
+        })),
+        ideas: [{ index: 1, title: 'Opening Hook', summary: 'Sets the stage.', startMs: 0, endMs: 24000 }],
+      },
+      askHistory: [{ id: 'h1', role: 'user', content: 'Previous question?', selectedText: 'Sentence number 2' }],
+    },
+  };
+
+  const bundle = buildShadowingAskContextBundle(fakeLesson, {
+    question: 'Why did he cut himself off here?',
+    selectedText: 'Sentence number 6 with natural phrasing.',
+    sentenceIndex: 6,
+    startMs: 10000,
+    endMs: 11800,
+    speaker: 'Sam',
+    view: 'reviewed',
+  });
+
+  assert.strictEqual(bundle.anchorIndex, 6);
+  assert.ok(bundle.userPrompt.includes('<selected_excerpt>'));
+  assert.ok(bundle.userPrompt.includes('speaker_interrupted_cut_off'));
+  assert.ok(bundle.userPrompt.includes('>>> #6 [00:10.000] Sam: Sentence number 6'));
+  assert.ok(bundle.userPrompt.includes('#1 [00:00.000]'), 'Includes -5 window');
+  assert.ok(bundle.userPrompt.includes('#11 [00:20.000]'), 'Includes +5 window');
+  assert.ok(bundle.userPrompt.includes('Opening Hook'), 'Includes video ideas arc');
+  assert.ok(bundle.userPrompt.includes('Previous question?'), 'Includes prior conversation history');
+});
+
+// 15. Reading Bookmark Persistence Separate From Derived Completion Law
+test('ShadowingService.updateReadingBookmark persists & clears bookmark in SQLite without mutating isCompleted', () => {
+  const tmpDb = path.join(os.tmpdir(), `flaptap-bm-test-${Date.now()}.sqlite`);
+  const sqlite = { db: new (require('node:sqlite').DatabaseSync)(tmpDb) };
+  // Reuse full SqliteService schema initialization
+  process.env.FLAPTAP_SQLITE_PATH = tmpDb;
+  const realSqlite = new SqliteService();
+  try {
+    realSqlite.db.prepare(
+      `INSERT INTO users (id, email, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?)`,
+    ).run('u_bm', 'bm@example.com', 'BM', 'hash', new Date().toISOString());
+
+    const repo = new HistoryRepository(realSqlite);
+    const created = repo.create({
+      id: 'les_bm_1',
+      track: 'shadowing',
+      trackTitle: 'Shadowing',
+      title: 'Bookmark Test',
+      creator: 'Host',
+      sourceUrl: 'https://youtube.com/watch?v=abcdefghijk',
+      thumbnailUrl: '',
+      accentDialect: 'American',
+      durationSeconds: 30,
+      pacingWpm: 150,
+      difficulty: 'Intermediate',
+      chunksCount: 1,
+      stats: { totalWords: 8, sentencesCount: 2, connectedCount: 0, expressionsCount: 0, vocabularyCount: 0 },
+      sentences: [
+        { id: 's-1', index: 1, timeRange: '00:00 - 00:02', startSec: 0, endSec: 2, durationSec: 2, text: 'First sentence.', highlightedHtml: 'First sentence.' },
+        { id: 's-2', index: 2, timeRange: '00:02 - 00:04', startSec: 2, endSec: 4, durationSec: 2, text: 'Second sentence.', highlightedHtml: 'Second sentence.' },
+      ],
+      chunks: [{ index: 1, timeRange: '00:00 - 00:04', startSec: 0, endSec: 4, sentenceIndices: [1, 2], text: 'First sentence. Second sentence.', highlightedHtml: 'First sentence. Second sentence.' }],
+      noteMarkdown: '# Bookmark Test',
+      createdAt: new Date().toISOString(),
+      completedDrills: 0,
+    }, { userId: 'u_bm' });
+
+    const { ShadowingReviewService } = require(path.join(distRoot, 'modules/tracks/shadowing/shadowing.review.service.js'));
+    const revSvc = new ShadowingReviewService(repo, {});
+    const svc = new ShadowingService(repo, {}, {}, {}, {}, revSvc, {}, {}, {});
+
+    const setRes = svc.updateReadingBookmark(created.id, {
+      sentenceIndex: 2,
+      startMs: 2000,
+      view: 'reviewed',
+      excerpt: 'Second sentence.',
+    }, { userId: 'u_bm' });
+
+    assert.strictEqual(setRes.readingBookmark.sentenceIndex, 2);
+    assert.strictEqual(setRes.readingBookmark.view, 'reviewed');
+
+    const reloaded = repo.findById(created.id, { userId: 'u_bm' });
+    assert.strictEqual(reloaded.transcriptData.readingBookmark.sentenceIndex, 2);
+    assert.strictEqual(Boolean(reloaded.isCompleted), false, 'Bookmark must NEVER mark lesson completed');
+
+    const cleared = svc.updateReadingBookmark(created.id, null, { userId: 'u_bm' });
+    assert.strictEqual(cleared.readingBookmark, null);
+  } finally {
+    realSqlite.onModuleDestroy();
+    try { fs.unlinkSync(tmpDb); } catch {}
+    delete process.env.FLAPTAP_SQLITE_PATH;
+  }
+});
+
+// 16. TranscriptProviderGuard: dedup, spacing, budget, persistent circuit breaker, negative cache, & kill-switch
+testAsync('TranscriptProviderGuard enforces dedup, spacing, rolling budget, persistent cooldown & kill-switch', async () => {
+  const { execFileSync } = require('child_process');
+  const tmpState = path.join(os.tmpdir(), `flaptap-guard-test-${Date.now()}.json`);
+  const prevLiveFlag = process.env.FLAPTAP_LIVE_TRANSCRIPTS;
+  process.env.FLAPTAP_LIVE_TRANSCRIPTS = 'on';
+
+  try {
+    let fakeNow = 1_700_000_000_000;
+    const sleeps = [];
+    const createGuard = () =>
+      new TranscriptProviderGuard({
+        stateFilePath: tmpState,
+        nowFn: () => fakeNow,
+        sleepFn: async (ms) => {
+          sleeps.push(ms);
+          fakeNow += ms;
+        },
+        jitterFn: () => 0,
+        policies: {
+          youtube: {
+            minSpacingMs: 5000,
+            jitterMs: 0,
+            maxPer10Min: 3,
+            maxPerHour: 10,
+            cooldownStepsSec: [900, 2700, 7200],
+          },
+        },
+        forceCooldownMs: 120_000,
+        negativeCacheTtlMs: 6 * 60 * 60 * 1000,
+      });
+
+    const guard = createGuard();
+
+    // A. Single-flight deduplication
+    let dedupCalls = 0;
+    const [r1, r2] = await Promise.all([
+      guard.execute({
+        provider: 'youtube',
+        targetKey: 'vid_dedup_1',
+        isRateLimitError: () => false,
+        run: async () => {
+          dedupCalls++;
+          await new Promise((r) => setTimeout(r, 15));
+          return { ok: true };
+        },
+      }),
+      guard.execute({
+        provider: 'youtube',
+        targetKey: 'vid_dedup_1',
+        isRateLimitError: () => false,
+        run: async () => {
+          dedupCalls++;
+          return { ok: false };
+        },
+      }),
+    ]);
+    assert.strictEqual(dedupCalls, 1, 'Concurrent calls for same video must deduplicate to 1 execution');
+    assert.strictEqual(r1.ok && r2.ok, true);
+
+    // Force cooldown check on same video immediately after fetch
+    assert.strictEqual(
+      guard.shouldSkipForceRefresh('youtube', 'vid_dedup_1'),
+      true,
+      'Repeated force refresh inside cooldown window should be skipped',
+    );
+
+    // B. Pacing spacing & rolling budget exhaustion (maxPer10Min = 3)
+    await guard.execute({
+      provider: 'youtube',
+      targetKey: 'vid_budget_2',
+      isRateLimitError: () => false,
+      run: async () => 'ok2',
+    });
+    assert.ok(sleeps.some((ms) => ms >= 4900), 'Second call immediately after first must wait minSpacingMs');
+
+    fakeNow += 10_000;
+    await guard.execute({
+      provider: 'youtube',
+      targetKey: 'vid_budget_3',
+      isRateLimitError: () => false,
+      run: async () => 'ok3',
+    });
+
+    // 4th call within 10 minutes exceeds maxPer10Min=3 and must fail fast BEFORE running `run`
+    let budgetBlockedRan = false;
+    await assert.rejects(
+      () =>
+        guard.execute({
+          provider: 'youtube',
+          targetKey: 'vid_budget_4',
+          isRateLimitError: () => false,
+          run: async () => {
+            budgetBlockedRan = true;
+            return 'nope';
+          },
+        }),
+      (err) => {
+        const resp = err?.getResponse?.();
+        return resp?.code === 'rate_limited' && resp?.retryAfterSec > 0;
+      },
+    );
+    assert.strictEqual(budgetBlockedRan, false, 'Rolling 10-min budget must block BEFORE hitting network');
+
+    // C. Negative cache for no_captions
+    fakeNow += 11 * 60 * 1000; // Advance 11m so 10m budget clears
+    let negCalls = 0;
+    await assert.rejects(
+      () =>
+        guard.execute({
+          provider: 'youtube',
+          targetKey: 'vid_nocap_1',
+          isRateLimitError: () => false,
+          classifyPermanentError: () => ({ code: 'no_captions', message: 'No English captions.' }),
+          run: async () => {
+            negCalls++;
+            throw new Error('no_captions');
+          },
+        }),
+    );
+    assert.strictEqual(negCalls, 1);
+
+    await assert.rejects(
+      () =>
+        guard.execute({
+          provider: 'youtube',
+          targetKey: 'vid_nocap_1',
+          isRateLimitError: () => false,
+          run: async () => {
+            negCalls++;
+            return 'should not run';
+          },
+        }),
+      (err) => err?.getStatus?.() === 422 && err?.getResponse?.()?.code === 'no_captions',
+    );
+    assert.strictEqual(negCalls, 1, 'Cached negative result must short-circuit with 0 network calls');
+
+    // D. Persistent circuit breaker + exponential cooldown across fresh instances
+    await assert.rejects(
+      () =>
+        guard.execute({
+          provider: 'youtube',
+          targetKey: 'vid_429_1',
+          isRateLimitError: () => true,
+          run: async () => {
+            throw new ServiceUnavailableException({ code: 'rate_limited', message: '429' });
+          },
+        }),
+      (err) => err?.getResponse?.()?.code === 'rate_limited' && err?.getResponse?.()?.retryAfterSec === 900,
+    );
+
+    // Brand-new instance simulating a server restart MUST still block for remaining cooldown!
+    const restartedGuard = createGuard();
+    let restartedRan = false;
+    await assert.rejects(
+      () =>
+        restartedGuard.execute({
+          provider: 'youtube',
+          targetKey: 'vid_after_restart',
+          isRateLimitError: () => false,
+          run: async () => {
+            restartedRan = true;
+            return 'nope';
+          },
+        }),
+      (err) => err?.getResponse?.()?.code === 'rate_limited' && err?.getResponse?.()?.retryAfterSec >= 899,
+    );
+    assert.strictEqual(restartedRan, false, 'Persisted circuit breaker must block calls even after restart');
+
+    // Advance past 15m cooldown; strike #2 must escalate to 45m (2700s)
+    fakeNow += 905 * 1000;
+    await assert.rejects(
+      () =>
+        restartedGuard.execute({
+          provider: 'youtube',
+          targetKey: 'vid_429_2',
+          isRateLimitError: () => true,
+          run: async () => {
+            throw new ServiceUnavailableException({ code: 'rate_limited', message: '429' });
+          },
+        }),
+      (err) => err?.getResponse?.()?.retryAfterSec === 2700,
+    );
+
+    // Advance past 45m cooldown; success resets circuit breaker streak back to 0
+    fakeNow += 2705 * 1000;
+    const recovered = await restartedGuard.execute({
+      provider: 'youtube',
+      targetKey: 'vid_recover',
+      isRateLimitError: () => false,
+      run: async () => 'recovered',
+    });
+    assert.strictEqual(recovered, 'recovered');
+    assert.strictEqual(restartedGuard.getStatusSnapshot().providers.youtube.consecutiveRateLimits, 0);
+
+    // E. Kill-switch: FLAPTAP_LIVE_TRANSCRIPTS=off blocks both TS guard and Python helper
+    process.env.FLAPTAP_LIVE_TRANSCRIPTS = 'off';
+    assert.strictEqual(restartedGuard.isLiveFetchDisabled(), true);
+    let killSwitchRan = false;
+    await assert.rejects(
+      () =>
+        restartedGuard.execute({
+          provider: 'youtube',
+          targetKey: 'vid_kill',
+          isRateLimitError: () => false,
+          run: async () => {
+            killSwitchRan = true;
+            return 'nope';
+          },
+        }),
+      (err) => err?.getStatus?.() === 503 && err?.getResponse?.()?.code === 'live_fetch_disabled',
+    );
+    assert.strictEqual(killSwitchRan, false);
+
+    // Verify Python CLI helper also stops immediately with FLAPTAP_ERROR:live_fetch_disabled
+    const pyBin = fs.existsSync(path.resolve(__dirname, '../.venv/bin/python3'))
+      ? path.resolve(__dirname, '../.venv/bin/python3')
+      : 'python3';
+    const scriptPath = path.resolve(
+      __dirname,
+      '../skills/american-accent-shadowing-skill/scripts/extract_transcript.py',
+    );
+    let pyStderr = '';
+    try {
+      execFileSync(pyBin, [scriptPath, 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'], {
+        env: Object.assign({}, process.env, { FLAPTAP_LIVE_TRANSCRIPTS: 'off' }),
+        encoding: 'utf-8',
+      });
+      assert.fail('extract_transcript.py should have exited non-zero under FLAPTAP_LIVE_TRANSCRIPTS=off');
+    } catch (pyErr) {
+      pyStderr = String(pyErr?.stderr || '');
+    }
+    assert.ok(
+      pyStderr.includes('FLAPTAP_ERROR:live_fetch_disabled:'),
+      `Expected FLAPTAP_ERROR:live_fetch_disabled in stderr, got: ${pyStderr}`,
+    );
+  } finally {
+    if (prevLiveFlag === undefined) delete process.env.FLAPTAP_LIVE_TRANSCRIPTS;
+    else process.env.FLAPTAP_LIVE_TRANSCRIPTS = prevLiveFlag;
+    try { fs.unlinkSync(tmpState); } catch {}
+  }
+});
+
+(async () => {
+  for (const t of asyncTests) {
+    try {
+      await t.fn();
+      passed++;
+      console.log(`✅ PASSED: ${t.name}`);
+    } catch (err) {
+      console.error(`❌ FAILED: ${t.name}`);
+      console.error(err);
+      process.exit(1);
+    }
+  }
+  console.log(`\n🎉 Consolidated Shadowing Unit Suite: ${passed} / ${passed} passed!\n`);
+})();

@@ -26,6 +26,7 @@ The Node service treats stdout as data only and reads the final
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import html
 import json
 import os
@@ -34,6 +35,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import urllib.error
 import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
@@ -78,6 +80,23 @@ class MediaError(Exception):
 def emit_error(code: str, message: str) -> None:
     print(f"FLAPTAP_ERROR:{code}:{message}", file=sys.stderr)
     sys.exit(2)
+
+
+def _is_live_fetch_disabled() -> bool:
+    flag = (os.environ.get("FLAPTAP_LIVE_TRANSCRIPTS") or "").strip().lower()
+    if flag in ("off", "0", "false"):
+        return True
+    if flag not in ("on", "1", "true") and (os.environ.get("NODE_ENV") or "").strip().lower() == "test":
+        return True
+    return False
+
+
+def _is_rate_limit_stderr(stderr: str) -> bool:
+    low = (stderr or "").lower()
+    return any(
+        k in low
+        for k in ("429", "too many requests", "rate limit", "temporarily blocked", "captcha", "sign in to confirm")
+    )
 
 
 def log(message: str) -> None:
@@ -266,6 +285,12 @@ def read_metadata(url: str) -> Dict[str, Any]:
         "--no-playlist",
         "--skip-download",
         "--no-warnings",
+        "--retries",
+        "1",
+        "--extractor-retries",
+        "1",
+        "--sleep-requests",
+        "1",
         "--socket-timeout",
         "12",
         "--print",
@@ -309,20 +334,34 @@ def try_platform_subtitles(
         "--sub-format",
         "json3/vtt/srt",
         "--no-warnings",
+        "--retries",
+        "1",
+        "--extractor-retries",
+        "1",
+        "--sleep-requests",
+        "1",
+        "--sleep-subtitles",
+        "1",
         "--socket-timeout",
         "12",
         "-o",
         f"{prefix}.%(ext)s",
         url,
     ]
+    res = None
     try:
-        run_command(cmd, timeout=40)
+        res = run_command(cmd, timeout=40)
     except Exception as error:
         log(f"Subtitle probe failed: {error}")
         return "", "", [], []
 
     files = [name for name in os.listdir(workdir) if name.startswith("subs.")]
     if not files:
+        if res and _is_rate_limit_stderr(res.stderr):
+            raise MediaError(
+                "rate_limited",
+                "The media provider is temporarily rate-limiting requests. Please wait before trying again.",
+            )
         return "", "", [], []
 
     def rank(name: str) -> Tuple[int, int]:
@@ -346,27 +385,34 @@ def download_media_via_ytdlp(url: str, workdir: str, want_video: bool) -> str:
     fmt = (
         "best[ext=mp4][height<=720]/bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/bestaudio[ext=m4a]/bestaudio/best"
         if want_video
-        else "bestaudio[ext=m4a]/bestaudio/best"
+        else "worstaudio[abr>=48]/bestaudio[abr<=96]/bestaudio[ext=m4a]/bestaudio/best"
     )
     cmd = [
         "yt-dlp",
         "--no-playlist",
         "--no-part",
         "--no-warnings",
+        "--retries",
+        "1",
+        "--extractor-retries",
+        "1",
+        "--sleep-requests",
+        "1",
+        "--sleep-subtitles",
+        "1",
         "--socket-timeout",
         "20",
         "--max-filesize",
         str(MAX_DOWNLOAD_BYTES),
         "-f",
         fmt,
-        "--merge-output-format",
-        "mp4",
-        "-o",
-        f"{prefix}.%(ext)s",
-        url,
     ]
+    if want_video:
+        cmd.extend(["--merge-output-format", "mp4"])
+    cmd.extend(["-o", f"{prefix}.%(ext)s", url])
+    dl_res = None
     try:
-        run_command(cmd, timeout=300)
+        dl_res = run_command(cmd, timeout=300)
     except subprocess.TimeoutExpired:
         raise MediaError("download_timeout", "Downloading that media took too long. Try a shorter clip.")
     except Exception as error:
@@ -381,6 +427,12 @@ def download_media_via_ytdlp(url: str, workdir: str, want_video: bool) -> str:
     for path in candidates:
         if os.path.isfile(path) and os.path.getsize(path) > 1024:
             return path
+
+    if dl_res and _is_rate_limit_stderr(dl_res.stderr):
+        raise MediaError(
+            "rate_limited",
+            "The media provider is temporarily rate-limiting requests. Please wait before trying again.",
+        )
 
     raise MediaError(
         "download_failed",
@@ -456,7 +508,17 @@ def transcribe_whisper(
     except Exception as error:
         raise MediaError("transcription_unavailable", f"Local speech transcription is unavailable: {error}")
 
-    cpu_threads = max(1, min(os.cpu_count() or 4, 6))
+    try:
+        from faster_whisper import BatchedInferencePipeline
+    except Exception:
+        BatchedInferencePipeline = None
+
+    physical_cores = max(1, (os.cpu_count() or 4) // 2 or 2)
+    cpu_threads = max(1, min(max(1, physical_cores - 1), 3))
+    try:
+        os.nice(10)
+    except Exception:
+        pass
     try:
         model = WhisperModel(
             model_name,
@@ -467,21 +529,42 @@ def transcribe_whisper(
     except Exception as error:
         raise MediaError("model_unavailable", f"Could not load the Whisper model '{model_name}': {error}")
 
-    segments, info = model.transcribe(
-        path,
-        language="en",
-        task="transcribe",
-        beam_size=1 if not word_timestamps else 2,
-        vad_filter=True,
-        vad_parameters={
-            "threshold": 0.5,
-            "min_speech_duration_ms": 250,
-            "min_silence_duration_ms": 500,
-            "speech_pad_ms": 400,
-        },
-        condition_on_previous_text=False,
-        word_timestamps=word_timestamps,
-    )
+    vad_opts = {
+        "threshold": 0.5,
+        "min_speech_duration_ms": 250,
+        "min_silence_duration_ms": 500,
+        "speech_pad_ms": 400,
+    }
+
+    if BatchedInferencePipeline is not None:
+        batched_model = BatchedInferencePipeline(model=model)
+        segments, info = batched_model.transcribe(
+            path,
+            language="en",
+            task="transcribe",
+            batch_size=8,
+            beam_size=1,
+            best_of=1,
+            temperature=0.0,
+            without_timestamps=False,
+            vad_filter=True,
+            vad_parameters=vad_opts,
+            condition_on_previous_text=False,
+            word_timestamps=word_timestamps,
+        )
+    else:
+        segments, info = model.transcribe(
+            path,
+            language="en",
+            task="transcribe",
+            beam_size=1,
+            best_of=1,
+            temperature=0.0,
+            vad_filter=True,
+            vad_parameters=vad_opts,
+            condition_on_previous_text=False,
+            word_timestamps=word_timestamps,
+        )
 
     collected: List[Dict[str, Any]] = []
     cues: List[Dict[str, Any]] = []
@@ -559,12 +642,199 @@ def transcribe_whisper(
     }
 
 
+def _compress_audio_for_cloud(path: str, workdir: str, max_seconds: int = 1800) -> str:
+    """Compresses oversized or exotic audio/video into lightweight 16kHz mono MP3 for Cloud Whisper 25MB limit."""
+    ext = os.path.splitext(path)[1].lower()
+    try:
+        if os.path.getsize(path) <= 23 * 1024 * 1024 and ext in (".mp3", ".m4a", ".wav", ".ogg", ".webm", ".flac"):
+            return path
+    except Exception:
+        return path
+
+    out_path = os.path.join(workdir, "cloud_stt.mp3")
+    res = run_command(
+        [
+            "ffmpeg",
+            "-y",
+            "-i",
+            path,
+            "-t",
+            str(max(60, int(max_seconds or 1800))),
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
+            "-b:a",
+            "32k",
+            out_path,
+        ],
+        timeout=60,
+    )
+    if res.returncode == 0 and os.path.isfile(out_path) and os.path.getsize(out_path) > 512:
+        return out_path
+    return path
+
+
+def _build_multipart_form(fields: List[Tuple[str, str]], file_field: str, file_path: str) -> Tuple[bytes, str]:
+    import uuid as _uuid
+
+    boundary = f"----FlaptapBoundary{_uuid.uuid4().hex}"
+    body = bytearray()
+    for name, value in fields:
+        body.extend(f"--{boundary}\r\n".encode("utf-8"))
+        body.extend(f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode("utf-8"))
+        body.extend(f"{value}\r\n".encode("utf-8"))
+
+    filename = os.path.basename(file_path) or "audio.mp3"
+    ext = os.path.splitext(filename)[1].lower()
+    mime = DIRECT_MEDIA_EXTS.get(ext, ("audio/mpeg", False))[0]
+    with open(file_path, "rb") as fh:
+        file_bytes = fh.read()
+
+    body.extend(f"--{boundary}\r\n".encode("utf-8"))
+    body.extend(
+        f'Content-Disposition: form-data; name="{file_field}"; filename="{filename}"\r\n'.encode("utf-8")
+    )
+    body.extend(f"Content-Type: {mime}\r\n\r\n".encode("utf-8"))
+    body.extend(file_bytes)
+    body.extend(f"\r\n--{boundary}--\r\n".encode("utf-8"))
+    return bytes(body), f"multipart/form-data; boundary={boundary}"
+
+
+def transcribe_cloud_whisper(
+    path: str,
+    workdir: str,
+    provider: str,
+    api_key: str,
+    base_url: str,
+    model_name: str,
+    max_seconds: int,
+    word_timestamps: bool = False,
+) -> Dict[str, Any]:
+    """Transcodes if needed and runs zero-local-CPU Cloud Whisper (Groq / OpenAI)."""
+    upload_path = _compress_audio_for_cloud(path, workdir, max_seconds=max_seconds)
+    endpoint = f"{base_url.rstrip('/')}/audio/transcriptions"
+    fields: List[Tuple[str, str]] = [
+        ("model", model_name),
+        ("language", "en"),
+        ("response_format", "verbose_json"),
+    ]
+    if word_timestamps:
+        fields.append(("timestamp_granularities[]", "word"))
+        fields.append(("timestamp_granularities[]", "segment"))
+
+    payload_bytes, content_type = _build_multipart_form(fields, "file", upload_path)
+    req = urllib.request.Request(
+        endpoint,
+        data=payload_bytes,
+        headers={
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": content_type,
+            "User-Agent": "Flaptap/1.0",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = json.loads(resp.read().decode("utf-8", errors="replace"))
+    except urllib.error.HTTPError as http_err:
+        detail = ""
+        try:
+            detail = http_err.read().decode("utf-8", errors="replace")[:300]
+        except Exception:
+            pass
+        raise MediaError("cloud_stt_failed", f"Cloud speech transcription error ({http_err.code}): {detail or http_err.reason}")
+    except Exception as err:
+        raise MediaError("cloud_stt_failed", f"Cloud speech request failed: {err}")
+
+    raw_segments = list(data.get("segments") or [])
+    raw_words = list(data.get("words") or [])
+    collected: List[Dict[str, Any]] = []
+    cues: List[Dict[str, Any]] = []
+    parts: List[str] = []
+    truncated = False
+
+    if raw_segments:
+        for seg in raw_segments:
+            start = round(float(seg.get("start") or 0), 3)
+            end = round(float(seg.get("end") or start), 3)
+            if start > max_seconds:
+                truncated = True
+                break
+            text = normalize_text(seg.get("text") or "")
+            if not text:
+                continue
+            parts.append(text)
+            collected.append({"start": start, "end": end, "text": text})
+            cues.append(
+                {
+                    "start": format_seconds_str(start),
+                    "end": format_seconds_str(end),
+                    "start_sec": start,
+                    "end_sec": max(end, round(start + 0.12, 3)),
+                    "text": text,
+                }
+            )
+    else:
+        full = normalize_text(data.get("text") or "")
+        if full:
+            dur = round(float(data.get("duration") or max(2.0, len(full.split()) * 0.4)), 3)
+            parts.append(full)
+            collected.append({"start": 0.0, "end": dur, "text": full})
+            cues.append({"start": format_seconds_str(0.0), "end": format_seconds_str(dur), "start_sec": 0.0, "end_sec": dur, "text": full})
+
+    timed_words: List[Dict[str, Any]] = []
+    if word_timestamps:
+        if raw_words:
+            last_w_start = 0.0
+            for w in raw_words:
+                token = normalize_text(w.get("word") or "")
+                if not token:
+                    continue
+                w_start = round(max(float(w.get("start") or 0), last_w_start), 3)
+                if w_start > max_seconds:
+                    break
+                w_end = round(float(w.get("end") or (w_start + 0.12)), 3)
+                if w_end <= w_start:
+                    w_end = round(w_start + 0.08, 3)
+                last_w_start = w_start
+                timed_words.append(
+                    {
+                        "word": token,
+                        "clean": clean_word_token(token),
+                        "start_sec": w_start,
+                        "end_sec": w_end,
+                    }
+                )
+        elif cues:
+            timed_words = extract_timed_words(cues)
+
+    for i in range(len(timed_words) - 1):
+        nxt_start = timed_words[i + 1]["start_sec"]
+        if timed_words[i]["end_sec"] > nxt_start and nxt_start > timed_words[i]["start_sec"]:
+            timed_words[i]["end_sec"] = round(nxt_start, 3)
+
+    return {
+        "text": normalize_text(" ".join(parts) or str(data.get("text") or "")),
+        "segments": collected,
+        "cues": cues,
+        "timed_words": timed_words,
+        "duration_seconds": round(float(data.get("duration") or (cues[-1]["end_sec"] if cues else 0)), 3),
+        "truncated": truncated,
+        "engine": f"cloud_whisper_{provider}",
+        "model": model_name,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Transcribe a media URL or local audio/video file to English text.")
     parser.add_argument("source", help="Media URL or local file path")
     parser.add_argument("--model", default=os.environ.get("FLAPTAP_WHISPER_MODEL", "base.en"))
     parser.add_argument("--max-seconds", type=int, default=int(os.environ.get("FLAPTAP_WHISPER_MAX_SECONDS", "1800")))
     parser.add_argument("--word-timestamps", action="store_true", help="Emit millisecond word-level timed_words & cues")
+    parser.add_argument("--skip-subtitles", action="store_true", help="Skip subtitle probe when caller already attempted captions")
+    parser.add_argument("--allow-local-whisper", action="store_true", help="Allow local CPU faster-whisper fallback when cloud STT and subtitles are unavailable")
     parser.add_argument("--persist-media-dir", default="", help="Directory to persist playable media for Range playback")
     parser.add_argument("--media-id", default="", help="Deterministic media ID prefix for persisted file")
     parser.add_argument("--output-json", default=None)
@@ -575,6 +845,11 @@ def main() -> None:
         emit_error("missing_source", "A media URL or file path is required.")
 
     is_url = source.startswith("http://") or source.startswith("https://")
+    if is_url and _is_live_fetch_disabled():
+        emit_error(
+            "live_fetch_disabled",
+            "Live transcript fetching is disabled by guard policy (FLAPTAP_LIVE_TRANSCRIPTS=off).",
+        )
     if not is_url and not os.path.isfile(source):
         emit_error("missing_file", "That local media file could not be found.")
 
@@ -621,17 +896,29 @@ def main() -> None:
                 metadata = {"title": clean_title or "Direct Media", "creator": urllib.parse.urlparse(source).hostname or "Direct Media", "duration_seconds": 0}
                 media_path = download_direct_url(source, os.path.join(workdir, f"direct{direct_ext}"))
             else:
-                metadata = read_metadata(source)
-                subtitle_text, subtitle_engine, subtitle_cues, subtitle_words = try_platform_subtitles(source, workdir)
+                if args.skip_subtitles:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as ex:
+                        meta_fut = ex.submit(read_metadata, source)
+                        dl_fut = ex.submit(
+                            download_media_via_ytdlp,
+                            source,
+                            workdir,
+                            bool(args.persist_media_dir),
+                        )
+                        media_path = dl_fut.result()
+                        metadata = meta_fut.result() or {}
+                else:
+                    metadata = read_metadata(source)
+                    subtitle_text, subtitle_engine, subtitle_cues, subtitle_words = try_platform_subtitles(source, workdir)
 
-                # If caller wants persisted playback (Transcript Lab) for non-YouTube URLs, download compact playable media
-                if args.persist_media_dir and not media_path:
-                    try:
-                        media_path = download_media_via_ytdlp(source, workdir, want_video=True)
-                    except Exception as dl_err:
-                        if not subtitle_text:
-                            raise
-                        log(f"Media persistence skipped (subtitles available): {dl_err}")
+                    # If caller wants persisted playback (Transcript Lab) for non-YouTube URLs, download compact playable media
+                    if args.persist_media_dir and not media_path:
+                        try:
+                            media_path = download_media_via_ytdlp(source, workdir, want_video=True)
+                        except Exception as dl_err:
+                            if not subtitle_text:
+                                raise
+                            log(f"Media persistence skipped (subtitles available): {dl_err}")
         else:
             media_path = source
 
@@ -667,17 +954,56 @@ def main() -> None:
                 **persisted_info,
             }
         else:
+            cloud_key = (os.environ.get("FLAPTAP_CLOUD_STT_KEY") or "").strip()
+            cloud_provider = (os.environ.get("FLAPTAP_CLOUD_STT_PROVIDER") or "groq").strip().lower()
+            cloud_base = (os.environ.get("FLAPTAP_CLOUD_STT_BASE_URL") or (
+                "https://api.openai.com/v1" if cloud_provider == "openai" else "https://api.groq.com/openai/v1"
+            )).strip()
+            cloud_model = (os.environ.get("FLAPTAP_CLOUD_STT_MODEL") or (
+                "whisper-1" if cloud_provider == "openai" else "whisper-large-v3-turbo"
+            )).strip()
+
+            if not cloud_key and not args.allow_local_whisper:
+                raise MediaError(
+                    "local_whisper_disabled",
+                    "Local Whisper CPU transcription is off unless explicitly requested or a Cloud Speech key is configured.",
+                )
+
             if not media_path and is_url:
                 media_path = download_media_via_ytdlp(source, workdir, want_video=bool(args.persist_media_dir))
                 if args.persist_media_dir:
                     persisted_info = persist_playable_media(media_path, args.persist_media_dir, args.media_id)
 
-            transcribed = transcribe_whisper(
-                media_path,
-                args.model,
-                max(60, args.max_seconds),
-                word_timestamps=bool(args.word_timestamps),
-            )
+            transcribed = None
+            if cloud_key:
+                try:
+                    transcribed = transcribe_cloud_whisper(
+                        media_path,
+                        workdir,
+                        cloud_provider,
+                        cloud_key,
+                        cloud_base,
+                        cloud_model,
+                        max(60, args.max_seconds),
+                        word_timestamps=bool(args.word_timestamps),
+                    )
+                except MediaError as cloud_err:
+                    if not args.allow_local_whisper:
+                        raise cloud_err
+                    log(f"Cloud Whisper failed, falling back to opted-in local Whisper: {cloud_err}")
+
+            if transcribed is None:
+                if not args.allow_local_whisper:
+                    raise MediaError(
+                        "local_whisper_disabled",
+                        "Local Whisper CPU transcription was not enabled.",
+                    )
+                transcribed = transcribe_whisper(
+                    media_path,
+                    args.model,
+                    max(60, args.max_seconds),
+                    word_timestamps=bool(args.word_timestamps),
+                )
             if not transcribed["text"].strip():
                 raise MediaError(
                     "no_speech",

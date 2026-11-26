@@ -790,6 +790,7 @@
       }
 
       if (!requireAuth(payload)) return;
+      await global.FlaptapConfirm?.flushPending?.({ keepalive: false });
 
       const selection = local.aiSelector?.getSelection?.() || {
         keyId: '',

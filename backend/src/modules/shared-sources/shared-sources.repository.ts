@@ -180,6 +180,114 @@ export class SharedSourcesRepository {
     return rows.map((row) => this.toSummaryRow(row));
   }
 
+  findAllForUser(userId: string): SharedSourceRecord[] {
+    const rows = this.sqlite.db
+      .prepare('SELECT * FROM shared_sources WHERE user_id = ? ORDER BY updated_at DESC')
+      .all(userId) as Array<Record<string, any>>;
+    return rows.map((row) => this.hydrate(row));
+  }
+
+  findByCriteria(
+    userId: string,
+    opts: {
+      sourceId?: string;
+      sourceKey?: string;
+      sourceUrl?: string;
+      mediaId?: string;
+      lessonId?: string;
+    },
+  ): SharedSourceRecord[] {
+    const found = new Map<string, SharedSourceRecord>();
+    const add = (row: Record<string, any> | undefined) => {
+      if (!row?.id) return;
+      const rec = this.hydrate(row);
+      found.set(rec.id, rec);
+    };
+    const addAll = (rows: Array<Record<string, any>>) => {
+      for (const r of rows || []) add(r);
+    };
+
+    if (opts.sourceId) {
+      add(
+        this.sqlite.db
+          .prepare('SELECT * FROM shared_sources WHERE id = ? AND user_id = ?')
+          .get(opts.sourceId, userId) as Record<string, any> | undefined,
+      );
+    }
+    if (opts.sourceKey) {
+      add(
+        this.sqlite.db
+          .prepare('SELECT * FROM shared_sources WHERE user_id = ? AND source_key = ?')
+          .get(userId, opts.sourceKey) as Record<string, any> | undefined,
+      );
+    }
+    if (opts.mediaId) {
+      addAll(
+        this.sqlite.db
+          .prepare('SELECT * FROM shared_sources WHERE user_id = ? AND media_id = ?')
+          .all(userId, opts.mediaId) as Array<Record<string, any>>,
+      );
+    }
+    if (opts.sourceUrl) {
+      addAll(
+        this.sqlite.db
+          .prepare('SELECT * FROM shared_sources WHERE user_id = ? AND LOWER(source_url) = LOWER(?)')
+          .all(userId, opts.sourceUrl) as Array<Record<string, any>>,
+      );
+    }
+    if (opts.lessonId) {
+      addAll(
+        this.sqlite.db
+          .prepare('SELECT * FROM shared_sources WHERE user_id = ? AND source_meta_json LIKE ?')
+          .all(userId, `%"lessonId":"${opts.lessonId}"%`) as Array<Record<string, any>>,
+      );
+    }
+    return Array.from(found.values());
+  }
+
+  deleteById(userId: string, id: string): boolean {
+    if (!id) return false;
+    const res = this.sqlite.db
+      .prepare('DELETE FROM shared_sources WHERE id = ? AND user_id = ?')
+      .run(id, userId);
+    return Number(res.changes) > 0;
+  }
+
+  deleteAllForUser(userId: string): number {
+    const res = this.sqlite.db
+      .prepare('DELETE FROM shared_sources WHERE user_id = ?')
+      .run(userId);
+    return Number(res.changes) || 0;
+  }
+
+  countReferencesForSource(userId: string, sourceId: string): { lessons: number; notes: number } {
+    const lRow = this.sqlite.db
+      .prepare('SELECT COUNT(*) AS cnt FROM lessons WHERE user_id = ? AND source_id = ?')
+      .get(userId, sourceId) as Record<string, any> | undefined;
+    const nRow = this.sqlite.db
+      .prepare('SELECT COUNT(*) AS cnt FROM american_extractor_notes WHERE user_id = ? AND source_id = ?')
+      .get(userId, sourceId) as Record<string, any> | undefined;
+    return {
+      lessons: Number(lRow?.cnt) || 0,
+      notes: Number(nRow?.cnt) || 0,
+    };
+  }
+
+  countGlobalMediaReferences(mediaId: string): number {
+    const clean = String(mediaId || '').trim();
+    if (!clean) return 0;
+    const sRow = this.sqlite.db
+      .prepare('SELECT COUNT(*) AS cnt FROM shared_sources WHERE media_id = ?')
+      .get(clean) as Record<string, any> | undefined;
+    const lRow = this.sqlite.db
+      .prepare('SELECT COUNT(*) AS cnt FROM lessons WHERE video_id = ?')
+      .get(clean) as Record<string, any> | undefined;
+    const tRow = this.sqlite.db
+      .prepare('SELECT COUNT(*) AS cnt FROM think_aloud_sessions WHERE media_id = ?')
+      .get(clean) as Record<string, any> | undefined;
+    return (Number(sRow?.cnt) || 0) + (Number(lRow?.cnt) || 0) + (Number(tRow?.cnt) || 0);
+  }
+
   linkLessonToSource(userId: string, lessonId: string, sourceId: string): void {
     try {
       this.sqlite.db

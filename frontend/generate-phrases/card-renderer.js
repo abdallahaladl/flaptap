@@ -281,9 +281,12 @@
       return `
         <div class="ll-item-head ll-item-head--card">
           <div class="ll-card-topbar">
-            <span class="ll-item-index ltr-num" title="Item ${sequenceNumber || 1}" aria-label="Item ${
-              sequenceNumber || 1
-            }"><span class="ll-index-hash">#</span>${sequenceNumber || '•'}</span>
+            <label class="ft-item-select-label" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+              <input type="checkbox" data-ll-select="${escapeHtml(item.id)}" ${Store().state.selectedIds?.has(item.id) ? 'checked' : ''} aria-label="Select ${escapeHtml(item.expression || 'phrase')}" />
+              <span class="ll-item-index ltr-num" title="Item ${sequenceNumber || 1}" aria-label="Item ${
+                sequenceNumber || 1
+              }"><span class="ll-index-hash">#</span>${sequenceNumber || '•'}</span>
+            </label>
             ${renderActionClusterHtml(item, { isDone, isSavedToVocab })}
           </div>
           ${renderHeadingBlockHtml(item, { isDone, isMasked })}
@@ -293,9 +296,12 @@
 
     return `
       <div class="ll-item-head">
-        <span class="ll-item-index ltr-num" title="Item ${sequenceNumber || 1}" aria-label="Item ${
-          sequenceNumber || 1
-        }"><span class="ll-index-hash">#</span>${sequenceNumber || '•'}</span>
+        <label class="ft-item-select-label" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" data-ll-select="${escapeHtml(item.id)}" ${Store().state.selectedIds?.has(item.id) ? 'checked' : ''} aria-label="Select ${escapeHtml(item.expression || 'phrase')}" />
+          <span class="ll-item-index ltr-num" title="Item ${sequenceNumber || 1}" aria-label="Item ${
+            sequenceNumber || 1
+          }"><span class="ll-index-hash">#</span>${sequenceNumber || '•'}</span>
+        </label>
         ${renderHeadingBlockHtml(item, { isDone, isMasked })}
         ${renderActionClusterHtml(item, { isDone, isSavedToVocab })}
       </div>

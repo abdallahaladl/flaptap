@@ -72,6 +72,12 @@
         <h3 class="ft-confirm-title" id="ft-confirm-title"></h3>
         <p class="ft-confirm-message" id="ft-confirm-message"></p>
         <div class="ft-confirm-detail" id="ft-confirm-detail" hidden></div>
+        <div class="ft-confirm-impact" id="ft-confirm-impact" hidden></div>
+        <div class="ft-confirm-options" id="ft-confirm-options" hidden></div>
+        <div class="ft-confirm-typecheck" id="ft-confirm-typecheck" hidden>
+          <label class="ft-confirm-typecheck-label" for="ft-confirm-phrase-input" id="ft-confirm-phrase-label"></label>
+          <input type="text" class="ft-confirm-phrase-input" id="ft-confirm-phrase-input" autocomplete="off" spellcheck="false" />
+        </div>
         <div class="ft-confirm-actions">
           <button type="button" class="ft-confirm-cancel" id="ft-confirm-cancel-btn">Cancel</button>
           <button type="button" class="ft-confirm-accept" id="ft-confirm-accept-btn">Delete</button>
@@ -80,16 +86,61 @@
     `;
 
     backdrop.addEventListener('click', (event) => {
-      if (event.target === backdrop) {
+      if (event.target === backdrop && !confirmState?.busy) {
         closeConfirm(false);
       }
     });
-    backdrop.querySelector('#ft-confirm-cancel-btn')?.addEventListener('click', () => closeConfirm(false));
-    backdrop.querySelector('#ft-confirm-accept-btn')?.addEventListener('click', () => closeConfirm(true));
+    backdrop.querySelector('#ft-confirm-cancel-btn')?.addEventListener('click', () => {
+      if (!confirmState?.busy) closeConfirm(false);
+    });
+    backdrop.querySelector('#ft-confirm-accept-btn')?.addEventListener('click', () => {
+      if (confirmState?.busy) return;
+      const acceptBtn = backdrop.querySelector('#ft-confirm-accept-btn');
+      if (acceptBtn?.disabled) return;
+      closeConfirm(true);
+    });
+
+    const phraseInput = backdrop.querySelector('#ft-confirm-phrase-input');
+    phraseInput?.addEventListener('input', () => {
+      syncPhraseGate();
+    });
+    phraseInput?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' && confirmState && !confirmState.busy) {
+        const acceptBtn = backdrop.querySelector('#ft-confirm-accept-btn');
+        if (acceptBtn && !acceptBtn.disabled) {
+          event.preventDefault();
+          closeConfirm(true);
+        }
+      }
+    });
 
     document.body.appendChild(backdrop);
     bindGlobalHandlers();
     return backdrop;
+  }
+
+  function syncPhraseGate() {
+    if (!confirmState) return;
+    const acceptBtn = document.getElementById('ft-confirm-accept-btn');
+    const phraseInput = document.getElementById('ft-confirm-phrase-input');
+    const required = String(confirmState.requirePhrase || '').trim();
+    if (!acceptBtn || !required) {
+      if (acceptBtn) acceptBtn.disabled = false;
+      return;
+    }
+    const typed = String(phraseInput?.value || '').trim().toUpperCase();
+    acceptBtn.disabled = typed !== required.toUpperCase();
+  }
+
+  function collectCheckboxValues() {
+    const out = {};
+    const optionsEl = document.getElementById('ft-confirm-options');
+    if (!optionsEl) return out;
+    optionsEl.querySelectorAll('input[type="checkbox"][data-opt-id]').forEach((cb) => {
+      const id = cb.getAttribute('data-opt-id');
+      if (id) out[id] = Boolean(cb.checked);
+    });
+    return out;
   }
 
   function closeConfirm(accepted) {
@@ -99,6 +150,7 @@
       return;
     }
     const { resolve, previousFocus } = confirmState;
+    const checkboxValues = collectCheckboxValues();
     confirmState = null;
 
     if (backdrop) {
@@ -112,24 +164,20 @@
         previousFocus.focus({ preventScroll: true });
       } catch {}
     }
-    resolve(Boolean(accepted));
+    resolve({ confirmed: Boolean(accepted), options: checkboxValues });
+  }
+
+  function escapeText(value) {
+    const div = document.createElement('div');
+    div.textContent = value == null ? '' : String(value);
+    return div.innerHTML;
   }
 
   /**
-   * Opens the unified Apple-frosted confirmation modal.
-   *
-   * @param {{
-   *   title?: string,
-   *   message?: string,
-   *   detail?: string,
-   *   confirmLabel?: string,
-   *   cancelLabel?: string,
-   *   tone?: 'danger' | 'warning' | 'primary',
-   *   icon?: string
-   * }} options
-   * @returns {Promise<boolean>}
+   * Opens the unified Apple-frosted confirmation modal and returns both
+   * confirmation state and any optional scoped checkbox selections.
    */
-  function ask(options = {}) {
+  function askAdvanced(options = {}) {
     if (confirmState) {
       closeConfirm(false);
     }
@@ -140,17 +188,33 @@
     const titleEl = backdrop.querySelector('#ft-confirm-title');
     const msgEl = backdrop.querySelector('#ft-confirm-message');
     const detailEl = backdrop.querySelector('#ft-confirm-detail');
+    const impactEl = backdrop.querySelector('#ft-confirm-impact');
+    const optionsEl = backdrop.querySelector('#ft-confirm-options');
+    const typecheckEl = backdrop.querySelector('#ft-confirm-typecheck');
+    const phraseLabelEl = backdrop.querySelector('#ft-confirm-phrase-label');
+    const phraseInputEl = backdrop.querySelector('#ft-confirm-phrase-input');
     const cancelBtn = backdrop.querySelector('#ft-confirm-cancel-btn');
     const acceptBtn = backdrop.querySelector('#ft-confirm-accept-btn');
 
+    const isAr = document.documentElement.lang === 'ar';
     const tone = options.tone || 'danger';
     const iconName =
       options.icon || (tone === 'primary' ? 'rotate-ccw' : tone === 'warning' ? 'alert-triangle' : 'trash');
 
-    if (card) card.dataset.tone = tone;
+    if (card) {
+      card.dataset.tone = tone;
+      card.classList.toggle(
+        'is-rich',
+        Boolean(options.impactItems?.length || options.checkboxes?.length || options.requirePhrase),
+      );
+    }
     if (iconWrap) iconWrap.innerHTML = svgIcon(iconName);
-    if (titleEl) titleEl.textContent = options.title || 'Confirm removal';
-    if (msgEl) msgEl.textContent = options.message || 'Are you sure you want to remove this item?';
+    if (titleEl) titleEl.textContent = options.title || (isAr ? 'تأكيد الحذف' : 'Confirm removal');
+    if (msgEl) {
+      msgEl.textContent =
+        options.message ||
+        (isAr ? 'هل أنت متأكد من حذف هذا العنصر؟' : 'Are you sure you want to remove this item?');
+    }
 
     const detail = String(options.detail || '').trim();
     if (detailEl) {
@@ -158,8 +222,77 @@
       detailEl.hidden = !detail;
     }
 
-    if (cancelBtn) cancelBtn.textContent = options.cancelLabel || 'Cancel';
-    if (acceptBtn) acceptBtn.textContent = options.confirmLabel || 'Delete';
+    const impactItems = Array.isArray(options.impactItems) ? options.impactItems.filter(Boolean) : [];
+    if (impactEl) {
+      if (impactItems.length > 0) {
+        impactEl.innerHTML = impactItems
+          .map((item) => {
+            if (typeof item === 'string') {
+              return `<span class="ft-confirm-impact-pill">${escapeText(item)}</span>`;
+            }
+            const label = escapeText(item.label || '');
+            const val =
+              item.value !== undefined && item.value !== null && String(item.value) !== ''
+                ? `<strong>${escapeText(item.value)}</strong> `
+                : '';
+            return `<span class="ft-confirm-impact-pill">${val}${label}</span>`;
+          })
+          .join('');
+        impactEl.hidden = false;
+      } else {
+        impactEl.innerHTML = '';
+        impactEl.hidden = true;
+      }
+    }
+
+    const checkboxes = Array.isArray(options.checkboxes) ? options.checkboxes.filter(Boolean) : [];
+    if (optionsEl) {
+      if (checkboxes.length > 0) {
+        optionsEl.innerHTML = checkboxes
+          .map(
+            (opt) => `
+              <label class="ft-confirm-option">
+                <input type="checkbox" data-opt-id="${escapeText(opt.id)}" ${opt.checked ? 'checked' : ''} />
+                <span>
+                  <strong>${escapeText(opt.label || '')}</strong>
+                  ${opt.description ? `<small>${escapeText(opt.description)}</small>` : ''}
+                </span>
+              </label>
+            `,
+          )
+          .join('');
+        optionsEl.hidden = false;
+      } else {
+        optionsEl.innerHTML = '';
+        optionsEl.hidden = true;
+      }
+    }
+
+    const requirePhrase = String(options.requirePhrase || '').trim();
+    if (typecheckEl && phraseInputEl && phraseLabelEl) {
+      if (requirePhrase) {
+        phraseLabelEl.innerHTML =
+          options.phraseLabel ||
+          (isAr
+            ? `للتأكيد، اكتب <code>${escapeText(requirePhrase)}</code> بالأسفل:`
+            : `To confirm, type <code>${escapeText(requirePhrase)}</code> below:`);
+        phraseInputEl.value = '';
+        phraseInputEl.placeholder = options.phrasePlaceholder || requirePhrase;
+        typecheckEl.hidden = false;
+      } else {
+        phraseInputEl.value = '';
+        typecheckEl.hidden = true;
+      }
+    }
+
+    if (cancelBtn) {
+      cancelBtn.disabled = false;
+      cancelBtn.textContent = options.cancelLabel || (isAr ? 'إلغاء' : 'Cancel');
+    }
+    if (acceptBtn) {
+      acceptBtn.disabled = Boolean(requirePhrase);
+      acceptBtn.textContent = options.confirmLabel || (isAr ? 'حذف' : 'Delete');
+    }
 
     const previousFocus = document.activeElement;
     backdrop.hidden = false;
@@ -168,13 +301,59 @@
     void backdrop.offsetWidth;
     backdrop.classList.add('is-open');
 
-    window.setTimeout(() => {
-      cancelBtn?.focus({ preventScroll: true });
-    }, 10);
-
     return new Promise((resolve) => {
-      confirmState = { resolve, previousFocus };
+      confirmState = { resolve, previousFocus, requirePhrase, busy: false };
+      syncPhraseGate();
+      window.setTimeout(() => {
+        if (requirePhrase && phraseInputEl) {
+          phraseInputEl.focus({ preventScroll: true });
+        } else {
+          cancelBtn?.focus({ preventScroll: true });
+        }
+      }, 10);
     });
+  }
+
+  /**
+   * Opens the unified Apple-frosted confirmation modal.
+   *
+   * @param {{
+   *   title?: string,
+   *   message?: string,
+   *   detail?: string,
+   *   impactItems?: Array<string | { label: string, value?: string | number }>,
+   *   checkboxes?: Array<{ id: string, label: string, description?: string, checked?: boolean }>,
+   *   requirePhrase?: string,
+   *   confirmLabel?: string,
+   *   cancelLabel?: string,
+   *   tone?: 'danger' | 'warning' | 'primary',
+   *   icon?: string
+   * }} options
+   * @returns {Promise<boolean>}
+   */
+  async function ask(options = {}) {
+    const res = await askAdvanced(options);
+    return Boolean(res?.confirmed);
+  }
+
+  /**
+   * Opens the Apple HIG destructive/reset dialog with optional impact preview,
+   * scoped checkboxes, and type-to-confirm gate, then executes `onConfirm` directly.
+   */
+  async function confirmAction(options = {}) {
+    const res = await askAdvanced(options);
+    if (!res?.confirmed) return { status: 'cancelled', options: res?.options || {} };
+    try {
+      await options.onConfirm?.(res.options || {});
+      return { status: 'confirmed', options: res.options || {} };
+    } catch (err) {
+      if (typeof options.onError === 'function') {
+        options.onError(err);
+      } else {
+        toastNotify(err?.message || 'Action failed.');
+      }
+      return { status: 'error', error: err, options: res.options || {} };
+    }
   }
 
   /* ========================================================================
@@ -456,6 +635,8 @@
 
   global.FlaptapConfirm = {
     ask,
+    askAdvanced,
+    confirmAction,
     withUndo,
     confirmAndUndo,
     flushPending,

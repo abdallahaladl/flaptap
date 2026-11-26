@@ -192,6 +192,28 @@
       shellState.detailPage?.onLanguagesLoaded?.();
     });
 
+    global.addEventListener('flaptap:data-purged', async (event) => {
+      const detail = event?.detail || {};
+      const f = String(detail.feature || '').toLowerCase();
+      if (detail.resetAll || f === 'american_extractor') {
+        store.resetUserData();
+        shellState.detailPage?.clearCurrent?.();
+        syncLibraryBadge();
+        if (store.state.activeView === 'detail') {
+          navigation.goToExtract({ replace: true });
+        } else if (store.state.activeView === 'library') {
+          await shellState.libraryPage?.onActivate?.();
+        }
+      }
+      if (detail.resetAll || f === 'lessons' || f === 'shadowing' || f === 'street_talk' || f === 'phonetics' || f === 'shared_sources') {
+        await loadLessonSources();
+      }
+      if (detail.resetAll || f === 'vocabulary') {
+        store.state.savedTerms.clear();
+        shellState.detailPage?.syncVocabularyState?.();
+      }
+    });
+
     global.addEventListener('flaptap:auth-changed', async (event) => {
       const user = event?.detail?.user;
       if (user) {

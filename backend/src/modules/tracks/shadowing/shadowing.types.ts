@@ -9,6 +9,13 @@ export type TranscriptExportFormat = 'txt' | 'md' | 'srt' | 'vtt' | 'json' | 'cs
 
 export type TranscriptReviewStatus = 'pending' | 'processing' | 'ready' | 'failed';
 
+export type TranscriptAvailabilityStatus =
+  | 'ready'
+  | 'rate_limited'
+  | 'no_captions'
+  | 'timeout'
+  | 'pending';
+
 export interface TimedWordMs {
   /** Global 0-based index within the active transcript word stream. */
   i: number;
@@ -35,6 +42,26 @@ export interface RawCueMs {
   text: string;
 }
 
+export interface ReadingBookmark {
+  sentenceIndex: number;
+  startMs: number;
+  view: 'reviewed' | 'raw';
+  excerpt: string;
+  updatedAt: string;
+}
+
+export interface ShadowingAskMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  selectedText?: string;
+  startMs?: number;
+  endMs?: number;
+  speaker?: string;
+  modelName?: string;
+  createdAt: string;
+}
+
 export interface TranscriptSentence {
   id: string;
   /** 1-based sequential sentence index. */
@@ -46,6 +73,7 @@ export interface TranscriptSentence {
   repaired: boolean;
   repairNote: string;
   isOverlap: boolean;
+  isInterrupted?: boolean;
   paragraphIndex: number;
   ideaIndex: number;
   startMs: number;
@@ -164,7 +192,11 @@ export interface ShadowingTranscriptData {
   reviewed: ReviewedTranscriptSnapshot | null;
   reviewStatus: TranscriptReviewStatus;
   reviewError: string;
+  transcriptStatus?: TranscriptAvailabilityStatus;
+  transcriptError?: string;
   speakerOverrides: Record<string, string>;
+  readingBookmark?: ReadingBookmark | null;
+  askHistory?: ShadowingAskMessage[];
 }
 
 export interface ReviewProgressEvent {

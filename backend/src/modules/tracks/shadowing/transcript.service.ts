@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   ServiceUnavailableException,
   UnprocessableEntityException,
 } from '@nestjs/common';
@@ -12,12 +13,17 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getPythonBinaryPath, getSkillScriptPath } from '../../../core/config/paths';
 import { classifyMediaUrl, EXTERNAL_MEDIA_ID_PATTERN } from '../../../core/media/media-url';
+import {
+  GuardStatusSnapshot,
+  TranscriptProviderGuard,
+} from '../../../core/media/transcript-provider-guard.service';
 
 /** Failure codes emitted by the Python helper as `FLAPTAP_ERROR:<code>:<message>`. */
 export type TranscriptErrorCode =
   | 'video_unavailable'
   | 'no_captions'
   | 'rate_limited'
+  | 'live_fetch_disabled'
   | 'timeout'
   | 'invalid_url'
   | 'media_too_long'
@@ -99,18 +105,72 @@ export class TranscriptService {
   private readonly logger = new Logger(TranscriptService.name);
   private readonly cacheDir = path.resolve(__dirname, '../../../../../data/transcripts');
   private readonly cacheVersion = 3;
-  private readonly cacheTtlMs = 7 * 24 * 60 * 60 * 1000;
+  private readonly cacheTtlMs = 30 * 24 * 60 * 60 * 1000;
+
+  constructor(
+    @Optional()
+    private readonly guard: TranscriptProviderGuard = new TranscriptProviderGuard(),
+  ) {}
+
+  public getGuardStatus(): GuardStatusSnapshot {
+    return this.guard.getStatusSnapshot();
+  }
 
   async extract(url: string, force = false): Promise<TranscriptResult> {
     const videoId = this.extractYoutubeId(url);
-    if (!force) {
-      const cached = this.readCache(videoId);
-      if (cached) {
-        this.logger.log(`Transcript cache hit for ${videoId}`);
-        return cached;
-      }
+    const cached = this.readCache(videoId);
+    if (!force && cached) {
+      this.logger.log(`Transcript cache hit for ${videoId}`);
+      return cached;
+    }
+    if (force && cached && this.guard.shouldSkipForceRefresh('youtube', videoId)) {
+      this.logger.log(
+        `Skipping redundant force re-extraction for ${videoId} (within guard force cooldown); returning cached transcript.`,
+      );
+      return cached;
     }
 
+    try {
+      return await this.guard.execute({
+        provider: 'youtube',
+        targetKey: videoId || url,
+        force,
+        isRateLimitError: (err) => this.extractErrorCode(err) === 'rate_limited',
+        classifyPermanentError: (err) => {
+          const code = this.extractErrorCode(err);
+          if (code === 'no_captions' || code === 'video_unavailable') {
+            return { code, message: (err as any)?.message || 'Caption extraction unavailable.' };
+          }
+          return null;
+        },
+        run: () => this.runExtractor(url, videoId),
+      });
+    } catch (error: any) {
+      const errCode = this.extractErrorCode(error);
+      if (
+        !force &&
+        errCode !== 'live_fetch_disabled' &&
+        errCode !== 'no_captions' &&
+        errCode !== 'video_unavailable'
+      ) {
+        const stale = this.readCache(videoId, true);
+        if (stale) {
+          this.logger.warn(`Caption extraction failed (${errCode || 'error'}); using stale transcript cache for ${videoId}.`);
+          return stale;
+        }
+      }
+      throw error;
+    }
+  }
+
+  private extractErrorCode(error: unknown): string {
+    const resp = (error as any)?.getResponse?.();
+    if (resp && typeof resp === 'object' && resp.code) return String(resp.code);
+    if ((error as any)?.code) return String((error as any).code);
+    return '';
+  }
+
+  private async runExtractor(url: string, videoId: string): Promise<TranscriptResult> {
     const scriptPath = getSkillScriptPath();
     const pythonBin = getPythonBinaryPath();
     const pythonDir = path.dirname(pythonBin);
@@ -140,12 +200,6 @@ export class TranscriptService {
       stderr = result.stderr;
     } catch (error: any) {
       const raw = `${error?.stderr || ''}\n${error?.message || ''}`;
-      const stale = this.readCache(videoId, true);
-      if (stale) {
-        this.logger.warn(`Caption extraction failed; using stale transcript cache for ${videoId}.`);
-        return stale;
-      }
-
       const helperError = raw.match(HELPER_ERROR_PATTERN);
       if (helperError) {
         throw this.toHttpException(
@@ -233,6 +287,7 @@ export class TranscriptService {
       case 'invalid_url':
         return new UnprocessableEntityException(body);
       case 'rate_limited':
+      case 'live_fetch_disabled':
         return new ServiceUnavailableException(body);
       case 'timeout':
         return new ServiceUnavailableException(body);
@@ -263,15 +318,44 @@ export class TranscriptService {
   }
 
   public deleteCache(videoId?: string): boolean {
-    if (!videoId) return false;
+    return this.deleteCacheWithBytes(videoId).removed;
+  }
+
+  public deleteCacheWithBytes(videoId?: string): { removed: boolean; bytesFreed: number } {
+    if (!videoId) return { removed: false, bytesFreed: 0 };
     try {
       const file = this.cachePath(videoId);
-      if (!fs.existsSync(file)) return false;
+      if (!fs.existsSync(file)) return { removed: false, bytesFreed: 0 };
+      const bytesFreed = fs.statSync(file).size || 0;
       fs.unlinkSync(file);
-      return true;
+      return { removed: true, bytesFreed };
     } catch {
-      return false;
+      return { removed: false, bytesFreed: 0 };
     }
+  }
+
+  public clearAllCacheFiles(): { filesRemoved: number; bytesFreed: number } {
+    let filesRemoved = 0;
+    let bytesFreed = 0;
+    try {
+      if (!fs.existsSync(this.cacheDir)) return { filesRemoved, bytesFreed };
+      for (const entry of fs.readdirSync(this.cacheDir)) {
+        if (!entry.endsWith('.json')) continue;
+        const full = path.join(this.cacheDir, entry);
+        try {
+          const st = fs.statSync(full);
+          if (!st.isFile()) continue;
+          fs.unlinkSync(full);
+          filesRemoved++;
+          bytesFreed += st.size || 0;
+        } catch {
+          // Ignore individual file error
+        }
+      }
+    } catch {
+      // Ignore directory error
+    }
+    return { filesRemoved, bytesFreed };
   }
 
   private cachePath(videoId: string): string {

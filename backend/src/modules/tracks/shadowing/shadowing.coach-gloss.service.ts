@@ -203,6 +203,7 @@ export class ShadowingCoachGlossService {
   }
 
   private persist(item: HistoryItem, stamp: string, entries: Record<string, string>): void {
+    if (!this.historyRepo.findById(item.id)) return;
     const bundle: CoachGlossBundle = {
       language: GLOSS_LANGUAGE,
       engineVersion: GLOSS_ENGINE_VERSION,

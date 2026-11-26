@@ -98,6 +98,8 @@ data/*.pid
 data/.vault.key
 data/models-dev-cache.json
 data/PUBLIC_URL.txt
+data/transcript-guard-state.json
+data/transcript-guard-state.json.*
 data/*.sqlite
 data/*.sqlite-shm
 data/*.sqlite-wal

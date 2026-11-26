@@ -470,6 +470,10 @@ export class ShadowingTranslationService {
       }
     }
 
+    if (!this.historyRepo.findById(item.id)) {
+      return;
+    }
+
     this.historyRepo.update(item.id, {
       translationsCache: item.translationsCache,
       translationsByText: item.translationsByText,

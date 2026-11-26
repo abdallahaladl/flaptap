@@ -14,7 +14,7 @@ import { ShadowingTranslationService } from './modules/tracks/shadowing/shadowin
 import { ShadowingAnalysisService } from './modules/tracks/shadowing/shadowing.analysis.service';
 import { ShadowingCoachGlossService } from './modules/tracks/shadowing/shadowing.coach-gloss.service';
 import { ShadowingReviewService } from './modules/tracks/shadowing/shadowing.review.service';
-import { TranscriptService } from './modules/tracks/shadowing/transcript.service';
+import { ShadowingAskService } from './modules/tracks/shadowing/shadowing.ask.service';
 import { StreetTalkController, StreetTalkService } from './modules/tracks/street-talk/street-talk.service';
 import { PhoneticsController, PhoneticsService } from './modules/tracks/phonetics/phonetics.service';
 import { HistoryController } from './modules/history/history.controller';
@@ -24,13 +24,17 @@ import { AiProvidersModule } from './modules/ai-providers/ai-providers.module';
 import { LearningLibraryModule } from './modules/learning-library/learning-library.module';
 import { AmericanExtractorModule } from './modules/american-extractor/american-extractor.module';
 import { SharedSourcesModule } from './modules/shared-sources/shared-sources.module';
+import { ThinkAloudModule } from './modules/think-aloud/think-aloud.module';
+import { DataLifecycleModule } from './modules/data-lifecycle/data-lifecycle.module';
 
 @Module({
   imports: [
     SharedSourcesModule,
     AiProvidersModule,
+    DataLifecycleModule,
     LearningLibraryModule,
     AmericanExtractorModule,
+    ThinkAloudModule,
   ],
   controllers: [
     HealthController,
@@ -49,11 +53,11 @@ import { SharedSourcesModule } from './modules/shared-sources/shared-sources.mod
     WordLookupService,
     AuthService,
     VocabularyService,
-    TranscriptService,
     ShadowingTranslationService,
     ShadowingAnalysisService,
     ShadowingCoachGlossService,
     ShadowingReviewService,
+    ShadowingAskService,
     ShadowingService,
     StreetTalkService,
     PhoneticsService,

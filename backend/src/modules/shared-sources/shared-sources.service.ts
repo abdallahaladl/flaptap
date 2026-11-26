@@ -126,6 +126,113 @@ export class SharedSourcesService {
     this.repository.linkLessonToSource(userId, lessonId, sourceId);
   }
 
+  pruneOrphanedMediaFiles(candidateMediaIds: string[]): { filesRemoved: number; bytesFreed: number } {
+    let filesRemoved = 0;
+    let bytesFreed = 0;
+    const seen = new Set<string>();
+
+    for (const rawId of candidateMediaIds) {
+      const clean = path.basename(String(rawId || '').trim());
+      if (!clean || !SAFE_MEDIA_ID_RE.test(clean) || seen.has(clean)) continue;
+      seen.add(clean);
+
+      // Only delete disk media if zero rows across ALL users still reference this mediaId
+      if (this.repository.countGlobalMediaReferences(clean) > 0) continue;
+
+      const candidates = [path.join(this.mediaDir, clean), path.join(this.mediaDir, `${clean}.mp4`)];
+      const unlinked = new Set<string>();
+      for (const filePath of candidates) {
+        if (unlinked.has(filePath)) continue;
+        try {
+          if (!fs.existsSync(filePath)) continue;
+          const st = fs.statSync(filePath);
+          if (!st.isFile()) continue;
+          fs.unlinkSync(filePath);
+          unlinked.add(filePath);
+          filesRemoved++;
+          bytesFreed += st.size || 0;
+        } catch {
+          // Ignore file unlink failure
+        }
+      }
+    }
+
+    return { filesRemoved, bytesFreed };
+  }
+
+  cleanupOrphanedSource(
+    userId: string,
+    opts: {
+      sourceId?: string;
+      sourceKey?: string;
+      sourceUrl?: string;
+      mediaId?: string;
+      lessonId?: string;
+      forceDelete?: boolean;
+    },
+  ): { sourcesDeleted: number; mediaFilesRemoved: number; bytesFreed: number } {
+    const matches = this.repository.findByCriteria(userId, opts);
+    let sourcesDeleted = 0;
+    const candidateMediaIds: string[] = [];
+    if (opts.mediaId) candidateMediaIds.push(opts.mediaId);
+
+    for (const rec of matches) {
+      const refs = this.repository.countReferencesForSource(userId, rec.id);
+      if (opts.forceDelete || (refs.lessons === 0 && refs.notes === 0)) {
+        if (this.repository.deleteById(userId, rec.id)) {
+          sourcesDeleted++;
+          if (rec.mediaId) candidateMediaIds.push(rec.mediaId);
+        }
+      }
+    }
+
+    const mediaGc = this.pruneOrphanedMediaFiles(candidateMediaIds);
+    return {
+      sourcesDeleted,
+      mediaFilesRemoved: mediaGc.filesRemoved,
+      bytesFreed: mediaGc.bytesFreed,
+    };
+  }
+
+  getStorageStatsForUser(userId: string): {
+    sourcesCount: number;
+    mediaFilesCount: number;
+    mediaBytes: number;
+  } {
+    const all = this.repository.findAllForUser(userId);
+    let mediaFilesCount = 0;
+    let mediaBytes = 0;
+    const seen = new Set<string>();
+
+    for (const src of all) {
+      const clean = path.basename(String(src.mediaId || '').trim());
+      if (!clean || !SAFE_MEDIA_ID_RE.test(clean) || seen.has(clean)) continue;
+      if (src.mediaKind !== 'audio' && src.mediaKind !== 'video') continue;
+      seen.add(clean);
+
+      const direct = path.join(this.mediaDir, clean);
+      const mp4 = path.join(this.mediaDir, `${clean}.mp4`);
+      const target = fs.existsSync(direct) ? direct : fs.existsSync(mp4) ? mp4 : '';
+      if (target) {
+        try {
+          const st = fs.statSync(target);
+          if (st.isFile()) {
+            mediaFilesCount++;
+            mediaBytes += st.size || 0;
+          }
+        } catch {
+          // Ignore stat error
+        }
+      }
+    }
+
+    return {
+      sourcesCount: all.length,
+      mediaFilesCount,
+      mediaBytes,
+    };
+  }
+
   /**
    * Persists an uploaded audio/video file once under `data/media/` using a
    * content-addressed filename so re-uploads never duplicate storage and

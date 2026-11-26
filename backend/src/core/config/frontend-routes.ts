@@ -29,6 +29,10 @@ const WORKSPACE_EXACT_PATHS = new Set<string>([
   '/american-extractor',
   '/american-english',
   '/phrases',
+  '/think',
+  '/think-aloud',
+  '/spontaneous',
+  '/thinking',
 ]);
 
 const WORKSPACE_SUBROUTE_PREFIXES = [
@@ -42,6 +46,10 @@ const WORKSPACE_SUBROUTE_PREFIXES = [
   '/american-extractor/',
   '/american-english/',
   '/phrases/',
+  '/think/',
+  '/think-aloud/',
+  '/spontaneous/',
+  '/thinking/',
 ];
 
 export function normalizePathname(pathname: string): string {

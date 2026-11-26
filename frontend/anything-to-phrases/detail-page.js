@@ -940,6 +940,11 @@
                 }" title="${saved ? 'Saved in Vocabulary' : 'Save to Vocabulary'}">
                   ${icon(saved ? 'bookmark-check' : 'bookmark-plus')}
                 </button>
+                <button type="button" class="icon-action icon-action--sm is-danger aex-util-btn" data-aex-delete-phrase="${escapeHtml(
+                  idx,
+                )}" aria-label="Remove ${escapeHtml(item.term)}" title="Remove phrase from guide">
+                  ${icon('trash')}
+                </button>
               </div>
               <span class="aex-action-divider" aria-hidden="true"></span>
               ${checkButton}
@@ -1518,6 +1523,53 @@
       el('aex-export-btn')?.addEventListener('click', exportMarkdown);
       el('aex-save-all-btn')?.addEventListener('click', saveAllItems);
 
+      el('aex-detail-reset-progress-btn')?.addEventListener('click', async () => {
+        const note = local.currentNote;
+        if (!note || !global.FlaptapConfirm?.confirmAction) return;
+        await global.FlaptapConfirm.confirmAction({
+          title: 'Reset study guide progress?',
+          message: 'Clears all studied phrase checkmarks for this guide.',
+          detail: note.title || '',
+          confirmLabel: 'Reset Progress',
+          tone: 'primary',
+          onConfirm: async () => {
+            const res = await api.resetNoteProgress(note.id);
+            note.completionProgress = res.completionProgress || {};
+            note.isCompleted = false;
+            store.cacheNote(note);
+            store.updateCachedNoteMeta(note.id, { isCompleted: false, completedCount: 0 });
+            renderNoteProgress(note);
+            renderItems(note);
+            showToast('Guide progress reset.');
+          },
+          onError: (err) => {
+            showToast(err?.message || 'Could not reset guide progress.');
+          },
+        });
+      });
+
+      el('aex-detail-delete-btn')?.addEventListener('click', async () => {
+        const note = local.currentNote;
+        if (!note || !global.FlaptapConfirm?.confirmAction) return;
+        await global.FlaptapConfirm.confirmAction({
+          title: 'Delete study guide permanently?',
+          message: 'Removes this study guide, its phrases, and any orphaned source caches.',
+          detail: note.title || '',
+          confirmLabel: 'Delete Guide',
+          tone: 'danger',
+          onConfirm: async () => {
+            await api.deleteNote(note.id);
+            store.removeNoteFromCache(note.id);
+            clearCurrent();
+            showToast('Study guide deleted.');
+            nav.goToLibrary({ replace: true });
+          },
+          onError: (err) => {
+            showToast(err?.message || 'Could not delete study guide.');
+          },
+        });
+      });
+
       el('aex-reextract-btn')?.addEventListener('click', () => {
         if (local.currentNote) nav.reextractNote(local.currentNote);
       });
@@ -1780,6 +1832,40 @@
         if (saveBtn) {
           e.preventDefault();
           saveItem(saveBtn.dataset.aexSaveIndex);
+          return;
+        }
+
+        const delPhraseBtn = e.target.closest('[data-aex-delete-phrase]');
+        if (delPhraseBtn && local.currentNote) {
+          e.preventDefault();
+          const idx = Number(delPhraseBtn.dataset.aexDeletePhrase);
+          const item = (local.currentNote.items || []).find((it) => Number(it.index) === idx);
+          global.FlaptapConfirm?.confirmAction?.({
+            title: 'Remove phrase from study guide?',
+            message: 'Removes this phrase and re-calculates guide completion automatically.',
+            detail: item?.term || '',
+            confirmLabel: 'Remove Phrase',
+            tone: 'danger',
+            onConfirm: async () => {
+              const res = await api.deleteNoteItem(local.currentNote.id, idx);
+              if (res?.note) {
+                local.currentNote = res.note;
+                store.cacheNote(res.note);
+                renderNoteProgress(res.note);
+                renderCategoryFilters(res.note);
+                renderItems(res.note);
+                const countEl = el('aex-note-count');
+                if (countEl) {
+                  const len = Array.isArray(res.note.items) ? res.note.items.length : 0;
+                  countEl.textContent = `${len} phrase${len === 1 ? '' : 's'}`;
+                }
+                showToast('Phrase removed from guide.');
+              }
+            },
+            onError: (err) => {
+              showToast(err?.message || 'Could not remove phrase.');
+            },
+          });
           return;
         }
 
