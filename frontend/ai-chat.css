@@ -250,6 +250,63 @@ body:not(.is-ai-chat-view) .editorial-toast {
 }
 
 /* --------------------------------------------------------------------------
+   1B. NON-BLOCKING SPLIT VIEW HOST PUSH (CO-PILOT MODE)
+   -------------------------------------------------------------------------- */
+
+.app-shell,
+body.studio-body {
+  transition: padding-inline-end 0.24s var(--ap-spring, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+html.ft-ai-resizing .app-shell,
+html.ft-ai-resizing body.studio-body,
+html.ft-ai-resizing .ft-ai-drawer {
+  transition: none !important;
+}
+
+html[data-ai-chat-mode="split"] .app-shell,
+html[data-ai-chat-mode="split"] body.studio-body {
+  padding-inline-end: min(var(--ft-ai-split-width, 430px), var(--ft-ai-split-cap, 52vw));
+  box-sizing: border-box;
+}
+
+html[data-ai-chat-mode="split"] .workspace-topbar-inner,
+html[data-ai-chat-mode="split"] .workspace-main {
+  padding-inline: 20px;
+}
+
+html[data-ai-chat-mode="split"] body:not(.is-ai-chat-view) .editorial-toast,
+html[data-ai-chat-mode="split"] .studio-body .floating-jump-pill {
+  inset-inline-end: calc(min(var(--ft-ai-split-width, 430px), var(--ft-ai-split-cap, 52vw)) + 20px) !important;
+}
+
+html[data-ai-chat-mode="split"] .studio-body .floating-jump-pill {
+  bottom: 22px !important;
+}
+
+@media (max-width: 1180px) {
+  html[data-ai-chat-mode="split"] {
+    --ft-ai-split-cap: 360px;
+  }
+}
+
+@media (max-width: 1280px) {
+  html[data-ai-chat-mode="split"] .studio-body .studio-workspace,
+  html[data-ai-chat-mode="split"] .studio-body .studio-workspace[data-layout="side"] {
+    grid-template-columns: minmax(230px, 38%) minmax(0, 62%);
+    gap: 12px;
+    padding-inline: 12px;
+  }
+
+  html[data-ai-chat-mode="split"] .studio-body .studio-workspace[data-layout="theater"],
+  html[data-ai-chat-mode="split"] .studio-body .studio-workspace[data-layout="focus"] {
+    grid-template-columns: minmax(0, 58%) minmax(260px, 42%);
+    gap: 12px;
+    padding-inline: 12px;
+  }
+}
+
+/* --------------------------------------------------------------------------
    2. BACKDROP & UNIFIED DRAWER CONTAINER (DOCKED / EXPANDED / FULLPAGE)
    -------------------------------------------------------------------------- */
 
@@ -295,6 +352,50 @@ body:not(.is-ai-chat-view) .editorial-toast {
   animation: ftAiDrawerIn 0.24s var(--ap-spring, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
+.ft-ai-drawer[data-mode="split"] {
+  top: 0;
+  bottom: 0;
+  inset-inline-end: 0;
+  width: min(var(--ft-ai-drawer-width, 430px), var(--ft-ai-split-cap, 52vw));
+  z-index: 640;
+  border-radius: 0;
+  border-top: none;
+  border-bottom: none;
+  border-inline-end: none;
+  border-inline-start: 1px solid var(--ap-border-strong);
+  background: var(--ap-surface);
+  box-shadow: -8px 0 28px -14px rgba(0, 0, 0, 0.14);
+}
+
+[dir="rtl"] .ft-ai-drawer[data-mode="split"] {
+  box-shadow: 8px 0 28px -14px rgba(0, 0, 0, 0.14);
+}
+
+.ft-ai-drawer[data-mode="floating"] {
+  width: min(var(--ft-ai-drawer-width, 420px), calc(100vw - 24px));
+  height: min(600px, calc(100dvh - 36px));
+  z-index: 700;
+  border-radius: 22px;
+  box-shadow:
+    0 22px 60px -14px rgba(0, 0, 0, 0.30),
+    0 4px 16px rgba(0, 0, 0, 0.10),
+    var(--ap-specular);
+}
+
+.ft-ai-drawer[data-mode="floating"] .ft-ai-head {
+  cursor: grab;
+  user-select: none;
+}
+
+.ft-ai-drawer[data-mode="floating"].is-dragging {
+  transition: none !important;
+  animation: none !important;
+}
+
+.ft-ai-drawer[data-mode="floating"].is-dragging .ft-ai-head {
+  cursor: grabbing;
+}
+
 .ft-ai-drawer[data-mode="expanded"] {
   inset: 0;
   margin: auto;
@@ -332,9 +433,30 @@ body:not(.is-ai-chat-view) .editorial-toast {
   top: 0;
   bottom: 0;
   inset-inline-start: 0;
-  width: 6px;
+  width: 7px;
   cursor: ew-resize;
   z-index: 15;
+  transition: background-color 0.14s ease;
+}
+
+.ft-ai-resize-handle::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 3px;
+  height: 34px;
+  border-radius: 99px;
+  background: var(--ap-border-strong);
+  opacity: 0;
+  transition: opacity 0.14s ease, background-color 0.14s ease;
+}
+
+.ft-ai-resize-handle:hover::after,
+html.ft-ai-resizing .ft-ai-resize-handle::after {
+  opacity: 1;
+  background: var(--ap-blue);
 }
 
 .ft-ai-drawer[data-mode="expanded"] .ft-ai-resize-handle,
@@ -359,7 +481,9 @@ body:not(.is-ai-chat-view) .editorial-toast {
   display: flex;
 }
 
-.ft-ai-drawer[data-mode="docked"].has-sidebar .ft-ai-sidebar {
+.ft-ai-drawer[data-mode="docked"].has-sidebar .ft-ai-sidebar,
+.ft-ai-drawer[data-mode="split"].has-sidebar .ft-ai-sidebar,
+.ft-ai-drawer[data-mode="floating"].has-sidebar .ft-ai-sidebar {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -758,6 +882,95 @@ body:not(.is-ai-chat-view) .editorial-toast {
   min-height: 34px;
   padding-inline-end: 28px;
   text-overflow: ellipsis;
+}
+
+.ft-ai-mode-btn {
+  gap: 5px;
+}
+
+.ft-ai-mode-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ap-blue);
+}
+
+.ft-ai-mode-hint {
+  font-size: 0.70rem;
+  color: var(--ap-text-tertiary);
+}
+
+.ft-ai-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.ft-ai-mode-card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--ap-border);
+  background: var(--ap-surface);
+  text-align: start;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background-color 0.14s ease, transform 0.14s var(--ap-spring);
+}
+
+.ft-ai-mode-card:hover {
+  border-color: rgba(0, 113, 227, 0.38);
+  transform: translateY(-1px);
+}
+
+.ft-ai-mode-card.is-active {
+  border-color: var(--ap-blue);
+  background: var(--ap-blue-wash);
+}
+
+.ft-ai-mode-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.ft-ai-mode-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ap-text-secondary);
+}
+
+.ft-ai-mode-card.is-active .ft-ai-mode-card-icon {
+  color: var(--ap-blue);
+}
+
+.ft-ai-mode-badge {
+  font-size: 0.63rem;
+  font-weight: 680;
+  padding: 1px 6px;
+  border-radius: 980px;
+  background: var(--ap-fill);
+  color: var(--ap-text-secondary);
+}
+
+.ft-ai-mode-badge.is-copilot {
+  background: var(--ap-green-wash);
+  color: var(--ap-green);
+}
+
+.ft-ai-mode-card-title {
+  font-size: 0.77rem;
+  font-weight: 660;
+  color: var(--ap-text-primary);
+}
+
+.ft-ai-mode-card-desc {
+  font-size: 0.67rem;
+  line-height: 1.35;
+  color: var(--ap-text-secondary);
 }
 
 .ft-ai-subpanel {

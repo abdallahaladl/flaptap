@@ -4,6 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const vm = require('vm');
 
 const tmpDb = path.join(os.tmpdir(), `flaptap-aichat-unit-${Date.now()}.sqlite`);
 process.env.FLAPTAP_SQLITE_PATH = tmpDb;
@@ -76,6 +77,30 @@ function run() {
     assert(isWorkspacePagePath(route), `Route ${route} should resolve to workspace`);
     assert.strictEqual(resolveFrontendEntryFile(route), 'index.html');
   }
+
+  // 2b. Extensible Frontend Display Mode Registry Contract
+  const modesPath = path.resolve(__dirname, '../frontend/ai-chat/modes.js');
+  const modesSrc = fs.readFileSync(modesPath, 'utf8');
+  const sandbox = { window: { innerWidth: 1440 } };
+  vm.runInNewContext(modesSrc, sandbox);
+  const Modes = sandbox.window.FlaptapAiChatModes;
+  assert(Modes && typeof Modes.registerMode === 'function', 'FlaptapAiChatModes missing');
+  assert.strictEqual(Modes.DEFAULT_MODE_ID, 'split', 'Default display mode should be split');
+  const builtIns = Modes.listModes();
+  assert(builtIns.length >= 5, 'Expected at least 5 display modes');
+  assert.strictEqual(Modes.getMode('split').blocksPage, false, 'Split mode must not block page');
+  assert.strictEqual(Modes.getMode('split').pushesLayout, true, 'Split mode must push layout');
+  assert.strictEqual(Modes.getMode('floating').blocksPage, false, 'Floating mode must not block page');
+  assert.strictEqual(Modes.getMode('floating').draggable, true, 'Floating mode must be draggable');
+  assert.strictEqual(Modes.getMode('docked').blocksPage, true, 'Overlay docked mode preserves blocking');
+  assert.strictEqual(Modes.resolveEffectiveMode('split', 390).id, 'docked', 'Narrow mobile falls back cleanly');
+  Modes.registerMode({
+    id: 'bottom_dock',
+    label: 'Bottom Console',
+    blocksPage: false,
+    pushesLayout: true,
+  });
+  assert.strictEqual(Modes.getMode('bottom_dock').label, 'Bottom Console', 'Custom mode registration failed');
 
   // 3. SQLite Repository CRUD, Edit/Truncate, Preferences & User Isolation
   const sqlite = new SqliteService();

@@ -16,6 +16,7 @@
   const Api = () => global.FlaptapAiChatApi;
   const Md = () => global.FlaptapAiChatMarkdown;
   const Ctx = () => global.FlaptapAiContext;
+  const Modes = () => global.FlaptapAiChatModes;
   const escapeHtml = (v) => Md().escapeHtml(v);
 
   const SLASH_COMMANDS = [
@@ -181,6 +182,12 @@
             </div>
 
             <div class="ft-ai-head-actions">
+              <button type="button" id="ft-ai-mode-btn" class="ft-ai-pill-btn ft-ai-mode-btn ft-ai-desktop-only" aria-expanded="false" aria-controls="ft-ai-mode-popover" title="Switch AI Chat display mode (Split, Floating, Overlay, Theater, Full Page)">
+                <span id="ft-ai-mode-btn-icon" class="ft-ai-mode-btn-icon" aria-hidden="true"></span>
+                <span id="ft-ai-mode-btn-label">Split</span>
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
+
               <button type="button" id="ft-ai-model-btn" class="ft-ai-pill-btn" aria-expanded="false" title="Choose AI Provider & Model">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
                 <span id="ft-ai-model-pill-label">Model</span>
@@ -194,19 +201,20 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               </button>
 
-              <button type="button" id="ft-ai-expand-btn" class="ft-ai-icon-btn ft-ai-desktop-only" aria-label="Expand or dock window" title="Toggle Expanded Modal">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
-              </button>
-
-              <a id="ft-ai-fullpage-link" href="/chat" class="ft-ai-icon-btn ft-ai-desktop-only" aria-label="Open full-page AI Chat" title="Open full-page /chat">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-              </a>
-
-              <button type="button" id="ft-ai-close-btn" class="ft-ai-icon-btn ft-ai-close-btn" aria-label="Close AI Chat" title="Close (Esc)">
+              <button type="button" id="ft-ai-close-btn" class="ft-ai-icon-btn ft-ai-close-btn" aria-label="Close AI Chat" title="Close">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
           </header>
+
+          <!-- Extensible Visual Display Mode Picker Popover -->
+          <div id="ft-ai-mode-popover" class="ft-ai-subpanel ft-ai-mode-popover" hidden>
+            <div class="ft-ai-ctrl-head">
+              <span class="ft-ai-ctrl-label">Workspace Display Mode</span>
+              <span class="ft-ai-mode-hint">Choose how AI works beside you</span>
+            </div>
+            <div id="ft-ai-mode-grid" class="ft-ai-mode-grid" role="radiogroup" aria-label="AI Chat Display Mode"></div>
+          </div>
 
           <!-- Collapsible Shared FlaptapAiSelector Panel -->
           <div id="ft-ai-model-panel" class="ft-ai-model-panel" hidden>
@@ -408,6 +416,100 @@
     inp.style.overflowY = inp.scrollHeight > 168 ? 'auto' : 'hidden';
   }
 
+  function resolveEffectiveModeDef() {
+    const s = Store().state;
+    const requested = s.displayMode || 'split';
+    if (Modes()?.resolveEffectiveMode) {
+      return Modes().resolveEffectiveMode(requested, global.innerWidth);
+    }
+    return {
+      id: requested,
+      label: requested,
+      shortLabel: requested,
+      blocksPage: requested === 'docked' || requested === 'expanded',
+      pushesLayout: requested === 'split',
+      resizable: requested === 'split' || requested === 'docked' || requested === 'floating',
+      draggable: requested === 'floating',
+      isRouteMode: requested === 'fullpage',
+      iconSvg: '',
+    };
+  }
+
+  function applyFloatingBounds(drawer) {
+    const s = Store().state;
+    if (!drawer) return;
+    const vw = global.innerWidth || 1280;
+    const vh = global.innerHeight || 800;
+    const width = Math.min(s.drawerWidth || 430, vw - 24);
+    const height = Math.min(600, vh - 36);
+    const fallbackX = document.documentElement.getAttribute('dir') === 'rtl' ? 18 : vw - width - 18;
+    const fallbackY = vh - height - 20;
+    const rawX = s.floatingPos ? s.floatingPos.x : fallbackX;
+    const rawY = s.floatingPos ? s.floatingPos.y : fallbackY;
+    const clampedX = Math.max(12, Math.min(rawX, vw - width - 12));
+    const clampedY = Math.max(12, Math.min(rawY, vh - height - 12));
+    drawer.style.left = `${Math.round(clampedX)}px`;
+    drawer.style.top = `${Math.round(clampedY)}px`;
+    drawer.style.right = 'auto';
+    drawer.style.bottom = 'auto';
+    drawer.style.insetInlineEnd = 'auto';
+  }
+
+  function clearFloatingBounds(drawer) {
+    if (!drawer) return;
+    drawer.style.left = '';
+    drawer.style.top = '';
+    drawer.style.right = '';
+    drawer.style.bottom = '';
+    drawer.style.insetInlineEnd = '';
+  }
+
+  function renderModePicker() {
+    const grid = el('ft-ai-mode-grid');
+    if (!grid) return;
+    const s = Store().state;
+    const activeId = s.displayMode || 'split';
+    const eff = resolveEffectiveModeDef();
+    const list = Modes()?.listModes?.() || [];
+
+    grid.innerHTML = list
+      .map((m) => {
+        const isSelected = m.id === activeId;
+        const isDisabledMobile = m.desktopOnly && (global.innerWidth || 1280) <= (Modes()?.DESKTOP_BREAKPOINT || 900);
+        return `
+          <button type="button" class="ft-ai-mode-card${isSelected ? ' is-active' : ''}${isDisabledMobile ? ' is-mobile-fallback' : ''}" data-set-display-mode="${escapeHtml(m.id)}" role="radio" aria-checked="${isSelected ? 'true' : 'false'}"${isDisabledMobile ? ' title="Uses Overlay Sheet on narrow screens"' : ''}>
+            <div class="ft-ai-mode-card-top">
+              <span class="ft-ai-mode-card-icon">${m.iconSvg || ''}</span>
+              ${m.badge ? `<span class="ft-ai-mode-badge${m.blocksPage ? '' : ' is-copilot'}">${escapeHtml(m.badge)}</span>` : ''}
+            </div>
+            <strong class="ft-ai-mode-card-title">${escapeHtml(m.label)}</strong>
+            <span class="ft-ai-mode-card-desc">${escapeHtml(m.description)}</span>
+          </button>`;
+      })
+      .join('');
+
+    const modeBtnLabel = el('ft-ai-mode-btn-label');
+    const modeBtnIcon = el('ft-ai-mode-btn-icon');
+    if (modeBtnLabel && eff) modeBtnLabel.textContent = eff.shortLabel || eff.label;
+    if (modeBtnIcon && eff) modeBtnIcon.innerHTML = eff.iconSvg || '';
+  }
+
+  function syncHeaderSubpanelAria() {
+    const s = Store().state;
+    const modePop = el('ft-ai-mode-popover');
+    const modelPanel = el('ft-ai-model-panel');
+    const settingsPop = el('ft-ai-settings-popover');
+    const ctxPop = el('ft-ai-ctx-popover');
+    if (modePop) modePop.hidden = !s.modePopoverOpen;
+    if (modelPanel) modelPanel.hidden = !s.modelPanelOpen;
+    if (settingsPop) settingsPop.hidden = !s.settingsPanelOpen;
+    if (ctxPop) ctxPop.hidden = !s.contextPopoverOpen;
+    el('ft-ai-mode-btn')?.setAttribute('aria-expanded', s.modePopoverOpen ? 'true' : 'false');
+    el('ft-ai-model-btn')?.setAttribute('aria-expanded', s.modelPanelOpen ? 'true' : 'false');
+    el('ft-ai-settings-btn')?.setAttribute('aria-expanded', s.settingsPanelOpen ? 'true' : 'false');
+    el('ft-ai-ctx-pill')?.setAttribute('aria-expanded', s.contextPopoverOpen ? 'true' : 'false');
+  }
+
   function syncDisplayHost() {
     const s = Store().state;
     const drawer = el('ft-ai-drawer');
@@ -418,30 +520,52 @@
     if (!drawer || !root) return;
 
     const isFull = s.displayMode === 'fullpage' && Boolean(fullHost);
-    drawer.dataset.mode = isFull ? 'fullpage' : s.displayMode;
+    const eff = isFull
+      ? { id: 'fullpage', shortLabel: 'Full', label: 'Full Page', blocksPage: false, pushesLayout: false, draggable: false, resizable: false, iconSvg: Modes()?.getMode?.('fullpage')?.iconSvg || '' }
+      : resolveEffectiveModeDef();
+
+    drawer.dataset.mode = eff.id;
+    drawer.dataset.interactive = eff.blocksPage ? 'modal' : 'coexist';
     drawer.style.setProperty('--ft-ai-drawer-width', `${s.drawerWidth}px`);
 
     if (isFull) {
       if (drawer.parentElement !== fullHost) {
         fullHost.appendChild(drawer);
       }
+      clearFloatingBounds(drawer);
       drawer.hidden = false;
       drawer.setAttribute('aria-modal', 'false');
       if (backdrop) backdrop.hidden = true;
       if (fab) fab.hidden = true;
+      document.documentElement.removeAttribute('data-ai-chat-mode');
+      document.documentElement.style.removeProperty('--ft-ai-split-width');
     } else {
       if (drawer.parentElement !== root) {
         root.appendChild(drawer);
       }
       drawer.hidden = !s.isOpen;
-      drawer.setAttribute('aria-modal', s.isOpen && s.displayMode === 'expanded' ? 'true' : 'false');
+      drawer.setAttribute('aria-modal', s.isOpen && eff.blocksPage ? 'true' : 'false');
       if (backdrop) {
-        backdrop.hidden = !s.isOpen;
-        backdrop.classList.toggle('is-expanded', s.displayMode === 'expanded');
+        backdrop.hidden = !(s.isOpen && eff.blocksPage);
+        backdrop.classList.toggle('is-expanded', eff.id === 'expanded');
       }
       if (fab) {
         fab.hidden = s.isOpen;
         fab.setAttribute('aria-expanded', s.isOpen ? 'true' : 'false');
+      }
+
+      if (s.isOpen && eff.pushesLayout) {
+        document.documentElement.setAttribute('data-ai-chat-mode', eff.id);
+        document.documentElement.style.setProperty('--ft-ai-split-width', `${s.drawerWidth}px`);
+      } else {
+        document.documentElement.removeAttribute('data-ai-chat-mode');
+        document.documentElement.style.removeProperty('--ft-ai-split-width');
+      }
+
+      if (s.isOpen && eff.draggable) {
+        applyFloatingBounds(drawer);
+      } else {
+        clearFloatingBounds(drawer);
       }
     }
 
@@ -451,15 +575,13 @@
       drawer.classList.toggle('has-sidebar', showSidebar);
     }
 
-    const expandBtn = el('ft-ai-expand-btn');
-    if (expandBtn) {
-      expandBtn.hidden = isFull;
-      expandBtn.title = s.displayMode === 'expanded' ? 'Dock to side' : 'Expand modal';
-    }
-    const fpLink = el('ft-ai-fullpage-link');
-    if (fpLink) fpLink.hidden = isFull;
+    const modeBtn = el('ft-ai-mode-btn');
+    if (modeBtn) modeBtn.hidden = false;
     const closeBtn = el('ft-ai-close-btn');
     if (closeBtn) closeBtn.hidden = isFull;
+
+    renderModePicker();
+    syncHeaderSubpanelAria();
 
     if (s.isOpen || isFull) {
       ensureAiSelector();
@@ -980,22 +1102,19 @@
     drawer.dataset.bound = '1';
 
     el('ft-ai-fab')?.addEventListener('click', () => global.FlaptapAiChat.toggle());
-    el('ft-ai-backdrop')?.addEventListener('click', () => global.FlaptapAiChat.close());
+    el('ft-ai-backdrop')?.addEventListener('click', () => {
+      if (resolveEffectiveModeDef().blocksPage) global.FlaptapAiChat.close();
+    });
     el('ft-ai-close-btn')?.addEventListener('click', () => global.FlaptapAiChat.close());
 
-    el('ft-ai-expand-btn')?.addEventListener('click', () => {
+    el('ft-ai-mode-btn')?.addEventListener('click', () => {
       const s = Store().state;
-      Store().setDisplayMode(s.displayMode === 'expanded' ? 'docked' : 'expanded');
-    });
-
-    el('ft-ai-fullpage-link')?.addEventListener('click', (e) => {
-      if (global.FlaptapWorkspace?.navigateToSection) {
-        e.preventDefault();
-        Store().state.isOpen = false;
-        global.FlaptapWorkspace.navigateToSection('ai-chat', {
-          noteId: Store().state.activeThreadId || '',
-        });
-      }
+      s.modePopoverOpen = !s.modePopoverOpen;
+      s.modelPanelOpen = false;
+      s.settingsPanelOpen = false;
+      s.contextPopoverOpen = false;
+      if (s.modePopoverOpen) renderModePicker();
+      syncHeaderSubpanelAria();
     });
 
     el('ft-ai-sidebar-toggle-btn')?.addEventListener('click', () => {
@@ -1037,19 +1156,10 @@
       }, 200);
     });
 
-    function syncHeaderSubpanelAria() {
-      const s = Store().state;
-      el('ft-ai-model-panel').hidden = !s.modelPanelOpen;
-      el('ft-ai-settings-popover').hidden = !s.settingsPanelOpen;
-      el('ft-ai-ctx-popover').hidden = !s.contextPopoverOpen;
-      el('ft-ai-model-btn')?.setAttribute('aria-expanded', s.modelPanelOpen ? 'true' : 'false');
-      el('ft-ai-settings-btn')?.setAttribute('aria-expanded', s.settingsPanelOpen ? 'true' : 'false');
-      el('ft-ai-ctx-pill')?.setAttribute('aria-expanded', s.contextPopoverOpen ? 'true' : 'false');
-    }
-
     el('ft-ai-model-btn')?.addEventListener('click', () => {
       const s = Store().state;
       s.modelPanelOpen = !s.modelPanelOpen;
+      s.modePopoverOpen = false;
       s.settingsPanelOpen = false;
       s.contextPopoverOpen = false;
       syncHeaderSubpanelAria();
@@ -1059,6 +1169,7 @@
     el('ft-ai-settings-btn')?.addEventListener('click', () => {
       const s = Store().state;
       s.settingsPanelOpen = !s.settingsPanelOpen;
+      s.modePopoverOpen = false;
       s.modelPanelOpen = false;
       s.contextPopoverOpen = false;
       syncHeaderSubpanelAria();
@@ -1067,6 +1178,7 @@
     el('ft-ai-ctx-pill')?.addEventListener('click', () => {
       const s = Store().state;
       s.contextPopoverOpen = !s.contextPopoverOpen;
+      s.modePopoverOpen = false;
       s.modelPanelOpen = false;
       s.settingsPanelOpen = false;
       syncHeaderSubpanelAria();
@@ -1122,17 +1234,68 @@
     });
     el('ft-ai-scroll-bottom-btn')?.addEventListener('click', () => scrollToBottom(true));
 
-    // Left-edge drag resize in docked mode
+    // Left-edge drag resize across Split, Docked, and Floating modes
     const resizeHandle = el('ft-ai-resize-handle');
     resizeHandle?.addEventListener('pointerdown', (ev) => {
-      if (Store().state.displayMode !== 'docked') return;
+      const eff = resolveEffectiveModeDef();
+      if (!eff.resizable) return;
       ev.preventDefault();
+      document.documentElement.classList.add('ft-ai-resizing');
       const isRtl = document.documentElement.getAttribute('dir') === 'rtl';
+      const drawerRect = drawer.getBoundingClientRect();
       const onMove = (moveEv) => {
-        const w = isRtl ? moveEv.clientX - 12 : global.innerWidth - moveEv.clientX - 12;
-        Store().setDrawerWidth(w);
+        let nextW;
+        if (eff.id === 'floating') {
+          nextW = isRtl ? moveEv.clientX - drawerRect.left : drawerRect.right - moveEv.clientX;
+        } else {
+          const edgeOffset = eff.id === 'split' ? 0 : 12;
+          nextW = isRtl ? moveEv.clientX - edgeOffset : global.innerWidth - moveEv.clientX - edgeOffset;
+        }
+        const clamped = Math.max(340, Math.min(720, Math.round(nextW)));
+        Store().state.drawerWidth = clamped;
+        drawer.style.setProperty('--ft-ai-drawer-width', `${clamped}px`);
+        if (eff.pushesLayout) {
+          document.documentElement.style.setProperty('--ft-ai-split-width', `${clamped}px`);
+        }
+        if (eff.draggable) {
+          applyFloatingBounds(drawer);
+        }
       };
       const onUp = () => {
+        document.documentElement.classList.remove('ft-ai-resizing');
+        Store().setDrawerWidth(Store().state.drawerWidth);
+        global.removeEventListener('pointermove', onMove);
+        global.removeEventListener('pointerup', onUp);
+      };
+      global.addEventListener('pointermove', onMove);
+      global.addEventListener('pointerup', onUp);
+    });
+
+    // Drag header to reposition Floating Window
+    const headEl = drawer.querySelector('.ft-ai-head');
+    headEl?.addEventListener('pointerdown', (ev) => {
+      const eff = resolveEffectiveModeDef();
+      if (!eff.draggable) return;
+      if (ev.target.closest('button, a, input, select, textarea')) return;
+      ev.preventDefault();
+      const rect = drawer.getBoundingClientRect();
+      const offsetX = ev.clientX - rect.left;
+      const offsetY = ev.clientY - rect.top;
+      drawer.classList.add('is-dragging');
+      const onMove = (moveEv) => {
+        const vw = global.innerWidth || 1280;
+        const vh = global.innerHeight || 800;
+        const nextX = Math.max(12, Math.min(moveEv.clientX - offsetX, vw - rect.width - 12));
+        const nextY = Math.max(12, Math.min(moveEv.clientY - offsetY, vh - rect.height - 12));
+        drawer.style.left = `${Math.round(nextX)}px`;
+        drawer.style.top = `${Math.round(nextY)}px`;
+        Store().state.floatingPos = { x: Math.round(nextX), y: Math.round(nextY) };
+      };
+      const onUp = () => {
+        drawer.classList.remove('is-dragging');
+        if (Store().state.floatingPos) {
+          Store().setFloatingPos(Store().state.floatingPos.x, Store().state.floatingPos.y);
+        }
         global.removeEventListener('pointermove', onMove);
         global.removeEventListener('pointerup', onUp);
       };
@@ -1142,6 +1305,12 @@
 
     // Delegated clicks inside drawer
     drawer.addEventListener('click', (e) => {
+      const modePick = e.target.closest('[data-set-display-mode]');
+      if (modePick) {
+        const targetMode = modePick.getAttribute('data-set-display-mode');
+        global.FlaptapAiChat.setDisplayMode(targetMode);
+        return;
+      }
       const selThread = e.target.closest('[data-select-thread]');
       if (selThread) {
         const id = selThread.getAttribute('data-select-thread');
@@ -1395,6 +1564,14 @@
 
       if (e.key === 'Escape' && s.isOpen && s.displayMode !== 'fullpage') {
         e.preventDefault();
+        if (s.modePopoverOpen || s.modelPanelOpen || s.settingsPanelOpen || s.contextPopoverOpen) {
+          s.modePopoverOpen = false;
+          s.modelPanelOpen = false;
+          s.settingsPanelOpen = false;
+          s.contextPopoverOpen = false;
+          syncHeaderSubpanelAria();
+          return;
+        }
         global.FlaptapAiChat.close();
         return;
       }
@@ -1493,15 +1670,34 @@
       }
       if (e.key === 'Escape' && Store().state.isOpen && Store().state.displayMode !== 'fullpage') {
         const activeTag = document.activeElement?.tagName;
-        if (Store().state.slashMenuOpen) {
-          Store().state.slashMenuOpen = false;
+        const s = Store().state;
+        if (s.slashMenuOpen) {
+          s.slashMenuOpen = false;
           renderSlashMenu();
           return;
         }
-        if (activeTag !== 'SELECT') {
+        if (s.modePopoverOpen || s.modelPanelOpen || s.settingsPanelOpen || s.contextPopoverOpen) {
+          s.modePopoverOpen = false;
+          s.modelPanelOpen = false;
+          s.settingsPanelOpen = false;
+          s.contextPopoverOpen = false;
+          syncHeaderSubpanelAria();
+          return;
+        }
+        const focusedInside = drawer.contains(document.activeElement);
+        if ((resolveEffectiveModeDef().blocksPage || focusedInside) && activeTag !== 'SELECT') {
           global.FlaptapAiChat.close();
         }
       }
+    });
+
+    let resizeRaf = 0;
+    global.addEventListener('resize', () => {
+      if (resizeRaf) return;
+      resizeRaf = requestAnimationFrame(() => {
+        resizeRaf = 0;
+        syncDisplayHost();
+      });
     });
 
     // React to Store updates cleanly
@@ -1553,6 +1749,7 @@
   global.FlaptapAiChatUi = {
     buildDom,
     syncDisplayHost,
+    renderModePicker,
     renderContextUi,
     renderPersonaAndControls,
     renderThreadsSidebar,

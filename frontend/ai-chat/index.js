@@ -9,6 +9,7 @@
   const Store = () => global.FlaptapAiChatStore;
   const Ui = () => global.FlaptapAiChatUi;
   const Ctx = () => global.FlaptapAiContext;
+  const Modes = () => global.FlaptapAiChatModes;
 
   function boot() {
     Ui().buildDom();
@@ -34,7 +35,10 @@
       s.personaOverride = opts.persona;
     }
     if (s.displayMode === 'fullpage') {
-      s.displayMode = s.lastOverlayMode || 'docked';
+      s.displayMode = s.lastOverlayMode || Modes()?.DEFAULT_MODE_ID || 'split';
+    }
+    if (opts.mode) {
+      Store().setDisplayMode(opts.mode);
     }
     s.isOpen = true;
     if (Store().isAuthenticated()) {
@@ -93,7 +97,39 @@
     const s = Store().state;
     if (s.displayMode !== 'fullpage') return;
     s.isOpen = false;
-    Store().setDisplayMode(s.lastOverlayMode || 'docked');
+    Store().setDisplayMode(s.lastOverlayMode || Modes()?.DEFAULT_MODE_ID || 'split');
+  }
+
+  function setDisplayMode(modeId) {
+    const def = Modes()?.getMode?.(modeId);
+    if (def?.isRouteMode || modeId === 'fullpage') {
+      if (global.FlaptapWorkspace?.navigateToSection) {
+        Store().state.isOpen = false;
+        Store().state.modePopoverOpen = false;
+        global.FlaptapWorkspace.navigateToSection('ai-chat', {
+          noteId: Store().state.activeThreadId || '',
+        });
+        return;
+      }
+      global.location.href = Store().state.activeThreadId
+        ? `/chat/${encodeURIComponent(Store().state.activeThreadId)}`
+        : '/chat';
+      return;
+    }
+    if (Store().state.displayMode === 'fullpage' && global.FlaptapWorkspace?.navigateToSection) {
+      Store().setDisplayMode(modeId);
+      Store().state.isOpen = true;
+      global.FlaptapWorkspace.navigateToSection('lessons');
+      Ui().syncDisplayHost();
+      return;
+    }
+    Store().setDisplayMode(modeId);
+  }
+
+  function registerDisplayMode(def) {
+    const registered = Modes()?.registerMode?.(def);
+    Ui().renderModePicker?.();
+    return registered;
   }
 
   function configure(handlers = {}) {
@@ -109,6 +145,10 @@
     isOpen: () => Boolean(Store().state.isOpen),
     mountFullPage,
     unmountFullPage,
+    setDisplayMode,
+    getDisplayMode: () => Store().state.displayMode,
+    registerDisplayMode,
+    listDisplayModes: (opts) => Modes()?.listModes?.(opts) || [],
     configure,
     registerContextProvider: (id, fn) => Ctx().registerProvider(id, fn),
     notifyContextChanged: () => Ctx().notifyChange(),

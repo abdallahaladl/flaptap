@@ -7,19 +7,47 @@
 (function (global) {
   'use strict';
 
-  const DISPLAY_MODE_KEY = 'flaptap_ai_chat_mode';
+  const DISPLAY_MODE_KEY = 'flaptap_ai_chat_display_mode';
   const SIDEBAR_WIDTH_KEY = 'flaptap_ai_chat_drawer_width';
+  const FLOAT_POS_KEY = 'flaptap_ai_chat_float_pos';
 
   const Api = () => global.FlaptapAiChatApi;
   const Ctx = () => global.FlaptapAiContext;
+  const Modes = () => global.FlaptapAiChatModes;
+
+  function readInitialOverlayMode() {
+    try {
+      const saved = String(localStorage.getItem(DISPLAY_MODE_KEY) || '').trim();
+      if (saved && saved !== 'fullpage' && (!Modes() || Modes().getMode(saved))) {
+        return saved;
+      }
+    } catch {}
+    return Modes()?.DEFAULT_MODE_ID || 'split';
+  }
+
+  function readInitialFloatingPos() {
+    try {
+      const raw = localStorage.getItem(FLOAT_POS_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (Number.isFinite(Number(parsed?.x)) && Number.isFinite(Number(parsed?.y))) {
+        return { x: Number(parsed.x), y: Number(parsed.y) };
+      }
+    } catch {}
+    return null;
+  }
+
+  const initialMode = readInitialOverlayMode();
 
   const state = {
     initialized: false,
     isOpen: false,
-    displayMode: localStorage.getItem(DISPLAY_MODE_KEY) || 'docked', // 'docked' | 'expanded' | 'fullpage'
-    lastOverlayMode: 'docked',
-    drawerWidth: Number(localStorage.getItem(SIDEBAR_WIDTH_KEY)) || 460,
+    displayMode: initialMode,
+    lastOverlayMode: initialMode,
+    drawerWidth: Number(localStorage.getItem(SIDEBAR_WIDTH_KEY)) || 430,
+    floatingPos: readInitialFloatingPos(),
     sidebarOpen: false,
+    modePopoverOpen: false,
     modelPanelOpen: false,
     settingsPanelOpen: false,
     contextPopoverOpen: false,
@@ -714,29 +742,42 @@
     } catch {}
   }
 
-  function setDisplayMode(mode) {
-    const allowed = ['docked', 'expanded', 'fullpage'];
-    if (!allowed.includes(mode)) return;
-    if (mode !== 'fullpage') {
-      state.lastOverlayMode = mode;
+  function setDisplayMode(modeId) {
+    const clean = String(modeId || '').trim();
+    const def = Modes()?.getMode?.(clean);
+    const fallbackAllowed = ['split', 'floating', 'docked', 'expanded', 'fullpage'];
+    if (!def && !fallbackAllowed.includes(clean)) return;
+
+    if (clean !== 'fullpage') {
+      state.lastOverlayMode = clean;
       try {
-        localStorage.setItem(DISPLAY_MODE_KEY, mode);
+        localStorage.setItem(DISPLAY_MODE_KEY, clean);
       } catch {}
     }
-    state.displayMode = mode;
-    if (mode === 'fullpage') {
+    state.displayMode = clean;
+    state.modePopoverOpen = false;
+    if (clean === 'fullpage') {
       state.sidebarOpen = true;
     }
     emit('display-mode');
   }
 
   function setDrawerWidth(w) {
-    const clamped = Math.max(380, Math.min(720, Math.round(Number(w) || 460)));
+    const clamped = Math.max(340, Math.min(720, Math.round(Number(w) || 430)));
     state.drawerWidth = clamped;
     try {
       localStorage.setItem(SIDEBAR_WIDTH_KEY, String(clamped));
     } catch {}
     emit('width');
+  }
+
+  function setFloatingPos(x, y) {
+    if (!Number.isFinite(Number(x)) || !Number.isFinite(Number(y))) return;
+    const pos = { x: Math.round(Number(x)), y: Math.round(Number(y)) };
+    state.floatingPos = pos;
+    try {
+      localStorage.setItem(FLOAT_POS_KEY, JSON.stringify(pos));
+    } catch {}
   }
 
   global.FlaptapAiChatStore = {
@@ -760,6 +801,7 @@
     updatePreferences,
     setDisplayMode,
     setDrawerWidth,
+    setFloatingPos,
     getEffectiveContext,
     getActivePersona,
     isAuthenticated,
