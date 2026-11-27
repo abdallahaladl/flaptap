@@ -22,6 +22,7 @@
       navThinkAloud: 'Think Aloud',
       navExtractor: 'Phrase Miner',
       navLearningLibrary: 'Phrase Builder',
+      navAiChat: 'AI Chat',
       navVocabulary: 'Vocabulary',
       navHistory: 'Activity',
       navAiModels: 'AI Models',
@@ -194,6 +195,7 @@
       navThinkAloud: 'فكّر بصوت عالٍ',
       navExtractor: 'استخراج العبارات',
       navLearningLibrary: 'بناء العبارات',
+      navAiChat: 'محادثة AI',
       navVocabulary: 'المفردات',
       navHistory: 'النشاط',
       navAiModels: 'نماذج الذكاء',
@@ -310,6 +312,7 @@
       navThinkAloud: 'Think Aloud',
       navExtractor: 'Extractor',
       navLearningLibrary: 'Creador',
+      navAiChat: 'Chat IA',
       navVocabulary: 'Vocabulario',
       navHistory: 'Actividad',
       navAiModels: 'Modelos IA',
@@ -341,6 +344,7 @@
       navThinkAloud: 'Think Aloud',
       navExtractor: 'Extracteur',
       navLearningLibrary: 'Générateur',
+      navAiChat: 'Chat IA',
       navVocabulary: 'Vocabulaire',
       navHistory: 'Activité',
       navAiModels: 'Modèles IA',
@@ -372,6 +376,7 @@
       navThinkAloud: 'Think Aloud',
       navExtractor: 'Phrase Miner',
       navLearningLibrary: 'Phrase Builder',
+      navAiChat: 'KI-Chat',
       navVocabulary: 'Vokabeln',
       navHistory: 'Aktivität',
       navAiModels: 'KI-Modelle',
@@ -403,6 +408,7 @@
       navThinkAloud: 'Sesli Düşün',
       navExtractor: 'İfade Çıkarıcı',
       navLearningLibrary: 'İfade Üretici',
+      navAiChat: 'YZ Sohbet',
       navVocabulary: 'Kelimeler',
       navHistory: 'Etkinlik',
       navAiModels: 'YZ Modelleri',
@@ -818,6 +824,7 @@
       'dialogue',
       'pronunciation',
       'think-aloud',
+      'ai-chat',
       'vocabulary',
       'history',
       'american-extractor',
@@ -833,6 +840,7 @@
     document.body.classList.toggle('is-extractor-view', section === 'american-extractor');
     document.body.classList.toggle('is-library-view', section === 'learning-library');
     document.body.classList.toggle('is-think-aloud-view', section === 'think-aloud');
+    document.body.classList.toggle('is-ai-chat-view', section === 'ai-chat');
     validSections.forEach((name) => {
       const panel = document.getElementById(`section-${name}`);
       if (panel) panel.hidden = name !== section;
@@ -843,6 +851,7 @@
     if (section !== 'lessons') lessonsStickyDock?.disconnect?.();
     if (section !== 'vocabulary') vocabStickyDock?.disconnect?.();
     if (section !== 'think-aloud') window.FlaptapThinkAloud?.onDeactivate?.();
+    if (section !== 'ai-chat') window.FlaptapAiChat?.unmountFullPage?.();
     return section;
   }
 
@@ -901,7 +910,10 @@
       await window.FlaptapLearningLibrary?.init?.(routeState);
     } else if (resolved === 'think-aloud') {
       await window.FlaptapThinkAloud?.init?.(routeState);
+    } else if (resolved === 'ai-chat') {
+      window.FlaptapAiChat?.mountFullPage?.({ threadId: routeState?.noteId || '' });
     }
+    window.FlaptapAiChat?.notifyContextChanged?.();
   }
 
   function switchSection(section, opts = {}) {
@@ -1017,6 +1029,7 @@
       const nextUserId = state.user?.id || null;
       if (!options.silent || nextUserId !== previousUserId) {
         window.dispatchEvent(new CustomEvent('flaptap:auth-changed', { detail: { user: state.user } }));
+        window.FlaptapAiChat?.refreshAuth?.();
       }
     } catch {
       state.sessionLoaded = true;
@@ -2590,6 +2603,9 @@
                 <h3 class="vocab-term">${escapeHtml(v.term)}</h3>
               </div>
               <div class="vocab-card-top-actions">
+                <button type="button" class="ft-ask-ai-icon-btn" data-vocab-ask-ai="${escapeHtml(v.id)}" aria-label="Ask AI about ${escapeHtml(v.term)}" title="Ask AI about ${escapeHtml(v.term)}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
+                </button>
                 ${window.FlaptapCopy ? window.FlaptapCopy.buttonHtml(v.term, { className: 'icon-action icon-action--xs' }) : ''}
                 ${v.partOfSpeech ? `<span class="vocab-pos">${escapeHtml(v.partOfSpeech)}</span>` : ''}
                 ${renderCheckButtonHtml({
@@ -3340,8 +3356,59 @@
       });
     });
 
+    document.getElementById('fc-ask-ai-btn')?.addEventListener('click', () => {
+      const item = state.vocabItems[state.flashcardIndex];
+      if (!item) return;
+      window.FlaptapAiChat?.openWithContext?.(
+        {
+          type: 'vocabulary',
+          id: item.id,
+          label: item.term,
+          subtitle: 'Vocabulary Flashcard',
+          payload: {
+            term: item.term,
+            ipa: item.ipa,
+            definition: item.definition,
+            translation: item.translation,
+            contextSentence: item.contextSentence,
+          },
+        },
+        {
+          quote: item.contextSentence ? { text: item.contextSentence, sourceLabel: item.term } : undefined,
+          prefill: `Help me master "${item.term}" in spoken American English: `,
+        },
+      );
+    });
+
     document.getElementById('vocab-grid')?.addEventListener('click', async (e) => {
       if (e.target.closest('[data-vocab-select]')) return;
+      const askBtn = e.target.closest('[data-vocab-ask-ai]');
+      if (askBtn) {
+        e.stopPropagation();
+        const id = askBtn.getAttribute('data-vocab-ask-ai');
+        const item = state.vocabItems.find((v) => v.id === id);
+        if (item) {
+          window.FlaptapAiChat?.openWithContext?.(
+            {
+              type: 'vocabulary',
+              id: item.id,
+              label: item.term,
+              subtitle: 'Vocabulary Vault',
+              payload: {
+                term: item.term,
+                ipa: item.ipa,
+                definition: item.definition,
+                translation: item.translation,
+                contextSentence: item.contextSentence,
+              },
+            },
+            {
+              quote: item.contextSentence ? { text: item.contextSentence, sourceLabel: item.term } : undefined,
+            },
+          );
+        }
+        return;
+      }
       const checkBtn = e.target.closest('[data-vocab-complete]');
       if (checkBtn) {
         e.stopPropagation();

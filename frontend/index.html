@@ -87,6 +87,7 @@
         else if (p === '/extractor' || p === '/miner' || p === '/phrase-miner' || p === '/american-extractor' || p === '/american-english' || p === '/phrases' || p.indexOf('/extractor/') === 0 || p.indexOf('/miner/') === 0 || p.indexOf('/phrase-miner/') === 0 || p.indexOf('/american-extractor/') === 0 || p.indexOf('/phrases/') === 0) sec = 'american-extractor';
         else if (p === '/library' || p === '/builder' || p === '/phrase-builder' || p === '/learning-library' || p.indexOf('/library/') === 0 || p.indexOf('/builder/') === 0 || p.indexOf('/phrase-builder/') === 0 || p.indexOf('/learning-library/') === 0) sec = 'learning-library';
         else if (p === '/think' || p === '/think-aloud' || p === '/spontaneous' || p === '/thinking' || p.indexOf('/think/') === 0 || p.indexOf('/think-aloud/') === 0 || p.indexOf('/spontaneous/') === 0 || p.indexOf('/thinking/') === 0) sec = 'think-aloud';
+        else if (p === '/chat' || p === '/ai' || p === '/ai-chat' || p === '/tutor' || p === '/assistant' || p.indexOf('/chat/') === 0 || p.indexOf('/ai/') === 0 || p.indexOf('/ai-chat/') === 0 || p.indexOf('/tutor/') === 0 || p.indexOf('/assistant/') === 0) sec = 'ai-chat';
         else if (p === '/vocabulary') sec = 'vocabulary';
         else if (p === '/history' || p === '/activity') sec = 'history';
         else if (p === '/' && qs.has('section')) {
@@ -96,6 +97,7 @@
           else if (q === 'extractor' || q === 'miner' || q === 'phrase-miner' || q === 'american-extractor' || q === 'american-english' || q === 'phrases' || q === 'anything-to-phrases') sec = 'american-extractor';
           else if (q === 'library' || q === 'builder' || q === 'phrase-builder' || q === 'learning-library') sec = 'learning-library';
           else if (q === 'think' || q === 'think-aloud' || q === 'spontaneous' || q === 'thinking') sec = 'think-aloud';
+          else if (q === 'chat' || q === 'ai' || q === 'ai-chat' || q === 'tutor' || q === 'assistant') sec = 'ai-chat';
           else if (q === 'vocabulary') sec = 'vocabulary';
           else if (q === 'history' || q === 'activity') sec = 'history';
         }
@@ -119,6 +121,7 @@
   <link rel="stylesheet" href="/check-button.css" />
   <link rel="stylesheet" href="/celebration.css" />
   <link rel="stylesheet" href="/confirm-undo.css" />
+  <link rel="stylesheet" href="/ai-chat.css" />
 </head>
 <body>
   <div class="app-shell">
@@ -250,6 +253,14 @@
 
         <div class="sidebar-group" data-sidebar-group="workspace">
           <div class="sidebar-group-label" data-i18n="navGroupWorkspace">Workspace</div>
+          <a href="/chat" class="sidebar-nav-link" data-route-section="ai-chat" data-tooltip="AI Chat" title="AI Chat — Context-aware English &amp; speaking companion">
+            <span class="sidebar-nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path>
+              </svg>
+            </span>
+            <span class="sidebar-link-text" data-i18n="navAiChat">AI Chat</span>
+          </a>
           <a href="/vocabulary" class="sidebar-nav-link" data-route-section="vocabulary" data-tooltip="Vocabulary" title="Vocabulary — Saved words &amp; flashcards">
             <span class="sidebar-nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
@@ -843,6 +854,10 @@
         <div class="flashcard-topbar">
           <span id="flashcard-progress-text" class="ltr-num">Card 1 / 1</span>
           <div class="flashcard-topbar-actions">
+            <button type="button" class="ft-ask-ai-chip-btn" id="fc-ask-ai-btn" title="Ask AI about this flashcard">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
+              <span>Ask AI</span>
+            </button>
             <button type="button" class="item-check-btn" id="fc-complete-toggle-btn" aria-pressed="false" aria-label="Mark done" title="Mark done">
               <svg class="ft-check-svg chk-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false"><path class="ft-check-tick chk-tick" d="M5.2 12.75 L9.55 17.1 Q10.1 17.65 10.65 17.05 L18.9 7.35" pathLength="1" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
               <span id="fc-complete-label" class="visually-hidden">Done</span>
@@ -1765,6 +1780,10 @@
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
                       <span>Delete</span>
                     </button>
+                    <button type="button" class="ft-ask-ai-chip-btn" id="aex-detail-ask-ai-btn" title="Ask Flaptap AI about this study guide">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
+                      <span>Ask AI</span>
+                    </button>
                     <button type="button" class="btn-vox btn-sm" id="aex-save-all-btn" title="Save all phrases to Vocabulary Vault">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
                       <span>Save All</span>
@@ -2402,6 +2421,11 @@
         </div>
       </div>
     </section>
+
+    <!-- SECTION 9: UNIVERSAL AI CHAT WORKSPACE (/chat) -->
+    <section id="section-ai-chat" class="ai-chat-page-section" hidden>
+      <div id="ft-ai-fullpage-host" class="ft-ai-fullpage-host"></div>
+    </section>
   </main>
   <script>
     (function () {
@@ -2618,6 +2642,10 @@
         </div>
 
         <div class="ll-study-nav-group">
+          <button type="button" class="ft-ask-ai-chip-btn" id="ll-study-ask-ai-btn" title="Ask Flaptap AI about this expression">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
+            <span>Ask AI</span>
+          </button>
           <button type="button" class="btn-secondary btn-xs ll-nav-step-btn" id="ll-study-prev-btn" aria-label="Previous expression">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
             <span>Prev</span>
@@ -2675,6 +2703,13 @@
   <script defer src="/think-aloud/spines-page.js"></script>
   <script defer src="/think-aloud/sessions-page.js"></script>
   <script defer src="/think-aloud/index.js"></script>
+  <script defer src="/ai-chat/api.js"></script>
+  <script defer src="/ai-chat/markdown.js"></script>
+  <script defer src="/ai-chat/context-bridge.js"></script>
+  <script defer src="/ai-chat/voice.js"></script>
+  <script defer src="/ai-chat/store.js"></script>
+  <script defer src="/ai-chat/ui.js"></script>
+  <script defer src="/ai-chat/index.js"></script>
   <script defer src="/app.js"></script>
 </body>
 </html>

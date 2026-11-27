@@ -364,6 +364,59 @@ export class SqliteService implements OnModuleDestroy {
 
       CREATE INDEX IF NOT EXISTS idx_audit_events_user_created
         ON audit_events(user_id, created_at DESC);
+
+      CREATE TABLE IF NOT EXISTS ai_chat_threads (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        title TEXT NOT NULL DEFAULT 'New Chat',
+        persona TEXT NOT NULL DEFAULT 'smart_mentor',
+        context_type TEXT NOT NULL DEFAULT 'general',
+        context_id TEXT NOT NULL DEFAULT '',
+        context_label TEXT NOT NULL DEFAULT '',
+        context_snapshot_json TEXT NOT NULL DEFAULT '{}',
+        is_pinned INTEGER NOT NULL DEFAULT 0,
+        model_used TEXT NOT NULL DEFAULT '',
+        message_count INTEGER NOT NULL DEFAULT 0,
+        last_message_preview TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ai_chat_threads_user_updated
+        ON ai_chat_threads(user_id, is_pinned DESC, updated_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_ai_chat_threads_user_context
+        ON ai_chat_threads(user_id, context_type, context_id, updated_at DESC);
+
+      CREATE TABLE IF NOT EXISTS ai_chat_messages (
+        id TEXT PRIMARY KEY,
+        thread_id TEXT NOT NULL REFERENCES ai_chat_threads(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        role TEXT NOT NULL,
+        content TEXT NOT NULL DEFAULT '',
+        reasoning TEXT NOT NULL DEFAULT '',
+        quote_json TEXT NOT NULL DEFAULT '{}',
+        attachments_json TEXT NOT NULL DEFAULT '[]',
+        model_name TEXT NOT NULL DEFAULT '',
+        provider_name TEXT NOT NULL DEFAULT '',
+        variant_used TEXT NOT NULL DEFAULT '',
+        execution_time_ms INTEGER NOT NULL DEFAULT 0,
+        finish_reason TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_ai_chat_messages_thread_created
+        ON ai_chat_messages(thread_id, created_at ASC);
+
+      CREATE TABLE IF NOT EXISTS ai_chat_preferences (
+        user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+        default_persona TEXT NOT NULL DEFAULT 'smart_mentor',
+        response_style TEXT NOT NULL DEFAULT 'balanced',
+        response_language TEXT NOT NULL DEFAULT 'auto',
+        temperature REAL NOT NULL DEFAULT 0.45,
+        custom_instructions TEXT NOT NULL DEFAULT '',
+        use_page_context INTEGER NOT NULL DEFAULT 1,
+        updated_at TEXT NOT NULL
+      );
     `);
 
     // Idempotent schema migrations for pre-existing databases

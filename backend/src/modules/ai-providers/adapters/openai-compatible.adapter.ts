@@ -126,18 +126,26 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
     onActivity: () => void,
     onContentDelta?: (delta: string, accumulated: string) => void,
     allowPartialOnTimeout = false,
-  ): Promise<{ content: string; finishReason: string; reasoningChars: number }> {
+    onReasoningDelta?: (delta: string, accumulated: string) => void,
+  ): Promise<{ content: string; finishReason: string; reasoningChars: number; reasoning: string }> {
     if (!res.body || !res.body.getReader) {
       const json: any = await res.json();
       const raw = json?.choices?.[0]?.message?.content;
       const full = Array.isArray(raw)
         ? raw.map((part: any) => part?.text || '').join('')
         : String(raw || '');
+      const reasoning = String(
+        json?.choices?.[0]?.message?.reasoning_content ||
+          json?.choices?.[0]?.message?.reasoning ||
+          '',
+      );
+      if (reasoning && onReasoningDelta) onReasoningDelta(reasoning, reasoning);
       if (full && onContentDelta) onContentDelta(full, full);
       return {
         content: full,
         finishReason: String(json?.choices?.[0]?.finish_reason || ''),
-        reasoningChars: String(json?.choices?.[0]?.message?.reasoning_content || '').length,
+        reasoningChars: reasoning.length,
+        reasoning,
       };
     }
 
@@ -146,7 +154,7 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
     let buffer = '';
     let contentAcc = '';
     let finishReason = '';
-    let reasoningChars = 0;
+    let reasoningAcc = '';
 
     const readWithIdleGuard = async () => {
       let idleTimer: NodeJS.Timeout | undefined;
@@ -186,10 +194,15 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
               finishReason = String(choice.finish_reason);
             }
             const delta = choice?.delta;
-            if (delta && typeof delta.reasoning_content === 'string') {
-              reasoningChars += delta.reasoning_content.length;
-            } else if (delta && typeof delta.reasoning === 'string') {
-              reasoningChars += delta.reasoning.length;
+            const rDelta =
+              delta && typeof delta.reasoning_content === 'string'
+                ? delta.reasoning_content
+                : delta && typeof delta.reasoning === 'string'
+                  ? delta.reasoning
+                  : '';
+            if (rDelta) {
+              reasoningAcc += rDelta;
+              onReasoningDelta?.(rDelta, reasoningAcc);
             }
             let chunk = '';
             if (delta && typeof delta.content === 'string') {
@@ -214,14 +227,24 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
       // A stall mid-stream still carries complete items. Let the caller salvage
       // them instead of discarding minutes of generation.
       if (allowPartialOnTimeout && contentAcc.trim().length > 0) {
-        return { content: contentAcc, finishReason: 'partial', reasoningChars };
+        return {
+          content: contentAcc,
+          finishReason: 'partial',
+          reasoningChars: reasoningAcc.length,
+          reasoning: reasoningAcc,
+        };
       }
       throw err;
     } finally {
       reader.cancel().catch(() => {});
     }
 
-    return { content: contentAcc, finishReason, reasoningChars };
+    return {
+      content: contentAcc,
+      finishReason,
+      reasoningChars: reasoningAcc.length,
+      reasoning: reasoningAcc,
+    };
   }
 
   async executeChat(
@@ -256,23 +279,42 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
         throw new Error('Request cancelled.');
       }
 
-      const userContent =
-        Array.isArray(request.images) && request.images.length > 0
-          ? [
-              { type: 'text', text: request.userPrompt },
-              ...request.images.map((image) => ({
-                type: 'image_url',
-                image_url: { url: `data:${image.mimeType};base64,${image.base64}` },
-              })),
-            ]
-          : request.userPrompt;
+      const apiMessages: Array<{ role: string; content: any }> = [
+        { role: 'system', content: request.systemPrompt },
+      ];
+
+      if (Array.isArray(request.messages) && request.messages.length > 0) {
+        for (const m of request.messages) {
+          const hasImgs = m.role === 'user' && Array.isArray(m.images) && m.images.length > 0;
+          const msgContent = hasImgs
+            ? [
+                { type: 'text', text: m.content },
+                ...m.images!.map((image) => ({
+                  type: 'image_url',
+                  image_url: { url: `data:${image.mimeType};base64,${image.base64}` },
+                })),
+              ]
+            : m.content;
+          apiMessages.push({ role: m.role, content: msgContent });
+        }
+      } else {
+        const userText = request.userPrompt || '';
+        const userContent =
+          Array.isArray(request.images) && request.images.length > 0
+            ? [
+                { type: 'text', text: userText },
+                ...request.images.map((image) => ({
+                  type: 'image_url',
+                  image_url: { url: `data:${image.mimeType};base64,${image.base64}` },
+                })),
+              ]
+            : userText;
+        apiMessages.push({ role: 'user', content: userContent });
+      }
 
       const payload: Record<string, any> = {
         model: modelId,
-        messages: [
-          { role: 'system', content: request.systemPrompt },
-          { role: 'user', content: userContent },
-        ],
+        messages: apiMessages,
         max_tokens: Math.max(64, Math.min(maxTokensOverride, 32768)),
         stream: useStream,
       };
@@ -333,6 +375,7 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
         let rawText = '';
         let finishReason = '';
         let reasoningChars = 0;
+        let reasoningText = '';
 
         if (useStream && contentType.includes('text/event-stream')) {
           const streamed = await this.readStreamingChatCompletion(
@@ -341,19 +384,25 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
             () => {},
             request.onContentDelta,
             Boolean(request.allowPartialOnTimeout),
+            request.onReasoningDelta,
           );
           rawText = streamed.content;
           finishReason = streamed.finishReason;
           reasoningChars = streamed.reasoningChars;
+          reasoningText = streamed.reasoning;
         } else {
           const data: any = await res.json();
           const raw = data?.choices?.[0]?.message?.content;
           finishReason = String(data?.choices?.[0]?.finish_reason || '');
-          reasoningChars = String(
+          reasoningText = String(
             data?.choices?.[0]?.message?.reasoning_content ||
               data?.choices?.[0]?.message?.reasoning ||
               '',
-          ).length;
+          );
+          reasoningChars = reasoningText.length;
+          if (reasoningText && request.onReasoningDelta) {
+            request.onReasoningDelta(reasoningText, reasoningText);
+          }
           rawText = Array.isArray(raw)
             ? raw.map((part: any) => part?.text || '').join('')
             : String(raw || '');
@@ -362,6 +411,11 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
           }
         }
 
+        const thinkMatch = rawText.match(/^\s*<think>([\s\S]*?)<\/think>\s*/i);
+        if (thinkMatch && !reasoningText) {
+          reasoningText = thinkMatch[1].trim();
+          reasoningChars = reasoningText.length;
+        }
         const cleaned = rawText.replace(/^\s*<think>[\s\S]*?<\/think>\s*/i, '').trim();
 
         if (!cleaned) {
@@ -389,6 +443,7 @@ export class OpenAiCompatibleAdapter implements IProviderProtocolAdapter {
           finishReason: finishReason || undefined,
           truncated: finishReason === 'length' || finishReason === 'max_tokens',
           reasoningChars: reasoningChars || undefined,
+          reasoning: reasoningText.trim() || undefined,
         };
       } catch (err: any) {
         if (request.signal?.aborted) {

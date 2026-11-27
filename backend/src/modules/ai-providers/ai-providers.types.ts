@@ -96,11 +96,19 @@ export interface ProviderImageAttachment {
   base64: string;
 }
 
+export interface ProviderChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  images?: ProviderImageAttachment[];
+}
+
 export interface ProviderChatRequest {
   model: string;
   variant?: string;
   systemPrompt: string;
-  userPrompt: string;
+  userPrompt?: string;
+  /** Optional multi-turn conversation history (overrides single userPrompt when non-empty). */
+  messages?: ProviderChatMessage[];
   /** Optional multimodal attachments (OCR, screenshot understanding). */
   images?: ProviderImageAttachment[];
   temperature?: number;
@@ -110,6 +118,7 @@ export interface ProviderChatRequest {
   timeoutMs?: number;
   signal?: AbortSignal;
   onContentDelta?: (delta: string, accumulated: string) => void;
+  onReasoningDelta?: (delta: string, accumulated: string) => void;
   /** Return whatever streamed before a stall/timeout instead of throwing. */
   allowPartialOnTimeout?: boolean;
 }
@@ -129,6 +138,8 @@ export interface ProviderChatResponse {
   truncated?: boolean;
   /** Characters of reasoning emitted before the visible answer, for diagnostics. */
   reasoningChars?: number;
+  /** Captured reasoning/thought text when emitted by a reasoning model. */
+  reasoning?: string;
 }
 
 export interface IProviderProtocolAdapter {

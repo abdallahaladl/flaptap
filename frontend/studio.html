@@ -58,6 +58,7 @@
   <link rel="stylesheet" href="/check-button.css" />
   <link rel="stylesheet" href="/celebration.css" />
   <link rel="stylesheet" href="/confirm-undo.css" />
+  <link rel="stylesheet" href="/ai-chat.css" />
 </head>
 <body class="studio-body">
   <!-- Full-Page Frameless Motion-Graphics Loader & Error Overlay -->
@@ -461,7 +462,7 @@
 
               <span class="scb-sep" aria-hidden="true"></span>
 
-              <button type="button" class="scb-btn scb-btn--mouth" id="video-zoom-mouth-quick-btn" title="Focus Mouth 2.2x (Z)" aria-label="Focus on speaker mouth">
+              <button type="button" class="scb-btn scb-btn--mouth" id="video-zoom-mouth-quick-btn" title="Focus Mouth 3.2x (Z) · Drag zoomed view to lock speaker mouth" aria-label="Focus on speaker mouth">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M4 12c2.5-3 6-3 8-1 2-2 5.5-2 8 1-2.5 4-6 5-8 5s-5.5-1-8-5z"></path>
                 </svg>
@@ -498,11 +499,14 @@
               <span class="scb-sep" aria-hidden="true"></span>
 
               <div class="scb-inline-sub" id="quick-speed-bar" role="group" aria-label="Quick playback speed shortcuts">
-                <button type="button" class="qsb-btn qsb-btn--half ltr-num" id="qsb-speed-05-btn" data-quick-speed="0.5" aria-pressed="false" aria-label="Set playback speed to 0.5x" title="Half speed 0.5x (` cycles quick speed)">
-                  <span>0.5x</span>
+                <button type="button" class="qsb-btn qsb-btn--quarter ltr-num" id="qsb-speed-025-btn" data-quick-speed="0.25" aria-pressed="false" aria-label="Set playback speed to 0.25x" title="Quarter speed 0.25x (` cycles quick speed)">
+                  <span>0.25<span class="qsb-unit">x</span></span>
+                </button>
+                <button type="button" class="qsb-btn qsb-btn--half ltr-num" id="qsb-speed-05-btn" data-quick-speed="0.5" aria-pressed="false" aria-label="Set playback speed to 0.50x" title="Half speed 0.50x (` cycles quick speed)">
+                  <span>0.50<span class="qsb-unit">x</span></span>
                 </button>
                 <button type="button" class="qsb-btn qsb-btn--three-quarter ltr-num" id="qsb-speed-075-btn" data-quick-speed="0.75" aria-pressed="false" aria-label="Set playback speed to 0.75x" title="Slow practice speed 0.75x (` cycles quick speed)">
-                  <span>0.75x</span>
+                  <span>0.75<span class="qsb-unit">x</span></span>
                 </button>
                 <button type="button" class="qsb-btn qsb-btn--reset" id="qsb-speed-reset-btn" aria-label="Reset speed to 1.00x" title="Reset speed to 1.00x (\)" disabled>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -1017,7 +1021,7 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M4 12c2.5-3 6-3 8-1 2-2 5.5-2 8 1-2.5 4-6 5-8 5s-5.5-1-8-5z"></path>
         </svg>
-        <span>Focus Mouth (2.2x)</span>
+        <span>Focus Mouth (3.2x)</span>
       </button>
       <button type="button" class="zoom-focal-btn" id="zoom-focal-face-btn" title="Focus on face &amp; expressions (Shift+Z)">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1040,6 +1044,24 @@
       <span class="deck-panel-label" data-i18n="studyToolsLabel">Study Tools</span>
     </div>
     <div class="more-menu-list">
+      <!-- Playback Speed Slider Menu Row (Ensures full 0.25x-2.00x popover access on narrow devices) -->
+      <button type="button" class="more-menu-item" id="more-speed-menu-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="speed-popover" title="Full playback speed slider &amp; presets (Q / E)">
+        <span class="more-menu-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 14l4-4"></path>
+            <path d="M3.34 19a10 10 0 1 1 17.32 0"></path>
+          </svg>
+        </span>
+        <span class="more-menu-copy">
+          <span class="more-menu-title" data-i18n="playbackSpeedLabel">Playback Speed</span>
+          <span class="more-menu-sub">Q / E · 0.25x–2.00x</span>
+        </span>
+        <span class="more-menu-right">
+          <span class="more-menu-pill ltr-num" id="more-speed-badge">1.00x</span>
+          <svg class="more-menu-chevron-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </span>
+      </button>
+
       <!-- Seek Step Row -->
       <div class="more-menu-row more-menu-row--seek" role="group" aria-label="Seek duration controls">
         <div class="more-menu-item-info">
@@ -1629,6 +1651,10 @@
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
           <span>Pronounce</span>
         </button>
+        <button type="button" class="ft-ask-ai-chip-btn" id="wp-ask-ai-btn" style="height: 32px;" title="Ask Flaptap AI about this">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
+          <span>Ask AI</span>
+        </button>
       </div>
       <button type="button" class="btn-vox" style="height: 32px; padding: 0 13px; font-size: 0.79rem;" id="wp-save-btn" data-i18n="saveToVocabBtn">+ Save to Vocabulary</button>
     </div>
@@ -1645,70 +1671,6 @@
     <span>Jump to <strong id="floating-jump-sent-num" class="ltr-num">#01</strong></span>
   </button>
 
-  <!-- Context-Aware Voice & Text AI Companion Drawer -->
-  <div id="studio-ask-backdrop" class="studio-ask-backdrop" hidden></div>
-  <aside id="studio-ask-drawer" class="studio-ask-drawer" role="dialog" aria-modal="false" aria-labelledby="studio-ask-title" hidden>
-    <header class="ask-drawer-head">
-      <div class="ask-drawer-titles">
-        <div class="ask-drawer-title-row">
-          <span class="ask-drawer-badge" aria-hidden="true">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
-          </span>
-          <h2 id="studio-ask-title" class="ask-drawer-title">Native AI Tutor</h2>
-        </div>
-        <span class="ask-drawer-sub">Knows this transcript, surrounding lines &amp; your goal</span>
-      </div>
-      <div class="ask-drawer-head-actions">
-        <button type="button" class="ask-head-btn" id="studio-ask-model-btn" aria-expanded="false" aria-controls="studio-ask-ai-mount" title="Choose AI Model">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-          <span>Model</span>
-        </button>
-        <button type="button" class="ask-head-icon-btn" id="studio-ask-clear-btn" aria-label="Clear conversation" title="Clear conversation">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-        </button>
-        <button type="button" class="ask-head-icon-btn" id="studio-ask-close-btn" aria-label="Close AI Tutor" title="Close (Esc)">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-        </button>
-      </div>
-    </header>
-
-    <div id="studio-ask-ai-mount" class="ask-drawer-ai-mount" hidden></div>
-
-    <div id="studio-ask-scroll" class="ask-drawer-body">
-      <div id="studio-ask-quote-card" class="ask-quote-card" hidden></div>
-
-      <div id="studio-ask-empty" class="ask-empty-state">
-        <p class="ask-empty-headline">Ask anything about how native speakers think &amp; phrase ideas here.</p>
-        <p class="ask-empty-sub">Select any text in the transcript or speak/type in English or Arabic — zero background setup needed.</p>
-      </div>
-
-      <div id="studio-ask-messages" class="ask-messages"></div>
-    </div>
-
-    <footer class="ask-drawer-foot">
-      <div id="studio-ask-starters" class="ask-starters"></div>
-
-      <div id="studio-ask-voice-bar" class="ask-voice-bar" hidden>
-        <span class="ask-voice-pulse" aria-hidden="true"></span>
-        <span id="studio-ask-voice-status" class="ask-voice-status">Listening…</span>
-      </div>
-
-      <div class="ask-composer-box">
-        <button type="button" class="ask-voice-lang-chip" id="studio-ask-voice-lang" title="Switch voice recognition language (Auto / EN / AR)">Auto</button>
-        <button type="button" class="ask-mic-btn" id="studio-ask-mic-btn" aria-pressed="false" aria-label="Ask with your voice" title="Ask with your voice">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>
-        </button>
-        <textarea id="studio-ask-input" class="ask-composer-input" rows="1" placeholder="Ask in English or Arabic, or tap mic…" aria-label="Ask AI question"></textarea>
-        <button type="button" class="ask-send-btn" id="studio-ask-send-btn" aria-label="Send question" title="Send (Enter)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-        </button>
-        <button type="button" class="ask-stop-btn" id="studio-ask-stop-btn" hidden aria-label="Stop generating" title="Stop">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"></rect></svg>
-        </button>
-      </div>
-    </footer>
-  </aside>
-
   <script defer src="/shared-utils.js"></script>
   <script defer src="/icon.js"></script>
   <script defer src="/confirm-undo.js"></script>
@@ -1717,6 +1679,13 @@
   <script defer src="/celebration.js"></script>
   <script defer src="/word-lookup.js"></script>
   <script defer src="/ai-provider-selector.js"></script>
+  <script defer src="/ai-chat/api.js"></script>
+  <script defer src="/ai-chat/markdown.js"></script>
+  <script defer src="/ai-chat/context-bridge.js"></script>
+  <script defer src="/ai-chat/voice.js"></script>
+  <script defer src="/ai-chat/store.js"></script>
+  <script defer src="/ai-chat/ui.js"></script>
+  <script defer src="/ai-chat/index.js"></script>
   <script defer src="/studio-transcript-tools.js"></script>
   <script defer src="/studio-layouts.js"></script>
   <script defer src="/studio-reader-flow.js"></script>

@@ -432,6 +432,25 @@
             if (txt) global.FlaptapWordLookup?.speakText?.(txt);
             return;
           }
+          const askAiBtn = e.target.closest('[data-ta-ask-ai]');
+          if (askAiBtn) {
+            const s = store.state.activeDetailSession;
+            global.FlaptapAiChat?.openWithContext?.(
+              {
+                type: 'think_aloud',
+                id: s?.id || askAiBtn.getAttribute('data-ta-ask-ai') || '',
+                label: s?.promptTitle || 'Think Aloud Session',
+                subtitle: 'Saved Session Report',
+              },
+              {
+                quote: s?.coaching?.shadowableRecast
+                  ? { text: s.coaching.shadowableRecast, sourceLabel: 'Shadowable Recast' }
+                  : undefined,
+                prefill: 'Review my Think Aloud session and help me sound even more natural: ',
+              },
+            );
+            return;
+          }
           const copyBtn = e.target.closest('[data-ta-copy]');
           if (copyBtn) {
             const txt = copyBtn.getAttribute('data-ta-copy');

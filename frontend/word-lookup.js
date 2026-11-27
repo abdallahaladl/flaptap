@@ -588,6 +588,10 @@
           <div class="word-popover-action-group">
             <button type="button" class="icon-action icon-action--sm" style="height: 32px; width: 32px;" id="wp-play-btn" hidden aria-label="Play sentence" title="Play sentence">${icon('play')}</button>
             <button type="button" class="icon-action icon-action--sm" style="height: 32px; width: 32px;" id="wp-speak-btn" hidden aria-label="Pronounce" title="Pronounce">${icon('volume-2')}</button>
+            <button type="button" class="ft-ask-ai-chip-btn" id="wp-ask-ai-btn" style="height: 32px;" title="Ask Flaptap AI about this word">
+              ${icon('sparkles', { size: 13 })}
+              <span>Ask AI</span>
+            </button>
           </div>
           <button type="button" class="btn-vox" style="height: 32px; width: 34px; padding: 0; font-size: 0.79rem;" id="wp-save-btn" aria-label="Save to Vocabulary"></button>
         </div>
@@ -636,6 +640,19 @@
           playBtn.insertAdjacentElement('afterend', speakBtn);
         }
       }
+      if (!document.getElementById('wp-ask-ai-btn')) {
+        const group = document.querySelector('#word-lookup-popover .word-popover-action-group');
+        if (group) {
+          const askBtn = document.createElement('button');
+          askBtn.type = 'button';
+          askBtn.id = 'wp-ask-ai-btn';
+          askBtn.className = 'ft-ask-ai-chip-btn';
+          askBtn.style.cssText = 'height: 32px;';
+          askBtn.title = 'Ask Flaptap AI about this';
+          askBtn.innerHTML = `${icon('sparkles', { size: 13 })}<span>Ask AI</span>`;
+          group.appendChild(askBtn);
+        }
+      }
     }
 
     if (!globalListenersBound) {
@@ -653,6 +670,37 @@
         if (e.target.closest('#wp-speak-btn')) {
           const term = activeLookup?.term || pendingWord || document.getElementById('wp-term')?.textContent;
           speakText(term);
+          return;
+        }
+        if (e.target.closest('#wp-ask-ai-btn')) {
+          const term = activeLookup?.term || pendingWord || document.getElementById('wp-term')?.textContent || '';
+          const ctxSentence = activeLookup?.contextSentence || currentConfig?.contextSentence || '';
+          const payload = {
+            term,
+            ipa: activeLookup?.ipa || '',
+            partOfSpeech: activeLookup?.partOfSpeech || '',
+            definition: activeLookup?.definition || '',
+            generalTranslation: activeLookup?.generalTranslation || '',
+            translation: activeLookup?.translation || '',
+            spokenTip: activeLookup?.spokenTip || '',
+            contextSentence: ctxSentence,
+          };
+          close();
+          global.FlaptapAiChat?.openWithContext?.(
+            {
+              type: 'word_lookup',
+              label: term,
+              subtitle: activeLookup?.partOfSpeech || 'Word Lookup',
+              payload,
+            },
+            {
+              quote: {
+                text: ctxSentence || term,
+                sourceLabel: term,
+              },
+              prefill: `Explain "${term}" in natural spoken American English — nuance, usage, and alternatives: `,
+            },
+          );
           return;
         }
         if (e.target.closest('#wp-save-btn') && currentConfig?.onSave && activeLookup) {

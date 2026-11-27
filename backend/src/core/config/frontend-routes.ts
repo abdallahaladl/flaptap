@@ -33,6 +33,11 @@ const WORKSPACE_EXACT_PATHS = new Set<string>([
   '/think-aloud',
   '/spontaneous',
   '/thinking',
+  '/chat',
+  '/ai',
+  '/ai-chat',
+  '/tutor',
+  '/assistant',
 ]);
 
 const WORKSPACE_SUBROUTE_PREFIXES = [
@@ -50,6 +55,11 @@ const WORKSPACE_SUBROUTE_PREFIXES = [
   '/think-aloud/',
   '/spontaneous/',
   '/thinking/',
+  '/chat/',
+  '/ai/',
+  '/ai-chat/',
+  '/tutor/',
+  '/assistant/',
 ];
 
 export function normalizePathname(pathname: string): string {

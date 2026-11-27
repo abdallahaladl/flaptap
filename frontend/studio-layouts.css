@@ -1089,41 +1089,7 @@ body.is-studio-resizing .video-zoom-surface {
   }
 
   .studio-body .studio-workspace[data-layout="cockpit"] .studio-control-bar-host {
-    container-type: normal;
-    padding: 12px;
-  }
-
-  .studio-body .studio-workspace[data-layout="cockpit"] .studio-control-bar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .studio-body .studio-workspace[data-layout="cockpit"] .scb-pod {
-    width: 100%;
-    padding-inline-start: 0 !important;
-  }
-
-  .studio-body .studio-workspace[data-layout="cockpit"] .scb-pod::before {
-    display: none !important;
-  }
-
-  .studio-body .studio-workspace[data-layout="cockpit"] .scb-pod--primary { order: 1; }
-  .studio-body .studio-workspace[data-layout="cockpit"] .scb-pod--speed   { order: 2; }
-  .studio-body .studio-workspace[data-layout="cockpit"] .scb-pod--zoom    { order: 3; }
-  .studio-body .studio-workspace[data-layout="cockpit"] .scb-pod--menu    { order: 4; margin-inline-start: 0; }
-
-  .studio-body .studio-workspace[data-layout="cockpit"] .scb-cluster,
-  .studio-body .studio-workspace[data-layout="cockpit"] .scb-cluster--playback,
-  .studio-body .studio-workspace[data-layout="cockpit"] .scb-cluster--speed,
-  .studio-body .studio-workspace[data-layout="cockpit"] .scb-cluster--zoom,
-  .studio-body .studio-workspace[data-layout="cockpit"] .scb-cluster--menu {
-    width: 100%;
-    justify-content: space-between;
-    height: 38px;
-    padding: 3px 5px;
-    background: var(--ap-fill-subtle);
-    border: 1px solid var(--ap-border);
+    padding: 6px 8px;
   }
 
   .studio-body .studio-workspace[data-layout="cockpit"] .deck-live-subtitle {
@@ -1620,7 +1586,7 @@ body.is-studio-resizing .video-zoom-surface {
     min-height: 64px;
   }
 
-  /* Compact Media Console on Mobile so Control Bar stays <= 120px & crisp */
+  /* Compact Single-Row Media Console on Mobile */
   .studio-body .studio-media-console .studio-timeline-bar {
     padding: 6px 10px 6px;
     gap: 5px;
@@ -1631,7 +1597,8 @@ body.is-studio-resizing .video-zoom-surface {
   }
 
   .studio-body .studio-media-console .studio-control-bar {
-    gap: 4px 6px;
+    flex-wrap: nowrap;
+    gap: 4px;
   }
 
   .studio-body .studio-media-console .scb-cluster,
@@ -1639,21 +1606,8 @@ body.is-studio-resizing .video-zoom-surface {
   .studio-body .studio-media-console .scb-cluster--speed,
   .studio-body .studio-media-console .scb-cluster--zoom,
   .studio-body .studio-media-console .scb-cluster--menu {
-    height: 31px;
-    padding: 2px;
-  }
-
-  .studio-body .scb-btn,
-  .studio-body .qsb-btn {
-    height: 26px;
-    min-width: 26px;
-    padding: 0 7px;
-    font-size: 0.72rem;
-  }
-
-  .studio-body .scb-btn--primary {
-    min-width: 34px;
-    padding: 0 9px;
+    height: 32px;
+    padding: 0;
   }
 
   .studio-body .studio-workspace[data-mobile-layout="docked"] .deck-live-subtitle,

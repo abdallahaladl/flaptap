@@ -3487,7 +3487,7 @@ body.studio-body:focus {
 .studio-control-bar {
   display: flex;
   flex-direction: row;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -3506,10 +3506,11 @@ body.studio-body:focus {
 .scb-pod {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  width: 100%;
+  justify-content: flex-start;
+  gap: 6px;
+  width: auto;
   min-width: 0;
+  flex: 0 0 auto;
 }
 
 .scb-cluster {
@@ -3594,6 +3595,8 @@ body.studio-body:focus {
   cursor: pointer;
   position: relative;
   white-space: nowrap;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   box-shadow: 0 1px 2px var(--ap-border-strong), inset 0 1px 0 rgba(255, 255, 255, 0.85);
   transition: background-color 0.12s ease, border-color 0.12s ease, color 0.12s ease, transform 0.08s ease, box-shadow 0.12s ease;
 }
@@ -3818,43 +3821,51 @@ body.studio-body:focus {
   transition: transform 0.12s ease, background-color 0.12s ease;
 }
 
-/* 0.5x — Cobalt Blue */
+/* 0.25x & 0.5x — Cobalt Blue */
+.qsb-btn--quarter,
 .qsb-btn--half {
   background: color-mix(in srgb, var(--status-info) 10%, var(--bg-paper));
   border-color: color-mix(in srgb, var(--status-info) 34%, var(--rule-strong));
   color: var(--status-info);
 }
 
+[data-theme="dark"] .qsb-btn--quarter,
 [data-theme="dark"] .qsb-btn--half {
   background: color-mix(in srgb, var(--status-info) 13%, #282824);
   border-color: color-mix(in srgb, var(--status-info) 36%, rgba(255, 255, 255, 0.12));
 }
 
+.qsb-btn--quarter .qsb-dot,
 .qsb-btn--half .qsb-dot {
   background: var(--status-info);
 }
 
+.qsb-btn--quarter:hover:not(:disabled),
 .qsb-btn--half:hover:not(:disabled) {
   background: color-mix(in srgb, var(--status-info) 20%, var(--bg-paper));
   border-color: var(--status-info);
 }
 
+[data-theme="dark"] .qsb-btn--quarter:hover:not(:disabled),
 [data-theme="dark"] .qsb-btn--half:hover:not(:disabled) {
   background: color-mix(in srgb, var(--status-info) 24%, #282824);
 }
 
+.qsb-btn--quarter.active,
 .qsb-btn--half.active {
   background: var(--status-info);
   border-color: var(--status-info);
   color: #FFFFFF;
 }
 
+[data-theme="dark"] .qsb-btn--quarter.active,
 [data-theme="dark"] .qsb-btn--half.active {
   background: var(--status-info);
   border-color: var(--status-info);
   color: var(--ap-text-primary);
 }
 
+.qsb-btn--quarter.active .qsb-dot,
 .qsb-btn--half.active .qsb-dot {
   background: currentColor;
   transform: scale(1.15);
@@ -4329,27 +4340,11 @@ body.studio-body:focus {
   white-space: nowrap;
 }
 
-/* Video Zoom & Focus Controls (Moved below video into Unified Control Bar) */
-.scb-pod--primary {
-  order: 1;
-  flex: 1 1 auto;
-  width: auto;
-  justify-content: space-between;
-}
-
-.scb-pod--menu {
-  order: 2;
-  width: auto;
-  flex: 0 0 auto;
-}
-
-.scb-pod--speed {
-  order: 3;
-}
-
-.scb-pod--zoom {
-  order: 4;
-}
+/* Video Zoom & Focus Controls (Single-row canonical order inside Unified Control Bar) */
+.scb-pod--primary { order: 1; }
+.scb-pod--zoom    { order: 2; }
+.scb-pod--speed   { order: 3; }
+.scb-pod--menu    { order: 4; margin-inline-start: auto; }
 
 .scb-btn--zoom-step {
   min-width: 28px;
@@ -4477,97 +4472,32 @@ body.studio-body:focus {
   height: 13.5px;
 }
 
-/* Medium Wide Deck (640px - 769px): Playback + Speed + Menu on Row 1, Video Zoom & Focus on Row 2 */
-@container scb-host (min-width: 640px) {
-  .studio-control-bar {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .scb-pod {
-    width: auto;
-    justify-content: flex-start;
-  }
-
-  .scb-pod--primary {
-    flex: 0 0 auto;
-    gap: 8px;
-    order: 1;
-  }
-
-  .scb-pod--speed {
-    flex: 0 0 auto;
-    gap: 8px;
-    order: 2;
-  }
-
-  .scb-pod--menu {
-    flex: 0 0 auto;
-    order: 3;
-  }
-
-  .scb-pod--zoom {
-    flex: 0 0 auto;
-    gap: 8px;
-    order: 4;
-  }
-}
-
-/* Wide Theater Deck (>= 770px): All standalone category cards align cleanly on ONE horizontal row */
-@container scb-host (min-width: 770px) {
-  .studio-control-bar {
-    flex-wrap: nowrap;
-    gap: 6px;
-  }
-
-  .scb-pod--primary,
-  .scb-pod--zoom,
-  .scb-pod--speed {
-    gap: 6px;
-  }
-
-  .scb-pod--zoom {
-    order: 2;
-  }
-
-  .scb-pod--speed {
-    order: 3;
-  }
-
-  .scb-pod--menu {
-    order: 4;
-  }
-}
-
-/* Narrow Mobile (<= 390px): Keep buttons comfortable and clean inside 3-row cards */
+/* Single-row progressive compact adjustments for narrow containers */
 @container scb-host (max-width: 390px) {
   .studio-control-bar {
-    gap: 6px;
+    gap: 4px;
   }
 
   .scb-pod {
-    gap: 5px;
+    gap: 4px;
   }
 
   .scb-cluster {
-    gap: 3px;
-    padding: 3px;
+    gap: 2px;
+    padding: 2px;
   }
 
   .scb-btn,
   .qsb-btn {
-    height: 31px;
-    min-width: 30px;
+    height: 30px;
+    min-width: 28px;
     padding: 0 6px;
     border-radius: 7px;
   }
 
   .scb-btn--primary {
-    min-width: 38px;
-    padding: 0 9px;
+    min-width: 36px;
+    padding: 0 8px;
   }
 
   .scb-btn--speed-step,
@@ -4578,13 +4508,13 @@ body.studio-body:focus {
   }
 
   .scb-btn--speed {
-    min-width: 46px;
+    min-width: 44px;
     padding: 0 6px;
     font-size: 0.7rem;
   }
 
   .scb-btn--zoom-pill {
-    min-width: 50px;
+    min-width: 46px;
     padding: 0 6px;
     font-size: 0.69rem;
   }

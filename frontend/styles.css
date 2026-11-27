@@ -1802,7 +1802,7 @@ html[data-sidebar="collapsed"] .sidebar-nav-link .nav-count-pill {
   position: fixed;
   bottom: 24px;
   inset-inline-end: 24px;
-  z-index: 900;
+  z-index: 980;
   padding: 11px 16px;
   border-radius: var(--radius-sm);
   background: var(--ink);

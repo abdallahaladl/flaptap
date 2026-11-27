@@ -134,6 +134,10 @@
             <div class="ta-btn-group">
               <button type="button" class="btn-secondary btn-xs" id="ta-spine-randomize-btn">Shuffle Spine</button>
               <button type="button" class="btn-secondary btn-xs" data-ta-speak="${esc(combined)}">Listen</button>
+              <button type="button" class="ft-ask-ai-chip-btn" id="ta-spine-ask-ai-btn" style="height:28px;" title="Roleplay &amp; drill this spine with Flaptap AI">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
+                <span>Practice with AI</span>
+              </button>
               <button type="button" class="btn-vox btn-xs" id="ta-spine-practice-arena-btn">Practice in Arena →</button>
             </div>
           </div>
@@ -355,6 +359,29 @@
         if (speakBtn) {
           const txt = speakBtn.getAttribute('data-ta-speak');
           if (txt) global.FlaptapWordLookup?.speakText?.(txt);
+          return;
+        }
+
+        if (e.target.closest('#ta-spine-ask-ai-btn')) {
+          const pack = store.state.spinePacks.find((p) => p.id === store.state.selectedPackId) || store.state.spinePacks[0];
+          const sTxt = pack?.starters?.[local.starterIdx]?.text || '';
+          const eTxt = pack?.engines?.[local.engineIdx]?.text || '';
+          const tTxt = pack?.tails?.[local.tailIdx]?.text || '';
+          const combined = `${sTxt} ${eTxt} ${tTxt}`.trim();
+          global.FlaptapAiChat?.openWithContext?.(
+            {
+              type: 'think_aloud',
+              id: pack?.id || '',
+              label: pack?.title || 'Thinking Spine',
+              subtitle: 'Spine Roleplay Drill',
+              payload: { combinedSpine: combined, domain: pack?.domain || '' },
+            },
+            {
+              persona: 'roleplay',
+              quote: combined ? { text: combined, sourceLabel: pack?.title || 'Thinking Spine' } : undefined,
+              prefill: `Give me a realistic spoken prompt so I can reply using this thinking spine: "${combined}"`,
+            },
+          );
           return;
         }
 

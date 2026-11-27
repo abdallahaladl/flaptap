@@ -5,6 +5,7 @@ import {
   IProviderProtocolAdapter,
   InternalResolvedKey,
   LiveModelsResponse,
+  ProviderChatMessage,
   ProviderChatRequest,
   ProviderChatResponse,
   ProviderImageAttachment,
@@ -418,7 +419,8 @@ export class AiProvidersService {
       model?: string;
       variant?: string;
       systemPrompt: string;
-      userPrompt: string;
+      userPrompt?: string;
+      messages?: ProviderChatMessage[];
       images?: ProviderImageAttachment[];
       temperature?: number;
       maxTokens?: number;
@@ -431,6 +433,7 @@ export class AiProvidersService {
       /** Ask the adapter to return streamed text that arrived before a stall. */
       allowPartialOnTimeout?: boolean;
       onContentDelta?: (delta: string, accumulated: string) => void;
+      onReasoningDelta?: (delta: string, accumulated: string) => void;
     },
   ): Promise<ProviderChatResponse> {
     const resolved = await this.resolveExecutionSelection({
@@ -454,6 +457,7 @@ export class AiProvidersService {
       variant: resolved.variantId,
       systemPrompt: params.systemPrompt,
       userPrompt: params.userPrompt,
+      messages: params.messages,
       images: params.images,
       temperature: params.temperature,
       supportsTemperature: catalogMeta?.supportsTemperature,
@@ -463,6 +467,7 @@ export class AiProvidersService {
       signal: params.signal,
       allowPartialOnTimeout: params.allowPartialOnTimeout,
       onContentDelta: params.onContentDelta,
+      onReasoningDelta: params.onReasoningDelta,
     };
 
     let primaryError: Error | null = null;

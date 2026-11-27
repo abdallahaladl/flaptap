@@ -50,12 +50,29 @@
       render();
       const backdrop = el('ll-study-drawer-backdrop');
       if (backdrop) backdrop.hidden = false;
+      global.FlaptapAiChat?.registerContextProvider?.('phrase-builder-study', () => {
+        const cur = store.findItemAnywhere(store.state.activeStudyItemId);
+        if (!cur || el('ll-study-drawer-backdrop')?.hidden) return { active: false };
+        return {
+          type: 'phrase_builder',
+          id: cur.id,
+          label: cur.expression || 'Phrase Builder',
+          subtitle: cur.categoryLabel || 'Expression Study',
+          payload: {
+            expression: cur.expression,
+            coreMeaning: cur.coreMeaning,
+            register: cur.register,
+          },
+        };
+      });
+      global.FlaptapAiChat?.notifyContextChanged?.();
     }
 
     function close() {
       store.state.activeStudyItemId = null;
       const backdrop = el('ll-study-drawer-backdrop');
       if (backdrop) backdrop.hidden = true;
+      global.FlaptapAiChat?.notifyContextChanged?.();
     }
 
     function step(delta) {
@@ -458,6 +475,22 @@
       el('ll-study-back-btn')?.addEventListener('click', close);
       el('ll-study-prev-btn')?.addEventListener('click', () => step(-1));
       el('ll-study-next-btn')?.addEventListener('click', () => step(1));
+      el('ll-study-ask-ai-btn')?.addEventListener('click', () => {
+        const item = store.findItemAnywhere(store.state.activeStudyItemId);
+        if (!item) return;
+        global.FlaptapAiChat?.openWithContext?.(
+          {
+            type: 'phrase_builder',
+            id: item.id,
+            label: item.expression,
+            subtitle: item.categoryLabel || 'Phrase Builder',
+          },
+          {
+            quote: { text: item.expression, sourceLabel: item.categoryLabel || 'Phrase Builder' },
+            prefill: `Coach me on using "${item.expression}" like a native American speaker: `,
+          },
+        );
+      });
       backdrop?.addEventListener('click', (e) => {
         if (e.target === backdrop) close();
       });

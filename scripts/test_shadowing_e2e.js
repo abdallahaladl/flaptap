@@ -885,6 +885,13 @@ async function run() {
         const consoleEl = document.querySelector('.studio-media-console');
         const playerCard = document.querySelector('.player-frame-card');
         const sent = document.querySelector('.sentence-driller-card');
+        const bar = document.getElementById('studio-control-bar');
+        const btns = Array.from(bar?.querySelectorAll('.scb-btn') || []).filter((b) => {
+          const r = b.getBoundingClientRect();
+          return getComputedStyle(b).display !== 'none' && r.width > 0 && r.height > 0;
+        });
+        const tops = btns.map((b) => Math.round(b.getBoundingClientRect().top));
+        const bottoms = btns.map((b) => Math.round(b.getBoundingClientRect().bottom));
         return {
           layout: ws?.getAttribute('data-layout'),
           overflow: document.documentElement.scrollWidth - window.innerWidth,
@@ -892,6 +899,8 @@ async function run() {
           consoleH: consoleEl ? Math.round(consoleEl.getBoundingClientRect().height) : 0,
           playerAlive: playerCard?.dataset.layoutKeepAlive,
           sentAlive: sent?.dataset.layoutKeepAlive,
+          barHeight: bottoms.length ? Math.max(...bottoms) - Math.min(...tops) : 999,
+          barOverflow: bar ? bar.scrollWidth - bar.clientWidth : 999,
         };
       });
       assert.strictEqual(check.layout, layoutId, `Layout did not switch to ${layoutId}`);
@@ -900,6 +909,10 @@ async function run() {
       assert.ok(check.consoleH >= 46, `Console height too small in ${layoutId}: ${check.consoleH}px`);
       assert.strictEqual(check.playerAlive, 'intact', `Player remounted in ${layoutId}`);
       assert.strictEqual(check.sentAlive, 'intact', `Sentence card remounted in ${layoutId}`);
+      assert.ok(
+        check.barHeight <= 44 && check.barOverflow <= 2,
+        `Desktop ${layoutId} control bar broke single row: ${JSON.stringify(check)}`,
+      );
     }
 
     // Verify Cockpit persistence across reload & Shift+Y cycle
@@ -933,24 +946,37 @@ async function run() {
     assert.ok(theaterBar.barHeight <= 44 && theaterBar.barOverflow <= 2, `Theater control bar broke single row: ${JSON.stringify(theaterBar)}`);
     ok('All 6 desktop layouts, zero-remount morphing, reload persistence & Shift+Y cycle verified');
 
-    // Test Tablet 768x1024 & Mobile 390px/360px zero overflow, spacious canvas & 4 mobile layouts
+    // Test Tablet 768x1024 & Mobile 390px/360px zero overflow, spacious canvas & single-row control bar
     await page.setViewport({ width: 768, height: 1024 });
     await new Promise((r) => setTimeout(r, 200));
-    const tabletCheck = await page.evaluate(() => ({
-      overflow: document.documentElement.scrollWidth - window.innerWidth,
-      canvasH: Math.round(document.querySelector('.studio-canvas')?.getBoundingClientRect().height || 0),
-      htmlOverflowY: getComputedStyle(document.documentElement).overflowY,
-      bodyOverflowY: getComputedStyle(document.body).overflowY,
-    }));
+    const tabletCheck = await page.evaluate(() => {
+      const bar = document.getElementById('studio-control-bar');
+      const btns = Array.from(bar?.querySelectorAll('.scb-btn') || []).filter((b) => {
+        const r = b.getBoundingClientRect();
+        return getComputedStyle(b).display !== 'none' && r.width > 0 && r.height > 0;
+      });
+      const tops = btns.map((b) => Math.round(b.getBoundingClientRect().top));
+      const bottoms = btns.map((b) => Math.round(b.getBoundingClientRect().bottom));
+      return {
+        overflow: document.documentElement.scrollWidth - window.innerWidth,
+        canvasH: Math.round(document.querySelector('.studio-canvas')?.getBoundingClientRect().height || 0),
+        htmlOverflowY: getComputedStyle(document.documentElement).overflowY,
+        bodyOverflowY: getComputedStyle(document.body).overflowY,
+        barHeight: bottoms.length ? Math.max(...bottoms) - Math.min(...tops) : 999,
+        barOverflow: bar ? bar.scrollWidth - bar.clientWidth : 999,
+      };
+    });
     assert.ok(
       tabletCheck.overflow <= 4 &&
       tabletCheck.canvasH >= 380 &&
       tabletCheck.htmlOverflowY === 'hidden' &&
-      tabletCheck.bodyOverflowY === 'hidden',
+      tabletCheck.bodyOverflowY === 'hidden' &&
+      tabletCheck.barHeight <= 44 &&
+      tabletCheck.barOverflow <= 2,
       `Tablet 768x1024 layout check failed: ${JSON.stringify(tabletCheck)}`,
     );
 
-    // Test Mobile 390px & 360px zero overflow, title legibility, canvas space & control bar <= 140px
+    // Test Mobile 390px & 360px zero overflow, title legibility, canvas space & single-row control bar
     for (const width of [390, 360]) {
       await page.setViewport({ width, height: 844 });
       await new Promise((r) => setTimeout(r, 200));
@@ -971,7 +997,7 @@ async function run() {
         };
       });
       assert.ok(metrics.overflow <= 4, `Mobile ${width}px horizontal overflow: +${metrics.overflow}px`);
-      assert.ok(metrics.barHeight <= 140 && metrics.barOverflow <= 2, `Mobile ${width}px control bar budget exceeded: ${JSON.stringify(metrics)}`);
+      assert.ok(metrics.barHeight <= 44 && metrics.barOverflow <= 2, `Mobile ${width}px control bar broke single row: ${JSON.stringify(metrics)}`);
       assert.ok(metrics.titleW >= 80, `Mobile ${width}px title severely clipped (${metrics.titleW}px)`);
       assert.ok(metrics.canvasH >= 320, `Mobile ${width}px sentence canvas squeezed (${metrics.canvasH}px)`);
     }

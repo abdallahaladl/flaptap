@@ -818,7 +818,13 @@
                 <span class="ta-badge ltr-num">${m.avgWpm || 0} WPM · ${m.totalWords || 0} words · ${m.fillerRatePer100 || 0} fillers/100w</span>
                 ${session.mode === 'four_three_two' ? `<span class="ta-badge ${m.wpmGainPct >= 0 ? 'ta-badge--green' : ''} ltr-num">4/3/2 Speed Delta: ${m.wpmGainPct >= 0 ? '+' : ''}${m.wpmGainPct}%</span>` : ''}
               </div>
-              <span class="ta-stage-meta">${esc(session.modelUsed || '')}</span>
+              <div style="display:inline-flex;align-items:center;gap:8px;">
+                <button type="button" class="ft-ask-ai-chip-btn" data-ta-ask-ai="${esc(session.id)}" title="Discuss this coaching report with Flaptap AI">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
+                  <span>Discuss with AI</span>
+                </button>
+                <span class="ta-stage-meta">${esc(session.modelUsed || '')}</span>
+              </div>
             </div>
 
             <div class="ta-command-body">
@@ -1212,6 +1218,36 @@
           return;
         }
 
+        const askAiBtn = e.target.closest('[data-ta-ask-ai]');
+        if (askAiBtn) {
+          const sid = askAiBtn.getAttribute('data-ta-ask-ai') || store.state.lastReportSession?.id || '';
+          const sess =
+            (store.state.lastReportSession?.id === sid ? store.state.lastReportSession : null) ||
+            (store.state.activeDetailSession?.id === sid ? store.state.activeDetailSession : null) ||
+            store.state.lastReportSession;
+          global.FlaptapAiChat?.openWithContext?.(
+            {
+              type: 'think_aloud',
+              id: sid,
+              label: sess?.promptTitle || 'Think Aloud Coaching',
+              subtitle: 'Speaking Coaching Report',
+              payload: sess?.coaching
+                ? {
+                    headlineVerdict: sess.coaching.headlineVerdict || '',
+                    shadowableRecast: sess.coaching.shadowableRecast || '',
+                  }
+                : {},
+            },
+            {
+              quote: sess?.coaching?.shadowableRecast
+                ? { text: sess.coaching.shadowableRecast, sourceLabel: 'Shadowable Recast' }
+                : undefined,
+              prefill: 'Review my Think Aloud performance and help me sound even more natural: ',
+            },
+          );
+          return;
+        }
+
         const copyBtn = e.target.closest('[data-ta-copy]');
         if (copyBtn) {
           const txt = copyBtn.getAttribute('data-ta-copy');
@@ -1293,6 +1329,22 @@
       renderOverviewStrip();
       renderConfigurator();
       bindEvents();
+      global.FlaptapAiChat?.registerContextProvider?.('think-aloud', () => {
+        if (document.body.dataset.activeSection !== 'think-aloud') return { active: false };
+        const sess = store.state.activeDetailSession || store.state.lastReportSession;
+        const prompt = store.state.activePrompt;
+        const id = sess?.id || store.state.selectedPackId || '';
+        const label = sess?.promptTitle || prompt?.promptTitle || 'Think Aloud';
+        return {
+          type: 'think_aloud',
+          id,
+          label,
+          subtitle: sess ? 'Coaching Report' : prompt ? 'Active Speaking Prompt' : 'Spontaneous Speaking',
+          payload: prompt
+            ? { promptTitle: prompt.promptTitle, promptBody: prompt.promptBody, mode: prompt.mode }
+            : {},
+        };
+      });
     }
 
     function startWithTopic({ mode, customTopic, frameworkId } = {}) {

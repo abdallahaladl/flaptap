@@ -62,6 +62,63 @@ export class AnthropicAdapter implements IProviderProtocolAdapter {
       });
   }
 
+  private async readStreamingMessages(
+    res: Response,
+    onContentDelta?: (delta: string, accumulated: string) => void,
+    onReasoningDelta?: (delta: string, accumulated: string) => void,
+    allowPartialOnTimeout = false,
+  ): Promise<{ text: string; thinking: string; stopReason: string }> {
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let textAcc = '';
+    let thinkingAcc = '';
+    let stopReason = '';
+
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const dataStr = trimmed.slice(5).trim();
+          if (!dataStr || dataStr === '[DONE]') continue;
+          try {
+            const parsed: any = JSON.parse(dataStr);
+            if (parsed?.type === 'content_block_delta') {
+              const d = parsed?.delta;
+              if (d?.type === 'text_delta' && typeof d?.text === 'string') {
+                textAcc += d.text;
+                onContentDelta?.(d.text, textAcc);
+              } else if (d?.type === 'thinking_delta' && typeof d?.thinking === 'string') {
+                thinkingAcc += d.thinking;
+                onReasoningDelta?.(d.thinking, thinkingAcc);
+              }
+            } else if (parsed?.type === 'message_delta' && parsed?.delta?.stop_reason) {
+              stopReason = String(parsed.delta.stop_reason);
+            }
+          } catch {
+            // Ignore keepalive / partial frames
+          }
+        }
+      }
+    } catch (err) {
+      if (allowPartialOnTimeout && textAcc.trim().length > 0) {
+        return { text: textAcc, thinking: thinkingAcc, stopReason: 'partial' };
+      }
+      throw err;
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+
+    return { text: textAcc, thinking: thinkingAcc, stopReason };
+  }
+
   async executeChat(
     key: InternalResolvedKey,
     request: ProviderChatRequest,
@@ -72,18 +129,32 @@ export class AnthropicAdapter implements IProviderProtocolAdapter {
     const start = Date.now();
 
     let includeThinking = ['low', 'medium', 'high', 'xhigh', 'max', 'on'].includes(variant);
+    let wantsStream = Boolean(request.onContentDelta || request.onReasoningDelta);
 
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       if (request.signal?.aborted) {
         throw new Error('Request cancelled.');
       }
 
       const maxTokens = Math.max(256, Math.min(request.maxTokens ?? 4096, 16384));
-      const userContent =
-        Array.isArray(request.images) && request.images.length > 0
+      const rawMessages =
+        Array.isArray(request.messages) && request.messages.length > 0
+          ? request.messages
+          : [
+              {
+                role: 'user' as const,
+                content: request.userPrompt || '',
+                images: request.images,
+              },
+            ];
+
+      const apiMessages: Array<{ role: 'user' | 'assistant'; content: any }> = [];
+      for (const m of rawMessages) {
+        const hasImgs = m.role === 'user' && Array.isArray(m.images) && m.images.length > 0;
+        const blocks = hasImgs
           ? [
-              { type: 'text', text: request.userPrompt },
-              ...request.images.map((image) => ({
+              { type: 'text', text: m.content },
+              ...m.images!.map((image) => ({
                 type: 'image',
                 source: {
                   type: 'base64',
@@ -92,13 +163,31 @@ export class AnthropicAdapter implements IProviderProtocolAdapter {
                 },
               })),
             ]
-          : request.userPrompt;
+          : m.content;
+        const prev = apiMessages[apiMessages.length - 1];
+        if (prev && prev.role === m.role) {
+          if (typeof prev.content === 'string' && typeof blocks === 'string') {
+            prev.content = `${prev.content}\n\n${blocks}`;
+          } else {
+            const prevBlocks = Array.isArray(prev.content)
+              ? prev.content
+              : [{ type: 'text', text: String(prev.content) }];
+            const nextBlocks = Array.isArray(blocks)
+              ? blocks
+              : [{ type: 'text', text: String(blocks) }];
+            prev.content = [...prevBlocks, ...nextBlocks];
+          }
+        } else {
+          apiMessages.push({ role: m.role, content: blocks });
+        }
+      }
 
       const payload: Record<string, any> = {
         model: modelId,
         system: request.systemPrompt,
-        messages: [{ role: 'user', content: userContent }],
+        messages: apiMessages,
         max_tokens: maxTokens,
+        ...(wantsStream ? { stream: true } : {}),
       };
 
       if (includeThinking) {
@@ -138,18 +227,55 @@ export class AnthropicAdapter implements IProviderProtocolAdapter {
             includeThinking = false;
             continue;
           }
+          if (res.status === 400 && wantsStream && /stream/i.test(body)) {
+            wantsStream = false;
+            continue;
+          }
           throw new Error(`Anthropic HTTP ${res.status}: ${body.slice(0, 300)}`);
         }
 
-        const data: any = await res.json();
-        const blocks = Array.isArray(data?.content) ? data.content : [];
-        const text = blocks
-          .filter((b: any) => b?.type === 'text' && typeof b?.text === 'string')
-          .map((b: any) => b.text)
-          .join('')
-          .trim();
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        let text = '';
+        let thinkingText = '';
+        let stopReason = '';
+
+        if (wantsStream && ct.includes('text/event-stream') && res.body?.getReader) {
+          const streamed = await this.readStreamingMessages(
+            res,
+            request.onContentDelta,
+            request.onReasoningDelta,
+            Boolean(request.allowPartialOnTimeout),
+          );
+          text = streamed.text.trim();
+          thinkingText = streamed.thinking.trim();
+          stopReason = streamed.stopReason;
+        } else {
+          const data: any = await res.json();
+          const blocks = Array.isArray(data?.content) ? data.content : [];
+          thinkingText = blocks
+            .filter((b: any) => b?.type === 'thinking' && typeof b?.thinking === 'string')
+            .map((b: any) => b.thinking)
+            .join('')
+            .trim();
+          text = blocks
+            .filter((b: any) => b?.type === 'text' && typeof b?.text === 'string')
+            .map((b: any) => b.text)
+            .join('')
+            .trim();
+          stopReason = String(data?.stop_reason || '');
+          if (thinkingText && request.onReasoningDelta) {
+            request.onReasoningDelta(thinkingText, thinkingText);
+          }
+          if (text && request.onContentDelta) {
+            request.onContentDelta(text, text);
+          }
+        }
 
         if (!text) {
+          if (wantsStream) {
+            wantsStream = false;
+            continue;
+          }
           throw new Error(`Anthropic (${modelId}) returned an empty response.`);
         }
 
@@ -161,8 +287,10 @@ export class AnthropicAdapter implements IProviderProtocolAdapter {
           modelUsed: modelId,
           variantUsed: includeThinking ? variant : 'standard',
           executionTimeMs: Date.now() - start,
-          finishReason: String(data?.stop_reason || '') || undefined,
-          truncated: String(data?.stop_reason || '') === 'max_tokens',
+          finishReason: stopReason || undefined,
+          truncated: stopReason === 'max_tokens',
+          reasoningChars: thinkingText ? thinkingText.length : undefined,
+          reasoning: thinkingText || undefined,
         };
       } finally {
         clearTimeout(timer);

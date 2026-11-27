@@ -493,6 +493,20 @@
       renderSourceMeta(note);
       renderNoteProgress(note);
       loadCrossFeatureLinks(note);
+      global.FlaptapAiChat?.registerContextProvider?.('phrase-miner-detail', () => {
+        if (store.state.activeView !== 'detail' || !local.currentNote) return { active: false };
+        return {
+          type: 'phrase_miner',
+          id: local.currentNote.id,
+          label: local.currentNote.title || 'Phrase Miner Guide',
+          subtitle: `${(local.currentNote.items || []).length} extracted phrases`,
+          payload: {
+            sourceType: local.currentNote.sourceType || 'text',
+            summary: local.currentNote.summary || '',
+          },
+        };
+      });
+      global.FlaptapAiChat?.notifyContextChanged?.();
     }
 
     async function loadCrossFeatureLinks(note) {
@@ -927,6 +941,11 @@
             <div class="aex-item-actions">
               <div class="aex-action-utils">
                 ${clipPlayBtn}
+                <button type="button" class="ft-ask-ai-icon-btn aex-util-btn" data-aex-ask-ai="${escapeHtml(
+                  idx,
+                )}" aria-label="Ask AI about ${escapeHtml(item.term)}" title="Ask AI about ${escapeHtml(item.term)}">
+                  ${icon('sparkles', { size: 13 })}
+                </button>
                 <button type="button" class="icon-action icon-action--sm aex-util-btn" data-aex-speak="${escapeHtml(
                   item.term,
                 )}" aria-label="Pronounce ${escapeHtml(item.term)} (TTS)" title="Pronounce (TTS)">
@@ -1513,6 +1532,15 @@
 
       el('aex-back-to-library')?.addEventListener('click', () => nav.goToLibrary());
       el('aex-detail-back-err')?.addEventListener('click', () => nav.goToLibrary());
+      el('aex-detail-ask-ai-btn')?.addEventListener('click', () => {
+        if (!local.currentNote) return;
+        global.FlaptapAiChat?.openWithContext?.({
+          type: 'phrase_miner',
+          id: local.currentNote.id,
+          label: local.currentNote.title || 'Phrase Miner Guide',
+          subtitle: `${(local.currentNote.items || []).length} phrases`,
+        });
+      });
       el('aex-detail-retry-err')?.addEventListener('click', () => {
         if (local.currentNote?.id) loadNote(local.currentNote.id, { forceFetch: true });
         else nav.goToLibrary();
@@ -1881,6 +1909,39 @@
               startSec: item.startSec,
               endSec: item.endSec,
             });
+          }
+          return;
+        }
+
+        const askAiBtn = e.target.closest('[data-aex-ask-ai]');
+        if (askAiBtn && local.currentNote) {
+          e.preventDefault();
+          const idx = Number(askAiBtn.dataset.aexAskAi);
+          const item = (local.currentNote.items || []).find((it) => Number(it.index) === idx);
+          if (item) {
+            global.FlaptapAiChat?.openWithContext?.(
+              {
+                type: 'phrase_miner',
+                id: local.currentNote.id,
+                label: `${item.term} · ${local.currentNote.title || 'Phrase Miner'}`,
+                subtitle: item.category || 'Extracted Phrase',
+                payload: {
+                  focusedPhrase: item.term,
+                  ipa: item.ipa || '',
+                  meaning: item.meaning || '',
+                  localizedMeaning: item.localizedMeaning || '',
+                  contextSentence: item.contextSentence || '',
+                  nuance: item.nuance || '',
+                },
+              },
+              {
+                quote: {
+                  text: item.contextSentence || item.term,
+                  sourceLabel: item.term,
+                },
+                prefill: `Break down "${item.term}" in natural spoken American English — nuance, reductions, and alternatives: `,
+              },
+            );
           }
           return;
         }

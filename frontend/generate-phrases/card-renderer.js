@@ -188,6 +188,11 @@
     return `
       <div class="ll-item-actions">
         <div class="ll-action-utils">
+          <button type="button" class="ft-ask-ai-icon-btn ll-util-btn" data-ll-ask-ai="${escapeHtml(
+            item.id,
+          )}" title="Ask AI about ${escapeHtml(item.expression)}" aria-label="Ask AI about ${escapeHtml(item.expression)}">
+            ${icon('sparkles', { size: 13 })}
+          </button>
           <button type="button" class="icon-action icon-action--sm ll-util-btn" data-ll-speak="${escapeHtml(
             getSpeakableText(item),
           )}" title="Pronounce (TTS)" aria-label="Pronounce ${escapeHtml(item.expression)}">

@@ -1364,7 +1364,10 @@ export class DataLifecycleService {
           `UPDATE users SET native_language = 'ar', ui_language = 'en', daily_goal_minutes = 15 WHERE id = ?`,
         )
         .run(userId);
+      this.sqlite.db.prepare('DELETE FROM ai_chat_preferences WHERE user_id = ?').run(userId);
     }
+    this.sqlite.db.prepare('DELETE FROM ai_chat_messages WHERE user_id = ?').run(userId);
+    this.sqlite.db.prepare('DELETE FROM ai_chat_threads WHERE user_id = ?').run(userId);
 
     // Clear global disk transcript caches if zero users remain referencing them
     if (

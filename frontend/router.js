@@ -64,6 +64,15 @@
       group: 'Lab',
       groupI18nKey: 'navGroupLab',
     },
+    'ai-chat': {
+      section: 'ai-chat',
+      path: '/chat',
+      aliases: ['/ai', '/ai-chat', '/tutor', '/assistant'],
+      title: 'AI Chat',
+      i18nKey: 'navAiChat',
+      group: 'Workspace',
+      groupI18nKey: 'navGroupWorkspace',
+    },
     vocabulary: {
       section: 'vocabulary',
       path: '/vocabulary',
@@ -117,6 +126,9 @@
       return 'american-extractor';
     }
     if (val === 'activity' || val === 'history') return 'history';
+    if (val === 'chat' || val === 'ai' || val === 'ai-chat' || val === 'tutor' || val === 'assistant') {
+      return 'ai-chat';
+    }
     if (ROUTE_TABLE[val]) return val;
     return null;
   }
@@ -249,6 +261,26 @@
       };
     }
 
+    // Sub-routes: AI Chat (/chat, /chat/:id)
+    if (
+      pathname.startsWith('/chat/') ||
+      pathname.startsWith('/ai/') ||
+      pathname.startsWith('/ai-chat/') ||
+      pathname.startsWith('/tutor/') ||
+      pathname.startsWith('/assistant/')
+    ) {
+      const parts = pathname.split('/');
+      const threadId = decodeURIComponent(parts[parts.length - 1] || '');
+      return {
+        section: 'ai-chat',
+        subview: threadId ? 'thread' : '',
+        domainId: '',
+        noteId: threadId,
+        searchParams: params,
+        canonicalizedFromQuery: false,
+      };
+    }
+
     // Exact path lookup across canonical routes + aliases
     for (const def of Object.values(ROUTE_TABLE)) {
       if (def.path === pathname || def.aliases.includes(pathname)) {
@@ -327,6 +359,12 @@
         pathname = `/think/session/${encodeURIComponent(options.noteId)}`;
       } else {
         pathname = '/think';
+      }
+    } else if (section === 'ai-chat') {
+      if (options.noteId) {
+        pathname = `/chat/${encodeURIComponent(options.noteId)}`;
+      } else {
+        pathname = '/chat';
       }
     } else if (section === 'vocabulary') {
       if (options.subview === 'flashcards') {

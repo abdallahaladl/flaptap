@@ -20,6 +20,8 @@
     "test:shadowing:unit": "node scripts/test_shadowing_unit.js",
     "test:think-aloud:unit": "node scripts/test_think_aloud_unit.js",
     "test:lifecycle:unit": "node scripts/test_data_lifecycle_unit.js",
+    "test:ai-chat:unit": "node scripts/test_ai_chat_unit.js",
+    "test:ai-chat:e2e": "node scripts/test_ai_chat_e2e.js",
     "test:shadowing:e2e": "NODE_PATH=./node_modules node scripts/test_shadowing_e2e.js",
     "migrate:timings": "NODE_PATH=./node_modules node scripts/migrate_timings.js",
     "test:timing": "python3 scripts/test_timing_extractor.py"

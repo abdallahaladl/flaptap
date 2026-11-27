@@ -84,7 +84,7 @@
       keyFlowCycle: 'Cycle flow mode',
       keyMute: 'Mute / Unmute',
       keySpeedStep: 'Speed ±0.05x',
-      keyQuickSpeed: 'Quick 0.75x / 0.5x / 1x',
+      keyQuickSpeed: 'Quick 0.75 / 0.50 / 0.25 / 1x',
       keySpeedReset: 'Reset speed 1.00x',
       keyRecordVoice: 'Record / Stop voice',
       keyReplayVoice: 'Play your voice',
@@ -259,7 +259,7 @@
       keyFlowCycle: 'تبديل وضع التدفق',
       keyMute: 'كتم / تشغيل الصوت',
       keySpeedStep: 'السرعة ±0.05x',
-      keyQuickSpeed: 'سرعة سريعة 0.75 / 0.5 / 1x',
+      keyQuickSpeed: 'سرعة سريعة 0.75 / 0.50 / 0.25 / 1x',
       keySpeedReset: 'إعادة السرعة 1.00x',
       keyRecordVoice: 'تسجيل / إيقاف صوتك',
       keyReplayVoice: 'تشغيل تسجيلك',
@@ -1146,6 +1146,7 @@
     { triggerId: 'scb-more-btn', popoverId: 'studio-more-popover' },
     { triggerId: 'video-zoom-level-pill', popoverId: 'video-zoom-popover' },
     { triggerId: 'speed-trigger-btn', popoverId: 'speed-popover' },
+    { triggerId: 'more-speed-menu-btn', popoverId: 'speed-popover' },
     { triggerId: 'voice-menu-btn', popoverId: 'voice-popover' },
     { triggerId: 'trans-trigger-btn', popoverId: 'translation-control-deck' },
     { triggerId: 'studio-shortcuts-btn', popoverId: 'shortcuts-popover' },
@@ -2686,7 +2687,121 @@
     initialPinchScale: 1.0,
     initialPinchMidX: 0,
     initialPinchMidY: 0,
+    mouthActive: false,
+    mouthAnchor: null,
   };
+
+  function getMouthAnchorStorageKey() {
+    const id = studioState.item?.id || studioState.lessonId;
+    return id ? `flaptap_mouth_anchor:${id}` : null;
+  }
+
+  function loadSavedMouthAnchor() {
+    if (videoZoom.mouthAnchor) return videoZoom.mouthAnchor;
+    const key = getMouthAnchorStorageKey();
+    if (!key) return null;
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      const normX = Number(parsed?.normX);
+      const normY = Number(parsed?.normY);
+      const scale = Number(parsed?.scale);
+      if (!Number.isFinite(normX) || !Number.isFinite(normY)) return null;
+      const anchor = {
+        normX: Math.min(0.85, Math.max(0.15, normX)),
+        normY: Math.min(0.85, Math.max(0.15, normY)),
+        scale: Number.isFinite(scale) ? Math.min(4.5, Math.max(2.6, scale)) : 3.2,
+      };
+      videoZoom.mouthAnchor = anchor;
+      return anchor;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveMouthAnchor(normX, normY, scale = 3.2) {
+    if (!Number.isFinite(normX) || !Number.isFinite(normY)) return;
+    const anchor = {
+      normX: Number(Math.min(0.85, Math.max(0.15, normX)).toFixed(4)),
+      normY: Number(Math.min(0.85, Math.max(0.15, normY)).toFixed(4)),
+      scale: Number(Math.min(4.5, Math.max(2.6, Number(scale) || 3.2)).toFixed(2)),
+    };
+    videoZoom.mouthAnchor = anchor;
+    const key = getMouthAnchorStorageKey();
+    if (!key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(anchor));
+    } catch {}
+  }
+
+  async function detectVideoMouthAnchor() {
+    if (typeof window.FaceDetector !== 'function') return null;
+    const videoEl = document.getElementById('studio-html5-player');
+    const viewport = document.getElementById('video-zoom-viewport');
+    if (
+      !videoEl ||
+      videoEl.tagName !== 'VIDEO' ||
+      videoEl.readyState < 2 ||
+      !videoEl.videoWidth ||
+      !videoEl.videoHeight ||
+      !viewport
+    ) {
+      return null;
+    }
+    try {
+      const detector = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 3 });
+      const faces = await detector.detect(videoEl);
+      if (!Array.isArray(faces) || !faces.length) return null;
+
+      let best = null;
+      let bestArea = 0;
+      for (const f of faces) {
+        const b = f?.boundingBox;
+        if (!b || !b.width || !b.height) continue;
+        const area = b.width * b.height;
+        if (area > bestArea) {
+          bestArea = area;
+          best = f;
+        }
+      }
+      if (!best?.boundingBox) return null;
+
+      const box = best.boundingBox;
+      let mouthPxX = box.x + box.width * 0.5;
+      let mouthPxY = box.y + box.height * 0.78;
+
+      if (Array.isArray(best.landmarks)) {
+        const mouthLm = best.landmarks.find((lm) => lm?.type === 'mouth' && lm.locations?.length);
+        if (mouthLm) {
+          const pts = mouthLm.locations;
+          mouthPxX = pts.reduce((sum, p) => sum + Number(p.x || 0), 0) / pts.length;
+          mouthPxY = pts.reduce((sum, p) => sum + Number(p.y || 0), 0) / pts.length;
+        }
+      }
+
+      const vpW = viewport.clientWidth || 800;
+      const vpH = viewport.clientHeight || 450;
+      const vw = videoEl.videoWidth;
+      const vh = videoEl.videoHeight;
+      const renderScale = Math.min(vpW / vw, vpH / vh);
+      const renderedW = vw * renderScale;
+      const renderedH = vh * renderScale;
+      const offsetX = (vpW - renderedW) / 2;
+      const offsetY = (vpH - renderedH) / 2;
+
+      const normX = (offsetX + mouthPxX * renderScale) / vpW;
+      const normY = (offsetY + mouthPxY * renderScale) / vpH;
+      const adaptiveScale = Math.min(4.2, Math.max(2.8, (0.42 * vh) / box.height));
+      return {
+        normX: Math.min(0.85, Math.max(0.15, normX)),
+        normY: Math.min(0.85, Math.max(0.15, normY)),
+        scale: Number(adaptiveScale.toFixed(2)),
+      };
+    } catch {
+      return null;
+    }
+  }
 
   function applyZoomTransform(animate = false) {
     const stage = document.getElementById('video-zoom-stage');
@@ -2762,28 +2877,41 @@
     applyZoomTransform(false);
   }
 
-  function focusMouth(animate = true) {
-    const viewport = document.getElementById('video-zoom-viewport');
-    if (!viewport) return;
+  function applyMouthFocalTarget(anchor, width, height, animate = true) {
+    const targetScale = anchor.scale || 3.2;
+    const mouthContentX = width * anchor.normX;
+    const mouthContentY = height * anchor.normY;
 
-    const width = viewport.clientWidth || 800;
-    const height = viewport.clientHeight || 450;
-
-    if (videoZoom.scale >= 2.15 && videoZoom.scale <= 2.25) {
-      resetZoom(animate);
-      return;
-    }
-
-    const mouthContentX = width * 0.50;
-    const mouthContentY = height * 0.62;
-    const targetScale = 2.2;
-
+    videoZoom.mouthActive = true;
     videoZoom.scale = targetScale;
     videoZoom.panX = (width / 2) - mouthContentX * targetScale;
     videoZoom.panY = (height / 2) - mouthContentY * targetScale;
 
     applyZoomTransform(animate);
     showFocalRing(width / 2, height / 2);
+    if (typeof showToast === 'function') {
+      showToast(`Mouth Focus ${Math.round(targetScale * 100)}% · Drag video to fine-tune`);
+    }
+  }
+
+  async function focusMouth(animate = true) {
+    const viewport = document.getElementById('video-zoom-viewport');
+    if (!viewport) return;
+
+    const width = viewport.clientWidth || 800;
+    const height = viewport.clientHeight || 450;
+
+    if (videoZoom.mouthActive && videoZoom.scale > 1.05) {
+      resetZoom(animate);
+      return;
+    }
+
+    const canDetectVideo =
+      typeof window.FaceDetector === 'function' &&
+      document.getElementById('studio-html5-player')?.tagName === 'VIDEO';
+    const detected = canDetectVideo ? await detectVideoMouthAnchor() : null;
+    const anchor = detected || loadSavedMouthAnchor() || { normX: 0.50, normY: 0.44, scale: 3.2 };
+    applyMouthFocalTarget(anchor, width, height, animate);
   }
 
   function focusFace(animate = true) {
@@ -2793,7 +2921,7 @@
     const width = viewport.clientWidth || 800;
     const height = viewport.clientHeight || 450;
 
-    if (videoZoom.scale >= 1.75 && videoZoom.scale <= 1.85) {
+    if (videoZoom.scale >= 1.75 && videoZoom.scale <= 1.85 && !videoZoom.mouthActive) {
       resetZoom(animate);
       return;
     }
@@ -2802,6 +2930,7 @@
     const faceContentY = height * 0.40;
     const targetScale = 1.8;
 
+    videoZoom.mouthActive = false;
     videoZoom.scale = targetScale;
     videoZoom.panX = (width / 2) - faceContentX * targetScale;
     videoZoom.panY = (height / 2) - faceContentY * targetScale;
@@ -2811,6 +2940,7 @@
   }
 
   function resetZoom(animate = true) {
+    videoZoom.mouthActive = false;
     videoZoom.scale = 1.0;
     videoZoom.panX = 0;
     videoZoom.panY = 0;
@@ -2883,8 +3013,7 @@
     }
 
     if (mouthQuickBtn) {
-      const isMouth = videoZoom.scale >= 2.15 && videoZoom.scale <= 2.25;
-      mouthQuickBtn.classList.toggle('active', isMouth);
+      mouthQuickBtn.classList.toggle('active', Boolean(videoZoom.mouthActive && videoZoom.scale > 1.05));
     }
 
     if (surface) {
@@ -3041,7 +3170,15 @@
       } catch {}
 
       if (!videoZoom.isDragging) return;
+      const didDragWhileMouth = videoZoom.hasDragged && videoZoom.mouthActive && videoZoom.scale > 1.01;
       videoZoom.isDragging = false;
+      if (didDragWhileMouth) {
+        const vpW = viewport.clientWidth || 800;
+        const vpH = viewport.clientHeight || 450;
+        const normX = ((vpW / 2) - videoZoom.panX) / (vpW * videoZoom.scale);
+        const normY = ((vpH / 2) - videoZoom.panY) / (vpH * videoZoom.scale);
+        saveMouthAnchor(normX, normY, videoZoom.scale);
+      }
       syncZoomUiDom();
     };
 
@@ -3060,10 +3197,20 @@
       const clickY = e.clientY - rect.top;
 
       if (videoZoom.scale <= 1.05) {
-        zoomToFocalPoint(2.2, clickX, clickY, true);
+        const vpW = viewport.clientWidth || 800;
+        const vpH = viewport.clientHeight || 450;
+        saveMouthAnchor(clickX / vpW, clickY / vpH, 3.2);
+        videoZoom.mouthActive = true;
+        zoomToFocalPoint(3.2, clickX, clickY, true);
         showFocalRing(clickX, clickY);
-      } else if (videoZoom.scale < 3.0) {
-        zoomToFocalPoint(3.5, clickX, clickY, true);
+      } else if (videoZoom.scale < 3.5) {
+        const vpW = viewport.clientWidth || 800;
+        const vpH = viewport.clientHeight || 450;
+        const normX = (clickX - videoZoom.panX) / (vpW * videoZoom.scale);
+        const normY = (clickY - videoZoom.panY) / (vpH * videoZoom.scale);
+        saveMouthAnchor(normX, normY, 3.6);
+        videoZoom.mouthActive = true;
+        zoomToFocalPoint(3.6, clickX, clickY, true);
         showFocalRing(clickX, clickY);
       } else {
         resetZoom(true);
@@ -4373,6 +4520,8 @@
       next = 0.75;
     } else if (Math.abs(curr - 0.75) < 0.001) {
       next = 0.5;
+    } else if (Math.abs(curr - 0.5) < 0.001) {
+      next = 0.25;
     } else {
       next = 1.0;
     }
@@ -5159,6 +5308,8 @@
 
     const scbSpeedVal = document.getElementById('scb-speed-value');
     if (scbSpeedVal) scbSpeedVal.textContent = `${speed.toFixed(2)}x`;
+    const moreSpeedBadge = document.getElementById('more-speed-badge');
+    if (moreSpeedBadge) moreSpeedBadge.textContent = `${speed.toFixed(2)}x`;
     const isCustomSpeed = Math.abs(speed - 1.0) >= 0.001;
     const speedTrigger = document.getElementById('speed-trigger-btn');
     if (speedTrigger) {

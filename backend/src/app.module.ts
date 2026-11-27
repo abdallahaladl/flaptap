@@ -26,11 +26,13 @@ import { AmericanExtractorModule } from './modules/american-extractor/american-e
 import { SharedSourcesModule } from './modules/shared-sources/shared-sources.module';
 import { ThinkAloudModule } from './modules/think-aloud/think-aloud.module';
 import { DataLifecycleModule } from './modules/data-lifecycle/data-lifecycle.module';
+import { AiChatModule } from './modules/ai-chat/ai-chat.module';
 
 @Module({
   imports: [
     SharedSourcesModule,
     AiProvidersModule,
+    AiChatModule,
     DataLifecycleModule,
     LearningLibraryModule,
     AmericanExtractorModule,

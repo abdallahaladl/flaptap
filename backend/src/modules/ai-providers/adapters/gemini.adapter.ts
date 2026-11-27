@@ -81,6 +81,66 @@ export class GeminiAdapter implements IProviderProtocolAdapter {
     return allModels;
   }
 
+  private async readStreamingGeminiResponse(
+    res: Response,
+    onContentDelta?: (delta: string, accumulated: string) => void,
+    onReasoningDelta?: (delta: string, accumulated: string) => void,
+    allowPartialOnTimeout = false,
+  ): Promise<{ text: string; thinking: string; finishReason: string }> {
+    const reader = res.body!.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let textAcc = '';
+    let thinkingAcc = '';
+    let finishReason = '';
+
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const payloadStr = trimmed.slice(5).trim();
+          if (!payloadStr || payloadStr === '[DONE]') continue;
+          try {
+            const parsed: any = JSON.parse(payloadStr);
+            const candidate = parsed?.candidates?.[0];
+            if (candidate?.finishReason) {
+              finishReason = String(candidate.finishReason);
+            }
+            const parts = Array.isArray(candidate?.content?.parts) ? candidate.content.parts : [];
+            for (const p of parts) {
+              if (typeof p?.text !== 'string' || !p.text) continue;
+              if (p.thought) {
+                thinkingAcc += p.text;
+                onReasoningDelta?.(p.text, thinkingAcc);
+              } else {
+                textAcc += p.text;
+                onContentDelta?.(p.text, textAcc);
+              }
+            }
+          } catch {
+            // Ignore partial chunks
+          }
+        }
+      }
+    } catch (err) {
+      if (allowPartialOnTimeout && textAcc.trim().length > 0) {
+        return { text: textAcc, thinking: thinkingAcc, finishReason: 'partial' };
+      }
+      throw err;
+    } finally {
+      reader.cancel().catch(() => {});
+    }
+
+    return { text: textAcc, thinking: thinkingAcc, finishReason };
+  }
+
   async executeChat(
     key: InternalResolvedKey,
     request: ProviderChatRequest,
@@ -92,8 +152,9 @@ export class GeminiAdapter implements IProviderProtocolAdapter {
 
     let includeThinking = Boolean(variant && variant !== 'standard' && variant !== 'default');
     let includeJsonMime = Boolean(request.json);
+    let wantsStream = Boolean(request.onContentDelta || request.onReasoningDelta);
 
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       if (request.signal?.aborted) {
         throw new Error('Request cancelled.');
       }
@@ -125,18 +186,33 @@ export class GeminiAdapter implements IProviderProtocolAdapter {
         }
       }
 
-      const imageParts =
-        Array.isArray(request.images) && request.images.length > 0
-          ? request.images.map((image) => ({
-              inline_data: { mime_type: image.mimeType, data: image.base64 },
-            }))
-          : [];
+      const rawMessages =
+        Array.isArray(request.messages) && request.messages.length > 0
+          ? request.messages
+          : [
+              {
+                role: 'user' as const,
+                content: request.userPrompt || '',
+                images: request.images,
+              },
+            ];
+
+      const contents = rawMessages.map((m) => {
+        const imageParts =
+          m.role === 'user' && Array.isArray(m.images) && m.images.length > 0
+            ? m.images.map((image) => ({
+                inline_data: { mime_type: image.mimeType, data: image.base64 },
+              }))
+            : [];
+        return {
+          role: m.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: m.content }, ...imageParts],
+        };
+      });
 
       const payload: Record<string, any> = {
         systemInstruction: { parts: [{ text: request.systemPrompt }] },
-        contents: [
-          { role: 'user', parts: [{ text: request.userPrompt }, ...imageParts] },
-        ],
+        contents,
         generationConfig,
       };
 
@@ -147,19 +223,20 @@ export class GeminiAdapter implements IProviderProtocolAdapter {
       request.signal?.addEventListener('abort', onExtAbort, { once: true });
 
       try {
-        const res = await fetch(
-          `${baseUrl}/models/${encodeURIComponent(modelId)}:generateContent`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-goog-api-key': key.apiKey,
-              'User-Agent': 'flaptap-ai/2.0',
-            },
-            body: JSON.stringify(payload),
-            signal: controller.signal,
+        const endpoint = wantsStream
+          ? `${baseUrl}/models/${encodeURIComponent(modelId)}:streamGenerateContent?alt=sse`
+          : `${baseUrl}/models/${encodeURIComponent(modelId)}:generateContent`;
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': key.apiKey,
+            'User-Agent': 'flaptap-ai/2.0',
           },
-        );
+          body: JSON.stringify(payload),
+          signal: controller.signal,
+        });
 
         if (!res.ok) {
           const body = await res.text().catch(() => '');
@@ -171,18 +248,55 @@ export class GeminiAdapter implements IProviderProtocolAdapter {
             includeJsonMime = false;
             continue;
           }
+          if (wantsStream && (res.status === 400 || res.status === 404)) {
+            wantsStream = false;
+            continue;
+          }
           throw new Error(`Google Gemini HTTP ${res.status}: ${body.slice(0, 300)}`);
         }
 
-        const data: any = await res.json();
-        const parts = data?.candidates?.[0]?.content?.parts || [];
-        const text = parts
-          .filter((p: any) => !p?.thought && typeof p?.text === 'string')
-          .map((p: any) => p.text)
-          .join('')
-          .trim();
+        const ct = (res.headers.get('content-type') || '').toLowerCase();
+        let text = '';
+        let thinkingText = '';
+        let finishReason = '';
+
+        if (wantsStream && ct.includes('text/event-stream') && res.body?.getReader) {
+          const streamed = await this.readStreamingGeminiResponse(
+            res,
+            request.onContentDelta,
+            request.onReasoningDelta,
+            Boolean(request.allowPartialOnTimeout),
+          );
+          text = streamed.text.trim();
+          thinkingText = streamed.thinking.trim();
+          finishReason = streamed.finishReason;
+        } else {
+          const data: any = await res.json();
+          const parts = data?.candidates?.[0]?.content?.parts || [];
+          thinkingText = parts
+            .filter((p: any) => Boolean(p?.thought) && typeof p?.text === 'string')
+            .map((p: any) => p.text)
+            .join('')
+            .trim();
+          text = parts
+            .filter((p: any) => !p?.thought && typeof p?.text === 'string')
+            .map((p: any) => p.text)
+            .join('')
+            .trim();
+          finishReason = String(data?.candidates?.[0]?.finishReason || '');
+          if (thinkingText && request.onReasoningDelta) {
+            request.onReasoningDelta(thinkingText, thinkingText);
+          }
+          if (text && request.onContentDelta) {
+            request.onContentDelta(text, text);
+          }
+        }
 
         if (!text) {
+          if (wantsStream) {
+            wantsStream = false;
+            continue;
+          }
           throw new Error(`Google Gemini (${modelId}) returned an empty response.`);
         }
 
@@ -194,8 +308,10 @@ export class GeminiAdapter implements IProviderProtocolAdapter {
           modelUsed: modelId,
           variantUsed: includeThinking ? variant : 'standard',
           executionTimeMs: Date.now() - start,
-          finishReason: String(data?.candidates?.[0]?.finishReason || '') || undefined,
-          truncated: String(data?.candidates?.[0]?.finishReason || '') === 'MAX_TOKENS',
+          finishReason: finishReason || undefined,
+          truncated: finishReason === 'MAX_TOKENS',
+          reasoningChars: thinkingText ? thinkingText.length : undefined,
+          reasoning: thinkingText || undefined,
         };
       } finally {
         clearTimeout(timer);

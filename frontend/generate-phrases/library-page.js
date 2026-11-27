@@ -1269,6 +1269,25 @@
         return true;
       }
 
+      const askAiBtn = e.target.closest('[data-ll-ask-ai]');
+      if (askAiBtn) {
+        const item = store.findItemAnywhere(askAiBtn.getAttribute('data-ll-ask-ai'));
+        if (item) {
+          global.FlaptapAiChat?.openWithContext?.(
+            {
+              type: 'phrase_builder',
+              id: item.id,
+              label: item.expression,
+              subtitle: item.categoryLabel || 'Phrase Builder',
+            },
+            {
+              quote: { text: item.expression, sourceLabel: item.categoryLabel || 'Phrase Builder' },
+            },
+          );
+        }
+        return;
+      }
+
       const studyBtn = e.target.closest('[data-ll-open-study]');
       if (studyBtn) {
         e.stopPropagation();

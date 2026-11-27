@@ -492,10 +492,11 @@ async function runProductionE2ETest() {
             'think-aloud',
             'american-extractor',
             'learning-library',
+            'ai-chat',
             'vocabulary',
             'history',
           ]),
-      `Expected all 8 primary links inside Left Sidebar (0 topbar tabs), got ${JSON.stringify(signedOutHome.navTabs)}`,
+      `Expected all 9 primary links inside Left Sidebar (0 topbar tabs), got ${JSON.stringify(signedOutHome.navTabs)}`,
     );
     assert(signedOutHome.cardsLeaked === 0 && signedOutHome.gateVisible, 'Signed-out visitor leaked library cards!');
     assert(signedOutHome.startBtnEnabled, 'Start Lesson button must remain clickable for signed-out visitor.');
@@ -1651,8 +1652,8 @@ async function runProductionE2ETest() {
     });
     assert(mobile390.overflow <= 4, `Horizontal overflow on 390px mobile: +${mobile390.overflow}px`);
     assert(
-      mobile390.barHeight <= 140 && mobile390.barOverflow <= 2,
-      `Control bar overflowed or exceeded 3-row mobile budget on 390px: ${JSON.stringify(mobile390)}`,
+      mobile390.barHeight <= 44 && mobile390.barOverflow <= 2,
+      `Control bar overflowed or broke single-row budget on 390px: ${JSON.stringify(mobile390)}`,
     );
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '11-studio-mobile.png') });
 
@@ -1674,10 +1675,10 @@ async function runProductionE2ETest() {
     });
     assert(
       mobile360.overflow <= 4 &&
-      mobile360.barHeight <= 140 &&
+      mobile360.barHeight <= 44 &&
       mobile360.barOverflow <= 2 &&
       mobile360.persistedShadowDone === '1',
-      `360px 3-row control bar or persisted completion failed: ${JSON.stringify(mobile360)}`,
+      `360px single-row control bar or persisted completion failed: ${JSON.stringify(mobile360)}`,
     );
 
     // Check Vocabulary Vault progress bar reflects Coach-saved word & completion toggle
