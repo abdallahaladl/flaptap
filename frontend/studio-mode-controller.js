@@ -9,17 +9,12 @@
   'use strict';
 
   const VALID_MODES = ['shadow', 'read', 'listen', 'insights', 'notes'];
-  const VALID_INSIGHTS_SUBVIEWS = ['lexicon', 'prosody'];
   const VALID_READ_VIEWS = ['paragraphs', 'ideas', 'speakers', 'raw'];
   const VALID_FILTERS = ['all', 'remaining', 'completed'];
 
   function normalizeMode(mode) {
     if (mode === 'extract' || mode === 'coach') return 'insights';
     return VALID_MODES.includes(mode) ? mode : 'shadow';
-  }
-
-  function normalizeInsightsSubView(sub) {
-    return VALID_INSIGHTS_SUBVIEWS.includes(sub) ? sub : 'lexicon';
   }
 
   function normalizeReadView(view) {
@@ -106,7 +101,6 @@
   function resolveCapabilities(ctx = {}) {
     const mode = normalizeMode(ctx.mode);
     const readView = normalizeReadView(ctx.readView);
-    const insightsSubView = normalizeInsightsSubView(ctx.insightsSubView);
     const item = ctx.item || null;
     const isMediaHubTrack = Boolean(item && (item.track === 'media_hub' || item.track === 'shadowing'));
     const isShadowingTrack = isMediaHubTrack;
@@ -114,26 +108,19 @@
     const hasCoachContent = Boolean(item && item.aiAnalysis);
     const isReadParagraphs = mode === 'read' && readView === 'paragraphs';
     const isReadRaw = mode === 'read' && readView === 'raw';
-    const isInsightsProsody = mode === 'insights' && insightsSubView === 'prosody';
 
     return {
       mode,
       readView,
-      insightsSubView,
       isShadowingTrack,
       hasTranscriptData,
       hasCoachContent,
       isReadParagraphs,
       isReadRaw,
       showReadSubbar: mode === 'read' && hasTranscriptData,
-      showToolsBar: mode === 'shadow' || mode === 'read' || (isInsightsProsody && hasCoachContent),
-      showSearch: mode === 'shadow' || mode === 'read' || (isInsightsProsody && hasCoachContent),
-      searchPlaceholder:
-        isInsightsProsody
-          ? 'Search prosody & coach insights...'
-          : mode === 'shadow'
-            ? 'Search sentences...'
-            : 'Search transcript...',
+      showToolsBar: mode === 'shadow' || mode === 'read',
+      showSearch: mode === 'shadow' || mode === 'read',
+      searchPlaceholder: mode === 'shadow' ? 'Search sentences...' : 'Search transcript...',
       showPacing: mode === 'shadow' && isShadowingTrack,
       showKaraokeToggle: (mode === 'shadow' || mode === 'read') && Boolean(ctx.hasTimedMedia),
       showRepairsToggle:
@@ -142,13 +129,8 @@
       showSpeakerBar:
         (mode === 'shadow' || (mode === 'read' && !isReadRaw)) &&
         (Number(ctx.speakerCount) > 1 || Boolean(ctx.speakerEditorOpen)),
-      showProgressDock:
-        mode === 'shadow' ||
-        isReadParagraphs ||
-        mode === 'listen' ||
-        (isInsightsProsody && hasCoachContent),
-      showCompletionFilter:
-        mode === 'shadow' || isReadParagraphs || (isInsightsProsody && hasCoachContent),
+      showProgressDock: mode === 'shadow' || isReadParagraphs || mode === 'listen',
+      showCompletionFilter: mode === 'shadow' || isReadParagraphs,
       showActiveJump: mode === 'shadow' || mode === 'read',
       showTranslationTrigger: mode === 'shadow',
       maskDeckSubtitle: mode === 'listen',

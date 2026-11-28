@@ -364,15 +364,55 @@
 
 .stx-prosody-strip {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px 14px;
-  padding: 9px 12px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 14px;
   margin-bottom: 10px;
   border-radius: var(--ap-radius-md);
   background: var(--ap-fill-subtle);
   border-inline-start: 3px solid var(--ap-blue);
+}
+
+.stx-prosody-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.stx-prosody-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.stx-prosody-tips {
+  margin: 0;
+  padding-inline-start: 18px;
+  padding-top: 6px;
+  border-top: 1px solid var(--ap-border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ap-text-secondary);
+}
+
+.stx-fallback-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-radius: var(--ap-radius-md);
+  background: var(--ap-blue-wash);
+  font-size: 0.78rem;
+  color: var(--ap-text-secondary);
 }
 
 .stx-prosody-main {

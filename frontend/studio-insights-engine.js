@@ -756,6 +756,154 @@
     };
   }
 
+  /**
+   * Merges Speaker Prosody / Connected Speech (& fallback Expressions / Vocabulary
+   * when Deep Lexicon has not been extracted yet) seamlessly into unified Insights items.
+   * Deduplicates against existing items and enriches overlaps with IPA / mouth mechanics.
+   */
+  function mergeProsodyIntoInsightsItems(baseItems = [], coachAnalysis = null, lesson = null) {
+    const merged = Array.isArray(baseItems) ? baseItems.map((it) => ({ ...it })) : [];
+    if (!coachAnalysis || typeof coachAnalysis !== 'object') {
+      return merged;
+    }
+
+    const sentences = Array.isArray(lesson?.sentences) ? lesson.sentences : [];
+    const sentByIndex = new Map();
+    for (const s of sentences) {
+      const idx = Number(s?.index);
+      if (Number.isFinite(idx)) sentByIndex.set(idx, s);
+    }
+
+    const cefrFallback = String(coachAnalysis.overview?.cefrLevel || 'B2').trim().toUpperCase() || 'B2';
+    const byNormTerm = new Map();
+    for (const it of merged) {
+      const key = normalizeForMatch(it.surface || it.term);
+      if (key && !byNormTerm.has(key)) {
+        byNormTerm.set(key, it);
+      }
+      const keyAlt = normalizeForMatch(it.term);
+      if (keyAlt && !byNormTerm.has(keyAlt)) {
+        byNormTerm.set(keyAlt, it);
+      }
+    }
+
+    const connected = Array.isArray(coachAnalysis.connectedSpeech) ? coachAnalysis.connectedSpeech : [];
+    connected.forEach((entry, idx) => {
+      const phrase = String(entry?.exactPhrase || entry?.phrase || '').trim();
+      if (!phrase) return;
+      const key = normalizeForMatch(phrase);
+      const sentIdx = Number(entry.sentenceIndex) || 1;
+      const sent = sentByIndex.get(sentIdx) || sentences.find((s) => normalizeForMatch(s?.text).includes(key));
+      const mechanics = String(entry.mechanics || '').trim();
+      const spokenIpa = String(entry.spokenIpa || '').trim();
+      const phenomenon = String(entry.phenomenon || 'Connected Speech').trim();
+
+      const existing = byNormTerm.get(key);
+      if (existing) {
+        if (!existing.ipa && spokenIpa) existing.ipa = spokenIpa;
+        if (!existing.spokenNote && mechanics) existing.spokenNote = mechanics;
+        if (!existing.usageNote && phenomenon) existing.usageNote = `Spoken phenomenon: ${phenomenon}.`;
+        return;
+      }
+
+      const item = {
+        index: 100000 + idx,
+        term: phrase,
+        surface: phrase,
+        category: 'connected_speech',
+        partOfSpeech: phenomenon.toLowerCase(),
+        cefr: cefrFallback,
+        ipa: spokenIpa,
+        meaning: mechanics,
+        spokenNote: mechanics,
+        usageNote: phenomenon ? `Connected speech pattern (${phenomenon}) in natural American delivery.` : '',
+        contextSentence: sent?.text || phrase,
+        sentenceIndex: sent?.index || sentIdx,
+        startSec: typeof sent?.startSec === 'number' ? sent.startSec : undefined,
+        endSec: typeof sent?.endSec === 'number' ? sent.endSec : undefined,
+        _coachSubject: 'coachConnected',
+        _coachIndex: idx,
+        source: 'prosody',
+      };
+      merged.push(item);
+      if (key) byNormTerm.set(key, item);
+    });
+
+    // If no Deep Lexicon extraction exists yet, also surface Expressions & Vocabulary directly
+    if (baseItems.length === 0) {
+      const expressions = Array.isArray(coachAnalysis.expressions) ? coachAnalysis.expressions : [];
+      expressions.forEach((entry, idx) => {
+        const phrase = String(entry?.phrase || '').trim();
+        if (!phrase) return;
+        const key = normalizeForMatch(phrase);
+        if (byNormTerm.has(key)) return;
+        const sentIdx = Number(entry.sentenceIndex) || 1;
+        const sent = sentByIndex.get(sentIdx) || sentences.find((s) => normalizeForMatch(s?.text).includes(key));
+        const reg = String(entry.register || 'idiom').trim();
+        const lowerReg = reg.toLowerCase();
+        const cat = lowerReg.includes('slang')
+          ? 'slang'
+          : lowerReg.includes('phrasal')
+            ? 'phrasal_verb'
+            : lowerReg.includes('conversational')
+              ? 'conversational_expression'
+              : 'idiom';
+
+        const item = {
+          index: 200000 + idx,
+          term: phrase,
+          surface: phrase,
+          category: cat,
+          register: reg,
+          cefr: cefrFallback,
+          ipa: String(entry.ipa || '').trim(),
+          meaning: String(entry.meaning || '').trim(),
+          usageNote: String(entry.usageNote || '').trim(),
+          contextSentence: sent?.text || phrase,
+          sentenceIndex: sent?.index || sentIdx,
+          startSec: typeof sent?.startSec === 'number' ? sent.startSec : undefined,
+          endSec: typeof sent?.endSec === 'number' ? sent.endSec : undefined,
+          _coachSubject: 'coachExpressions',
+          _coachIndex: idx,
+          source: 'prosody',
+        };
+        merged.push(item);
+        if (key) byNormTerm.set(key, item);
+      });
+
+      const vocab = Array.isArray(coachAnalysis.vocabulary) ? coachAnalysis.vocabulary : [];
+      vocab.forEach((entry, idx) => {
+        const term = String(entry?.term || '').trim();
+        if (!term) return;
+        const key = normalizeForMatch(term);
+        if (byNormTerm.has(key)) return;
+        const sentIdx = Number(entry.sentenceIndex) || 1;
+        const sent = sentByIndex.get(sentIdx) || sentences.find((s) => normalizeForMatch(s?.text).includes(key));
+        const item = {
+          index: 300000 + idx,
+          term,
+          surface: term,
+          category: 'vocabulary',
+          partOfSpeech: String(entry.partOfSpeech || 'word').trim(),
+          cefr: cefrFallback,
+          ipa: String(entry.ipa || '').trim(),
+          meaning: String(entry.definition || '').trim(),
+          contextSentence: sent?.text || term,
+          sentenceIndex: sent?.index || sentIdx,
+          startSec: typeof sent?.startSec === 'number' ? sent.startSec : undefined,
+          endSec: typeof sent?.endSec === 'number' ? sent.endSec : undefined,
+          _coachSubject: 'coachVocabulary',
+          _coachIndex: idx,
+          source: 'prosody',
+        };
+        merged.push(item);
+        if (key) byNormTerm.set(key, item);
+      });
+    }
+
+    return merged;
+  }
+
   return {
     MACRO_GROUPS,
     CATEGORY_LABELS,
@@ -763,6 +911,7 @@
     getMacroGroupLabel,
     getCategoryLabel,
     getNativeRoleLabel,
+    mergeProsodyIntoInsightsItems,
     buildThoughtParagraphs,
     computeParagraphHighlights,
     computeParagraphStats,

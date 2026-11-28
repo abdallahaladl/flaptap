@@ -248,6 +248,10 @@
     abortController: null,
     settingsOpen: false,
     filtersOpen: false,
+    prosodyTipsOpen: false,
+    prosodyLoading: false,
+    prosodyError: '',
+    effectiveNote: null,
     languages: null,
     aiSelector: null,
     // Config options for next extraction
@@ -295,9 +299,50 @@
     return c === 'ar' || c === 'he' || c === 'fa' || c === 'ur';
   }
 
+  function getEffectiveNote(lesson = bridge()?.getItem?.()) {
+    const coach = bridge()?.getCoachAnalysis?.() || null;
+    const baseNote = state.note;
+    const baseItems = Array.isArray(baseNote?.items) ? baseNote.items : [];
+    const eng = engine();
+    const mergedItems = eng?.mergeProsodyIntoInsightsItems
+      ? eng.mergeProsodyIntoInsightsItems(baseItems, coach, lesson)
+      : baseItems;
+
+    if (!baseNote && mergedItems.length === 0) {
+      return null;
+    }
+
+    return {
+      ...(baseNote || {}),
+      id: baseNote?.id || '',
+      title: baseNote?.title || lesson?.title || 'Insights',
+      targetLanguage: baseNote?.targetLanguage || state.configLanguage || 'ar',
+      items: mergedItems,
+      completionProgress: baseNote?.completionProgress || { items: [] },
+      _isCoachFallback: !baseNote,
+    };
+  }
+
   function completedSetForNote(note) {
     const raw = note?.completionProgress?.items;
-    return new Set(Array.isArray(raw) ? raw.map((n) => Number(n)) : []);
+    const doneSet = new Set(Array.isArray(raw) ? raw.map((n) => Number(n)) : []);
+    const b = bridge();
+    const items = Array.isArray(note?.items) ? note.items : [];
+    const bySubj = new Map();
+    for (const it of items) {
+      if (it._coachSubject && typeof it._coachIndex === 'number') {
+        if (!bySubj.has(it._coachSubject)) {
+          bySubj.set(
+            it._coachSubject,
+            new Set(b?.getCoachCompletedSet?.(it._coachSubject) || []),
+          );
+        }
+        if (bySubj.get(it._coachSubject).has(it._coachIndex)) {
+          doneSet.add(Number(it.index));
+        }
+      }
+    }
+    return doneSet;
   }
 
   function highlightVerbatimTerm(sentence, term, surface) {
@@ -336,8 +381,9 @@
   }
 
   function getFilteredItems(ignoreCefr = false) {
-    const items = Array.isArray(state.note?.items) ? state.note.items : [];
-    const doneSet = completedSetForNote(state.note);
+    const note = state.effectiveNote || state.note;
+    const items = Array.isArray(note?.items) ? note.items : [];
+    const doneSet = completedSetForNote(note);
     const query = state.search.trim().toLowerCase();
     const macro = MACRO_GROUPS.find((g) => g.id === state.macroGroup);
 
@@ -484,9 +530,10 @@
       state.loadedLessonId = lessonId;
       state.note = res?.data || null;
       state.guides = Array.isArray(res?.guides) ? res.guides : [];
-      state.settingsOpen = !state.note;
+      state.settingsOpen = false;
       state.activeItemByPara.clear();
-      bridge()?.setExtractBadge?.(state.note?.items?.length || 0);
+      const eff = getEffectiveNote(bridge()?.getItem?.());
+      bridge()?.setExtractBadge?.(eff?.items?.length || 0);
     } catch (err) {
       state.streamError = err?.message || 'Could not load extraction state.';
     } finally {
@@ -814,7 +861,8 @@
     if (!panel || panel.style.display === 'none') return;
 
     const cur = Number(tick.currentTime || 0);
-    const items = Array.isArray(state.note.items) ? state.note.items : [];
+    const activeNote = state.effectiveNote || state.note;
+    const items = Array.isArray(activeNote?.items) ? activeNote.items : [];
     const match =
       items.find(
         (it) =>
@@ -864,9 +912,17 @@
   }
 
   async function toggleItemStudied(itemIndex) {
+    const idx = Number(itemIndex);
+    const activeNote = state.effectiveNote || state.note;
+    const matchedItem = (activeNote?.items || []).find((it) => Number(it.index) === idx);
+    if (matchedItem && matchedItem._coachSubject && typeof matchedItem._coachIndex === 'number') {
+      bridge()?.toggleCoachCompletion?.(matchedItem._coachSubject, matchedItem._coachIndex);
+      render();
+      return;
+    }
+
     const note = state.note;
     if (!note?.id) return;
-    const idx = Number(itemIndex);
     const doneSet = completedSetForNote(note);
     const nextCompleted = !doneSet.has(idx);
     if (nextCompleted) doneSet.add(idx);
@@ -915,7 +971,7 @@
   }
 
   function exportFilteredItems(format) {
-    const note = state.note;
+    const note = state.effectiveNote || state.note;
     if (!note) return;
     const items = getFilteredItems();
     const baseName =
@@ -1507,15 +1563,46 @@
         : '';
 
     const coach = bridge()?.getCoachAnalysis?.();
+    const focusTips = Array.isArray(coach?.overview?.focusTips) ? coach.overview.focusTips.filter(Boolean) : [];
     const prosodyBannerHtml = coach
       ? `<div class="stx-prosody-strip">
-          <div class="stx-prosody-main">
-            <span class="stx-prosody-pill">${escapeHtml(coach.overview?.cefrLevel || 'B2')} · ${escapeHtml(
-              coach.overview?.speakerStyle || 'Prosody Brief',
-            )}</span>
-            <span class="stx-prosody-text">${escapeHtml(coach.overview?.summary || '')}</span>
+          <div class="stx-prosody-head">
+            <div class="stx-prosody-main">
+              <span class="stx-prosody-pill">${escapeHtml(coach.overview?.cefrLevel || 'B2')} · ${escapeHtml(
+                coach.overview?.speakerStyle || 'Prosody Brief',
+              )}</span>
+              <span class="stx-prosody-text">${escapeHtml(coach.overview?.summary || '')}</span>
+            </div>
+            <div class="stx-prosody-actions">
+              ${
+                focusTips.length > 0
+                  ? `<button type="button" class="stx-mini-btn${state.prosodyTipsOpen ? ' is-active' : ''}" id="stx-prosody-tips-btn" aria-expanded="${
+                      state.prosodyTipsOpen ? 'true' : 'false'
+                    }">Focus Tips (${focusTips.length})</button>`
+                  : ''
+              }
+              <button type="button" class="stx-mini-btn" id="stx-refresh-prosody-btn" ${
+                state.prosodyLoading ? 'disabled' : ''
+              } title="Refresh speaker prosody &amp; connected speech analysis">${
+                state.prosodyLoading ? 'Analyzing...' : 'Refresh Prosody'
+              }</button>
+            </div>
           </div>
-          <button type="button" class="stx-mini-btn" id="stx-open-prosody-btn">Prosody &amp; Mouth →</button>
+          ${
+            focusTips.length > 0 && state.prosodyTipsOpen
+              ? `<ul class="stx-prosody-tips">${focusTips.map((tip) => `<li>${escapeHtml(tip)}</li>`).join('')}</ul>`
+              : ''
+          }
+          ${state.prosodyError ? `<p class="stx-error-note" style="margin:0;">${escapeHtml(state.prosodyError)}</p>` : ''}
+        </div>`
+      : '';
+
+    const coachFallbackBarHtml = note._isCoachFallback
+      ? `<div class="stx-fallback-bar">
+          <span>Showing Speaker Prosody, Connected Speech &amp; Highlights. Run full A1–C2 extraction for deeper phrase coverage across all paragraphs.</span>
+          <button type="button" class="stx-btn-primary" id="stx-run-fallback-extract-btn" style="height:30px;font-size:0.76rem;padding:0 12px;">
+            ${ICONS.layers}<span>Extract Full A1–C2</span>
+          </button>
         </div>`
       : '';
 
@@ -1540,6 +1627,7 @@
             .join('')}</div>`;
 
     return `
+      ${coachFallbackBarHtml}
       ${prosodyBannerHtml}
       <div class="stx-dock" role="region" aria-label="Insights workbench controls">
         <div class="stx-dock-top">
@@ -1573,7 +1661,11 @@
           <div class="stx-dock-actions">
             ${
               !coach
-                ? `<button type="button" class="stx-mini-btn" id="stx-open-prosody-btn" title="Generate Speaker Prosody Brief & Connected Speech Mechanics">+ Prosody</button>`
+                ? `<button type="button" class="stx-mini-btn" id="stx-load-prosody-btn" ${
+                    state.prosodyLoading ? 'disabled' : ''
+                  } title="Analyze Speaker Prosody &amp; Connected Speech Mechanics">${
+                    state.prosodyLoading ? 'Loading Prosody...' : '+ Prosody &amp; Mouth'
+                  }</button>`
                 : ''
             }
             <button type="button" class="stx-mini-btn${state.recallMode ? ' is-active' : ''}" id="stx-recall-btn" aria-pressed="${
@@ -1711,7 +1803,13 @@
               : `Showing <strong>${filtered.length}</strong> of <strong>${totalCount}</strong> extracted items`
           }</span>
           <div class="stx-summary-right">
-            <a class="stx-summary-link" href="/extractor/note/${encodeURIComponent(note.id)}" title="Open guide in Phrase Miner">Full Guide ↗</a>
+            ${
+              note.id
+                ? `<a class="stx-summary-link" href="/extractor/note/${encodeURIComponent(
+                    note.id,
+                  )}" title="Open guide in Phrase Miner">Full Guide ↗</a>`
+                : ''
+            }
             ${
               hasAnyActiveFilters()
                 ? `<button type="button" class="stx-mini-btn" id="stx-reset-filters-btn">Reset</button>`
@@ -1928,7 +2026,7 @@
       });
     });
 
-    const itemByIndex = new Map((state.note?.items || []).map((it) => [Number(it.index), it]));
+    const itemByIndex = new Map(((state.effectiveNote || state.note)?.items || []).map((it) => [Number(it.index), it]));
     scopeRoot.querySelectorAll('[data-stx-action]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const action = btn.getAttribute('data-stx-action');
@@ -2008,7 +2106,7 @@
     const slot = thoughtEl.querySelector(`[data-stx-inspector-slot="${CSS.escape(paraId)}"]`);
     if (!slot) return;
 
-    const note = state.note;
+    const note = state.effectiveNote || state.note;
     const doneSet = completedSetForNote(note);
     const rtl = isRtlLanguage(note?.targetLanguage);
     const hasMedia = Boolean(bridge()?.getPlaybackState?.()?.hasMedia);
@@ -2055,10 +2153,14 @@
       return;
     }
 
-    if (!state.note) {
+    const effectiveNote = getEffectiveNote(lesson);
+    state.effectiveNote = effectiveNote;
+    bridge()?.setExtractBadge?.(effectiveNote?.items?.length || 0);
+
+    if (!effectiveNote) {
       panel.innerHTML = renderLaunchpadHtml(lesson);
     } else {
-      panel.innerHTML = renderWorkbenchHtml(state.note, lesson);
+      panel.innerHTML = renderWorkbenchHtml(effectiveNote, lesson);
     }
 
     bindPanelEvents(panel);
@@ -2187,8 +2289,21 @@
       render();
     });
 
-    document.getElementById('stx-open-prosody-btn')?.addEventListener('click', () => {
-      bridge()?.switchInsightsSubView?.('prosody');
+    document.getElementById('stx-prosody-tips-btn')?.addEventListener('click', () => {
+      state.prosodyTipsOpen = !state.prosodyTipsOpen;
+      render();
+    });
+
+    document.getElementById('stx-load-prosody-btn')?.addEventListener('click', () => {
+      bridge()?.triggerProsodyAnalysis?.(false);
+    });
+
+    document.getElementById('stx-refresh-prosody-btn')?.addEventListener('click', () => {
+      bridge()?.triggerProsodyAnalysis?.(true);
+    });
+
+    document.getElementById('stx-run-fallback-extract-btn')?.addEventListener('click', () => {
+      startExtractionStream({ force: Boolean(state.configForce) });
     });
 
     document.getElementById('stx-filters-toggle-btn')?.addEventListener('click', () => {
@@ -2354,9 +2469,25 @@
     render();
   }
 
+  function onCoachAnalysisUpdated() {
+    if (getContainer()) {
+      render();
+    }
+  }
+
+  function setProsodyState({ loading, error } = {}) {
+    if (typeof loading === 'boolean') state.prosodyLoading = loading;
+    if (typeof error === 'string') state.prosodyError = error;
+    if (getContainer() && document.querySelector('.studio-canvas')?.dataset?.activeMode === 'insights') {
+      render();
+    }
+  }
+
   global.FlaptapStudioExtract = {
     onLessonLoaded,
     onActivate,
+    onCoachAnalysisUpdated,
+    setProsodyState,
     render,
   };
 })(window);

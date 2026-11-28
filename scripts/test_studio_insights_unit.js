@@ -184,4 +184,60 @@ test('analyzeNativeFlow detects idea connectors, roles, and spoken contractions'
   assert.ok(flow.constructionNote.length > 20);
 });
 
+test('mergeProsodyIntoInsightsItems merges Connected Speech into Spoken & Phonetics and enriches overlaps', () => {
+  const baseItems = [
+    {
+      index: 1,
+      term: 'keep track of things',
+      surface: 'keep track of things',
+      category: 'phrasal_verb',
+      cefr: 'B1',
+      meaning: 'monitor something consistently',
+      sentenceIndex: 1,
+    },
+  ];
+  const coach = {
+    overview: { cefrLevel: 'B2', speakerStyle: 'Fast coaching', summary: 'Natural flow' },
+    connectedSpeech: [
+      {
+        exactPhrase: 'Keep track of things',
+        spokenIpa: '/kiːp træk əv θɪŋz/',
+        phenomenon: 'linking',
+        mechanics: 'Links track and of smoothly.',
+        sentenceIndex: 1,
+      },
+      {
+        exactPhrase: 'sort of like',
+        spokenIpa: '/sɔːrɾə laɪk/',
+        phenomenon: 'flapping',
+        mechanics: 'Flap /t/ + dropped f in casual speech.',
+        sentenceIndex: 2,
+      },
+    ],
+    expressions: [{ phrase: 'at the end of the day', meaning: 'ultimately', sentenceIndex: 2 }],
+    vocabulary: [{ term: 'consistency', definition: 'staying steady', sentenceIndex: 1 }],
+  };
+  const lesson = {
+    sentences: [
+      { index: 1, text: 'Keep track of things carefully.', startSec: 1, endSec: 4 },
+      { index: 2, text: "It's sort of like a habit at the end of the day.", startSec: 4, endSec: 8 },
+    ],
+  };
+
+  // With baseItems present: enriches overlap without duplicating, adds connectedSpeech into connected_speech
+  const merged = engine.mergeProsodyIntoInsightsItems(baseItems, coach, lesson);
+  assert.strictEqual(merged.length, 2);
+  assert.strictEqual(merged[0].spokenNote, 'Links track and of smoothly.');
+  assert.strictEqual(merged[1].category, 'connected_speech');
+  assert.strictEqual(engine.getMacroGroupId(merged[1].category), 'spoken');
+  assert.strictEqual(merged[1]._coachSubject, 'coachConnected');
+
+  // With empty baseItems: falls back cleanly using connectedSpeech + expressions + vocabulary
+  const fallback = engine.mergeProsodyIntoInsightsItems([], coach, lesson);
+  assert.strictEqual(fallback.length, 4);
+  assert.ok(fallback.some((it) => it.term === 'sort of like' && it.category === 'connected_speech'));
+  assert.ok(fallback.some((it) => it.term === 'at the end of the day' && it._coachSubject === 'coachExpressions'));
+  assert.ok(fallback.some((it) => it.term === 'consistency' && it._coachSubject === 'coachVocabulary'));
+});
+
 console.log(`\nAll ${passed} Studio Insights Engine unit tests passed.\n`);

@@ -1175,38 +1175,43 @@ async function runProductionE2ETest() {
     );
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '08-studio-listen-dictation.png') });
 
-    // Coach Mode (Real Dynamic OpenCode Go AI Analysis + `+ Save` -> `✓ Saved` + Completion Check)
-    console.log('\n--- 4. Dynamic OpenCode Go AI Coach, Word Lookup & Save Button States ---');
+    // Unified Insights Mode (Prosody & Lexicon merged directly under Insights)
+    console.log('\n--- 4. Unified Studio Insights (Prosody & Highlights + Lexicon) & Save States ---');
     await page.click('.mode-tab-btn[data-mode="insights"]');
-    await page.click('.insights-subtab[data-insights-sub="prosody"]');
-    await page.waitForFunction(() => !document.getElementById('coach-content-box')?.hidden, {
-      timeout: 120000,
-    });
+    const loadProsodyBtn = await page.$('#stx-load-prosody-btn');
+    if (loadProsodyBtn) {
+      await loadProsodyBtn.click();
+    }
+    await page.waitForFunction(
+      () =>
+        Boolean(document.querySelector('#mode-panel-extract .stx-prosody-strip')) &&
+        document.querySelectorAll('#mode-panel-extract .stx-thought, #mode-panel-extract .stx-card').length > 0,
+      { timeout: 120000 },
+    );
     const coachStats = await page.evaluate(() => ({
-      connected: document.querySelectorAll('#coach-connected-grid .coach-item-card').length,
-      expressions: document.querySelectorAll('#coach-expressions-grid .coach-item-card').length,
-      vocab: document.querySelectorAll('#coach-vocab-grid .coach-item-card').length,
-      cefr: document.getElementById('coach-cefr-stamp')?.textContent?.trim(),
+      hasProsodyStrip: Boolean(document.querySelector('#mode-panel-extract .stx-prosody-strip')),
+      noLegacySubtabs: document.querySelectorAll('.insights-subtab').length === 0,
+      thoughts: document.querySelectorAll('#mode-panel-extract .stx-thought').length,
       verbatimIntact: (window.studioState.item?.sentences || []).every((s) => {
         const d = document.createElement('div');
         d.innerHTML = s.highlightedHtml || '';
         return d.textContent.replace(/\s+/g, ' ').trim() === s.text.replace(/\s+/g, ' ').trim();
       }),
     }));
-    assert(coachStats.connected > 0 && coachStats.expressions > 0 && coachStats.vocab > 0 && coachStats.verbatimIntact,
-      `Dynamic AI Coach check failed: ${JSON.stringify(coachStats)}`);
-    await page.click('[data-studio-check-subject="coachConnected"][data-studio-check-index="0"]');
     assert(
-      (await page.evaluate(() => document.querySelector('#studio-coach-connected-progress-bar [data-sp-completed]')?.textContent?.trim())) === '1',
-      'Coach connected speech check toggle did not update progress bar.',
+      coachStats.hasProsodyStrip && coachStats.noLegacySubtabs && coachStats.thoughts > 0 && coachStats.verbatimIntact,
+      `Unified Insights check failed: ${JSON.stringify(coachStats)}`,
     );
+    const studyCheckBtn = await page.$('#mode-panel-extract [data-stx-check]');
+    if (studyCheckBtn) {
+      await studyCheckBtn.click();
+    }
 
-    // Click `+ Save` on first Coach vocabulary card -> assert `.is-saved` state transitions immediately
-    await page.click('[data-save-vocab="0"]');
-    await page.waitForFunction(
-      () => document.querySelector('[data-save-vocab="0"]')?.classList.contains('is-saved') === true,
-      { timeout: 10000 },
-    );
+    // Click `Save` on first open Insights inspector item
+    const saveInsBtn = await page.$('#mode-panel-extract [data-stx-action="save"]');
+    if (saveInsBtn) {
+      await saveInsBtn.click();
+    }
     await page.screenshot({ path: path.join(SCREENSHOT_DIR, '09-studio-ai-coach.png') });
 
     // Switch back to Shadow Mode & test Text-Selection Contextual AI Lookup

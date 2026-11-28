@@ -706,7 +706,7 @@
     if (canvas) {
       canvas.dataset.activeMode = mode;
       canvas.dataset.readView = mode === 'read' ? readView : '';
-      canvas.dataset.insightsSub = mode === 'insights' ? (studioState.insightsSubView || 'lexicon') : '';
+      canvas.dataset.insightsSub = '';
     }
 
     if (!MC) return null;
@@ -723,7 +723,6 @@
     const caps = MC.resolveCapabilities({
       mode,
       readView,
-      insightsSubView: studioState.insightsSubView || 'lexicon',
       item,
       hasVideo: hasLessonVideo(item),
       hasTimedMedia: hasTimedMedia(item),
@@ -2001,57 +2000,10 @@
     }
   }
 
-  function switchInsightsSubView(subName, opts = {}) {
-    const nextSub = subName === 'prosody' ? 'prosody' : 'lexicon';
-    studioState.insightsSubView = nextSub;
-
-    document.querySelectorAll('.insights-subtab[data-insights-sub]').forEach((btn) => {
-      const act = btn.dataset.insightsSub === nextSub;
-      btn.classList.toggle('active', act);
-      btn.setAttribute('aria-selected', act ? 'true' : 'false');
-    });
-
-    const extractPanel = document.getElementById('mode-panel-extract');
-    const coachPanel = document.getElementById('mode-panel-coach');
-    if (extractPanel) extractPanel.style.display = nextSub === 'lexicon' ? '' : 'none';
-    if (coachPanel) coachPanel.style.display = nextSub === 'prosody' ? '' : 'none';
-
-    if (nextSub === 'lexicon') {
-      window.FlaptapStudioExtract?.onActivate?.();
-    } else if (studioState.item) {
-      if ((studioState.item.sentences || []).length === 0) {
-        const loadingBox = document.getElementById('coach-loading-box');
-        const errorBox = document.getElementById('coach-error-box');
-        const contentBox = document.getElementById('coach-content-box');
-        if (loadingBox) loadingBox.hidden = true;
-        if (contentBox) contentBox.hidden = true;
-        if (errorBox) {
-          errorBox.hidden = false;
-          const title = document.getElementById('coach-error-title');
-          const msg = document.getElementById('coach-error-msg');
-          if (title) title.textContent = 'Waiting for Transcript';
-          if (msg) msg.textContent = 'Fetch captions or paste a transcript in Shadow mode first to unlock Prosody & Highlights.';
-        }
-      } else {
-        const coachContent = document.getElementById('coach-content-box');
-        if (!coachContent || coachContent.hidden) {
-          triggerDynamicCoachAnalysis(false);
-        }
-      }
-    }
-
+  function switchInsightsSubView(_subName, _opts = {}) {
+    window.FlaptapStudioExtract?.onActivate?.();
     applyStudioModeChrome();
     refreshAllStudioProgressBars();
-    syncSearchMatchesDom();
-
-    if (!opts.skipUrlSync && studioState.mode === 'insights') {
-      try {
-        const url = new URL(window.location.href);
-        url.searchParams.set('mode', 'insights');
-        url.searchParams.set('sub', nextSub);
-        window.history.replaceState({}, '', url.toString());
-      } catch {}
-    }
   }
 
   function switchStudioMode(modeName, opts = {}) {
@@ -2144,9 +2096,7 @@
     if (target === 'listen') {
       renderDictationCard();
     } else if (target === 'insights') {
-      switchInsightsSubView(forcedInsightsSub || studioState.insightsSubView || 'lexicon', {
-        skipUrlSync: true,
-      });
+      window.FlaptapStudioExtract?.onActivate?.();
     }
 
     applyStudioModeChrome();
@@ -2174,15 +2124,11 @@
       try {
         const url = new URL(window.location.href);
         url.searchParams.set('mode', target);
+        url.searchParams.delete('sub');
         if (target === 'read') {
           url.searchParams.set('view', studioState.readView || 'paragraphs');
-          url.searchParams.delete('sub');
-        } else if (target === 'insights') {
-          url.searchParams.delete('view');
-          url.searchParams.set('sub', studioState.insightsSubView || 'lexicon');
         } else {
           url.searchParams.delete('view');
-          url.searchParams.delete('sub');
         }
         window.history.replaceState({}, '', url.toString());
       } catch {}
@@ -5333,18 +5279,9 @@
         : null;
     }
     if (studioState.mode === 'insights') {
-      if (studioState.insightsSubView === 'prosody') {
-        const firstUncheckedCoach = document.querySelector(
-          '#mode-panel-coach [data-studio-check-subject^="coach"]:not(.is-checked)',
-        );
-        return (
-          firstUncheckedCoach?.closest('.coach-item-card, section') ||
-          firstUncheckedCoach ||
-          null
-        );
-      }
       return (
         document.querySelector('#mode-panel-extract .stx-card.is-sync-active') ||
+        document.querySelector('#mode-panel-extract .stx-thought') ||
         document.querySelector('#mode-panel-extract .stx-card') ||
         null
       );
@@ -6078,14 +6015,7 @@
     }
 
     studioState.analysisInFlight = true;
-    const loadingBox = document.getElementById('coach-loading-box');
-    const errorBox = document.getElementById('coach-error-box');
-    const contentBox = document.getElementById('coach-content-box');
-    const refreshBtn = document.getElementById('coach-refresh-btn');
-    if (loadingBox) loadingBox.hidden = false;
-    if (errorBox) errorBox.hidden = true;
-    if (contentBox) contentBox.hidden = true;
-    if (refreshBtn) refreshBtn.disabled = true;
+    window.FlaptapStudioExtract?.setProsodyState?.({ loading: true, error: '' });
 
     try {
       const res = await apiFetch('/api/tracks/media-hub/analyze', {
@@ -6113,14 +6043,11 @@
         applyStudioModeChrome();
       }
     } catch (error) {
-      if (loadingBox) loadingBox.hidden = true;
-      if (errorBox) {
-        errorBox.hidden = false;
-        document.getElementById('coach-error-msg').textContent = error.message;
-      }
+      window.FlaptapStudioExtract?.setProsodyState?.({ loading: false, error: error?.message || 'Prosody analysis failed.' });
+      showToast(error?.message || 'Prosody analysis failed.');
     } finally {
       studioState.analysisInFlight = false;
-      if (refreshBtn) refreshBtn.disabled = false;
+      window.FlaptapStudioExtract?.setProsodyState?.({ loading: false });
     }
   }
 
@@ -6329,40 +6256,28 @@
     return promise;
   }
 
+  let studioExtractBadgeCount = 0;
+
   function syncInsightsCombinedBadge() {
-    const extractCount = Number(document.getElementById('badge-extract-count')?.textContent || 0) || 0;
-    const coachCount = Number(document.getElementById('badge-coach-count')?.textContent || 0) || 0;
+    const analysis = studioState.item?.aiAnalysis;
+    const coachTotal =
+      (analysis?.connectedSpeech?.length || 0) +
+      (analysis?.expressions?.length || 0) +
+      (analysis?.vocabulary?.length || 0);
     const combinedEl = document.getElementById('badge-insights-count');
     if (!combinedEl) return;
-    const displayCount = extractCount > 0 ? extractCount : coachCount;
+    const displayCount = studioExtractBadgeCount > 0 ? studioExtractBadgeCount : coachTotal;
     combinedEl.textContent = String(displayCount);
     combinedEl.hidden = displayCount <= 0;
   }
 
-  function syncCoachBadgeFromAnalysis(analysis) {
-    const total =
-      (analysis?.connectedSpeech?.length || 0) +
-      (analysis?.expressions?.length || 0) +
-      (analysis?.vocabulary?.length || 0);
-    const badgeCoach = document.getElementById('badge-coach-count');
-    if (badgeCoach) {
-      badgeCoach.textContent = String(total);
-      badgeCoach.hidden = total === 0;
-    }
+  function syncCoachBadgeFromAnalysis(_analysis) {
     syncInsightsCombinedBadge();
   }
 
   function renderCoachAnalysis(analysis) {
     if (!analysis) return;
 
-    const loadingBox = document.getElementById('coach-loading-box');
-    const errorBox = document.getElementById('coach-error-box');
-    const contentBox = document.getElementById('coach-content-box');
-    if (loadingBox) loadingBox.hidden = true;
-    if (errorBox) errorBox.hidden = true;
-    if (contentBox) contentBox.hidden = false;
-
-    // Saved-state is needed for the card Save buttons, fetched once, lazily.
     loadSavedVocabularyTerms();
 
     const cefr = analysis.overview?.cefrLevel || 'B2';
@@ -6372,121 +6287,9 @@
       headerCefr.hidden = false;
     }
 
-    document.getElementById('coach-cefr-stamp').textContent = cefr;
-    document.getElementById('coach-style-heading').textContent =
-      analysis.overview?.speakerStyle || 'Natural American Cadence';
-    const summaryEl = document.getElementById('coach-summary-text');
-    const briefContextIndex =
-      studioState.activeSentence?.index ||
-      studioState.item?.sentences?.[0]?.index ||
-      1;
-    if (summaryEl) {
-      summaryEl.innerHTML = renderCoachInteractiveText(
-        analysis.overview?.summary || '',
-        briefContextIndex,
-      );
-    }
-
-    const tipsList = document.getElementById('coach-tips-list');
-    if (tipsList) {
-      tipsList.innerHTML = (analysis.overview?.focusTips || [])
-        .map((tip) => `<li>${renderCoachInteractiveText(tip, briefContextIndex)}</li>`)
-        .join('');
-    }
-
-    const connected = analysis.connectedSpeech || [];
-    const expressions = analysis.expressions || [];
-    const vocab = analysis.vocabulary || [];
-
     syncCoachBadgeFromAnalysis(analysis);
-
-    document.getElementById(COACH_SECTIONS.connected.countId).textContent = String(
-      connected.length,
-    );
-    document.getElementById(COACH_SECTIONS.expression.countId).textContent = String(
-      expressions.length,
-    );
-    document.getElementById(COACH_SECTIONS.vocabulary.countId).textContent = String(vocab.length);
-
-    const connDone = getStudioCompletedSet('coachConnected');
-    document.getElementById(COACH_SECTIONS.connected.gridId).innerHTML = connected
-      .map((entry, index) =>
-        renderCoachCardHtml({
-          section: COACH_SECTIONS.connected,
-          index,
-          sentenceIndex: entry.sentenceIndex,
-          phraseText: entry.exactPhrase,
-          quote: true,
-          tag: entry.phenomenon,
-          ipa: entry.spokenIpa,
-          bodyHtml: `<p class="coach-desc coach-desc--mechanics">${renderCoachInteractiveText(
-            entry.mechanics,
-            entry.sentenceIndex,
-          )}</p>`,
-          isDone: connDone.has(index),
-        }),
-      )
-      .join('');
-
-    const exprDone = getStudioCompletedSet('coachExpressions');
-    document.getElementById(COACH_SECTIONS.expression.gridId).innerHTML = expressions
-      .map((entry, index) => {
-        const register = String(entry.register || 'Expression');
-        const lowerRegister = register.toLowerCase();
-        const isSlang = lowerRegister.includes('slang') || lowerRegister.includes('colloquial');
-        const usageNote = entry.usageNote
-          ? `<p class="coach-desc coach-desc--note">${renderCoachInteractiveText(
-              entry.usageNote,
-              entry.sentenceIndex,
-            )}</p>`
-          : '';
-        return renderCoachCardHtml({
-          section: COACH_SECTIONS.expression,
-          index,
-          sentenceIndex: entry.sentenceIndex,
-          phraseText: entry.phrase,
-          tag: register,
-          tagClass: isSlang ? ' is-slang' : '',
-          ipa: entry.ipa,
-          bodyHtml:
-            `<p class="coach-desc coach-desc--meaning">${renderCoachInteractiveText(
-              entry.meaning,
-              entry.sentenceIndex,
-            )}</p>` + usageNote,
-          glossKey: `expression:${index}`,
-          saveKind: 'expression',
-          isSaved: studioState.savedTerms.has(normalizeTermKey(entry.phrase)),
-          isDone: exprDone.has(index),
-        });
-      })
-      .join('');
-
-    const vocabDone = getStudioCompletedSet('coachVocabulary');
-    document.getElementById(COACH_SECTIONS.vocabulary.gridId).innerHTML = vocab
-      .map((entry, index) =>
-        renderCoachCardHtml({
-          section: COACH_SECTIONS.vocabulary,
-          index,
-          sentenceIndex: entry.sentenceIndex,
-          phraseText: entry.term,
-          tag: entry.partOfSpeech || 'word',
-          ipa: entry.ipa,
-          bodyHtml: `<p class="coach-desc">${renderCoachInteractiveText(
-            entry.definition,
-            entry.sentenceIndex,
-          )}</p>`,
-          glossKey: `vocabulary:${index}`,
-          saveKind: 'vocabulary',
-          isSaved: studioState.savedTerms.has(normalizeTermKey(entry.term)),
-          isDone: vocabDone.has(index),
-        }),
-      )
-      .join('');
-
-    syncPlaybackButtonsDom();
     refreshAllStudioProgressBars();
-    applyCompletionFilterDom();
-    hydrateCoachGlosses(analysis);
+    window.FlaptapStudioExtract?.onCoachAnalysisUpdated?.(analysis);
   }
 
   /* ========================================================================
@@ -7812,8 +7615,10 @@
     syncDeckLiveSubtitle();
     requestAnimationFrame(syncStudioDeckStickyHeightVar);
 
+    window.FlaptapStudioExtract?.onLessonLoaded?.(item);
+
     if (studioState.mode === 'insights') {
-      switchInsightsSubView(studioState.insightsSubView || 'lexicon', { skipUrlSync: true });
+      window.FlaptapStudioExtract?.onActivate?.();
     } else if (item.aiAnalysis) {
       syncCoachBadgeFromAnalysis(item.aiAnalysis);
     }
@@ -7831,8 +7636,6 @@
         renderDictationCard();
       }
     }
-
-    window.FlaptapStudioExtract?.onLessonLoaded?.(item);
 
     if (initialTarget && (targetSentence || studioState.autoFollow)) {
       jumpToActiveItem({ index: initialTarget.index });
@@ -8044,10 +7847,6 @@
 
     document.querySelectorAll('.mode-tab-btn[data-mode]').forEach((btn) => {
       btn.addEventListener('click', () => switchStudioMode(btn.dataset.mode));
-    });
-
-    document.querySelectorAll('.insights-subtab[data-insights-sub]').forEach((btn) => {
-      btn.addEventListener('click', () => switchInsightsSubView(btn.dataset.insightsSub));
     });
 
     document.querySelectorAll('[data-studio-comp-filter]').forEach((btn) => {
@@ -9842,6 +9641,8 @@
       switchInsightsSubView: (sub, opts = {}) => switchInsightsSubView(sub, opts),
       getCoachAnalysis: () => studioState.item?.aiAnalysis || null,
       triggerProsodyAnalysis: (force = false) => triggerDynamicCoachAnalysis(force),
+      getCoachCompletedSet: (subject) => Array.from(getStudioCompletedSet(subject)),
+      toggleCoachCompletion: (subject, idx) => toggleStudioItemCompletion(subject, idx),
       jumpToShadowSentence: (sentenceIndex) => {
         const targetIdx = Number(sentenceIndex) || 1;
         switchStudioMode('shadow');
@@ -9867,12 +9668,7 @@
         return () => playbackTickListeners.delete(fn);
       },
       setExtractBadge: (count) => {
-        const el = document.getElementById('badge-extract-count');
-        if (el) {
-          const n = Number(count) || 0;
-          el.textContent = String(n);
-          el.hidden = n <= 0;
-        }
+        studioExtractBadgeCount = Number(count) || 0;
         syncInsightsCombinedBadge();
       },
     };

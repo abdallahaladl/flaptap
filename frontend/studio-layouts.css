@@ -2324,11 +2324,6 @@ body.is-studio-resizing .video-zoom-surface {
   }
 
   /* Wide content focus inside Transcript Only & Hide Video modes */
-  .studio-body .studio-workspace[data-layout="reader-only"] .insights-subbar-wrap,
-  .studio-body .studio-workspace[data-video-hidden="1"] .insights-subbar-wrap {
-    max-width: min(1240px, 100%);
-  }
-
   .studio-body .studio-workspace[data-layout="reader-only"] .studio-extract-view,
   .studio-body .studio-workspace[data-layout="reader-only"] .coach-view,
   .studio-body .studio-workspace[data-layout="reader-only"] .dictation-view,
