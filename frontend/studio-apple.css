@@ -174,8 +174,10 @@ html:has(.studio-body),
 }
 
 .studio-body .studio-topbar-inner {
-  max-width: 1720px;
-  padding: 8px 20px;
+  max-width: 1680px;
+  width: 100%;
+  margin-inline: auto;
+  padding: 8px 18px;
   min-height: 58px;
   display: flex;
   align-items: center;
