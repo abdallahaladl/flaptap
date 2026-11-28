@@ -65,9 +65,9 @@
   flex-direction: column;
   gap: 0;
   width: 100%;
-  max-width: 960px;
-  margin-inline: auto;
-  padding: 6px 20px 96px;
+  max-width: none;
+  margin-inline: 0;
+  padding: 14px 16px 76px;
   color: var(--ap-text-primary);
 }
 

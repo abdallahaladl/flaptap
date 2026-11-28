@@ -2232,7 +2232,7 @@ body.is-studio-resizing .video-zoom-surface {
   .studio-body .studio-workspace[data-video-hidden="1"] .studio-canvas {
     grid-column: 1 !important;
     grid-row: 1 !important;
-    max-width: min(1400px, 100%);
+    max-width: none;
     width: 100%;
     margin-inline: auto;
     height: 100% !important;
@@ -2270,12 +2270,12 @@ body.is-studio-resizing .video-zoom-surface {
 
 @media (min-width: 769px) and (min-height: 551px) {
   .studio-body .studio-workspace[data-layout="reader-only"] {
-    max-width: min(1560px, 100%);
+    max-width: min(1680px, 100%);
     margin-inline: auto;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
     gap: 0;
-    padding: 10px 24px 12px;
+    padding: 12px 18px 16px;
   }
 
   .studio-body .studio-workspace[data-layout="reader-only"] .studio-split-resizer {
@@ -2308,7 +2308,7 @@ body.is-studio-resizing .video-zoom-surface {
   .studio-body .studio-workspace[data-layout="reader-only"] .studio-canvas {
     grid-column: 1;
     grid-row: 1;
-    max-width: min(1400px, 100%);
+    max-width: none;
     width: 100%;
     margin-inline: auto;
     height: 100%;
@@ -2323,33 +2323,31 @@ body.is-studio-resizing .video-zoom-surface {
     bottom: 124px;
   }
 
-  /* Wide content focus inside Transcript Only & Hide Video modes */
+  /* Wide content focus inside Transcript Only & Hide Video modes — matches Shadow tab edges cleanly */
   .studio-body .studio-workspace[data-layout="reader-only"] .studio-extract-view,
-  .studio-body .studio-workspace[data-layout="reader-only"] .coach-view,
+  .studio-body .studio-workspace[data-layout="reader-only"] .editorial-article-view,
   .studio-body .studio-workspace[data-layout="reader-only"] .dictation-view,
   .studio-body .studio-workspace[data-layout="reader-only"] .notes-view,
-  .studio-body .studio-workspace[data-video-hidden="1"] .studio-extract-view,
-  .studio-body .studio-workspace[data-video-hidden="1"] .coach-view,
-  .studio-body .studio-workspace[data-video-hidden="1"] .dictation-view,
-  .studio-body .studio-workspace[data-video-hidden="1"] .notes-view {
-    max-width: min(1240px, 100%);
-    padding-bottom: 84px;
-  }
-
   .studio-body .studio-workspace[data-layout="reader-only"] .sentences-list,
   .studio-body .studio-workspace[data-layout="reader-only"] .read-view-panel,
+  .studio-body .studio-workspace[data-video-hidden="1"] .studio-extract-view,
+  .studio-body .studio-workspace[data-video-hidden="1"] .editorial-article-view,
+  .studio-body .studio-workspace[data-video-hidden="1"] .dictation-view,
+  .studio-body .studio-workspace[data-video-hidden="1"] .notes-view,
   .studio-body .studio-workspace[data-video-hidden="1"] .sentences-list,
   .studio-body .studio-workspace[data-video-hidden="1"] .read-view-panel {
-    padding: 16px 28px 84px;
+    max-width: none;
+    width: 100%;
+    padding: 14px 16px 84px;
   }
 
   /* Tighter bottom padding when Floating Video is open (only Ask AI at bottom-right) */
   .studio-body .studio-workspace[data-layout="reader-only"][data-video-float="1"] .studio-extract-view,
-  .studio-body .studio-workspace[data-layout="reader-only"][data-video-float="1"] .coach-view,
+  .studio-body .studio-workspace[data-layout="reader-only"][data-video-float="1"] .editorial-article-view,
   .studio-body .studio-workspace[data-layout="reader-only"][data-video-float="1"] .dictation-view,
   .studio-body .studio-workspace[data-layout="reader-only"][data-video-float="1"] .notes-view,
   .studio-body .studio-workspace[data-video-hidden="1"][data-video-float="1"] .studio-extract-view,
-  .studio-body .studio-workspace[data-video-hidden="1"][data-video-float="1"] .coach-view,
+  .studio-body .studio-workspace[data-video-hidden="1"][data-video-float="1"] .editorial-article-view,
   .studio-body .studio-workspace[data-video-hidden="1"][data-video-float="1"] .dictation-view,
   .studio-body .studio-workspace[data-video-hidden="1"][data-video-float="1"] .notes-view,
   .studio-body .studio-workspace[data-layout="reader-only"][data-video-float="1"] .sentences-list,
@@ -2361,7 +2359,7 @@ body.is-studio-resizing .video-zoom-surface {
 
   .studio-body .studio-workspace[data-layout="reader-only"] .editorial-paragraph-block,
   .studio-body .studio-workspace[data-video-hidden="1"] .editorial-paragraph-block {
-    max-width: min(1160px, 100%);
+    max-width: none;
   }
 
   .studio-body .studio-workspace[data-layout="reader-only"] .paragraph-prose,

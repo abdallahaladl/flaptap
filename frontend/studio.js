@@ -7150,11 +7150,7 @@
       renderSentencesAndParagraphs();
 
       if (nextItem.aiAnalysis) {
-        const coachContent = document.getElementById('coach-content-box');
-        if (
-          (studioState.mode === 'insights' && studioState.insightsSubView === 'prosody') ||
-          (coachContent && !coachContent.hidden)
-        ) {
+        if (studioState.mode === 'insights') {
           renderCoachAnalysis(nextItem.aiAnalysis);
         } else {
           syncCoachBadgeFromAnalysis(nextItem.aiAnalysis);

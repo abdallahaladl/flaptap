@@ -466,7 +466,11 @@ html:has(.studio-body),
 }
 
 .studio-workspace[data-layout="theater"] .sentences-list,
-.studio-workspace[data-layout="focus"] .sentences-list {
+.studio-workspace[data-layout="focus"] .sentences-list,
+.studio-workspace[data-layout="theater"] .studio-extract-view,
+.studio-workspace[data-layout="theater"] .editorial-article-view,
+.studio-workspace[data-layout="theater"] .dictation-view,
+.studio-workspace[data-layout="theater"] .notes-view {
   padding: 10px 10px 84px;
   gap: 8px;
 }
@@ -2240,9 +2244,10 @@ body.studio-body:focus {
    ========================================================================== */
 
 .editorial-article-view {
-  padding: 20px 26px 84px;
-  max-width: 72ch;
-  margin: 0 auto;
+  padding: 14px 16px 76px;
+  max-width: none;
+  width: 100%;
+  margin: 0;
 }
 
 .editorial-paragraph-block {
@@ -2297,10 +2302,10 @@ body.studio-body:focus {
    ========================================================================== */
 
 .dictation-view {
-  max-width: 920px;
+  max-width: none;
   width: 100%;
-  margin-inline: auto;
-  padding: 16px 18px 84px;
+  margin-inline: 0;
+  padding: 14px 16px 76px;
 }
 
 .dictation-toolbar {
@@ -3120,10 +3125,10 @@ body.studio-body:focus {
    ========================================================================== */
 
 .notes-view {
-  max-width: 920px;
+  max-width: none;
   width: 100%;
-  margin-inline: auto;
-  padding: 14px 18px 84px;
+  margin-inline: 0;
+  padding: 14px 16px 76px;
 }
 
 .notes-header {
