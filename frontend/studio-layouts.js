@@ -29,9 +29,9 @@
   };
 
   const FLOAT_SIZE_PRESETS = [
-    { id: 'S', width: 280 },
-    { id: 'M', width: 380 },
-    { id: 'L', width: 500 },
+    { id: 'S', width: 360 },
+    { id: 'M', width: 448 },
+    { id: 'L', width: 580 },
   ];
 
   const DESKTOP_LAYOUTS = [
@@ -218,10 +218,27 @@
   }
 
   function isConsoleFloatingMode() {
+    if (isFloatingVideoActive()) return false;
     const ws = getWorkspace();
     const hiddenFlag = Boolean(window.studioState?.videoHidden) || ws?.getAttribute('data-video-hidden') === '1';
     if (!isMobileViewport() && state.desktopLayout === 'reader-only') return true;
     return Boolean(hiddenFlag && (window.innerWidth || 1024) > 900);
+  }
+
+  function mountMediaConsoleInPip(enable) {
+    const consoleEl = document.getElementById('studio-media-console');
+    const playerCard = document.querySelector('.player-frame-card');
+    const deck = document.querySelector('.studio-deck');
+    if (!consoleEl || !playerCard) return;
+
+    if (enable) {
+      if (consoleEl.parentElement !== playerCard) {
+        const resizeHandle = document.getElementById('float-video-resize-handle');
+        playerCard.insertBefore(consoleEl, resizeHandle && resizeHandle.parentElement === playerCard ? resizeHandle : null);
+      }
+    } else if (deck && consoleEl.parentElement !== deck) {
+      deck.insertBefore(consoleEl, playerCard.nextSibling);
+    }
   }
 
   function applyFloatingConsoleState() {
@@ -229,13 +246,14 @@
     const dragGrip = document.getElementById('float-console-drag-handle');
     const collapseBtn = document.getElementById('float-console-collapse-btn');
     const miniPlayBtn = document.getElementById('float-console-mini-play-btn');
-    const isFloating = isConsoleFloatingMode();
+    const inPip = isFloatingVideoActive();
+    const isFloating = !inPip && isConsoleFloatingMode();
 
     if (dragGrip) dragGrip.hidden = !isFloating;
     if (collapseBtn) {
-      collapseBtn.hidden = !isFloating;
+      collapseBtn.hidden = !(isFloating || inPip);
       collapseBtn.setAttribute('aria-expanded', state.consoleCollapsed ? 'false' : 'true');
-      collapseBtn.title = state.consoleCollapsed ? 'Expand floating control bar' : 'Minimize floating control bar';
+      collapseBtn.title = state.consoleCollapsed ? 'Expand control bar' : 'Minimize control bar';
     }
     if (miniPlayBtn) {
       miniPlayBtn.hidden = !(isFloating && state.consoleCollapsed);
@@ -243,7 +261,8 @@
 
     if (!consoleEl) return;
     consoleEl.classList.toggle('is-console-floating', isFloating);
-    consoleEl.classList.toggle('is-console-collapsed', Boolean(isFloating && state.consoleCollapsed));
+    consoleEl.classList.toggle('is-console-in-pip', inPip);
+    consoleEl.classList.toggle('is-console-collapsed', Boolean((isFloating || inPip) && state.consoleCollapsed));
 
     if (!isFloating || !state.consolePos) {
       consoleEl.style.removeProperty('--console-float-x');
@@ -286,21 +305,28 @@
   }
 
   function resolveSizeLabel(width) {
-    if (width <= 310) return 'S';
-    if (width >= 440) return 'L';
+    if (width <= 390) return 'S';
+    if (width >= 510) return 'L';
     return 'M';
   }
 
   function clampFloatRect(rawRect = state.floatRect) {
     const vw = window.innerWidth || document.documentElement.clientWidth || 1280;
     const vh = window.innerHeight || document.documentElement.clientHeight || 800;
-    const minW = Math.min(240, Math.max(200, vw - 24));
-    const maxW = Math.max(minW, Math.min(640, vw - 24));
-    const defaultW = vw <= 640 ? Math.min(264, maxW) : Math.min(340, maxW);
+    const minW = Math.min(320, Math.max(240, vw - 24));
+    const maxW = Math.max(minW, Math.min(680, vw - 24));
+    const defaultW = vw <= 640 ? Math.min(296, maxW) : Math.min(448, maxW);
     const width = Math.round(
       Math.max(minW, Math.min(maxW, Number.isFinite(Number(rawRect?.width)) && Number(rawRect.width) > 0 ? Number(rawRect.width) : defaultW)),
     );
-    const estHeight = Math.round((width * 9) / 16) + 34;
+    const consoleEl = document.getElementById('studio-media-console');
+    const cardEl = document.querySelector('.player-frame-card');
+    const measuredConsoleH =
+      consoleEl && cardEl && consoleEl.parentElement === cardEl
+        ? consoleEl.getBoundingClientRect().height
+        : 0;
+    const consoleEstH = measuredConsoleH > 20 ? Math.round(measuredConsoleH) : state.consoleCollapsed ? 42 : 112;
+    const estHeight = Math.round((width * 9) / 16) + 34 + consoleEstH;
 
     const minX = 12;
     const maxX = Math.max(minX, vw - width - 12);
@@ -328,8 +354,11 @@
   function applyFloatRectToDom(rect = state.floatRect) {
     const card = document.querySelector('.player-frame-card');
     if (!card) return;
+    const hasCustomPos = Number.isFinite(Number(rect?.x)) && rect?.x !== null && Number.isFinite(Number(rect?.y)) && rect?.y !== null;
     const clamped = clampFloatRect(rect);
-    state.floatRect = clamped;
+    state.floatRect = hasCustomPos
+      ? clamped
+      : { ...clamped, x: null, y: null };
     card.style.setProperty('--float-x', `${clamped.x}px`);
     card.style.setProperty('--float-y', `${clamped.y}px`);
     card.style.setProperty('--float-w', `${clamped.width}px`);
@@ -406,10 +435,12 @@
       videoToggleBtn.hidden = isReaderDesktop || isMiniMobile;
     }
 
+    mountMediaConsoleInPip(active);
+    applyFloatingConsoleState();
+
     if (active) {
       applyFloatRectToDom(state.floatRect);
     }
-    applyFloatingConsoleState();
   }
 
   function setFloatingVideo(enabled, { persist = true, animate = true } = {}) {
@@ -1170,6 +1201,9 @@
         localStorage.setItem(STORAGE_CONSOLE_COLLAPSED_KEY, state.consoleCollapsed ? '1' : '0');
       } catch {}
       applyFloatingConsoleState();
+      if (isFloatingVideoActive()) {
+        applyFloatRectToDom(state.floatRect);
+      }
     });
     document.getElementById('float-console-mini-play-btn')?.addEventListener('click', () => {
       document.getElementById('deck-play-active-btn')?.click();
