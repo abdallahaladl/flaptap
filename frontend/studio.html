@@ -1714,6 +1714,32 @@
 
   <div id="studio-toast" class="editorial-toast" role="status" aria-live="polite"></div>
 
+  <!-- Paired Floating Action Dock Button (Shown alongside Ask AI when video is hidden / closed in Reader Only) -->
+  <button
+    type="button"
+    id="studio-float-video-fab"
+    class="studio-float-video-fab"
+    hidden
+    aria-label="Open Floating Video (P)"
+  >
+    <span class="sfv-fab-tooltip" aria-hidden="true">
+      <span class="sfv-fab-tooltip-dot" id="sfv-fab-tooltip-dot"></span>
+      <span class="sfv-fab-tooltip-label" data-i18n="floatVideoTooltip">Picture-in-Picture</span>
+      <kbd class="ft-ai-fab-kbd">P</kbd>
+    </span>
+    <span class="sfv-fab-surface">
+      <span class="sfv-fab-sheen" aria-hidden="true"></span>
+      <span class="sfv-fab-orb" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2.5" y="4" width="19" height="15" rx="2.5"></rect>
+          <rect x="11.5" y="10.5" width="7.5" height="5.5" rx="1.2" fill="currentColor" stroke="none"></rect>
+        </svg>
+        <span class="sfv-fab-live-dot" id="sfv-fab-live-dot" hidden></span>
+      </span>
+      <span class="sfv-fab-title" id="sfv-fab-title">Float Video</span>
+    </span>
+  </button>
+
   <!-- Real-Time Auto-Follow Floating Jump Pill (Visible when user scrolls away during playback) -->
   <button type="button" id="floating-jump-active-btn" class="floating-jump-pill" hidden aria-label="Jump to currently playing sentence">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">

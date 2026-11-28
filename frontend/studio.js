@@ -925,6 +925,15 @@
     if (floatDot) {
       floatDot.classList.toggle('is-playing', isPlaying);
     }
+    const sfvDot = document.getElementById('sfv-fab-live-dot');
+    if (sfvDot) {
+      sfvDot.hidden = !isPlaying;
+      sfvDot.classList.toggle('is-playing', isPlaying);
+    }
+    const sfvTipDot = document.getElementById('sfv-fab-tooltip-dot');
+    if (sfvTipDot) {
+      sfvTipDot.classList.toggle('is-playing', isPlaying);
+    }
     const miniConsolePlayBtn = document.getElementById('float-console-mini-play-btn');
     if (miniConsolePlayBtn) {
       miniConsolePlayBtn.classList.toggle('is-playing', isPlaying);

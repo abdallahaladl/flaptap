@@ -218,11 +218,27 @@
   }
 
   function isConsoleFloatingMode() {
-    if (isFloatingVideoActive()) return false;
-    const ws = getWorkspace();
-    const hiddenFlag = Boolean(window.studioState?.videoHidden) || ws?.getAttribute('data-video-hidden') === '1';
+    if (isFloatingVideoActive() || hasVideoMedia()) return false;
     if (!isMobileViewport() && state.desktopLayout === 'reader-only') return true;
-    return Boolean(hiddenFlag && (window.innerWidth || 1024) > 900);
+    return false;
+  }
+
+  function syncFloatingVideoFabPosition() {
+    const floatFab = document.getElementById('studio-float-video-fab');
+    if (!floatFab || floatFab.hidden) return;
+    const isSplitAi = document.documentElement.getAttribute('data-ai-chat-mode') === 'split';
+    if (isSplitAi) {
+      floatFab.style.removeProperty('--sfv-fab-end');
+      return;
+    }
+    const aiFab = document.getElementById('ft-ai-fab');
+    const edgeInset = (window.innerWidth || 1024) <= 768 ? 14 : 20;
+    if (aiFab && !aiFab.hidden) {
+      const aiW = Math.round(aiFab.getBoundingClientRect().width || 104);
+      floatFab.style.setProperty('--sfv-fab-end', `${edgeInset + aiW + 10}px`);
+    } else {
+      floatFab.style.setProperty('--sfv-fab-end', `${edgeInset}px`);
+    }
   }
 
   function mountMediaConsoleInPip(enable) {
@@ -376,10 +392,12 @@
 
   function syncFloatingVideoUi() {
     const ws = getWorkspace();
-    const canFloat = hasVideoMedia() && isVideoPaneRemoved();
+    const hasVideo = hasVideoMedia();
+    const canFloat = hasVideo && isVideoPaneRemoved();
     const active = Boolean(state.floatingVideo && canFloat);
 
     if (ws) {
+      ws.setAttribute('data-has-video', hasVideo ? '1' : '0');
       ws.setAttribute('data-video-float', active ? '1' : '0');
     }
 
@@ -433,6 +451,25 @@
       const isReaderDesktop = !isMobileViewport() && state.desktopLayout === 'reader-only';
       const isMiniMobile = isMobileViewport() && state.mobileLayout === 'mini';
       videoToggleBtn.hidden = isReaderDesktop || isMiniMobile;
+    }
+
+    const floatFab = document.getElementById('studio-float-video-fab');
+    if (floatFab) {
+      const showFloatFab = Boolean(canFloat && !active);
+      floatFab.hidden = !showFloatFab;
+      document.body.classList.toggle('has-float-video-fab', showFloatFab);
+      const fabTitle = document.getElementById('sfv-fab-title');
+      if (fabTitle) {
+        const isNarrow = (window.innerWidth || 1024) <= 460;
+        if (state.uiLang === 'ar') {
+          fabTitle.textContent = isNarrow ? 'الفيديو' : 'فيديو عائم';
+        } else {
+          fabTitle.textContent = isNarrow ? 'Video' : 'Float Video';
+        }
+      }
+      if (showFloatFab) {
+        requestAnimationFrame(syncFloatingVideoFabPosition);
+      }
     }
 
     mountMediaConsoleInPip(active);
@@ -1191,6 +1228,36 @@
     const toggleFloatAction = () => toggleFloatingVideo();
     document.getElementById('studio-float-video-btn')?.addEventListener('click', toggleFloatAction);
     document.getElementById('studio-topbar-float-btn')?.addEventListener('click', toggleFloatAction);
+    document.getElementById('studio-float-video-fab')?.addEventListener('click', toggleFloatAction);
+
+    // Keep #studio-float-video-fab aligned seamlessly beside dynamically mounted #ft-ai-fab
+    if (typeof MutationObserver === 'function' && !state.aiFabObserver) {
+      const attachAiFabWatcher = (aiFab) => {
+        if (!aiFab || aiFab.__sfvObserved) return;
+        aiFab.__sfvObserved = true;
+        if (typeof ResizeObserver === 'function') {
+          new ResizeObserver(syncFloatingVideoFabPosition).observe(aiFab);
+        }
+        new MutationObserver(syncFloatingVideoFabPosition).observe(aiFab, {
+          attributes: true,
+          attributeFilter: ['hidden', 'class', 'style'],
+        });
+        syncFloatingVideoFabPosition();
+      };
+      const existingAiFab = document.getElementById('ft-ai-fab');
+      if (existingAiFab) attachAiFabWatcher(existingAiFab);
+      state.aiFabObserver = new MutationObserver(() => {
+        const aiFab = document.getElementById('ft-ai-fab');
+        if (aiFab) {
+          attachAiFabWatcher(aiFab);
+        }
+      });
+      state.aiFabObserver.observe(document.body, { childList: true });
+      new MutationObserver(syncFloatingVideoFabPosition).observe(document.documentElement, {
+        attributes: true,
+        attributeFilter: ['data-ai-chat-mode'],
+      });
+    }
 
     // Floating media console collapse & drag handlers
     const consoleEl = document.getElementById('studio-media-console');
