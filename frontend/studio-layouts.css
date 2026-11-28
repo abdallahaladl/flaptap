@@ -1214,6 +1214,28 @@ body.is-studio-resizing .video-zoom-surface {
   }
 }
 
+/* Medium Desktop Topbar Compaction (Prevents mid-word clipping around 900px-1140px) */
+@media (min-width: 769px) and (max-width: 1140px) {
+  .studio-body .studio-topbar-inner {
+    padding: 8px 14px;
+    gap: 10px;
+  }
+
+  .studio-body .studio-meta-creator {
+    max-width: 120px;
+  }
+
+  .studio-body .studio-meta-line #studio-platform-badge,
+  .studio-body .studio-meta-line #studio-review-status-pill,
+  .studio-body .studio-meta-line .studio-meta-sep {
+    display: none;
+  }
+
+  .studio-body .studio-toolbar {
+    gap: 6px;
+  }
+}
+
 /* ==========================================================================
    6. COMPACT HEADER DENSITY MODE (Toggleable inside Layout Picker)
    ========================================================================== */
@@ -2168,18 +2190,19 @@ body.is-studio-resizing .video-zoom-surface {
 
 /* ==========================================================================
    AUDIO-ONLY READER FOCUS MODE ([data-video-hidden="1"]) & TRANSCRIPT ONLY ([data-layout="reader-only"])
-   Keeps the YouTube / HTML5 media player alive & mounted off-screen (1x1px)
-   while expanding the reading canvas into a calm centered editorial column.
+   Keeps the YouTube / HTML5 media player alive & mounted off-screen (1x1px),
+   expands the content canvas to full wide editorial focus, and floats
+   .studio-media-console cleanly at the bottom (draggable & collapsible).
    ========================================================================== */
 
 @media (min-width: 901px) {
   .studio-body .studio-workspace[data-video-hidden="1"] {
-    max-width: min(1680px, 100%) !important;
+    max-width: min(1560px, 100%) !important;
     margin-inline: auto;
     grid-template-columns: minmax(0, 1fr) !important;
-    grid-template-rows: minmax(0, 1fr) auto !important;
-    gap: 10px !important;
-    padding: 12px 20px 14px !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    gap: 0 !important;
+    padding: 10px 24px 12px !important;
   }
 
   .studio-body .studio-workspace[data-video-hidden="1"] .studio-split-resizer {
@@ -2207,23 +2230,11 @@ body.is-studio-resizing .video-zoom-surface {
   .studio-body .studio-workspace[data-video-hidden="1"] .studio-canvas {
     grid-column: 1 !important;
     grid-row: 1 !important;
+    max-width: min(1400px, 100%);
+    width: 100%;
+    margin-inline: auto;
     height: 100% !important;
     min-height: 0 !important;
-  }
-
-  .studio-body .studio-workspace[data-video-hidden="1"] .studio-media-console {
-    grid-column: 1 !important;
-    grid-row: 2 !important;
-    background: var(--ap-glass-popover);
-    backdrop-filter: saturate(180%) blur(24px);
-    -webkit-backdrop-filter: saturate(180%) blur(24px);
-    box-shadow: var(--ap-shadow-popover), var(--ap-specular);
-    border-radius: 18px;
-  }
-
-  .studio-body .studio-workspace[data-video-hidden="1"] .studio-timeline-bar {
-    padding: 8px 14px 6px;
-    gap: 5px;
   }
 
   .studio-body .studio-workspace[data-video-hidden="1"] .deck-live-subtitle {
@@ -2231,7 +2242,7 @@ body.is-studio-resizing .video-zoom-surface {
   }
 
   .studio-body:has(.studio-workspace[data-video-hidden="1"]) .floating-jump-pill {
-    bottom: 118px;
+    bottom: 124px;
   }
 }
 
@@ -2250,17 +2261,17 @@ body.is-studio-resizing .video-zoom-surface {
 
 /* ==========================================================================
    TRANSCRIPT ONLY LAYOUT ([data-layout="reader-only"])
-   100% Canvas focus with floating bottom glass console & optional PiP Video
+   100% Canvas focus (wide reading space) + Floating Media Bar + Optional PiP Video
    ========================================================================== */
 
 @media (min-width: 769px) and (min-height: 551px) {
   .studio-body .studio-workspace[data-layout="reader-only"] {
-    max-width: min(1480px, 100%);
+    max-width: min(1560px, 100%);
     margin-inline: auto;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) auto;
-    gap: 10px;
-    padding: 12px 24px 14px;
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0;
+    padding: 10px 24px 12px;
   }
 
   .studio-body .studio-workspace[data-layout="reader-only"] .studio-split-resizer {
@@ -2292,29 +2303,11 @@ body.is-studio-resizing .video-zoom-surface {
   .studio-body .studio-workspace[data-layout="reader-only"] .studio-canvas {
     grid-column: 1;
     grid-row: 1;
-    max-width: 1080px;
+    max-width: min(1400px, 100%);
     width: 100%;
     margin-inline: auto;
     height: 100%;
     min-height: 0;
-  }
-
-  .studio-body .studio-workspace[data-layout="reader-only"] .studio-media-console {
-    grid-column: 1;
-    grid-row: 2;
-    max-width: 960px;
-    width: 100%;
-    margin-inline: auto;
-    background: var(--ap-glass-popover);
-    backdrop-filter: saturate(180%) blur(24px);
-    -webkit-backdrop-filter: saturate(180%) blur(24px);
-    box-shadow: var(--ap-shadow-popover), var(--ap-specular);
-    border-radius: 18px;
-  }
-
-  .studio-body .studio-workspace[data-layout="reader-only"] .studio-timeline-bar {
-    padding: 8px 14px 6px;
-    gap: 5px;
   }
 
   .studio-body .studio-workspace[data-layout="reader-only"] .deck-live-subtitle {
@@ -2322,8 +2315,165 @@ body.is-studio-resizing .video-zoom-surface {
   }
 
   .studio-body:has(.studio-workspace[data-layout="reader-only"]) .floating-jump-pill {
-    bottom: 118px;
+    bottom: 124px;
   }
+
+  /* Wide content focus inside Transcript Only & Hide Video modes */
+  .studio-body .studio-workspace[data-layout="reader-only"] .insights-subbar-wrap,
+  .studio-body .studio-workspace[data-video-hidden="1"] .insights-subbar-wrap {
+    max-width: min(1240px, 100%);
+  }
+
+  .studio-body .studio-workspace[data-layout="reader-only"] .studio-extract-view,
+  .studio-body .studio-workspace[data-layout="reader-only"] .coach-view,
+  .studio-body .studio-workspace[data-layout="reader-only"] .dictation-view,
+  .studio-body .studio-workspace[data-layout="reader-only"] .notes-view,
+  .studio-body .studio-workspace[data-video-hidden="1"] .studio-extract-view,
+  .studio-body .studio-workspace[data-video-hidden="1"] .coach-view,
+  .studio-body .studio-workspace[data-video-hidden="1"] .dictation-view,
+  .studio-body .studio-workspace[data-video-hidden="1"] .notes-view {
+    max-width: min(1240px, 100%);
+    padding-bottom: 144px;
+  }
+
+  .studio-body .studio-workspace[data-layout="reader-only"] .sentences-list,
+  .studio-body .studio-workspace[data-layout="reader-only"] .read-view-panel,
+  .studio-body .studio-workspace[data-video-hidden="1"] .sentences-list,
+  .studio-body .studio-workspace[data-video-hidden="1"] .read-view-panel {
+    padding: 16px 28px 144px;
+  }
+
+  .studio-body .studio-workspace[data-layout="reader-only"] .editorial-paragraph-block,
+  .studio-body .studio-workspace[data-video-hidden="1"] .editorial-paragraph-block {
+    max-width: min(1160px, 100%);
+  }
+
+  .studio-body .studio-workspace[data-layout="reader-only"] .paragraph-prose,
+  .studio-body .studio-workspace[data-video-hidden="1"] .paragraph-prose {
+    max-width: none;
+  }
+}
+
+/* ==========================================================================
+   FLOATING MEDIA CONTROL BAR (.studio-media-console.is-console-floating)
+   Draggable & collapsible Apple Liquid Glass bar floating over canvas bottom
+   ========================================================================== */
+
+.studio-body .studio-media-console.is-console-floating {
+  position: fixed !important;
+  left: var(--console-float-x, 50%) !important;
+  bottom: var(--console-float-bottom, 16px) !important;
+  transform: translateX(var(--console-float-tx, -50%)) !important;
+  z-index: 410 !important;
+  width: min(790px, calc(100vw - 144px)) !important;
+  max-width: calc(100vw - 24px) !important;
+  margin: 0 !important;
+  border-radius: 18px !important;
+  background: var(--ap-glass-popover) !important;
+  backdrop-filter: saturate(180%) blur(24px);
+  -webkit-backdrop-filter: saturate(180%) blur(24px);
+  border: 1px solid var(--ap-border-strong) !important;
+  box-shadow: 0 18px 46px -12px rgba(0, 0, 0, 0.36), var(--ap-specular) !important;
+  transition: width 0.2s var(--ap-ease), border-radius 0.2s var(--ap-ease);
+}
+
+@media (min-width: 769px) {
+  .studio-body .studio-media-console.is-console-floating:not(.is-console-collapsed) {
+    width: min(748px, calc(100vw - 268px)) !important;
+  }
+}
+
+.studio-body .studio-media-console.is-console-floating .studio-timeline-bar {
+  padding: 7px 12px 5px;
+  gap: 5px;
+}
+
+.studio-body .studio-media-console.is-console-floating.is-console-collapsed {
+  width: auto !important;
+  min-width: 270px;
+  border-radius: 980px !important;
+}
+
+.studio-body .studio-media-console.is-console-floating.is-console-collapsed .studio-scrub-track,
+.studio-body .studio-media-console.is-console-floating.is-console-collapsed .studio-control-bar-host,
+.studio-body .studio-media-console.is-console-floating.is-console-collapsed .studio-shadow-pause-bar,
+.studio-body .studio-media-console.is-console-floating.is-console-collapsed .rec-live-floating {
+  display: none !important;
+}
+
+.studio-body .studio-media-console.is-console-floating.is-console-collapsed .studio-timeline-bar {
+  padding: 6px 10px;
+  border-bottom: none;
+}
+
+.studio-body .float-console-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ap-text-tertiary);
+  cursor: grab;
+  touch-action: none;
+  flex-shrink: 0;
+}
+
+.studio-body .float-console-grip:hover {
+  background: var(--ap-fill);
+  color: var(--ap-text-primary);
+}
+
+.studio-body .float-console-grip:active {
+  cursor: grabbing;
+}
+
+.studio-body .float-console-mini-play {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--ap-blue);
+  color: #FFFFFF;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.studio-body .float-console-collapse-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--ap-border);
+  border-radius: 50%;
+  background: var(--ap-surface-secondary);
+  color: var(--ap-text-secondary);
+  cursor: pointer;
+  transition: transform 0.18s var(--ap-ease), background-color 0.14s var(--ap-ease), color 0.14s var(--ap-ease);
+}
+
+.studio-body .float-console-collapse-btn:hover {
+  background: var(--ap-fill);
+  color: var(--ap-text-primary);
+}
+
+.studio-body .studio-media-console.is-console-collapsed .float-console-collapse-btn svg {
+  transform: rotate(180deg);
+}
+
+.studio-body .float-console-grip[hidden],
+.studio-body .float-console-mini-play[hidden],
+.studio-body .float-console-collapse-btn[hidden] {
+  display: none !important;
 }
 
 /* ==========================================================================
@@ -2469,11 +2619,30 @@ body.is-studio-resizing .video-zoom-surface {
   opacity: 1 !important;
 }
 
-.studio-body .studio-workspace[data-video-float="1"] .video-aspect-box {
+.studio-body .studio-workspace[data-video-float="1"] .video-aspect-box,
+.studio-body .studio-workspace[data-video-float="1"] .player-frame-card.is-video-hidden .video-aspect-box {
   width: 100% !important;
   aspect-ratio: 16 / 9 !important;
   min-height: 0 !important;
   height: auto !important;
+}
+
+.studio-body .studio-workspace[data-video-float="1"] .player-frame-card.is-video-hidden .video-zoom-viewport {
+  position: relative !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  overflow: hidden !important;
+}
+
+.studio-body .studio-workspace[data-video-float="1"] .video-zoom-stage,
+.studio-body .studio-workspace[data-video-float="1"] .video-zoom-stage iframe,
+.studio-body .studio-workspace[data-video-float="1"] .video-zoom-stage #studio-youtube-player,
+.studio-body .studio-workspace[data-video-float="1"] .video-zoom-stage .studio-html5-video {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .studio-body .studio-workspace[data-video-float="1"] #studio-audio-stage {

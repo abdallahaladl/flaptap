@@ -381,6 +381,17 @@
           </div>
           <div class="studio-timeline-top">
             <div class="studio-timeline-left">
+              <button type="button" class="float-console-grip" id="float-console-drag-handle" hidden title="Drag to move floating bar · Double-click to center" aria-label="Drag floating control bar">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <circle cx="9" cy="6" r="1.9"></circle><circle cx="15" cy="6" r="1.9"></circle>
+                  <circle cx="9" cy="12" r="1.9"></circle><circle cx="15" cy="12" r="1.9"></circle>
+                  <circle cx="9" cy="18" r="1.9"></circle><circle cx="15" cy="18" r="1.9"></circle>
+                </svg>
+              </button>
+              <button type="button" class="float-console-mini-play" id="float-console-mini-play-btn" hidden title="Play / Pause (Space)" aria-label="Play or Pause">
+                <svg class="fcmp-play-icon" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
+                <svg class="fcmp-pause-icon" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" hidden aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg>
+              </button>
               <span class="studio-ms-clock ltr-num"><span id="studio-clock-now">00:00.000</span> <span class="clock-sep">/</span> <span id="studio-clock-total">00:00.000</span></span>
               <span class="studio-clip-readout" id="studio-active-clip-label" hidden></span>
             </div>
@@ -389,6 +400,9 @@
               <button type="button" class="studio-define-pill" id="studio-define-word-btn" hidden>Define</button>
               <button type="button" class="studio-video-toggle-pill studio-float-toggle-pill" id="studio-float-video-btn" hidden aria-pressed="false" title="Pop out draggable floating video (P)">Float Video</button>
               <button type="button" class="studio-video-toggle-pill" id="studio-video-toggle-btn" hidden title="Hide or show video frame (keeps audio playing)">Hide Video</button>
+              <button type="button" class="float-console-collapse-btn" id="float-console-collapse-btn" hidden aria-expanded="true" title="Minimize or expand floating control bar" aria-label="Minimize floating control bar">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+              </button>
             </div>
           </div>
         </div>

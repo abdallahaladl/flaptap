@@ -1689,7 +1689,7 @@ body.studio-body:focus {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  max-width: 880px;
+  max-width: 960px;
   width: 100%;
   margin: 0 auto;
   padding: 12px 20px 6px;
@@ -2386,7 +2386,7 @@ body.studio-body:focus {
   flex-direction: column;
   gap: 0;
   width: 100%;
-  max-width: 880px;
+  max-width: 960px;
   margin-inline: auto;
   padding: 8px 20px 96px;
 }

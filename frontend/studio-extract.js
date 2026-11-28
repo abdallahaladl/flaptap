@@ -1080,18 +1080,7 @@
 
   function renderInspectorHtml(para, item, doneSet, rtl, hasMedia) {
     if (!para || !item) {
-      const total = para?.items?.length || 0;
-      const firstIdx = para?.items?.[0]?.index;
-      return `
-        <div class="stx-inspector-hint">
-          <span>Click any highlighted phrase above to explore its meaning, native usage, and audio.</span>
-          ${
-            firstIdx !== undefined
-              ? `<button type="button" class="stx-inspector-peek-btn" data-stx-para="${escapeHtml(para.id)}" data-stx-hl="${firstIdx}">Inspect first (1/${total})</button>`
-              : ''
-          }
-        </div>
-      `;
+      return '';
     }
 
     const idx = Number(item.index);
@@ -1102,7 +1091,11 @@
     const eng = engine();
     const groupId = eng ? eng.getMacroGroupId(item.category) : 'words';
     const catLabel = CATEGORY_LABELS[item.category] || item.category || 'Phrase';
-    const roleLabel = eng ? eng.getNativeRoleLabel(item) : catLabel;
+    const rawPos = String(item.partOfSpeech || '').trim();
+    const rawReg = String(item.register || '').trim();
+    const genericPos = new Set(['phrase', 'idiom', 'expression', 'structure', 'sentence', 'slang']);
+    const showPos = rawPos && !genericPos.has(rawPos.toLowerCase()) && rawPos.toLowerCase() !== catLabel.toLowerCase();
+    const showReg = rawReg && rawReg.toLowerCase() !== 'neutral' && rawReg.toLowerCase() !== catLabel.toLowerCase();
 
     const posInPara = para.items.findIndex((it) => Number(it.index) === idx);
     const totalInPara = para.items.length;
@@ -1182,11 +1175,10 @@
           </div>
 
           <div class="stx-inspector-meta">
-            <span class="stx-role-pill stx-role-pill--${escapeHtml(groupId)}">${escapeHtml(roleLabel)}</span>
             ${cefr ? `<span class="stx-badge stx-badge--cefr-${escapeHtml(cefr)}">${escapeHtml(cefr)}</span>` : ''}
-            <span class="stx-badge">${escapeHtml(catLabel)}</span>
-            ${item.partOfSpeech ? `<span class="stx-badge">${escapeHtml(item.partOfSpeech)}</span>` : ''}
-            ${item.register ? `<span class="stx-badge">${escapeHtml(item.register)}</span>` : ''}
+            <span class="stx-badge stx-badge--cat">${escapeHtml(catLabel)}</span>
+            ${showPos ? `<span class="stx-badge">${escapeHtml(rawPos)}</span>` : ''}
+            ${showReg ? `<span class="stx-badge">${escapeHtml(rawReg)}</span>` : ''}
             ${
               typeof tsSec === 'number'
                 ? `<span class="stx-badge stx-badge--time">${escapeHtml(formatTs(tsSec))}</span>`
@@ -1360,6 +1352,7 @@
     const flowChipsHtml =
       flow && flow.flowChips.length > 0
         ? `<div class="stx-flow-chain" aria-label="Idea connection path">
+            <span class="stx-flow-kicker" title="${escapeHtml(flow.constructionNote || '')}">Flow</span>
             ${flow.flowChips
               .map((chip, cIdx) => {
                 const isAct = activeIdx !== null && Number(activeIdx) === chip.itemIndex;
@@ -1369,34 +1362,16 @@
                   isAct ? ' is-active' : ''
                 }" data-stx-para="${escapeHtml(para.id)}" data-stx-hl="${
                   chip.itemIndex
-                }" title="${escapeHtml(chip.role)}">
-                  <span class="stx-flow-chip-text">${escapeHtml(chip.label)}</span>
-                  <span class="stx-flow-chip-role">${escapeHtml(chip.role)}</span>
-                </button>`;
+                }" title="${escapeHtml(chip.role)}">${escapeHtml(chip.label)}</button>`;
               })
               .join('')}
-          </div>`
-        : '';
-
-    const contractionsHtml =
-      flow && flow.contractions.length > 0
-        ? `<div class="stx-contractions-row">
-            <span class="stx-contractions-label">Spoken shortcuts:</span>
-            ${flow.contractions.map((c) => `<span class="stx-contraction-pill" dir="ltr">${escapeHtml(c)}</span>`).join('')}
-          </div>`
-        : '';
-
-    const dnaDotsHtml =
-      stats && stats.groupBreakdown.length > 0
-        ? `<div class="stx-dna-dots" title="Insight breakdown in this paragraph">
-            ${stats.groupBreakdown
-              .map(
-                (g) => `<span class="stx-dna-item" title="${escapeHtml(g.label)}: ${g.count}">
-                  <span class="stx-dot stx-dot--${escapeHtml(g.groupId)}" aria-hidden="true"></span>
-                  <span class="ltr-num">${g.count}</span>
-                </span>`,
-              )
-              .join('')}
+            ${
+              flow.contractions.length > 0
+                ? `<span class="stx-flow-sep" aria-hidden="true">·</span><span class="stx-contractions-inline" title="Spoken contractions">${flow.contractions
+                    .map((c) => `<code>${escapeHtml(c)}</code>`)
+                    .join(' ')}</span>`
+                : ''
+            }
           </div>`
         : '';
 
@@ -1424,7 +1399,6 @@
 
           <div class="stx-thought-stats">
             ${statPills.join('<span class="stx-stat-sep" aria-hidden="true">·</span>')}
-            ${dnaDotsHtml}
             ${
               stats
                 ? `<span class="stx-thought-mastery${stats.isComplete ? ' is-complete' : ''} ltr-num" title="Derived automatically from studied highlights">
@@ -1441,19 +1415,7 @@
         </div>
 
         ${extraHtml}
-
-        ${
-          flow
-            ? `<div class="stx-flow-strip">
-                <div class="stx-flow-note">
-                  <span class="stx-flow-icon" aria-hidden="true">${ICONS.flow}</span>
-                  <span class="stx-flow-copy"><strong>Native Flow:</strong> ${escapeHtml(flow.constructionNote)}</span>
-                </div>
-                ${flowChipsHtml}
-                ${contractionsHtml}
-              </div>`
-            : ''
-        }
+        ${flowChipsHtml}
 
         <div class="stx-inspector-slot" data-stx-inspector-slot="${escapeHtml(para.id)}">
           ${renderInspectorHtml(para, activeItem, doneSet, rtl, hasMedia)}

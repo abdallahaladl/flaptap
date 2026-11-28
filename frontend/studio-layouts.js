@@ -13,6 +13,8 @@
   const STORAGE_COMPACT_KEY = 'flaptap_studio_compact_dock';
   const STORAGE_FLOAT_VIDEO_KEY = 'flaptap_studio_float_video';
   const STORAGE_FLOAT_RECT_KEY = 'flaptap_studio_float_rect';
+  const STORAGE_CONSOLE_POS_KEY = 'flaptap_studio_console_pos';
+  const STORAGE_CONSOLE_COLLAPSED_KEY = 'flaptap_studio_console_collapsed';
 
   const LEGACY_LAYOUT_MAP = {
     side: 'transcript',
@@ -121,6 +123,8 @@
     compactDock: false,
     floatingVideo: false,
     floatRect: loadSavedFloatRect(),
+    consolePos: loadSavedConsolePos(),
+    consoleCollapsed: loadSavedConsoleCollapsed(),
     splits: loadSavedSplits(),
     uiLang: 'en',
     lastViewportIsMobile: null,
@@ -185,6 +189,82 @@
     } catch {}
   }
 
+  function loadSavedConsolePos() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_CONSOLE_POS_KEY) || 'null');
+      if (parsed && typeof parsed === 'object' && Number.isFinite(Number(parsed.x)) && Number.isFinite(Number(parsed.bottom))) {
+        return { x: Number(parsed.x), bottom: Number(parsed.bottom) };
+      }
+    } catch {}
+    return null;
+  }
+
+  function saveConsolePos() {
+    try {
+      if (state.consolePos) {
+        localStorage.setItem(STORAGE_CONSOLE_POS_KEY, JSON.stringify(state.consolePos));
+      } else {
+        localStorage.removeItem(STORAGE_CONSOLE_POS_KEY);
+      }
+    } catch {}
+  }
+
+  function loadSavedConsoleCollapsed() {
+    try {
+      return localStorage.getItem(STORAGE_CONSOLE_COLLAPSED_KEY) === '1';
+    } catch {
+      return false;
+    }
+  }
+
+  function isConsoleFloatingMode() {
+    const ws = getWorkspace();
+    const hiddenFlag = Boolean(window.studioState?.videoHidden) || ws?.getAttribute('data-video-hidden') === '1';
+    if (!isMobileViewport() && state.desktopLayout === 'reader-only') return true;
+    return Boolean(hiddenFlag && (window.innerWidth || 1024) > 900);
+  }
+
+  function applyFloatingConsoleState() {
+    const consoleEl = document.getElementById('studio-media-console');
+    const dragGrip = document.getElementById('float-console-drag-handle');
+    const collapseBtn = document.getElementById('float-console-collapse-btn');
+    const miniPlayBtn = document.getElementById('float-console-mini-play-btn');
+    const isFloating = isConsoleFloatingMode();
+
+    if (dragGrip) dragGrip.hidden = !isFloating;
+    if (collapseBtn) {
+      collapseBtn.hidden = !isFloating;
+      collapseBtn.setAttribute('aria-expanded', state.consoleCollapsed ? 'false' : 'true');
+      collapseBtn.title = state.consoleCollapsed ? 'Expand floating control bar' : 'Minimize floating control bar';
+    }
+    if (miniPlayBtn) {
+      miniPlayBtn.hidden = !(isFloating && state.consoleCollapsed);
+    }
+
+    if (!consoleEl) return;
+    consoleEl.classList.toggle('is-console-floating', isFloating);
+    consoleEl.classList.toggle('is-console-collapsed', Boolean(isFloating && state.consoleCollapsed));
+
+    if (!isFloating || !state.consolePos) {
+      consoleEl.style.removeProperty('--console-float-x');
+      consoleEl.style.removeProperty('--console-float-tx');
+      consoleEl.style.removeProperty('--console-float-bottom');
+      return;
+    }
+
+    const vw = window.innerWidth || 1280;
+    const vh = window.innerHeight || 800;
+    const rect = consoleEl.getBoundingClientRect();
+    const cw = Math.max(240, rect.width || 680);
+    const ch = Math.max(40, rect.height || 96);
+    const clampedX = Math.round(Math.max(12, Math.min(vw - cw - 12, state.consolePos.x)));
+    const clampedBottom = Math.round(Math.max(12, Math.min(vh - ch - 60, state.consolePos.bottom)));
+    state.consolePos = { x: clampedX, bottom: clampedBottom };
+    consoleEl.style.setProperty('--console-float-x', `${clampedX}px`);
+    consoleEl.style.setProperty('--console-float-tx', '0px');
+    consoleEl.style.setProperty('--console-float-bottom', `${clampedBottom}px`);
+  }
+
   function getWorkspace() {
     return document.getElementById('studio-main-content');
   }
@@ -206,8 +286,8 @@
   }
 
   function resolveSizeLabel(width) {
-    if (width <= 325) return 'S';
-    if (width >= 445) return 'L';
+    if (width <= 310) return 'S';
+    if (width >= 440) return 'L';
     return 'M';
   }
 
@@ -216,7 +296,7 @@
     const vh = window.innerHeight || document.documentElement.clientHeight || 800;
     const minW = Math.min(240, Math.max(200, vw - 24));
     const maxW = Math.max(minW, Math.min(640, vw - 24));
-    const defaultW = vw <= 640 ? Math.min(270, maxW) : Math.min(380, maxW);
+    const defaultW = vw <= 640 ? Math.min(264, maxW) : Math.min(340, maxW);
     const width = Math.round(
       Math.max(minW, Math.min(maxW, Number.isFinite(Number(rawRect?.width)) && Number(rawRect.width) > 0 ? Number(rawRect.width) : defaultW)),
     );
@@ -228,7 +308,7 @@
     const maxY = Math.max(minY, vh - estHeight - 12);
 
     const defaultX = Math.max(minX, vw - width - 20);
-    const defaultY = Math.max(minY, vh - estHeight - 120);
+    const defaultY = Math.min(maxY, minY + 10);
 
     const x = Math.round(
       Math.max(minX, Math.min(maxX, Number.isFinite(Number(rawRect?.x)) && rawRect.x !== null ? Number(rawRect.x) : defaultX)),
@@ -286,6 +366,20 @@
       zoomHud.hidden = active ? false : videoHidden;
     }
 
+    if (active && hasVideoMedia()) {
+      const zoomViewport = document.getElementById('video-zoom-viewport');
+      const zoomStage = document.getElementById('video-zoom-stage');
+      if (zoomViewport) zoomViewport.hidden = false;
+      if (zoomStage) zoomStage.hidden = false;
+      if (window.studioState?.item?.videoId) {
+        const ytEl = document.getElementById('studio-youtube-player');
+        if (ytEl) {
+          ytEl.hidden = false;
+          if (ytEl.style.display === 'none') ytEl.style.display = '';
+        }
+      }
+    }
+
     const floatBtn = document.getElementById('studio-float-video-btn');
     if (floatBtn) {
       floatBtn.hidden = !canFloat;
@@ -315,6 +409,7 @@
     if (active) {
       applyFloatRectToDom(state.floatRect);
     }
+    applyFloatingConsoleState();
   }
 
   function setFloatingVideo(enabled, { persist = true, animate = true } = {}) {
@@ -744,6 +839,12 @@
         const nextId = card.getAttribute('data-studio-layout-option');
         const scope = card.getAttribute('data-layout-scope') || 'desktop';
         setLayout(nextId, { scope, animate: true, persist: true });
+        if (typeof state.onClosePopoverCallback === 'function') {
+          state.onClosePopoverCallback();
+        } else {
+          pop.hidden = true;
+          onPopoverStateChange(false);
+        }
       });
     });
 
@@ -1060,6 +1161,75 @@
     document.getElementById('studio-float-video-btn')?.addEventListener('click', toggleFloatAction);
     document.getElementById('studio-topbar-float-btn')?.addEventListener('click', toggleFloatAction);
 
+    // Floating media console collapse & drag handlers
+    const consoleEl = document.getElementById('studio-media-console');
+    const consoleGrip = document.getElementById('float-console-drag-handle');
+    document.getElementById('float-console-collapse-btn')?.addEventListener('click', () => {
+      state.consoleCollapsed = !state.consoleCollapsed;
+      try {
+        localStorage.setItem(STORAGE_CONSOLE_COLLAPSED_KEY, state.consoleCollapsed ? '1' : '0');
+      } catch {}
+      applyFloatingConsoleState();
+    });
+    document.getElementById('float-console-mini-play-btn')?.addEventListener('click', () => {
+      document.getElementById('deck-play-active-btn')?.click();
+    });
+    if (consoleGrip && consoleEl) {
+      let cDragging = false;
+      let startCX = 0;
+      let startCY = 0;
+      let origLeft = 0;
+      let origBottom = 16;
+      let cRaf = 0;
+      let pendLeft = 0;
+      let pendBottom = 16;
+
+      const commitConsoleDrag = () => {
+        cRaf = 0;
+        state.consolePos = { x: pendLeft, bottom: pendBottom };
+        applyFloatingConsoleState();
+      };
+      const onConsoleMove = (e) => {
+        if (!cDragging) return;
+        pendLeft = origLeft + (e.clientX - startCX);
+        pendBottom = origBottom - (e.clientY - startCY);
+        if (!cRaf) cRaf = requestAnimationFrame(commitConsoleDrag);
+      };
+      const endConsoleDrag = () => {
+        if (!cDragging) return;
+        cDragging = false;
+        if (cRaf) {
+          cancelAnimationFrame(cRaf);
+          commitConsoleDrag();
+        }
+        document.body.classList.remove('is-float-video-dragging');
+        saveConsolePos();
+        window.removeEventListener('pointermove', onConsoleMove);
+        window.removeEventListener('pointerup', endConsoleDrag);
+        window.removeEventListener('pointercancel', endConsoleDrag);
+      };
+      consoleGrip.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 || !isConsoleFloatingMode()) return;
+        e.preventDefault();
+        const r = consoleEl.getBoundingClientRect();
+        cDragging = true;
+        startCX = e.clientX;
+        startCY = e.clientY;
+        origLeft = r.left;
+        origBottom = Math.max(12, (window.innerHeight || 800) - r.bottom);
+        document.body.classList.add('is-float-video-dragging');
+        window.addEventListener('pointermove', onConsoleMove);
+        window.addEventListener('pointerup', endConsoleDrag);
+        window.addEventListener('pointercancel', endConsoleDrag);
+      });
+      consoleGrip.addEventListener('dblclick', () => {
+        if (!isConsoleFloatingMode()) return;
+        state.consolePos = null;
+        saveConsolePos();
+        applyFloatingConsoleState();
+      });
+    }
+
     document.getElementById('float-video-play-btn')?.addEventListener('click', () => {
       document.getElementById('deck-play-active-btn')?.click();
     });
@@ -1371,6 +1541,7 @@
         if (isFloatingVideoActive()) {
           applyFloatRectToDom(state.floatRect);
         }
+        applyFloatingConsoleState();
         updateSplitResizerGeometry();
       },
       { passive: true },

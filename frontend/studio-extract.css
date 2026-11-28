@@ -7,56 +7,56 @@
 
 :root,
 [data-theme="light"] {
-  --stx-hl-words-bg: rgba(0, 113, 227, 0.11);
-  --stx-hl-words-bg-hover: rgba(0, 113, 227, 0.19);
-  --stx-hl-words-border: rgba(0, 113, 227, 0.45);
+  --stx-hl-words-bg: rgba(0, 113, 227, 0.065);
+  --stx-hl-words-bg-hover: rgba(0, 113, 227, 0.14);
+  --stx-hl-words-border: rgba(0, 113, 227, 0.42);
   --stx-hl-words-ink: #0058B0;
 
-  --stx-hl-idioms-bg: rgba(255, 149, 0, 0.13);
-  --stx-hl-idioms-bg-hover: rgba(255, 149, 0, 0.22);
-  --stx-hl-idioms-border: rgba(201, 52, 0, 0.44);
+  --stx-hl-idioms-bg: rgba(255, 149, 0, 0.08);
+  --stx-hl-idioms-bg-hover: rgba(255, 149, 0, 0.16);
+  --stx-hl-idioms-border: rgba(201, 52, 0, 0.42);
   --stx-hl-idioms-ink: #A33200;
 
-  --stx-hl-structures-bg: rgba(88, 86, 214, 0.11);
-  --stx-hl-structures-bg-hover: rgba(88, 86, 214, 0.19);
-  --stx-hl-structures-border: rgba(88, 86, 214, 0.46);
+  --stx-hl-structures-bg: rgba(88, 86, 214, 0.065);
+  --stx-hl-structures-bg-hover: rgba(88, 86, 214, 0.14);
+  --stx-hl-structures-border: rgba(88, 86, 214, 0.42);
   --stx-hl-structures-ink: #3634A3;
 
-  --stx-hl-spoken-bg: rgba(255, 45, 85, 0.11);
-  --stx-hl-spoken-bg-hover: rgba(255, 45, 85, 0.19);
-  --stx-hl-spoken-border: rgba(211, 27, 69, 0.44);
+  --stx-hl-spoken-bg: rgba(255, 45, 85, 0.065);
+  --stx-hl-spoken-bg-hover: rgba(255, 45, 85, 0.14);
+  --stx-hl-spoken-border: rgba(211, 27, 69, 0.42);
   --stx-hl-spoken-ink: #B41239;
 
-  --stx-hl-culture-bg: rgba(52, 199, 89, 0.12);
-  --stx-hl-culture-bg-hover: rgba(52, 199, 89, 0.21);
-  --stx-hl-culture-border: rgba(36, 138, 61, 0.45);
+  --stx-hl-culture-bg: rgba(52, 199, 89, 0.075);
+  --stx-hl-culture-bg-hover: rgba(52, 199, 89, 0.16);
+  --stx-hl-culture-border: rgba(36, 138, 61, 0.42);
   --stx-hl-culture-ink: #1D7533;
 }
 
 [data-theme="dark"] {
-  --stx-hl-words-bg: rgba(10, 132, 255, 0.20);
-  --stx-hl-words-bg-hover: rgba(10, 132, 255, 0.30);
-  --stx-hl-words-border: rgba(64, 156, 255, 0.62);
+  --stx-hl-words-bg: rgba(10, 132, 255, 0.12);
+  --stx-hl-words-bg-hover: rgba(10, 132, 255, 0.22);
+  --stx-hl-words-border: rgba(64, 156, 255, 0.56);
   --stx-hl-words-ink: #7CC0FF;
 
-  --stx-hl-idioms-bg: rgba(255, 159, 10, 0.19);
-  --stx-hl-idioms-bg-hover: rgba(255, 159, 10, 0.29);
-  --stx-hl-idioms-border: rgba(255, 159, 10, 0.60);
+  --stx-hl-idioms-bg: rgba(255, 159, 10, 0.12);
+  --stx-hl-idioms-bg-hover: rgba(255, 159, 10, 0.22);
+  --stx-hl-idioms-border: rgba(255, 159, 10, 0.56);
   --stx-hl-idioms-ink: #FFC46B;
 
-  --stx-hl-structures-bg: rgba(125, 122, 255, 0.20);
-  --stx-hl-structures-bg-hover: rgba(125, 122, 255, 0.30);
-  --stx-hl-structures-border: rgba(125, 122, 255, 0.62);
+  --stx-hl-structures-bg: rgba(125, 122, 255, 0.12);
+  --stx-hl-structures-bg-hover: rgba(125, 122, 255, 0.22);
+  --stx-hl-structures-border: rgba(125, 122, 255, 0.56);
   --stx-hl-structures-ink: #B5B3FF;
 
-  --stx-hl-spoken-bg: rgba(255, 55, 95, 0.19);
-  --stx-hl-spoken-bg-hover: rgba(255, 55, 95, 0.29);
-  --stx-hl-spoken-border: rgba(255, 55, 95, 0.60);
+  --stx-hl-spoken-bg: rgba(255, 55, 95, 0.12);
+  --stx-hl-spoken-bg-hover: rgba(255, 55, 95, 0.22);
+  --stx-hl-spoken-border: rgba(255, 55, 95, 0.56);
   --stx-hl-spoken-ink: #FF8AA0;
 
-  --stx-hl-culture-bg: rgba(48, 209, 88, 0.18);
-  --stx-hl-culture-bg-hover: rgba(48, 209, 88, 0.28);
-  --stx-hl-culture-border: rgba(48, 209, 88, 0.58);
+  --stx-hl-culture-bg: rgba(48, 209, 88, 0.11);
+  --stx-hl-culture-bg-hover: rgba(48, 209, 88, 0.21);
+  --stx-hl-culture-border: rgba(48, 209, 88, 0.54);
   --stx-hl-culture-ink: #6FE890;
 }
 
@@ -65,7 +65,7 @@
   flex-direction: column;
   gap: 0;
   width: 100%;
-  max-width: 880px;
+  max-width: 960px;
   margin-inline: auto;
   padding: 6px 20px 96px;
   color: var(--ap-text-primary);
@@ -963,28 +963,27 @@
   background: var(--ap-fill-subtle);
 }
 
-/* Inline Highlight Tokens */
+/* Inline Highlight Tokens (Calm editorial underline at rest; crisp pill only when active) */
 .stx-hl {
   appearance: none;
   -webkit-appearance: none;
   display: inline;
-  padding: 1px 6px 2px;
+  padding: 1px 4px 2px;
   margin: 0 1px;
   border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 6px;
+  border-bottom: 1.5px solid transparent;
+  border-radius: 5px;
   font: inherit;
-  font-weight: 600;
+  font-weight: 560;
   line-height: inherit;
   color: inherit;
   cursor: pointer;
   text-align: inherit;
   vertical-align: baseline;
   transition:
-    background-color 0.16s var(--ap-spring),
-    border-color 0.16s var(--ap-spring),
-    box-shadow 0.16s var(--ap-spring),
-    color 0.16s var(--ap-spring);
+    background-color 0.15s var(--ap-ease),
+    border-color 0.15s var(--ap-ease),
+    color 0.15s var(--ap-ease);
 }
 
 .stx-hl--words {
@@ -1124,108 +1123,76 @@
   border-color: color-mix(in srgb, var(--ap-green-solid) 45%, transparent);
 }
 
-/* Native Flow & Sentence Construction Strip */
-.stx-flow-strip {
-  margin-top: 13px;
-  padding: 10px 13px;
-  border-radius: var(--ap-radius-md);
-  background: var(--ap-fill-subtle);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.stx-flow-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  font-size: 0.8rem;
-  line-height: 1.48;
-  color: var(--ap-text-secondary);
-}
-
-.stx-flow-icon {
-  color: var(--ap-blue);
-  margin-top: 2px;
-  flex-shrink: 0;
-}
-
-.stx-flow-copy strong {
-  color: var(--ap-text-primary);
-  font-weight: 600;
-}
-
+/* Quiet Inline Native Flow Bar (zero heavy box or loud pill clutter) */
 .stx-flow-chain {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 5px;
+  gap: 5px 6px;
+  margin-top: 9px;
+  font-size: 0.76rem;
+  color: var(--ap-text-tertiary);
+}
+
+.stx-flow-kicker {
+  font-size: 0.69rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ap-text-tertiary);
+  margin-inline-end: 2px;
 }
 
 .stx-flow-arrow {
   display: inline-flex;
   align-items: center;
-  color: var(--ap-text-tertiary);
+  opacity: 0.55;
 }
 
 .stx-flow-chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 5px;
-  padding: 3px 9px;
-  border-radius: var(--ap-radius-pill);
-  border: 1px solid var(--ap-border);
-  background: var(--ap-surface);
-  color: var(--ap-text-primary);
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 1px 7px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: var(--ap-fill-subtle);
+  color: var(--ap-text-secondary);
+  font-family: var(--ap-font-text);
   font-size: 0.74rem;
+  font-weight: 550;
   cursor: pointer;
-  transition: border-color 0.14s var(--ap-ease), background-color 0.14s var(--ap-ease), transform 0.14s var(--ap-ease);
+  transition: background-color 0.13s var(--ap-ease), color 0.13s var(--ap-ease), border-color 0.13s var(--ap-ease);
 }
 
 .stx-flow-chip:hover {
-  border-color: var(--ap-border-strong);
-  transform: translateY(-1px);
+  background: var(--ap-fill);
+  color: var(--ap-text-primary);
 }
 
 .stx-flow-chip.is-active {
-  border-color: var(--ap-blue);
   background: var(--ap-blue-wash);
-}
-
-.stx-flow-chip-text {
-  font-weight: 600;
-}
-
-.stx-flow-chip-role {
-  font-size: 0.68rem;
-  color: var(--ap-text-tertiary);
-}
-
-.stx-flow-chip.is-active .stx-flow-chip-role {
+  border-color: color-mix(in srgb, var(--ap-blue) 36%, transparent);
   color: var(--ap-blue);
-}
-
-.stx-contractions-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 5px;
-}
-
-.stx-contractions-label {
-  font-size: 0.71rem;
   font-weight: 600;
-  color: var(--ap-text-tertiary);
 }
 
-.stx-contraction-pill {
+.stx-flow-sep {
+  opacity: 0.45;
+}
+
+.stx-contractions-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stx-contractions-inline code {
   font-family: var(--ap-font-mono);
   font-size: 0.71rem;
-  font-weight: 600;
-  color: var(--stx-hl-spoken-ink);
-  background: var(--stx-hl-spoken-bg);
-  padding: 1px 7px;
-  border-radius: var(--ap-radius-pill);
+  color: var(--ap-text-secondary);
+  background: var(--ap-fill-subtle);
+  padding: 1px 5px;
+  border-radius: 4px;
 }
 
 /* Below-Paragraph Active Insight Inspector */

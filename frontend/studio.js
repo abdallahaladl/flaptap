@@ -755,6 +755,8 @@
       videoToggleBtn: document.getElementById('studio-video-toggle-btn'),
     });
 
+    window.FlaptapStudioLayouts?.syncFloatingVideoUi?.();
+
     if (caps.showSpeakerBar) {
       renderSpeakerBar();
     }
@@ -922,6 +924,15 @@
     const floatDot = document.getElementById('float-video-live-dot');
     if (floatDot) {
       floatDot.classList.toggle('is-playing', isPlaying);
+    }
+    const miniConsolePlayBtn = document.getElementById('float-console-mini-play-btn');
+    if (miniConsolePlayBtn) {
+      miniConsolePlayBtn.classList.toggle('is-playing', isPlaying);
+      miniConsolePlayBtn.setAttribute('aria-pressed', isPlaying ? 'true' : 'false');
+      const mPlay = miniConsolePlayBtn.querySelector('.fcmp-play-icon');
+      const mPause = miniConsolePlayBtn.querySelector('.fcmp-pause-icon');
+      if (mPlay) mPlay.hidden = isPlaying;
+      if (mPause) mPause.hidden = !isPlaying;
     }
     if (masterPlayText) {
       const numStr = `#${String(activeIdx).padStart(2, '0')}`;
