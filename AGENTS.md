@@ -9,8 +9,8 @@
 ## 1. AI Transport & Shared Provider Selector
 
 1. **Direct Multi-Provider APIs (`AiProvidersModule` + `AiClient`)**
-   - Workspace generators & review pipelines (`Shadowing` AI Verbatim Review, `Phrase Builder` / `learning-library`, `Phrase Miner` / `american-extractor`) run through [`AiProvidersService`](file:///Users/abdallah/workspace/flaptap/backend/src/modules/ai-providers/ai-providers.service.ts), supporting live `/models` probing, `models.dev` capability enrichment, streaming SSE with transient `429`/timeout failover, and per-user AES-256-GCM BYOK keys alongside `.env` system keys.
-   - Studio sentence pipelines (`ShadowingAnalysisService`, `ShadowingTranslationService`, `StreetTalkService`, `PhoneticsService`, `WordLookupService`) use [`AiClient`](file:///Users/abdallah/workspace/flaptap/backend/src/core/ai/ai.client.ts) (`reasoning_effort: "none"` for sub-second Studio responsiveness).
+   - Workspace generators & review pipelines (`Media Hub` AI Verbatim Review, `Phrase Builder` / `learning-library`, `Phrase Miner` / `american-extractor`) run through [`AiProvidersService`](file:///Users/abdallah/workspace/flaptap/backend/src/modules/ai-providers/ai-providers.service.ts), supporting live `/models` probing, `models.dev` capability enrichment, streaming SSE with transient `429`/timeout failover, and per-user AES-256-GCM BYOK keys alongside `.env` system keys.
+   - Studio sentence pipelines (`MediaHubAnalysisService`, `MediaHubTranslationService`, `StreetTalkService`, `PhoneticsService`, `WordLookupService`) use [`AiClient`](file:///Users/abdallah/workspace/flaptap/backend/src/core/ai/ai.client.ts) (`reasoning_effort: "none"` for sub-second Studio responsiveness).
    - Never commit `.env` or expose raw secrets outside authenticated masked previews (`sk-••••abcd`).
 2. **Single Shared Provider UI**
    - Every AI-configurable feature MUST mount [`FlaptapAiSelector`](file:///Users/abdallah/workspace/flaptap/frontend/ai-provider-selector.js) rather than creating a parallel provider/model picker.
@@ -22,8 +22,8 @@
 
 | Feature | Owner | Contract |
 | :--- | :--- | :--- |
-| **Dynamic AI Coach & Word Lookup** | `ShadowingAnalysisService` | Verbatim-grounded Connected Speech (IPA + mouth mechanics), Expressions/Idioms, Key Vocabulary, Prosody Brief, and Contextual Word Definitions. |
-| **World-Language Translation** | `ShadowingTranslationService` | Translate spoken English into 170+ languages (`ar` default). Standard register; preserve names and technical terms in Latin script (`<bdi class="tech-loanword" dir="ltr">` for RTL). |
+| **Dynamic AI Coach & Word Lookup** | `MediaHubAnalysisService` | Verbatim-grounded Connected Speech (IPA + mouth mechanics), Expressions/Idioms, Key Vocabulary, Prosody Brief, and Contextual Word Definitions. |
+| **World-Language Translation** | `MediaHubTranslationService` | Translate spoken English into 170+ languages (`ar` default). Standard register; preserve names and technical terms in Latin script (`<bdi class="tech-loanword" dir="ltr">` for RTL). |
 | **Dialogue Generation** | `StreetTalkService` | Author realistic spoken American dialogues with connected speech, expressions, and vocabulary. |
 | **Phonetics Workouts** | `PhoneticsService` | Author articulatory workouts with IPA, tongue/jaw mechanics, and spoken drill lines. |
 | **Caption Extraction & Timing** | `TranscriptService` + Python helper | JSON3 word-offset ingestion, rolling-cue deduplication, and explicit failure taxonomy. |
@@ -54,9 +54,13 @@
    - **Zero Benefit Before Sign-In:** Visitors can browse all UI surfaces, but every value-producing action opens the auth gate before execution (saving and auto-resuming the pending action), and every protected route enforces `requireAuthenticatedUser` (`401 auth_required`) with `WHERE user_id = ?`.
    - `AuthService` handles `scrypt` accounts, `HttpOnly` cookies + Bearer tokens, session revocation, and full account deletion.
    - `HistoryRepository` & `VocabularyService` power the **Activity & Cache** control center (per-item & global cache clearing, `force` re-extraction, progress reset, bulk operations, JSON backup export) and SRS flashcards (`mastery_level` 0–4).
-2. **Instant Video Open Path**
-   - `POST /api/tracks/shadowing/process` extracts captions, segments sentences/paragraphs deterministically, saves to SQLite, and returns immediately; AI Coach (`POST /api/tracks/shadowing/analyze`) runs asynchronously afterward and caches in SQLite.
-3. **Zero External Font or Render-Blocking Assets**
+2. **Blink-of-an-Eye Instant Open Path (Minimal Necessary Work Only)**
+   - Pasting or opening a media link MUST execute **only** the strictly necessary minimum: auth check, fetch/load the raw transcript, deterministic sentence segmentation, and mount the player + transcript immediately.
+   - Never block initial lesson open on AI analysis, AI review, deep lexical extraction, translation, config polling (`fetchShadowingConfig`), chat thread hydration, or vocabulary pre-fetching. Every optional/AI/API-heavy capability MUST run strictly on-demand after the lesson is visible.
+3. **Zero Local Device Compute & Zero GPU-Burning UI Law (Mandatory for All AI Agents)**
+   - **Never Consume User/Host Hardware for ML or Heavy Processing:** Flaptap is designed to run smoothly on any user device without pegging local CPU or GPU resources. Never enable or invoke local ML/STT inference (`faster_whisper`, local Whisper models, PyTorch, ONNX, local LLMs, or heavy local transcoding) on the user or host machine. Transcription and cognitive work must come exclusively from native provider subtitles/captions or direct cloud HTTPS APIs.
+   - **Zero GPU-Heavy UI Animations:** Never ship animated large-radius CSS `filter: blur(>12px)` blobs, oversized animated SVG waves, multi-layer pulsing rings, or idle `requestAnimationFrame` loops on loaders or static panels. Loading states must use a single-layer lightweight CSS spinner respecting `prefers-reduced-motion`.
+4. **Zero External Font or Render-Blocking Assets**
    - Native system font stacks (`SF Pro Display`, `SF Pro Text`, `SF Mono` via `design-tokens.css` — zero Google Fonts or external font CDN requests).
 
 ---
@@ -66,7 +70,7 @@
 - **Apple Liquid Glass & Tactile Design Tokens:** All styles consume [`design-tokens.css`](file:///Users/abdallah/workspace/flaptap/frontend/design-tokens.css) and [`apple-components.css`](file:///Users/abdallah/workspace/flaptap/frontend/apple-components.css) (`#F5F5F7` / `#FFFFFF` Light Mode, `#000000` / `#1C1C1E` OLED Dark Mode, `#0071E3` / `#0A84FF` accent).
 - **Editorial Polish:** 1.5–1.75px stroke SVG icons everywhere — zero emojis, zero demo chips under inputs, zero purple AI gradients.
 - **Localization & Bidi:** English (`en`, LTR) default UI with full `ar` (RTL), `es`, `fr`, `de`, `tr` support. Timestamp and IPA spans enforce `direction: ltr; unicode-bidi: isolate; font-variant-numeric: tabular-nums`.
-- **Studio Docking & Modes:** **Transcript** (`35%` video / `65%` canvas) and **Theater** (`65%` video / `35%` rail) docking, plus 5 client-side modes (`Shadow` | `Read` | `Listen` | `Coach` | `Notes`) switching in `0ms` without remounting the player.
+- **Studio Docking & Modes:** **Transcript** (`35%` video / `65%` canvas) and **Theater** (`65%` video / `35%` rail) docking, plus 5 client-side modes (`Shadow` | `Read` | `Listen` | `Insights` [`Lexicon` A1–C2 + `Prosody & Highlights`] | `Notes`) switching in `0ms` without remounting the player.
 
 ### Sidebar Taxonomy, Naming & Brand Governance Law (Mandatory & Scalable)
 
@@ -74,7 +78,7 @@ Every AI agent modifying, renaming, or adding any workspace feature MUST follow 
 
 1. **Three-Pillar Scalable Category Architecture**
    - **Studio** *(Active Speaking & Drill Studios — sessions that open in `/studio`)*:
-     - `Shadowing` (`/`, `lessons` — unified universal media ingest, upload, millisecond word playback, AI Verbatim Review, multi-speaker/ideas/raw views, Coach, translations & 7-format export) · `Dialogues` (`/dialogue`, `dialogue`) · `Phonetics` (`/pronunciation`, `pronunciation`)
+     - `Media Hub` (`/`, `media-hub` — unified universal media ingest, upload, millisecond word playback, Deep Lexical Extract workbench, AI Verbatim Review, multi-speaker/ideas/raw views, Coach, translations & 7-format export) · `Dialogues` (`/dialogue`, `dialogue`) · `Phonetics` (`/pronunciation`, `pronunciation`)
    - **Lab** *(Phrase Extraction & Phrase Authoring Tools)*:
      - `Phrase Miner` (`/extractor`, `american-extractor`) · `Phrase Builder` (`/library`, `learning-library`)
    - **Workspace** *(Personal Memory, Progress, Cache & System Control)*:
@@ -84,7 +88,7 @@ Every AI agent modifying, renaming, or adding any workspace feature MUST follow 
 
 2. **Brand Naming Contract (Short, Expressive, Parallel)**
    - **1–2 Words, ≤ 15 Characters:** Fits cleanly at `248px` desktop and `212px` tablet width without wrapping or truncation.
-   - **Noun-First Functional Clarity:** Use concrete, memorable studio/tool nouns (`Shadowing`, `Dialogues`, `Phonetics`, `Phrase Miner`, `Phrase Builder`, `Vocabulary`, `Activity`).
+   - **Noun-First Functional Clarity:** Use concrete, memorable studio/tool nouns (`Media Hub`, `Dialogues`, `Phonetics`, `Phrase Miner`, `Phrase Builder`, `Vocabulary`, `Activity`).
    - **Forbidden Patterns:** Never use imperative CTA verbs (`Generate...`, `Create...`), marketing taglines (`Anything to...`), or ampersands (`X & Y`) in sidebar labels.
    - **Cross-Surface Parity:** The sidebar label, topbar breadcrumb, `<title>`, section `<h1>`, `I18N` translations, and collapsed `data-tooltip` MUST all use the same canonical name.
 
@@ -99,7 +103,7 @@ Every AI agent modifying, renaming, or adding any workspace feature MUST follow 
 
 ### Real Derived Completion Law
 
-- **Zero Manual Completion Overrides:** Never add container-level "Mark Complete" buttons or toggles on multi-item learning entities (`Phrase Miner` guides, `Phrase Builder` items, `Shadowing`/`Dialogues`/`Phonetics` lessons, or `Activity` rows).
+- **Zero Manual Completion Overrides:** Never add container-level "Mark Complete" buttons or toggles on multi-item learning entities (`Phrase Miner` guides, `Phrase Builder` items, `Media Hub`/`Dialogues`/`Phonetics` lessons, or `Activity` rows).
 - **Strict Child Derivation:** A container is `Completed` (`done`) **if and only if** `totalItems > 0 && completedItems === totalItems` (`progress` when `completedItems > 0`, `new` when `0`). Backend repositories and frontend views must compute completion strictly from checked child items.
 
 ### Studio Layout Invariants
@@ -113,6 +117,6 @@ Every AI agent modifying, renaming, or adding any workspace feature MUST follow 
 
 - Typecheck & build: `npm run build` (`cd backend && npm run build`)
 - Offline timing unit suite: `npm run test:timing`
-- Feature unit suites: `npm run test:extractor:unit` · `npm run test:shadowing:unit`
+- Feature unit suites: `npm run test:extractor:unit` · `npm run test:media-hub:unit`
 - Full production E2E suite: `npm run test:e2e`
 - Never commit `.env`, API keys, `data/*.sqlite*`, or temporary artifacts.

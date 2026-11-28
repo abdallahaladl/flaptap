@@ -1742,10 +1742,7 @@ body.is-studio-resizing .video-zoom-surface {
   .studio-body .studio-layout-backdrop,
   .studio-body .studio-split-resizer,
   .studio-body .studio-workspace[data-layout="zen"] .sentence-driller-card,
-  .studio-body .loader-mesh-blob,
-  .studio-body .loader-ribbon,
-  .studio-body .loader-ring,
-  .studio-body .loader-spec-bar,
+  .studio-body .loader-overlay--canvas .loader-spinner,
   .studio-body .loader-headline {
     transition: none !important;
     animation: none !important;
@@ -1763,8 +1760,8 @@ body.is-studio-resizing .video-zoom-surface {
 }
 
 /* ==========================================================================
-   10. FULL-PAGE FRAMELESS MOTION-GRAPHICS LOADER (ZERO SMALL CARD)
-   Atmospheric Mesh · Edge-to-Edge Flowing Acoustic Ribbons · Kinetic Spectrum
+   10. MINIMAL ZERO-GPU LOADING & ERROR OVERLAY
+   Lightweight single CSS border spinner (zero blur blobs, ribbons, or waves)
    ========================================================================== */
 
 .studio-body .loader-overlay.loader-overlay--canvas {
@@ -1773,194 +1770,39 @@ body.is-studio-resizing .video-zoom-surface {
   z-index: 800;
   padding: 24px;
   background: var(--ap-canvas);
-  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Full-Viewport Drifting Atmospheric Mesh */
-.studio-body .loader-mesh {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.studio-body .loader-mesh-blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(72px);
-  opacity: 0.42;
-  will-change: transform, opacity;
-}
-
-[data-theme="dark"] .studio-body .loader-mesh-blob {
-  opacity: 0.34;
-}
-
-.studio-body .loader-mesh-blob--1 {
-  width: min(62vw, 680px);
-  height: min(62vw, 680px);
-  top: -18%;
-  left: -10%;
-  background: radial-gradient(circle, rgba(0, 113, 227, 0.38) 0%, transparent 70%);
-  animation: loaderBlobDrift1 14s ease-in-out infinite;
-}
-
-.studio-body .loader-mesh-blob--2 {
-  width: min(58vw, 620px);
-  height: min(58vw, 620px);
-  bottom: -22%;
-  right: -12%;
-  background: radial-gradient(circle, rgba(56, 189, 248, 0.30) 0%, transparent 70%);
-  animation: loaderBlobDrift2 17s ease-in-out infinite;
-}
-
-.studio-body .loader-mesh-blob--3 {
-  width: min(46vw, 480px);
-  height: min(46vw, 480px);
-  top: 28%;
-  left: 34%;
-  background: radial-gradient(circle, rgba(48, 209, 88, 0.16) 0%, transparent 72%);
-  animation: loaderBlobDrift3 12s ease-in-out infinite;
-}
-
-/* Edge-to-Edge Flowing Sinusoidal Acoustic Ribbons */
-.studio-body .loader-ribbons {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.studio-body .loader-ribbon {
-  position: absolute;
-  left: 0;
-  width: 200%;
-  height: 260px;
-  will-change: transform;
-}
-
-.studio-body .loader-ribbon--1 {
-  color: rgba(0, 113, 227, 0.24);
-  animation: loaderRibbonFlow 9s linear infinite;
-}
-
-.studio-body .loader-ribbon--2 {
-  color: rgba(56, 189, 248, 0.18);
-  animation: loaderRibbonFlow 13s linear infinite reverse;
-}
-
-.studio-body .loader-ribbon--3 {
-  color: rgba(48, 209, 88, 0.12);
-  animation: loaderRibbonFlow 18s linear infinite;
-}
-
-[data-theme="dark"] .studio-body .loader-ribbon--1 {
-  color: rgba(10, 132, 255, 0.30);
-}
-
-[data-theme="dark"] .studio-body .loader-ribbon--2 {
-  color: rgba(100, 210, 255, 0.22);
-}
-
-/* Frameless Centered Kinetic Focal Sculpture */
 .studio-body .loader-focal {
-  position: relative;
-  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 28px;
+  gap: 14px;
   width: 100%;
-  max-width: 540px;
+  max-width: 440px;
   text-align: center;
 }
 
-.studio-body .loader-rings {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  transform: translate(-50%, -62%);
-  pointer-events: none;
-}
-
-.studio-body .loader-ring {
-  position: absolute;
-  top: 50%;
-  left: 50%;
+.studio-body .loader-overlay--canvas .loader-spinner {
+  width: 26px;
+  height: 26px;
+  margin: 0;
   border-radius: 50%;
-  border: 1px solid rgba(0, 113, 227, 0.22);
-  transform: translate(-50%, -50%) scale(0.75);
-  opacity: 0;
-  will-change: transform, opacity;
+  border: 2px solid var(--ap-border-strong);
+  border-top-color: var(--ap-blue);
+  animation: studio-spin 0.7s linear infinite;
 }
 
-[data-theme="dark"] .studio-body .loader-ring {
-  border-color: rgba(10, 132, 255, 0.26);
+@media (prefers-reduced-motion: reduce) {
+  .studio-body .loader-overlay--canvas .loader-spinner {
+    animation-duration: 1.8s;
+  }
 }
 
-.studio-body .loader-ring--1 {
-  width: 240px;
-  height: 240px;
-  animation: loaderRingExpand 3.6s cubic-bezier(0.22, 1, 0.36, 1) infinite;
-}
-
-.studio-body .loader-ring--2 {
-  width: 380px;
-  height: 380px;
-  animation: loaderRingExpand 3.6s cubic-bezier(0.22, 1, 0.36, 1) 1.2s infinite;
-}
-
-.studio-body .loader-ring--3 {
-  width: 520px;
-  height: 520px;
-  animation: loaderRingExpand 3.6s cubic-bezier(0.22, 1, 0.36, 1) 2.4s infinite;
-}
-
-/* 15-Bar Fluid Kinetic Sound Spectrum */
-.studio-body .loader-spectrum {
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  height: 128px;
-}
-
-.studio-body .loader-spec-bar {
-  width: 6px;
-  height: var(--bar-h, 64px);
-  border-radius: 99px;
-  background: linear-gradient(180deg, #38BDF8 0%, var(--ap-blue) 100%);
-  box-shadow: 0 6px 18px -4px rgba(0, 113, 227, 0.38);
-  transform-origin: center;
-  will-change: transform, opacity;
-  animation: loaderSpecWave 1.45s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
-  animation-delay: calc(var(--bar-i, 0) * 0.075s);
-}
-
-.studio-body .loader-spec-bar--center {
-  width: 7px;
-  background: linear-gradient(180deg, #64D2FF 0%, var(--ap-blue) 100%);
-}
-
-[data-theme="dark"] .studio-body .loader-spec-bar {
-  box-shadow: 0 0 22px -2px rgba(10, 132, 255, 0.45);
-}
-
-/* Minimal Whisper Text While Loading (No Box, No Clutter) */
 .studio-body .loader-error-card {
-  position: relative;
-  z-index: 2;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1969,11 +1811,9 @@ body.is-studio-resizing .video-zoom-surface {
 .studio-body .loader-overlay--canvas:not(.loader-error) .loader-headline {
   margin: 0;
   font-family: var(--ap-font-display);
-  font-size: 1.05rem;
+  font-size: 0.96rem;
   font-weight: 560;
-  letter-spacing: 0.01em;
   color: var(--ap-text-secondary);
-  animation: loaderTextBreath 3s ease-in-out infinite;
 }
 
 .studio-body .loader-overlay--canvas:not(.loader-error) .loader-subheadline,
@@ -1981,89 +1821,33 @@ body.is-studio-resizing .video-zoom-surface {
   display: none !important;
 }
 
-/* Clean Error Glass Card State (Shown ONLY when an error occurs) */
-.studio-body .loader-overlay--canvas.loader-error .loader-ribbons,
-.studio-body .loader-overlay--canvas.loader-error .loader-rings,
-.studio-body .loader-overlay--canvas.loader-error .loader-spectrum {
+.studio-body .loader-overlay--canvas.loader-error .loader-spinner {
   display: none !important;
 }
 
 .studio-body .loader-overlay--canvas.loader-error .loader-error-card {
   width: min(440px, calc(100vw - 32px));
-  padding: 32px 28px 26px;
-  border-radius: 24px;
-  background: var(--ap-glass-popover);
-  backdrop-filter: saturate(180%) blur(24px);
-  -webkit-backdrop-filter: saturate(180%) blur(24px);
-  border: 1px solid var(--ap-border);
-  box-shadow: var(--ap-shadow-popover), var(--ap-specular);
+  padding: 28px 24px 22px;
+  border-radius: 20px;
+  background: var(--ap-surface);
+  border: 1px solid var(--ap-border-strong);
+  box-shadow: var(--ap-shadow-popover);
 }
 
 .studio-body .loader-error-badge {
-  width: 52px;
-  height: 52px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: var(--ap-red-wash);
   color: var(--ap-red);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .studio-body .loader-overlay--canvas.loader-error .loader-subheadline {
   display: block !important;
-}
-
-@media (max-width: 640px) {
-  .studio-body .loader-spectrum {
-    gap: 5px;
-    height: 104px;
-  }
-
-  .studio-body .loader-spec-bar {
-    width: 4.5px;
-  }
-
-  .studio-body .loader-spec-bar--center {
-    width: 5.5px;
-  }
-}
-
-@keyframes loaderBlobDrift1 {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(8vw, 6vh, 0) scale(1.12); }
-}
-
-@keyframes loaderBlobDrift2 {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(-9vw, -7vh, 0) scale(1.14); }
-}
-
-@keyframes loaderBlobDrift3 {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(0.95); }
-  50% { transform: translate3d(-5vw, 5vh, 0) scale(1.1); }
-}
-
-@keyframes loaderRibbonFlow {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-50%, 0, 0); }
-}
-
-@keyframes loaderRingExpand {
-  0% { transform: translate(-50%, -50%) scale(0.55); opacity: 0.65; }
-  85% { transform: translate(-50%, -50%) scale(1.15); opacity: 0; }
-  100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0; }
-}
-
-@keyframes loaderSpecWave {
-  0%, 100% { transform: scaleY(0.28); opacity: 0.55; }
-  50% { transform: scaleY(1); opacity: 1; }
-}
-
-@keyframes loaderTextBreath {
-  0%, 100% { opacity: 0.62; }
-  50% { opacity: 1; }
 }
 
 /* ==========================================================================

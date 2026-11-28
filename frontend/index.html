@@ -81,7 +81,7 @@
         }
         var p = String(location.pathname || '/').split('?')[0].replace(/\/+$/, '') || '/';
         var qs = new URLSearchParams(location.search || '');
-        var sec = 'lessons';
+        var sec = 'media-hub';
         if (p === '/dialogue' || p === '/dialogues') sec = 'dialogue';
         else if (p === '/pronunciation' || p === '/phonetics') sec = 'pronunciation';
         else if (p === '/extractor' || p === '/miner' || p === '/phrase-miner' || p === '/american-extractor' || p === '/american-english' || p === '/phrases' || p.indexOf('/extractor/') === 0 || p.indexOf('/miner/') === 0 || p.indexOf('/phrase-miner/') === 0 || p.indexOf('/american-extractor/') === 0 || p.indexOf('/phrases/') === 0) sec = 'american-extractor';
@@ -131,7 +131,7 @@
     <!-- Primary Left Navigation Rail -->
     <aside id="app-sidebar" class="app-sidebar" aria-label="Primary Navigation">
       <div class="sidebar-header">
-        <a href="/" class="brand-link" data-route-section="lessons" aria-label="Flaptap Home">
+        <a href="/" class="brand-link" data-route-section="media-hub" aria-label="Flaptap Home">
           <span class="brand-mark" aria-hidden="true">
             <svg width="30" height="30" viewBox="0 0 64 64" fill="none">
               <defs>
@@ -186,13 +186,13 @@
       <nav class="sidebar-nav" aria-label="Workspace Sections">
         <div class="sidebar-group" data-sidebar-group="studio">
           <div class="sidebar-group-label" data-i18n="navGroupStudio">Studio</div>
-          <a href="/" class="sidebar-nav-link" data-route-section="lessons" data-tooltip="Shadowing" title="Shadowing — Video speaking lessons">
+          <a href="/" class="sidebar-nav-link" data-route-section="media-hub" data-tooltip="Media Hub" title="Media Hub — Video &amp; audio study studio">
             <span class="sidebar-nav-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="6 4 20 12 6 20 6 4"></polygon>
               </svg>
             </span>
-            <span class="sidebar-link-text" data-i18n="navLessons">Shadowing</span>
+            <span class="sidebar-link-text" data-i18n="navMediaHub">Media Hub</span>
           </a>
           <a href="/dialogue" class="sidebar-nav-link" data-route-section="dialogue" data-tooltip="Dialogues" title="Dialogues — Conversational roleplay">
             <span class="sidebar-nav-icon" aria-hidden="true">
@@ -295,14 +295,14 @@
           </span>
         </button>
         <div class="sidebar-footer-meta">
-          <span class="sidebar-edition-note" data-i18n="brandEdition">Spoken English Studio</span>
+          <span class="sidebar-edition-note" data-i18n="brandEdition">Flaptap Studio</span>
           <kbd class="sidebar-kbd-hint" title="Toggle sidebar">⌘B</kbd>
         </div>
       </div>
     </aside>
     <script>
       (function () {
-        var sec = window.__flaptapBootSection || 'lessons';
+        var sec = window.__flaptapBootSection || 'media-hub';
         var links = document.querySelectorAll('#app-sidebar .sidebar-nav-link[data-route-section]');
         for (var i = 0; i < links.length; i++) {
           var match = links[i].getAttribute('data-route-section') === sec;
@@ -331,7 +331,7 @@
               <span class="crumb-sep" aria-hidden="true">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
               </span>
-              <span class="crumb-current">Shadowing</span>
+              <span class="crumb-current">Media Hub</span>
             </nav>
           </div>
 
@@ -387,18 +387,18 @@
       </header>
 
       <main class="workspace-main">
-    <!-- SECTION 1: SHADOWING STUDIO & LIBRARY -->
-    <section id="section-lessons" hidden>
+    <!-- SECTION 1: MEDIA HUB STUDIO & LIBRARY -->
+    <section id="section-media-hub" hidden>
       <div class="editorial-desk apple-lessons-hero">
         <div class="desk-kicker">
           <span class="apple-kicker-dot" aria-hidden="true"></span>
-          <span data-i18n="heroKicker">Spoken English Studio</span>
+          <span data-i18n="heroKicker">Universal Media Learning Hub</span>
         </div>
         <h1 class="desk-headline" data-i18n="heroHeadline">
-          Turn any video into <span class="apple-hero-accent">your speaking studio.</span>
+          Turn any media into <span class="apple-hero-accent">your interactive study studio.</span>
         </h1>
         <p class="desk-subcopy" data-i18n="heroSubcopy">
-          Paste any video, podcast, or audio link — or upload a file — to shadow real speakers with millisecond word playback, AI verbatim review, multi-speaker views, coaching, and 7-format export.
+          Paste any video, podcast, social clip, or audio link — or upload a file — to shadow speakers, read multi-speaker transcripts, inspect A1–C2 vocabulary &amp; prosody with playback jump, and export in 7 formats.
         </p>
 
         <div class="lessons-input-mode-switch" role="tablist" aria-label="Media source type">
@@ -423,7 +423,7 @@
                 type="url"
                 id="youtube-url-input"
                 class="command-input"
-                placeholder="Paste YouTube, TikTok, Instagram, X, Podcast RSS, Apple Podcasts, or MP3/MP4 link..."
+                placeholder="Paste any video, podcast, or audio link..."
                 data-i18n-placeholder="urlPlaceholder"
                 autocomplete="off"
                 spellcheck="false"
@@ -467,14 +467,14 @@
         </div>
 
         <div class="lessons-ingest-options">
-          <div class="lessons-pacing-control" title="Choose shadowing unit (changeable anytime in Studio)">
+          <div class="lessons-pacing-control" title="Choose line length (changeable anytime in Studio)">
             <span class="lessons-pacing-label" data-i18n="lessonsPacingLabel">Lines</span>
-            <div class="lessons-pacing-group" id="lessons-pacing-group" role="radiogroup" aria-label="Shadowing line length">
+            <div class="lessons-pacing-group" id="lessons-pacing-group" role="radiogroup" aria-label="Transcript line length">
               <button type="button" class="lessons-pacing-pill active" data-pacing="short" role="radio" aria-checked="true" title="4–9 word drill lines; complete thoughts up to 11 words stay intact" data-i18n="pacingShort">Short</button>
               <button type="button" class="lessons-pacing-pill" data-pacing="normal" role="radio" aria-checked="false" title="Complete sentences up to ~20 words; longer run-ons break at their strongest clause boundary" data-i18n="pacingNormal">Normal</button>
             </div>
           </div>
-          <span class="lessons-instant-hint">Opens Studio instantly · AI Review, Coach &amp; Translations available inside</span>
+          <span class="lessons-instant-hint">Opens Studio instantly · Shadow, Read, Listen, Insights &amp; Notes</span>
         </div>
 
         <div class="platform-chips-row" aria-label="Supported media platforms">
@@ -516,7 +516,7 @@
             <span class="capability-check-badge" aria-hidden="true">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </span>
-            <span data-i18n="capModes">Four studio modes</span>
+            <span data-i18n="capModes">Five studio modes</span>
           </span>
           <span class="capability-item">
             <span class="capability-check-badge" aria-hidden="true">
@@ -593,9 +593,9 @@
                 <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#layers"></use></svg>
                 <span data-i18n="filterAll">All</span>
               </button>
-              <button type="button" class="filter-pill" data-filter="shadowing" aria-selected="false">
+              <button type="button" class="filter-pill" data-filter="media_hub" aria-selected="false">
                 <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#monitor"></use></svg>
-                <span data-i18n="filterVideos">Videos</span>
+                <span data-i18n="filterVideos">Media</span>
               </button>
               <button type="button" class="filter-pill" data-filter="street_talk" aria-selected="false">
                 <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#message-square"></use></svg>
@@ -951,7 +951,7 @@
         <h3 data-i18n="emptyVocabTitle">No saved words yet</h3>
         <p data-i18n="emptyVocabDesc">Click any word in Video Lessons, Anything to Phrases, or Generate Phrases to save contextual definitions and unlock spaced flashcards.</p>
         <div class="empty-ledger-actions">
-          <button type="button" class="btn-vox" data-route-section="lessons">Open Shadowing</button>
+          <button type="button" class="btn-vox" data-route-section="media-hub">Open Media Hub</button>
           <button type="button" class="btn-secondary" data-route-section="american-extractor">Open Phrase Miner</button>
         </div>
       </div>
@@ -1140,9 +1140,9 @@
                   <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#layers"></use></svg>
                   <span data-i18n="filterAll">All</span>
                 </button>
-                <button type="button" class="filter-pill" data-ledger-track="shadowing" aria-selected="false">
+                <button type="button" class="filter-pill" data-ledger-track="media_hub" aria-selected="false">
                   <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#monitor"></use></svg>
-                  <span data-i18n="filterVideos">Videos</span>
+                  <span data-i18n="filterVideos">Media</span>
                 </button>
                 <button type="button" class="filter-pill" data-ledger-track="street_talk" aria-selected="false">
                   <svg class="ft-icon" aria-hidden="true" focusable="false"><use href="/icons.svg#message-square"></use></svg>
@@ -2429,11 +2429,11 @@
   </main>
   <script>
     (function () {
-      var sec = window.__flaptapBootSection || 'lessons';
-      var panel = document.getElementById('section-' + sec) || document.getElementById('section-lessons');
+      var sec = window.__flaptapBootSection || 'media-hub';
+      var panel = document.getElementById('section-' + sec) || document.getElementById('section-media-hub');
       if (panel) panel.hidden = false;
       document.body.dataset.activeSection = sec;
-      document.body.classList.toggle('is-lessons-view', sec === 'lessons');
+      document.body.classList.toggle('is-lessons-view', sec === 'media-hub');
       document.body.classList.toggle('is-extractor-view', sec === 'american-extractor');
       document.body.classList.toggle('is-library-view', sec === 'learning-library');
     })();

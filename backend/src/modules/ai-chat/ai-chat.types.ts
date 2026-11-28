@@ -12,7 +12,7 @@ export type AiChatLanguageMode = 'auto' | 'en' | 'ar_en' | 'bilingual';
 
 export type AiChatContextType =
   | 'general'
-  | 'shadowing'
+  | 'media_hub'
   | 'dialogue'
   | 'phonetics'
   | 'think_aloud'

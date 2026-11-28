@@ -9,6 +9,7 @@
 
   const state = {
     lessonId: '',
+    loadedThreadLessonId: '',
     handlers: {},
   };
 
@@ -19,16 +20,16 @@
   function resolveTrackContextType(track) {
     if (track === 'street_talk') return 'dialogue';
     if (track === 'phonetics') return 'phonetics';
-    return 'shadowing';
+    return 'media_hub';
   }
 
   function buildStudioContext() {
     const item = global.studioState?.item;
     if (!item) {
       return {
-        type: 'shadowing',
+        type: 'media_hub',
         id: '',
-        label: 'Speaking Studio',
+        label: 'Media Hub Studio',
         subtitle: 'Active lesson studio',
       };
     }
@@ -97,10 +98,12 @@
 
   async function hydrate(item) {
     state.lessonId = item?.id || '';
+    state.loadedThreadLessonId = '';
     const ai = getAi();
     if (!ai) return;
     ai.notifyContextChanged();
-    if (item?.id) {
+    if (item?.id && ai.isOpen?.()) {
+      state.loadedThreadLessonId = item.id;
       const type = resolveTrackContextType(item.track);
       await ai.loadContextThread?.(type, item.id);
     }
@@ -109,6 +112,11 @@
   function open(opts = {}) {
     const ai = getAi();
     if (!ai) return;
+    if (state.lessonId && state.loadedThreadLessonId !== state.lessonId) {
+      state.loadedThreadLessonId = state.lessonId;
+      const type = resolveTrackContextType(global.studioState?.item?.track);
+      void ai.loadContextThread?.(type, state.lessonId);
+    }
     const ctx = buildStudioContext();
     ai.open({
       context: ctx,

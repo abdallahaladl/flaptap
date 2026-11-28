@@ -28,8 +28,8 @@ export { WordDefinitionResponse };
 const ANALYSIS_VERSION = 1;
 
 @Injectable()
-export class ShadowingAnalysisService {
-  private readonly logger = new Logger(ShadowingAnalysisService.name);
+export class MediaHubAnalysisService {
+  private readonly logger = new Logger(MediaHubAnalysisService.name);
   private readonly inFlight = new Map<string, Promise<AiCoachAnalysis>>();
 
   constructor(

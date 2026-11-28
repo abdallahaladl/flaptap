@@ -5,7 +5,7 @@
  *  1. Sidebar consolidation: exactly 7 nav links (Transcripts removed), zero topbar nav leaks
  *  2. Auth gates (401) on upload, review stream, export, title rename, speaker rename
  *  3. Real spoken English audio upload (macOS `say` + `ffmpeg` or fallback fixture) ->
- *     POST /api/tracks/shadowing/upload -> HTTP 206 Range media streaming -> multi-user isolation
+ *     POST /api/tracks/media-hub/upload -> HTTP 206 Range media streaming -> multi-user isolation
  *  4. 7-format × 5-view export API (.txt, .md, .srt, .vtt, .json, .csv, .html)
  *  5. Inline title rename (`PATCH /:id/title`) & speaker rename (`PATCH /:id/speakers`)
  *  6. Puppeteer UI on `/` (Media Link / Audio-Video File tabs, live platform detection pill,
@@ -44,7 +44,7 @@ async function waitForServer(timeoutMs = 20000) {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     try {
-      const res = await fetch(`${BASE}/api/tracks/shadowing/config`);
+      const res = await fetch(`${BASE}/api/tracks/media-hub/config`);
       if (res.ok) return;
     } catch {}
     await new Promise((r) => setTimeout(r, 250));
@@ -286,7 +286,7 @@ async function seedLongPacingLessonViaSqlite(userId) {
   const distDir = path.join(ROOT, 'backend/dist');
   const { SqliteService } = require(path.join(distDir, 'core/database/sqlite.service.js'));
   const { HistoryRepository } = require(path.join(distDir, 'core/database/history.repository.js'));
-  const { assembleAlignedReviewedViews } = require(path.join(distDir, 'modules/tracks/shadowing/utils/word-alignment.util.js'));
+  const { assembleAlignedReviewedViews } = require(path.join(distDir, 'modules/tracks/media-hub/utils/word-alignment.util.js'));
 
   const sqlite = new SqliteService();
   const repo = new HistoryRepository(sqlite);
@@ -404,22 +404,22 @@ async function run() {
     ok(`Live NestJS server booted on ${BASE}`);
 
     // 1. Config & Auth gates
-    const cfg = await api('/api/tracks/shadowing/config');
+    const cfg = await api('/api/tracks/media-hub/config');
     assert.strictEqual(cfg.status, 200);
     assert.ok(Array.isArray(cfg.json.exportFormats) && cfg.json.exportFormats.length === 7);
     assert.ok(Array.isArray(cfg.json.views) && cfg.json.views.length === 5);
     assert.ok(cfg.json.providerGuard && cfg.json.providerGuard.liveFetchEnabled === false, 'Config must expose providerGuard with liveFetchEnabled: false under kill-switch');
-    ok('GET /api/tracks/shadowing/config exposes all 7 export formats, 5 views & providerGuard');
+    ok('GET /api/tracks/media-hub/config exposes all 7 export formats, 5 views & providerGuard');
 
-    const unauthExport = await api('/api/tracks/shadowing/fake/export?view=sentences&format=txt');
+    const unauthExport = await api('/api/tracks/media-hub/fake/export?view=sentences&format=txt');
     assert.strictEqual(unauthExport.status, 401);
-    const unauthStream = await api('/api/tracks/shadowing/fake/review/stream', { method: 'POST', body: '{}' });
+    const unauthStream = await api('/api/tracks/media-hub/fake/review/stream', { method: 'POST', body: '{}' });
     assert.strictEqual(unauthStream.status, 401);
-    const unauthTitle = await api('/api/tracks/shadowing/fake/title', { method: 'PATCH', body: '{"title":"x"}' });
+    const unauthTitle = await api('/api/tracks/media-hub/fake/title', { method: 'PATCH', body: '{"title":"x"}' });
     assert.strictEqual(unauthTitle.status, 401);
-    const unauthPacing = await api('/api/tracks/shadowing/fake/pacing', { method: 'PATCH', body: '{"pacingMode":"normal"}' });
+    const unauthPacing = await api('/api/tracks/media-hub/fake/pacing', { method: 'PATCH', body: '{"pacingMode":"normal"}' });
     assert.strictEqual(unauthPacing.status, 401);
-    ok('Auth gates strictly return 401 on consolidated Shadowing endpoints');
+    ok('Auth gates strictly return 401 on consolidated Media Hub endpoints');
 
     // 2. Register two isolated accounts
     const regA = await api('/api/auth/register', {
@@ -447,57 +447,57 @@ async function run() {
     // Verify user isolation
     const bobGet = await api(`/api/history/${seeded.id}`, {}, tokenB);
     assert.ok(bobGet.status === 404 || bobGet.status === 403, `Expected 404/403 for User B, got ${bobGet.status}`);
-    const bobExport = await api(`/api/tracks/shadowing/${seeded.id}/export?view=sentences&format=txt`, {}, tokenB);
+    const bobExport = await api(`/api/tracks/media-hub/${seeded.id}/export?view=sentences&format=txt`, {}, tokenB);
     assert.strictEqual(bobExport.status, 404);
-    const bobPacing = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"normal"}' }, tokenB);
+    const bobPacing = await api(`/api/tracks/media-hub/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"normal"}' }, tokenB);
     assert.strictEqual(bobPacing.status, 404);
-    ok('Strict user isolation verified across consolidated Shadowing endpoints');
+    ok('Strict user isolation verified across consolidated Media Hub endpoints');
 
     // Verify dynamic pacing API validation & round-trip (short -> normal -> short)
-    const badPacing = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"giant"}' }, tokenA);
+    const badPacing = await api(`/api/tracks/media-hub/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"giant"}' }, tokenA);
     assert.strictEqual(badPacing.status, 400);
-    const normalRes = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"normal"}' }, tokenA);
+    const normalRes = await api(`/api/tracks/media-hub/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"normal"}' }, tokenA);
     assert.strictEqual(normalRes.status, 200);
     assert.strictEqual(normalRes.json.pacingMode, 'normal');
     assert.ok(normalRes.json.sentenceCount <= 3, `Expected normal pacing <=3 lines, got ${normalRes.json.sentenceCount}`);
-    const legacyBalRes = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"balanced"}' }, tokenA);
+    const legacyBalRes = await api(`/api/tracks/media-hub/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"balanced"}' }, tokenA);
     assert.strictEqual(legacyBalRes.status, 200);
     assert.strictEqual(legacyBalRes.json.pacingMode, 'normal', 'Legacy balanced input must normalize to normal');
     assert.strictEqual(legacyBalRes.json.sentenceCount, normalRes.json.sentenceCount, 'Legacy balanced must equal normal sentence count');
-    const shortRes = await api(`/api/tracks/shadowing/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"short"}' }, tokenA);
+    const shortRes = await api(`/api/tracks/media-hub/${pacingLesson.id}/pacing`, { method: 'PATCH', body: '{"pacingMode":"short"}' }, tokenA);
     assert.strictEqual(shortRes.status, 200);
     assert.strictEqual(shortRes.json.pacingMode, 'short');
     assert.ok(shortRes.json.sentenceCount >= 4, `Expected short pacing >=4 lines, got ${shortRes.json.sentenceCount}`);
-    ok('PATCH /api/tracks/shadowing/:id/pacing switches short <-> normal cleanly with strict validation');
+    ok('PATCH /api/tracks/media-hub/:id/pacing switches short <-> normal cleanly with strict validation');
 
     // 4. Test all 7 export formats + Raw Original view via live HTTP API
     for (const fmt of ['txt', 'md', 'srt', 'vtt', 'json', 'csv', 'html']) {
-      const exp = await api(`/api/tracks/shadowing/${seeded.id}/export?view=sentences&format=${fmt}`, {}, tokenA);
+      const exp = await api(`/api/tracks/media-hub/${seeded.id}/export?view=sentences&format=${fmt}`, {}, tokenA);
       assert.strictEqual(exp.status, 200, `Export ${fmt} returned ${exp.status}`);
       assert.ok(exp.text.length > 20, `Export ${fmt} was empty`);
     }
-    const expRaw = await api(`/api/tracks/shadowing/${seeded.id}/export?view=raw&format=txt`, {}, tokenA);
+    const expRaw = await api(`/api/tracks/media-hub/${seeded.id}/export?view=raw&format=txt`, {}, tokenA);
     assert.strictEqual(expRaw.status, 200);
     assert.ok(expRaw.text.includes('pie torch'), 'Raw export must preserve untouched ASR text');
     ok('All 7 export formats + untouched Raw Original export verified over HTTP');
 
     // 5. Test speaker rename API propagation
     const spkRes = await api(
-      `/api/tracks/shadowing/${seeded.id}/speakers`,
+      `/api/tracks/media-hub/${seeded.id}/speakers`,
       { method: 'PATCH', body: JSON.stringify({ speakers: { spk_1: 'Lex', spk_2: 'Andrej' } }) },
       tokenA,
     );
     assert.strictEqual(spkRes.status, 200);
     assert.strictEqual(spkRes.json.data.sentences[0].speaker, 'Lex');
     assert.strictEqual(spkRes.json.data.sentences[1].speaker, 'Andrej');
-    ok('PATCH /api/tracks/shadowing/:id/speakers propagates speaker renames cleanly');
+    ok('PATCH /api/tracks/media-hub/:id/speakers propagates speaker renames cleanly');
 
     // Optional live audio upload test (only if OPENAI_API_KEY / GROQ_API_KEY configured)
     const sampleMp3 = generateTestAudioMp3();
     if (sampleMp3 && (process.env.OPENAI_API_KEY || process.env.GROQ_API_KEY)) {
       const form = new FormData();
       form.append('file', new Blob([fs.readFileSync(sampleMp3)], { type: 'audio/mpeg' }), 'sample.mp3');
-      const upRes = await fetch(`${BASE}/api/tracks/shadowing/upload`, {
+      const upRes = await fetch(`${BASE}/api/tracks/media-hub/upload`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${tokenA}` },
         body: form,
@@ -1121,7 +1121,7 @@ async function run() {
     ok('Unified Studio Enhancements checklist renders all deferred options unchecked by default');
 
     const importRes = await api(
-      `/api/tracks/shadowing/${seeded.id}/transcript/import`,
+      `/api/tracks/media-hub/${seeded.id}/transcript/import`,
       {
         method: 'POST',
         body: JSON.stringify({ rawText: 'Hello there. Welcome back to instant shadowing!' }),
@@ -1130,10 +1130,10 @@ async function run() {
     );
     assert.strictEqual(importRes.status, 201);
     assert.ok(Array.isArray(importRes.json.sentences) && importRes.json.sentences.length === 2, 'Manual transcript import should produce 2 sentences');
-    ok('POST /api/tracks/shadowing/:id/transcript/import deterministically populates sentences with 0% CPU');
+    ok('POST /api/tracks/media-hub/:id/transcript/import deterministically populates sentences with 0% CPU');
 
     const sttDisabledRes = await api(
-      `/api/tracks/shadowing/${seeded.id}/transcribe`,
+      `/api/tracks/media-hub/${seeded.id}/transcribe`,
       { method: 'POST', body: JSON.stringify({ allowLocalWhisper: true }) },
       tokenA,
     );
@@ -1142,7 +1142,7 @@ async function run() {
     ok('Third-party Whisper/Groq transcription endpoint strictly returns 400 third_party_stt_disabled');
 
     const guardBlockedRes = await api(
-      '/api/tracks/shadowing/process',
+      '/api/tracks/media-hub/process',
       { method: 'POST', body: JSON.stringify({ url: 'https://www.youtube.com/watch?v=zzGuardTest9' }) },
       tokenA,
     );

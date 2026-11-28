@@ -10,6 +10,8 @@ export const STUDIO_PAGE_PATHS = new Set<string>(['/studio', '/studio.html']);
 const WORKSPACE_EXACT_PATHS = new Set<string>([
   '/',
   '/index.html',
+  '/media',
+  '/media-hub',
   '/lessons',
   '/shadowing',
   '/dialogue',

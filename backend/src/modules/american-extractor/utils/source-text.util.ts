@@ -22,6 +22,7 @@ export const CORE_CATEGORIES: readonly CoreExtractorCategory[] = [
   'cultural_reference',
   'pragmatics_context',
   'native_response',
+  'key_sentence',
 ] as const;
 
 export const AUDIO_DEPENDENT_CATEGORIES: readonly AudioExtractorCategory[] = [
@@ -221,7 +222,7 @@ export function computeExtractionHash(params: {
       ? Array.from(new Set(params.categories.map((c) => String(c).trim().toLowerCase()))).sort().join(',')
       : '';
   const payload = [
-    'v4',
+    'v5',
     normalizedText,
     params.targetLanguage || 'ar',
     params.extractionType || 'all',
@@ -440,6 +441,13 @@ export function normalizeCategory(value: unknown): ExtractorItemCategory {
     reaction: 'native_response',
     reactions: 'native_response',
     response: 'native_response',
+    key_sentence: 'key_sentence',
+    key_sentences: 'key_sentence',
+    important_sentence: 'key_sentence',
+    important_sentences: 'key_sentence',
+    notable_sentence: 'key_sentence',
+    sentence: 'key_sentence',
+    sentences: 'key_sentence',
     connected_speech: 'connected_speech',
     connected_speech_reduction: 'connected_speech',
     pronunciation: 'pronunciation_phonetics',

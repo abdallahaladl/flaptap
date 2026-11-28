@@ -20,13 +20,13 @@ import {
   ReviewedTranscriptSnapshot,
   ReviewProgressEvent,
   TranscriptSentence,
-} from './shadowing.types';
+} from './media-hub.types';
 import {
   buildReviewChunks,
   buildTranscriptReviewSystemPrompt,
   buildTranscriptReviewUserPrompt,
   parseTranscriptReviewResponse,
-} from './shadowing-review.prompt';
+} from './media-hub-review.prompt';
 import {
   captureCompletedCoverage,
   remapCompletedIndices,
@@ -52,8 +52,8 @@ export interface ReviewLessonOptions {
 }
 
 @Injectable()
-export class ShadowingReviewService {
-  private readonly logger = new Logger(ShadowingReviewService.name);
+export class MediaHubReviewService {
+  private readonly logger = new Logger(MediaHubReviewService.name);
 
   constructor(
     private readonly historyRepo: HistoryRepository,
@@ -322,7 +322,7 @@ export class ShadowingReviewService {
       });
 
       this.logger.log(
-        `Reviewed shadowing lesson ${lesson.id} in ${reviewedSnapshot.executionTimeMs}ms ` +
+        `Reviewed Media Hub lesson ${lesson.id} in ${reviewedSnapshot.executionTimeMs}ms ` +
           `(${reviewedSnapshot.sentences.length} sentences, ${reviewedSnapshot.speakers.length} speakers, ` +
           `${reviewedSnapshot.quality.verbatimScore}% verbatim)`,
       );

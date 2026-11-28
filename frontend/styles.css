@@ -526,9 +526,7 @@ html[data-sidebar="collapsed"] .sidebar-nav-link .nav-count-pill {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: color-mix(in srgb, var(--bg-paper) 92%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: var(--bg-paper);
   border-bottom: 1px solid var(--rule);
 }
 

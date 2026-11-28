@@ -27,23 +27,28 @@
     const path = String(global.location?.pathname || '/').toLowerCase();
     if (path.startsWith('/studio')) {
       return {
-        type: 'shadowing',
+        type: 'media_hub',
         id: '',
-        label: 'Speaking Studio',
-        subtitle: 'Active transcript & audio playback',
+        label: 'Media Hub Studio',
+        subtitle: 'Active transcript, deep extract & audio playback',
       };
     }
 
     const sec =
       global.FlaptapRouter?.parseLocation?.(global.location)?.section ||
       document.documentElement.getAttribute('data-active-section') ||
-      'lessons';
+      'media-hub';
 
     const map = {
+      'media-hub': {
+        type: 'media_hub',
+        label: 'Media Hub',
+        subtitle: 'Video, podcast & audio study studio',
+      },
       lessons: {
-        type: 'shadowing',
-        label: 'Shadowing Studio',
-        subtitle: 'Video & audio speaking lessons',
+        type: 'media_hub',
+        label: 'Media Hub',
+        subtitle: 'Video, podcast & audio study studio',
       },
       dialogue: {
         type: 'dialogue',
@@ -131,7 +136,7 @@
     }
 
     const t = ctx?.type || 'general';
-    if (t === 'shadowing' || t === 'dialogue' || t === 'phonetics') {
+    if (t === 'media_hub' || t === 'shadowing' || t === 'dialogue' || t === 'phonetics') {
       if (ctx?.id) {
         return [
           {
@@ -166,6 +171,16 @@
           label: 'Natural daily openers',
           prompt:
             'Teach me 5 ultra-natural American conversation starters and connectors that replace textbook phrasing.',
+        },
+        {
+          label: 'Master connected speech',
+          prompt:
+            'Break down the 5 most important American reductions, linking rules, and flap-T habits with fast spoken examples.',
+        },
+        {
+          label: 'Start a 2-minute roleplay',
+          prompt:
+            'Start a realistic 1-on-1 everyday American conversation with me and coach my phrasing gently after each turn.',
         },
       ];
     }
@@ -284,6 +299,124 @@
     ];
   }
 
+  function getEmptyStateCopy(ctx, isAr = false) {
+    const t = ctx?.type || 'general';
+    const hasId = Boolean(ctx?.id);
+
+    if (isAr) {
+      const arMap = {
+        media_hub: hasId
+          ? {
+              title: 'اسأل عن هذا الدرس',
+              subtitle: 'أقرأ النص الكامل والتوقيت الحالي — اسأل عن النطق أو المعنى أو التعبيرات الطبيعية.',
+            }
+          : {
+              title: 'مركز الوسائط والتعلّم التفاعلي',
+              subtitle: 'تدرّب على الإيقاع الأمريكي والربط الصوتي واستخراج التعبيرات والمفردات خطوة بخطوة.',
+            },
+        shadowing: hasId
+          ? {
+              title: 'اسأل عن هذا الدرس',
+              subtitle: 'أقرأ النص الكامل والتوقيت الحالي — اسأل عن النطق أو المعنى أو التعبيرات الطبيعية.',
+            }
+          : {
+              title: 'مدرب الترديد والتحدث',
+              subtitle: 'تدرّب على الإيقاع الأمريكي والربط الصوتي وتفكيك الجمل الطبيعية خطوة بخطوة.',
+            },
+        dialogue: {
+          title: 'اسأل عن هذا الحوار',
+          subtitle: 'اكتشف نبرة المتحدثين والتعبيرات اليومية والبدائل الأمريكية الأكثر طبيعية.',
+        },
+        phonetics: {
+          title: 'مدرب الصوتيات والنطق',
+          subtitle: 'اسأل عن مخارج الحروف والرموز الصوتية (IPA) وتدريبات اللسان والفك.',
+        },
+        phrase_miner: {
+          title: 'تحليل العبارات المستخرجة',
+          subtitle: 'قارن بين الأساليب الرسمية واليومية وتدرّب على استخدام العبارات في سياقات حقيقية.',
+        },
+        phrase_builder: {
+          title: 'بناء التعبيرات الأمريكية',
+          subtitle: 'افهم متى يستخدم الأمريكيون هذا التعبير وكيف يُنطق بسرعة المحادثة الطبيعية.',
+        },
+        think_aloud: {
+          title: 'طوّر طلاقتك التلقائية',
+          subtitle: 'احصل على صياغات أكثر طبيعية وتخلّص من التردد وحشوات الكلام.',
+        },
+        vocabulary: {
+          title: 'مراجعة المفردات بذكاء',
+          subtitle: 'تدرّب على كلماتك المحفوظة داخل جمل واقعية واكتشف الفروق الدقيقة بينها.',
+        },
+        word_lookup: {
+          title: 'فهم الكلمة في سياقها',
+          subtitle: 'اكتشف المعنى الدقيق والنبرة والأمثلة اليومية والنطق الأمريكي الأصيل.',
+        },
+      };
+      return (
+        arMap[t] || {
+          title: 'اسأل أي شيء بسياق كامل',
+          subtitle: 'أعرف الشاشة والنص الذي تدرسه الآن — اسأل بالعربية أو الإنجليزية نصياً أو صوتياً أو بصورة.',
+        }
+      );
+    }
+
+    const enMap = {
+      media_hub: hasId
+        ? {
+            title: 'Ask about this media session',
+            subtitle: 'I have the full transcript and timing in view — ask about nuance, linking, or phrasing.',
+          }
+        : {
+            title: 'Your Media Hub & Spoken Studio',
+            subtitle: 'Ask about American rhythm, connected speech, extracted phrases, or start a live speaking drill.',
+          },
+      shadowing: hasId
+        ? {
+            title: 'Ask about this lesson',
+            subtitle: 'I have the full transcript and timing in view — ask about nuance, linking, or phrasing.',
+          }
+        : {
+            title: 'Your Shadowing & Speaking Coach',
+            subtitle: 'Ask about American rhythm, connected speech, phrasing, or start a live speaking drill.',
+          },
+      dialogue: {
+        title: 'Break down this dialogue',
+        subtitle: 'Explore speaker tone, casual contractions, and natural American alternatives.',
+      },
+      phonetics: {
+        title: 'Articulation & Accent Coach',
+        subtitle: 'Ask about tongue placement, IPA breakdowns, flap-T, or natural stress timing.',
+      },
+      phrase_miner: {
+        title: 'Explore extracted phrases',
+        subtitle: 'Compare casual vs. sharp phrasing and drill these expressions in realistic dialogues.',
+      },
+      phrase_builder: {
+        title: 'Master this expression',
+        subtitle: 'See when natives actually say it, how it reduces at speed, and practice in context.',
+      },
+      think_aloud: {
+        title: 'Sharpen your spontaneous flow',
+        subtitle: 'Upgrade phrasing, trim fillers, and build a crisp spoken structure.',
+      },
+      vocabulary: {
+        title: 'Drill your saved vocabulary',
+        subtitle: 'Test recall in context, compare close synonyms, and spot common preposition traps.',
+      },
+      word_lookup: {
+        title: 'Explore word nuance',
+        subtitle: 'Get natural American examples, register differences, and pronunciation tips.',
+      },
+    };
+
+    return (
+      enMap[t] || {
+        title: 'Ask anything with full context',
+        subtitle: 'I know the active screen, transcript, or phrase you are studying — ask by text, voice, or screenshot.',
+      }
+    );
+  }
+
   function notifyChange() {
     const ctx = getActiveContext();
     listeners.forEach((fn) => {
@@ -302,6 +435,7 @@
     registerProvider,
     getActiveContext,
     getStarterChips,
+    getEmptyStateCopy,
     notifyChange,
     subscribe,
   };

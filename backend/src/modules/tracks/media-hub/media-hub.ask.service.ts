@@ -7,8 +7,8 @@ import { HistoryItem, HistoryRepository, RequestIdentityScope } from '../../../c
 import { formatTimestampMs } from '../../../core/linguistics/segmentation';
 import { AiProvidersService } from '../../ai-providers/ai-providers.service';
 import { MediaTranscriptionService } from '../../american-extractor/sources/media-transcription.service';
-import { ShadowingReviewService } from './shadowing.review.service';
-import { ShadowingAskMessage, TranscriptSentence } from './shadowing.types';
+import { MediaHubReviewService } from './media-hub.review.service';
+import { MediaHubAskMessage, TranscriptSentence } from './media-hub.types';
 
 const EXT_BY_MIME: Record<string, string> = {
   'audio/webm': '.webm',
@@ -37,8 +37,8 @@ export interface AskLessonDto {
 
 export interface AskLessonResponse {
   answer: string;
-  userMessage: ShadowingAskMessage;
-  assistantMessage: ShadowingAskMessage;
+  userMessage: MediaHubAskMessage;
+  assistantMessage: MediaHubAskMessage;
   providerName: string;
   modelUsed: string;
   variantUsed: string;
@@ -54,7 +54,7 @@ function formatMsClock(ms: number): string {
 /**
  * Pure system prompt builder for the Context-Aware Native American English Companion.
  */
-export function buildShadowingAskSystemPrompt(nativeLanguage = 'ar'): string {
+export function buildMediaHubAskSystemPrompt(nativeLanguage = 'ar'): string {
   const langCode = String(nativeLanguage || 'ar').trim() || 'ar';
   return `You are an elite Native American English Thinking & Speaking Mentor embedded directly inside the learner's active video/audio transcript studio.
 
@@ -117,7 +117,7 @@ function pickCanonicalSentencesForView(
 /**
  * Pure context assembly helper for unit-testable prompt grounding.
  */
-export function buildShadowingAskContextBundle(
+export function buildMediaHubAskContextBundle(
   lesson: HistoryItem,
   params: AskLessonDto,
 ): {
@@ -279,13 +279,13 @@ export function buildShadowingAskContextBundle(
 }
 
 @Injectable()
-export class ShadowingAskService {
-  private readonly logger = new Logger(ShadowingAskService.name);
+export class MediaHubAskService {
+  private readonly logger = new Logger(MediaHubAskService.name);
 
   constructor(
     private readonly historyRepo: HistoryRepository,
     private readonly aiProviders: AiProvidersService,
-    private readonly reviewService: ShadowingReviewService,
+    private readonly reviewService: MediaHubReviewService,
     private readonly mediaTranscription: MediaTranscriptionService,
   ) {}
 
@@ -319,8 +319,8 @@ export class ShadowingAskService {
     }
 
     const nativeLanguage = scope?.user?.nativeLanguage || 'ar';
-    const systemPrompt = buildShadowingAskSystemPrompt(nativeLanguage);
-    const { userPrompt } = buildShadowingAskContextBundle(lesson, {
+    const systemPrompt = buildMediaHubAskSystemPrompt(nativeLanguage);
+    const { userPrompt } = buildMediaHubAskContextBundle(lesson, {
       ...dto,
       question,
     });
@@ -347,7 +347,7 @@ export class ShadowingAskService {
     }
 
     const now = new Date().toISOString();
-    const userMessage: ShadowingAskMessage = {
+    const userMessage: MediaHubAskMessage = {
       id: `ask_u_${randomUUID().slice(0, 12)}`,
       role: 'user',
       content: question,
@@ -357,7 +357,7 @@ export class ShadowingAskService {
       ...(dto.speaker?.trim() ? { speaker: dto.speaker.trim().slice(0, 64) } : {}),
       createdAt: now,
     };
-    const assistantMessage: ShadowingAskMessage = {
+    const assistantMessage: MediaHubAskMessage = {
       id: `ask_a_${randomUUID().slice(0, 12)}`,
       role: 'assistant',
       content: answer,
@@ -373,7 +373,7 @@ export class ShadowingAskService {
 
     const executionTimeMs = response.executionTimeMs || Date.now() - startedAt;
     this.logger.log(
-      `Shadowing Ask answered for ${lesson.id} in ${executionTimeMs}ms (${response.modelUsed})`,
+      `Media Hub Ask answered for ${lesson.id} in ${executionTimeMs}ms (${response.modelUsed})`,
     );
 
     return {
@@ -422,7 +422,7 @@ export class ShadowingAskService {
         skipCache: true,
         wordTimestamps: false,
         cloudStt,
-        allowLocalWhisper: true,
+        allowLocalWhisper: false,
       });
       return {
         text: String(result.text || '').trim(),

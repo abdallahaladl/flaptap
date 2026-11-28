@@ -8,15 +8,15 @@ import {
   formatTimestampMs,
   segmentParagraphs,
   segmentSentences,
-  ShadowingPacingMode,
+  MediaHubPacingMode,
 } from '../linguistics/segmentation';
 import type {
-  ShadowingMediaPlayback,
-  ShadowingTranscriptData,
+  MediaHubMediaPlayback,
+  MediaHubTranscriptData,
   TimedWordMs,
   TranscriptAvailabilityStatus,
   TranscriptReviewStatus,
-} from '../../modules/tracks/shadowing/shadowing.types';
+} from '../../modules/tracks/media-hub/media-hub.types';
 
 export interface RequestIdentityScope {
   userId?: string | null;
@@ -131,7 +131,7 @@ export interface HistoryItem {
   id: string;
   userId?: string | null;
   guestToken?: string | null;
-  track: 'shadowing' | 'street_talk' | 'phonetics' | 'creator_script';
+  track: 'media_hub' | 'street_talk' | 'phonetics' | 'creator_script';
   trackTitle: string;
   title: string;
   creator: string;
@@ -140,8 +140,8 @@ export interface HistoryItem {
   sourceKey?: string;
   sourceUrl: string;
   platform?: string;
-  media?: ShadowingMediaPlayback;
-  transcriptData?: ShadowingTranscriptData;
+  media?: MediaHubMediaPlayback;
+  transcriptData?: MediaHubTranscriptData;
   transcriptStatus?: TranscriptAvailabilityStatus;
   transcriptError?: string;
   reviewStatus?: TranscriptReviewStatus;
@@ -168,7 +168,7 @@ export interface HistoryItem {
   };
   chunks?: ChunkItem[];
   sentences?: SentenceItem[];
-  pacingMode?: ShadowingPacingMode;
+  pacingMode?: MediaHubPacingMode;
   translationsCache?: Record<string, Record<number, string>>;
   translationsByText?: Record<string, Record<string, string>>;
   translationEngineVersion?: number;
@@ -605,9 +605,9 @@ export class HistoryRepository {
     const platform =
       item.platform ||
       item.transcriptData?.platform ||
-      (item.track === 'shadowing' && item.videoId ? 'YouTube' : '');
+      (item.track === 'media_hub' && item.videoId ? 'YouTube' : '');
     const mediaKind =
-      item.media?.mediaKind || (item.track === 'shadowing' && item.videoId ? 'youtube' : 'none');
+      item.media?.mediaKind || (item.track === 'media_hub' && item.videoId ? 'youtube' : 'none');
     const reviewStatus: TranscriptReviewStatus =
       item.transcriptData?.reviewStatus || (item.transcriptData?.reviewed ? 'ready' : 'pending');
     const speakerCount = Math.max(
@@ -750,9 +750,10 @@ export class HistoryRepository {
       WHERE ${where.sql}
     `;
 
-    if (track && track !== 'all') {
+    const normalizedTrack = track === 'shadowing' ? 'media_hub' : track;
+    if (normalizedTrack && normalizedTrack !== 'all') {
       sql += ' AND track = ?';
-      params.push(track);
+      params.push(normalizedTrack);
     }
 
     sql += ' ORDER BY updated_at DESC, created_at DESC';
@@ -778,7 +779,7 @@ export class HistoryRepository {
           : Math.round(((Number(row.duration_seconds) || 60) / 60) * (Number(row.pacing_wpm) || 140));
       const platform =
         String(row.platform || '') ||
-        (String(row.track) === 'shadowing' && videoId ? 'YouTube' : '');
+        (String(row.track) === 'media_hub' && videoId ? 'YouTube' : '');
 
       return {
         id: String(row.id),
@@ -872,7 +873,7 @@ export class HistoryRepository {
     const where = this.scopeWhereClause(scope);
     const row = this.sqlite.db
       .prepare(
-        `SELECT * FROM lessons WHERE ${where.sql} AND track = 'shadowing' AND source_key = ? ORDER BY updated_at DESC LIMIT 1`,
+        `SELECT * FROM lessons WHERE ${where.sql} AND track = 'media_hub' AND source_key = ? ORDER BY updated_at DESC LIMIT 1`,
       )
       .get(...where.params, cleanKey);
     return row ? this.rowToItem(row) : undefined;
@@ -907,7 +908,7 @@ export class HistoryRepository {
     if (cleanVid) {
       const row = this.sqlite.db
         .prepare(
-          `SELECT * FROM lessons WHERE ${where.sql} AND track = 'shadowing' AND LOWER(video_id) = ? ORDER BY updated_at DESC LIMIT 1`,
+          `SELECT * FROM lessons WHERE ${where.sql} AND track = 'media_hub' AND LOWER(video_id) = ? ORDER BY updated_at DESC LIMIT 1`,
         )
         .get(...where.params, cleanVid);
       if (row) return this.rowToItem(row);
@@ -1028,7 +1029,8 @@ export class HistoryRepository {
 
   clearAll(scope?: RequestIdentityScope, track?: string): number {
     const where = this.scopeWhereClause(scope);
-    const cleanTrack = String(track || '').trim();
+    const rawTrack = String(track || '').trim();
+    const cleanTrack = rawTrack === 'shadowing' ? 'media_hub' : rawTrack;
     const hasTrack = cleanTrack && cleanTrack !== 'all';
 
     const lessonRows = hasTrack
@@ -1442,7 +1444,7 @@ export class HistoryRepository {
     const summaries = this.findSummaries(undefined, scope);
 
     const byTrack = {
-      shadowing: 0,
+      media_hub: 0,
       street_talk: 0,
       phonetics: 0,
     };
@@ -1459,7 +1461,7 @@ export class HistoryRepository {
     for (const s of summaries) {
       if (s.track === 'street_talk') byTrack.street_talk++;
       else if (s.track === 'phonetics') byTrack.phonetics++;
-      else byTrack.shadowing++;
+      else byTrack.media_hub++;
 
       totalLessonsBytes += Number(s.payloadBytes) || 0;
       if (s.cacheInfo?.aiCoachCached) aiCoachCachedCount++;
@@ -1483,7 +1485,7 @@ export class HistoryRepository {
               p.id,
               p.lesson_id AS lessonId,
               COALESCE(l.title, 'Deleted Lesson') AS lessonTitle,
-              COALESCE(l.track, 'shadowing') AS track,
+              COALESCE(l.track, 'media_hub') AS track,
               p.mode,
               p.drills_count AS drillsCount,
               p.duration_sec AS durationSec,

@@ -27,7 +27,7 @@ body::before {
   max-width: var(--ap-content-max);
   width: 100%;
   margin: 0 auto;
-  padding: 14px 64px 64px;
+  padding: 14px 64px 88px;
 }
 
 .app-sidebar {
@@ -263,19 +263,17 @@ html[data-sidebar="collapsed"] .sidebar-header .icon-btn.sidebar-collapse-btn:ho
    REDESIGNED APPLE LIQUID GLASS TOPBAR
    ========================================================================== */
 .workspace-topbar {
-  background: rgba(246, 246, 249, 0.80);
-  backdrop-filter: saturate(190%) blur(26px);
-  -webkit-backdrop-filter: saturate(190%) blur(26px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.065);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  background: var(--ap-canvas, #F5F5F7);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92);
   font-family: var(--ap-font-text);
 }
 
 [data-theme="dark"] .workspace-topbar {
-  background: rgba(11, 11, 13, 0.78);
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+  background: #0B0B0D;
+  border-bottom-color: rgba(255, 255, 255, 0.10);
   box-shadow:
-    inset 0 -1px 0 rgba(255, 255, 255, 0.025),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.03),
     0 12px 28px -22px rgba(0, 0, 0, 0.85);
 }
 
@@ -806,10 +804,14 @@ html[data-sidebar="collapsed"] .sidebar-header .icon-btn.sidebar-collapse-btn:ho
   font-weight: 400;
   letter-spacing: -0.01em;
   color: var(--ap-text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
   outline: none;
 }
 
 .command-input::placeholder {
+  text-overflow: ellipsis;
   color: var(--ap-text-tertiary);
 }
 
@@ -832,7 +834,10 @@ html[data-sidebar="collapsed"] .sidebar-header .icon-btn.sidebar-collapse-btn:ho
   }
 
   .desk-capabilities {
-    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding-inline-end: 108px;
   }
 }
 
@@ -899,27 +904,28 @@ html[data-sidebar="collapsed"] .sidebar-header .icon-btn.sidebar-collapse-btn:ho
 /* Supported Platforms & Capabilities Strip */
 .platform-chips-row {
   justify-content: center;
-  gap: 6px;
-  margin-top: 18px;
+  gap: 5px;
+  margin-top: 16px;
 }
 
 .platform-row-label {
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 500;
   color: var(--ap-text-tertiary);
-  margin-inline-end: 4px;
+  margin-inline-end: 3px;
 }
 
 .platform-chip {
-  height: 24px;
-  padding: 0 10px;
+  height: 23px;
+  padding: 0 8.5px;
   border-radius: var(--ap-radius-pill);
   border: 1px solid var(--ap-border);
   background: var(--ap-fill-subtle);
   color: var(--ap-text-secondary);
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: -0.005em;
+  white-space: nowrap;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
@@ -1313,18 +1319,22 @@ html[data-sidebar="collapsed"] .sidebar-header .icon-btn.sidebar-collapse-btn:ho
 
 .apple-stat-head {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
+  min-height: 34px;
 }
 
 .telemetry-label {
   font-family: var(--ap-font-text);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 500;
+  line-height: 1.28;
   text-transform: none;
   letter-spacing: -0.005em;
   color: var(--ap-text-secondary);
+  white-space: normal;
+  overflow: visible;
 }
 
 .apple-stat-icon {
@@ -1575,7 +1585,12 @@ html[data-sidebar="collapsed"] .sidebar-header .icon-btn.sidebar-collapse-btn:ho
 .ft-shelf-dock .filter-pills {
   flex: 0 1 auto;
   min-width: 0;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+
+.ft-shelf-dock .filter-pill {
+  padding: 5px 10px;
+  font-size: 0.78rem;
 }
 
 .ft-shelf-dock .ft-dock-search {
@@ -2992,6 +3007,25 @@ select.field-input {
    12. RESPONSIVE BREAKPOINTS & ACCESSIBILITY
    -------------------------------------------------------------------------- */
 
+@media (max-width: 1180px) {
+  .telemetry-strip {
+    gap: 10px;
+  }
+
+  .telemetry-cell,
+  .telemetry-cell:last-child {
+    padding: 14px 13px 16px;
+  }
+
+  .telemetry-label {
+    font-size: 0.72rem;
+  }
+
+  .ft-shelf-dock .filter-pills {
+    flex-wrap: wrap;
+  }
+}
+
 @media (max-width: 1080px) {
   .usage-overview-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3016,7 +3050,7 @@ select.field-input {
   }
 
   .workspace-main {
-    padding: 18px 18px 48px;
+    padding: 18px 18px 88px;
   }
 
   .editorial-desk,
@@ -3107,16 +3141,29 @@ select.field-input {
   }
 
   .workspace-main {
-    padding: 16px 14px 44px;
+    padding: 16px 14px 88px;
   }
 
   .editorial-desk,
   .editorial-desk.apple-lessons-hero,
   .editorial-desk.apple-centered-hero,
   .lexicon-desk {
-    padding: 24px 16px 22px;
+    padding: 22px 16px 26px;
     border-radius: 20px;
     text-align: start;
+  }
+
+  .editorial-desk.apple-lessons-hero {
+    padding-bottom: 58px;
+  }
+
+  .editorial-desk.apple-lessons-hero .desk-kicker,
+  .editorial-desk.apple-centered-hero .desk-kicker {
+    margin-inline: 0;
+  }
+
+  .editorial-desk.apple-lessons-hero .lessons-input-mode-switch {
+    margin-inline: 0;
   }
 
   .editorial-desk.apple-lessons-hero .desk-headline,
@@ -3153,7 +3200,10 @@ select.field-input {
   }
 
   .desk-capabilities {
-    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding-inline-end: 108px;
   }
 
   .telemetry-cell {
@@ -3333,6 +3383,11 @@ select.field-input {
   color: var(--ap-text-secondary);
   cursor: pointer;
   transition: border-color 0.18s var(--ap-ease), background-color 0.18s var(--ap-ease), transform 0.14s var(--ap-ease);
+}
+
+[data-theme="dark"] .lessons-dropzone {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .lessons-dropzone:hover,

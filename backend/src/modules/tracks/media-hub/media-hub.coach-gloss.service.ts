@@ -44,8 +44,8 @@ interface CoachGlossSourceEntry {
  * visit renders instantly with zero extra model calls.
  */
 @Injectable()
-export class ShadowingCoachGlossService {
-  private readonly logger = new Logger(ShadowingCoachGlossService.name);
+export class MediaHubCoachGlossService {
+  private readonly logger = new Logger(MediaHubCoachGlossService.name);
   private readonly inFlight = new Map<string, Promise<CoachGlossResponse>>();
 
   constructor(

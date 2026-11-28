@@ -33,7 +33,8 @@ export type CoreExtractorCategory =
   | 'metaphor_figurative'
   | 'cultural_reference'
   | 'pragmatics_context'
-  | 'native_response';
+  | 'native_response'
+  | 'key_sentence';
 
 export type AudioExtractorCategory =
   | 'connected_speech'
@@ -97,6 +98,7 @@ export interface ExtractorItem {
   term: string;
   surface: string;
   category: ExtractorItemCategory;
+  partOfSpeech?: string;
   register: string;
   ipa: string;
   cefr?: string;
@@ -112,9 +114,14 @@ export interface ExtractorItem {
   exampleTranslation?: string;
   techNote?: string;
   tags?: string[];
+  /** 1-based Media Hub Studio sentence index when grounded in a lesson transcript. */
+  sentenceIndex?: number;
   /** Exact millisecond-accurate playback boundaries in source audio/video when available. */
   startSec?: number;
   endSec?: number;
+  /** Exact word-level millisecond boundaries for the phrase/word itself inside the sentence. */
+  phraseStartSec?: number;
+  phraseEndSec?: number;
   grounded: boolean;
 }
 
@@ -217,6 +224,21 @@ export interface PaginatedHistoryResult {
   };
 }
 
+export interface TimedSentenceWord {
+  word: string;
+  clean: string;
+  startMs: number;
+  endMs: number;
+}
+
+export interface TimedSentenceAnchor {
+  index: number;
+  startSec: number;
+  endSec: number;
+  text: string;
+  words?: TimedSentenceWord[];
+}
+
 export interface ResolvedSource {
   sourceId?: string;
   sourceKey?: string;
@@ -232,6 +254,7 @@ export interface ResolvedSource {
   mediaId?: string;
   durationSeconds?: number;
   segments?: SourceSegment[];
+  timedSentences?: TimedSentenceAnchor[];
   needsContextualTitle?: boolean;
   submittedFileNames?: string[];
   sourceMeta: Record<string, any>;

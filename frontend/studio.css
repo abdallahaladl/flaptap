@@ -467,7 +467,7 @@ html:has(.studio-body),
 
 .studio-workspace[data-layout="theater"] .sentences-list,
 .studio-workspace[data-layout="focus"] .sentences-list {
-  padding: 10px 10px 24px;
+  padding: 10px 10px 84px;
   gap: 8px;
 }
 
@@ -1673,9 +1673,102 @@ body.studio-body:focus {
 .studio-canvas[data-active-mode="shadow"] #canvas-progress-dock [data-for-mode]:not([data-for-mode="shadow"]),
 .studio-canvas[data-active-mode="read"] #canvas-progress-dock [data-for-mode]:not([data-for-mode="read"]),
 .studio-canvas[data-active-mode="listen"] #canvas-progress-dock [data-for-mode]:not([data-for-mode="listen"]),
-.studio-canvas[data-active-mode="coach"] #canvas-progress-dock [data-for-mode]:not([data-for-mode="coach"]),
+.studio-canvas[data-active-mode="insights"] #canvas-progress-dock [data-for-mode]:not([data-for-mode="insights"]),
 .studio-canvas[data-active-mode="listen"] .studio-comp-filter {
   display: none !important;
+}
+
+/* Unified Insights Mode (Lexicon A1-C2 + Prosody & Highlights Coach) */
+.insights-view {
+  display: flex;
+  flex-direction: column;
+}
+
+.insights-subbar-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  max-width: 880px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 12px 20px 6px;
+}
+
+.insights-subbar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 980px;
+  background: var(--ap-fill-subtle, rgba(118, 118, 128, 0.1));
+  border: 1px solid var(--ap-border, var(--rule));
+}
+
+.insights-subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 14px;
+  border-radius: 980px;
+  border: none;
+  background: transparent;
+  color: var(--ink-secondary);
+  font-size: 0.81rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.insights-subtab:hover {
+  color: var(--ink);
+}
+
+.insights-subtab.active {
+  background: var(--bg-sheet);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.coach-loop-btn.active {
+  background: var(--ap-orange-wash, rgba(255, 149, 0, 0.14));
+  border-color: var(--ap-orange-solid, #FF9500);
+  color: var(--ap-orange, #C93400);
+}
+
+.notes-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+}
+
+.notes-tools #notes-save-indicator {
+  margin-inline-start: auto;
+}
+
+.notes-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 980px;
+  border: 1px solid var(--rule-strong);
+  background: var(--bg-paper);
+  color: var(--ink-secondary);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.13s ease, color 0.13s ease, border-color 0.13s ease;
+}
+
+.notes-tool-btn:hover {
+  background: var(--bg-inset);
+  color: var(--ink);
+  border-color: var(--ap-blue, #0071E3);
 }
 
 .canvas-progress-actions {
@@ -1853,7 +1946,14 @@ body.studio-body:focus {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 12px 14px 28px;
+  padding: 12px 14px 84px;
+}
+
+.sentence-driller-card,
+.editorial-paragraph-block,
+.coach-item-card,
+.stx-card {
+  scroll-margin-top: 245px;
 }
 
 .sentence-driller-card {
@@ -2140,7 +2240,7 @@ body.studio-body:focus {
    ========================================================================== */
 
 .editorial-article-view {
-  padding: 28px 32px 36px;
+  padding: 20px 26px 84px;
   max-width: 72ch;
   margin: 0 auto;
 }
@@ -2197,7 +2297,10 @@ body.studio-body:focus {
    ========================================================================== */
 
 .dictation-view {
-  padding: 24px 26px 32px;
+  max-width: 920px;
+  width: 100%;
+  margin-inline: auto;
+  padding: 16px 18px 84px;
 }
 
 .dictation-toolbar {
@@ -2283,9 +2386,9 @@ body.studio-body:focus {
   flex-direction: column;
   gap: 0;
   width: 100%;
-  max-width: 920px;
+  max-width: 880px;
   margin-inline: auto;
-  padding: 22px 22px 36px;
+  padding: 8px 20px 96px;
 }
 
 /* --- Speaker & prosody brief --------------------------------------------- */
@@ -2959,8 +3062,12 @@ body.studio-body:focus {
 }
 
 @media (max-width: 640px) {
+  .insights-subbar-wrap {
+    padding: 10px 14px 4px;
+  }
+
   .coach-view {
-    padding: 16px 12px 28px;
+    padding: 8px 14px 56px;
   }
 
   .coach-brief-card {
@@ -3013,15 +3120,18 @@ body.studio-body:focus {
    ========================================================================== */
 
 .notes-view {
-  padding: 24px;
+  max-width: 920px;
+  width: 100%;
+  margin-inline: auto;
+  padding: 14px 18px 84px;
 }
 
 .notes-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
 .study-notes-textarea {
@@ -3448,7 +3558,7 @@ body.studio-body:focus {
   }
 
   .sentences-list {
-    padding: 8px 8px 24px;
+    padding: 8px 8px 84px;
     gap: 8px;
   }
 

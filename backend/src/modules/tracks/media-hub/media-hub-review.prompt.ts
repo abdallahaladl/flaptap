@@ -1,5 +1,5 @@
 import { extractJsonBlock, repairAndParseJson } from '../../learning-library/utils/json-salvage.util';
-import { TranscriptSentence } from './shadowing.types';
+import { TranscriptSentence } from './media-hub.types';
 import { DraftReviewedIdea, DraftReviewedSentence } from './utils/word-alignment.util';
 
 export interface TranscriptReviewChunk {

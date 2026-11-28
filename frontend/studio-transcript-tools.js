@@ -651,7 +651,7 @@
      ======================================================================== */
 
   async function streamReviewLesson({ lessonId, opts = {}, headers = {}, signal, onProgress }) {
-    const res = await fetch(`/api/tracks/shadowing/${encodeURIComponent(lessonId)}/review/stream`, {
+    const res = await fetch(`/api/tracks/media-hub/${encodeURIComponent(lessonId)}/review/stream`, {
       method: 'POST',
       headers: Object.assign({ 'Content-Type': 'application/json' }, headers),
       body: JSON.stringify({

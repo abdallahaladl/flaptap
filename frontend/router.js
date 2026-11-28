@@ -10,12 +10,12 @@
   const SIDEBAR_COLLAPSE_KEY = 'flaptap_sidebar_collapsed';
 
   const ROUTE_TABLE = {
-    lessons: {
-      section: 'lessons',
+    'media-hub': {
+      section: 'media-hub',
       path: '/',
-      aliases: ['/lessons', '/shadowing', '/index.html'],
-      title: 'Shadowing',
-      i18nKey: 'navLessons',
+      aliases: ['/media', '/media-hub', '/lessons', '/shadowing', '/index.html'],
+      title: 'Media Hub',
+      i18nKey: 'navMediaHub',
       group: 'Studio',
       groupI18nKey: 'navGroupStudio',
     },
@@ -105,7 +105,15 @@
 
   function normalizeSectionAlias(raw) {
     const val = String(raw || '').trim().toLowerCase();
-    if (val === 'shadowing' || val === 'lessons') return 'lessons';
+    if (
+      val === 'media' ||
+      val === 'media-hub' ||
+      val === 'media_hub' ||
+      val === 'shadowing' ||
+      val === 'lessons'
+    ) {
+      return 'media-hub';
+    }
     if (val === 'dialogue' || val === 'dialogues') return 'dialogue';
     if (val === 'pronunciation' || val === 'phonetics') return 'pronunciation';
     if (val === 'think' || val === 'think-aloud' || val === 'spontaneous' || val === 'thinking') {
@@ -285,7 +293,7 @@
     for (const def of Object.values(ROUTE_TABLE)) {
       if (def.path === pathname || def.aliases.includes(pathname)) {
         // Legacy `?section=...` on `/` (only convert when explicitly requested on root)
-        if (def.section === 'lessons' && params.has('section')) {
+        if (def.section === 'media-hub' && params.has('section')) {
           const legacyTarget = normalizeSectionAlias(params.get('section'));
           if (legacyTarget) {
             return {
@@ -309,9 +317,9 @@
       }
     }
 
-    // Unknown workspace path defaults safely to Lessons
+    // Unknown workspace path defaults safely to Media Hub
     return {
-      section: 'lessons',
+      section: 'media-hub',
       subview: '',
       domainId: '',
       noteId: '',
@@ -321,7 +329,7 @@
   }
 
   function buildUrl(section, options = {}) {
-    const def = ROUTE_TABLE[section] || ROUTE_TABLE.lessons;
+    const def = ROUTE_TABLE[section] || ROUTE_TABLE['media-hub'];
     let pathname = def.path;
     const nextParams = new URLSearchParams();
 
@@ -418,7 +426,7 @@
   }
 
   function updateDocumentAndChrome(route, opts = {}) {
-    const def = ROUTE_TABLE[route.section] || ROUTE_TABLE.lessons;
+    const def = ROUTE_TABLE[route.section] || ROUTE_TABLE['media-hub'];
     const translatedTitle =
       typeof labelTranslator === 'function' ? labelTranslator(def.i18nKey) || def.title : def.title;
     const translatedGroup =
@@ -429,8 +437,8 @@
 
     document.title = subLabel
       ? `${translatedTitle} · ${subLabel} — Flaptap`
-      : route.section === 'lessons'
-        ? 'Flaptap — Spoken English Studio'
+      : route.section === 'media-hub'
+        ? 'Flaptap — Media Hub & Spoken Studio'
         : `${translatedTitle} — Flaptap`;
 
     document.documentElement.setAttribute('data-active-section', route.section);
@@ -508,7 +516,7 @@
   }
 
   function navigate(targetSection, options = {}) {
-    const resolvedSection = normalizeSectionAlias(targetSection) || 'lessons';
+    const resolvedSection = normalizeSectionAlias(targetSection) || 'media-hub';
     const nextUrl = buildUrl(resolvedSection, options);
     const currentFull = `${normalizePath(global.location.pathname)}${global.location.search || ''}`;
 
@@ -546,6 +554,8 @@
 
   const CANONICALIZABLE_ALIASES = new Set([
     '/index.html',
+    '/media',
+    '/media-hub',
     '/lessons',
     '/shadowing',
     '/dialogues',

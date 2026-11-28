@@ -471,8 +471,8 @@
         const isYouTube = /youtube\.com|youtu\.be/i.test(note.sourceUrl || '');
         studioBtn.hidden = !(lessonId || isYouTube);
         studioBtn.dataset.aexStudio = lessonId
-          ? `/studio?id=${encodeURIComponent(lessonId)}`
-          : `/studio?url=${encodeURIComponent(note.sourceUrl)}`;
+          ? `/studio?id=${encodeURIComponent(lessonId)}&mode=extract`
+          : `/studio?url=${encodeURIComponent(note.sourceUrl)}&mode=extract`;
         if (studioLabel) studioLabel.textContent = lessonId ? 'Open Lesson' : 'Open in Studio';
       }
 
@@ -524,7 +524,7 @@
         const studioLabel = el('aex-studio-btn-label');
         if (studioBtn && res?.lesson?.id) {
           studioBtn.hidden = false;
-          studioBtn.dataset.aexStudio = `/studio?id=${encodeURIComponent(res.lesson.id)}`;
+          studioBtn.dataset.aexStudio = `/studio?id=${encodeURIComponent(res.lesson.id)}&mode=extract`;
           studioBtn.title = `Open synced Studio lesson (${res.lesson.sentencesCount} sentences · zero re-fetch)`;
           if (studioLabel) studioLabel.textContent = 'Open Lesson';
         }
@@ -546,24 +546,48 @@
       });
     }
 
+    const CEFR_RANK_MAP = { A1: 1, A2: 2, B1: 3, B2: 4, C1: 5, C2: 6 };
+    const CEFR_THRESHOLD_MIN = { a2_plus: 2, b1_plus: 3, b2_plus: 4, c1_plus: 5 };
+
+    function matchesLevelFilter(cefrValue, filterVal) {
+      if (!filterVal || filterVal === 'all') return true;
+      const cefr = String(cefrValue || '').trim().toUpperCase();
+      if (Object.prototype.hasOwnProperty.call(CEFR_THRESHOLD_MIN, filterVal)) {
+        const rank = CEFR_RANK_MAP[cefr];
+        return rank ? rank >= CEFR_THRESHOLD_MIN[filterVal] : true;
+      }
+      return cefr === String(filterVal).trim().toUpperCase();
+    }
+
     function renderLevelFilter(note) {
       const select = el('aex-note-level-filter');
       if (!select) return;
+      const rank = (lv) => CEFR_RANK_MAP[String(lv || '').toUpperCase()] || 99;
       const levels = Array.from(
-        new Set((note.items || []).map((i) => i.cefr).filter(Boolean)),
-      ).sort();
+        new Set((note.items || []).map((i) => String(i.cefr || '').toUpperCase()).filter(Boolean)),
+      ).sort((a, b) => rank(a) - rank(b));
       if (levels.length <= 1) {
         select.hidden = true;
         select.value = 'all';
         local.filterLevel = 'all';
         return;
       }
+      const thresholdOptions = [];
+      const hasAtLeast = (minRank) => levels.some((lv) => rank(lv) >= minRank);
+      const hasBelow = (minRank) => levels.some((lv) => rank(lv) < minRank);
+      if (hasAtLeast(2) && hasBelow(2)) thresholdOptions.push('<option value="a2_plus">A2+ (Hide A1)</option>');
+      if (hasAtLeast(3) && hasBelow(3)) thresholdOptions.push('<option value="b1_plus">B1+ (Hide A1–A2)</option>');
+      if (hasAtLeast(4) && hasBelow(4)) thresholdOptions.push('<option value="b2_plus">B2+ (Advanced)</option>');
+      if (hasAtLeast(5) && hasBelow(5)) thresholdOptions.push('<option value="c1_plus">C1+ (Expert)</option>');
+
       select.hidden = false;
       select.innerHTML = [
         '<option value="all">All CEFR</option>',
-        ...levels.map((lv) => `<option value="${escapeHtml(lv)}">CEFR ${escapeHtml(lv)}</option>`),
+        ...thresholdOptions,
+        ...levels.map((lv) => `<option value="${escapeHtml(lv)}">Exact: ${escapeHtml(lv)}</option>`),
       ].join('');
-      select.value = levels.includes(local.filterLevel) ? local.filterLevel : 'all';
+      const validValues = new Set(['all', 'a2_plus', 'b1_plus', 'b2_plus', 'c1_plus', ...levels]);
+      select.value = validValues.has(local.filterLevel) ? local.filterLevel : 'all';
     }
 
     function renderCategoryFilters(note) {
@@ -615,7 +639,7 @@
       return (note?.items || []).filter((item) => {
         if (local.scopeRemaining && completedSet.has(Number(item.index))) return false;
         if (local.filterCategory !== 'all' && item.category !== local.filterCategory) return false;
-        if (local.filterLevel !== 'all' && item.cefr !== local.filterLevel) return false;
+        if (!matchesLevelFilter(item.cefr, local.filterLevel)) return false;
         if (!query) return true;
         return [
           item.term,

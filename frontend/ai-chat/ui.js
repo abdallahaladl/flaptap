@@ -30,12 +30,22 @@
     { cmd: '/summarize', label: 'Key takeaways', text: 'Summarize the highest-value spoken takeaways from this context in crisp bullets.' },
   ];
 
+  const DEFAULT_PERSONAS = [
+    { id: 'smart_mentor', label: 'Native Mentor', shortLabel: 'Mentor', description: 'Context-aware spoken American coach' },
+    { id: 'accent_coach', label: 'Pronunciation & Prosody', shortLabel: 'Accent', description: 'Connected speech, IPA & mouth mechanics' },
+    { id: 'natural_rewrite', label: 'Natural Rewriter', shortLabel: 'Rewrite', description: 'Casual to sharp native upgrades' },
+    { id: 'grammar_nuance', label: 'Grammar & Nuance', shortLabel: 'Nuance', description: 'Modals, tenses & real usage' },
+    { id: 'roleplay', label: 'Roleplay Partner', shortLabel: 'Roleplay', description: 'Interactive spoken conversation' },
+    { id: 'general', label: 'General Assistant', shortLabel: 'General', description: 'Any topic, fast and versatile' },
+  ];
+
   let mounted = false;
   let aiSelector = null;
   let voiceCtrl = null;
   let scrollStickyLock = true;
   let streamRenderRaf = 0;
   let renamingThreadId = '';
+  let personaPopoverOpen = false;
 
   function el(id) {
     return document.getElementById(id);
@@ -112,22 +122,25 @@
     root.id = 'ft-ai-root';
     root.className = 'ft-ai-root';
     root.innerHTML = `
-      <!-- Living Animated Floating AI Launcher -->
+      <!-- Apple Liquid Glass Floating AI Launcher -->
       <button type="button" id="ft-ai-fab" class="ft-ai-fab" aria-label="Open Flaptap AI Chat (Cmd+J)" aria-expanded="false" aria-controls="ft-ai-drawer">
-        <span class="ft-ai-fab-aura" aria-hidden="true"></span>
-        <span class="ft-ai-fab-rim" aria-hidden="true"></span>
+        <span class="ft-ai-fab-tooltip" aria-hidden="true">
+          <span class="ft-ai-fab-tooltip-dot"></span>
+          <span class="ft-ai-fab-ctx" id="ft-ai-fab-ctx">AI Mentor</span>
+          <kbd class="ft-ai-fab-kbd">⌘J</kbd>
+        </span>
         <span class="ft-ai-fab-surface">
-          <span class="ft-ai-fab-wave" aria-hidden="true">
-            <span class="ft-ai-wave-bar"></span>
-            <span class="ft-ai-wave-bar"></span>
-            <span class="ft-ai-wave-bar"></span>
-            <span class="ft-ai-wave-bar"></span>
+          <span class="ft-ai-fab-sheen" aria-hidden="true"></span>
+          <span class="ft-ai-fab-orb" aria-hidden="true">
+            <svg class="ft-ai-fab-spark" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"></path></svg>
+            <span class="ft-ai-fab-wave" aria-hidden="true">
+              <span class="ft-ai-wave-bar"></span>
+              <span class="ft-ai-wave-bar"></span>
+              <span class="ft-ai-wave-bar"></span>
+              <span class="ft-ai-wave-bar"></span>
+            </span>
           </span>
-          <span class="ft-ai-fab-copy">
-            <span class="ft-ai-fab-title" id="ft-ai-fab-title">Ask AI</span>
-            <span class="ft-ai-fab-ctx" id="ft-ai-fab-ctx">AI Mentor</span>
-          </span>
-          <kbd class="ft-ai-fab-kbd" aria-hidden="true">⌘J</kbd>
+          <span class="ft-ai-fab-title" id="ft-ai-fab-title">Ask AI</span>
         </span>
       </button>
 
@@ -159,53 +172,59 @@
           </div>
         </aside>
 
+        <!-- Sidebar Scrim for Overlay Drawer Modes -->
+        <div id="ft-ai-sidebar-scrim" class="ft-ai-sidebar-scrim" hidden></div>
+
         <!-- Main Chat Stage -->
         <div class="ft-ai-main">
-          <header class="ft-ai-head">
+          <!-- Row 1: macOS Vibrancy Toolbar Header -->
+          <header class="ft-ai-head ft-ai-chat-head">
+            <span class="ft-ai-drag-pill" aria-hidden="true"></span>
             <div class="ft-ai-head-left">
               <button type="button" id="ft-ai-sidebar-toggle-btn" class="ft-ai-icon-btn" aria-label="Toggle conversations history" title="Conversations">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"></rect><line x1="9" y1="4" x2="9" y2="20"></line></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"></rect><line x1="9" y1="4" x2="9" y2="20"></line></svg>
               </button>
               <button type="button" id="ft-ai-quick-new-btn" class="ft-ai-icon-btn" aria-label="New chat" title="New Chat">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
               </button>
-              <div class="ft-ai-title-stack">
-                <div class="ft-ai-title-row">
-                  <span class="ft-ai-live-dot" aria-hidden="true"></span>
-                  <h2 id="ft-ai-title" class="ft-ai-title">Flaptap AI</h2>
-                </div>
-                <button type="button" id="ft-ai-ctx-pill" class="ft-ai-ctx-pill" aria-expanded="false" title="Inspect or toggle active workspace context">
-                  <span class="ft-ai-ctx-dot" aria-hidden="true"></span>
-                  <span id="ft-ai-ctx-pill-text">AI Mentor</span>
-                </button>
-              </div>
+              <h2 id="ft-ai-title" class="ft-ai-title">Flaptap AI</h2>
             </div>
 
             <div class="ft-ai-head-actions">
               <button type="button" id="ft-ai-mode-btn" class="ft-ai-pill-btn ft-ai-mode-btn ft-ai-desktop-only" aria-expanded="false" aria-controls="ft-ai-mode-popover" title="Switch AI Chat display mode (Split, Floating, Overlay, Theater, Full Page)">
                 <span id="ft-ai-mode-btn-icon" class="ft-ai-mode-btn-icon" aria-hidden="true"></span>
                 <span id="ft-ai-mode-btn-label">Split</span>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
               </button>
 
-              <button type="button" id="ft-ai-model-btn" class="ft-ai-pill-btn" aria-expanded="false" title="Choose AI Provider & Model">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
-                <span id="ft-ai-model-pill-label">Model</span>
-              </button>
-
-              <button type="button" id="ft-ai-settings-btn" class="ft-ai-icon-btn" aria-expanded="false" aria-label="AI Controls & Persona" title="Persona, Style & Instructions">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="2" y1="14" x2="6" y2="14"></line><line x1="10" y1="8" x2="14" y2="8"></line><line x1="18" y1="16" x2="22" y2="16"></line></svg>
+              <button type="button" id="ft-ai-settings-btn" class="ft-ai-icon-btn" aria-expanded="false" aria-label="AI Controls &amp; Persona" title="Persona, Style &amp; Instructions">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="2" y1="14" x2="6" y2="14"></line><line x1="10" y1="8" x2="14" y2="8"></line><line x1="18" y1="16" x2="22" y2="16"></line></svg>
               </button>
 
               <button type="button" id="ft-ai-export-btn" class="ft-ai-icon-btn" aria-label="Export conversation" title="Export Markdown (.md)">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
               </button>
 
-              <button type="button" id="ft-ai-close-btn" class="ft-ai-icon-btn ft-ai-close-btn" aria-label="Close AI Chat" title="Close">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              <button type="button" id="ft-ai-close-btn" class="ft-ai-icon-btn ft-ai-close-btn" aria-label="Close AI Chat" title="Close (Esc)">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
               </button>
             </div>
           </header>
+
+          <!-- Row 2: Slim Context & Model Ribbon -->
+          <div class="ft-ai-context-bar">
+            <button type="button" id="ft-ai-ctx-pill" class="ft-ai-ctx-pill" aria-expanded="false" aria-controls="ft-ai-ctx-popover" title="Inspect or toggle active workspace context">
+              <span class="ft-ai-ctx-dot" aria-hidden="true"></span>
+              <span id="ft-ai-ctx-pill-text">AI Mentor</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+
+            <button type="button" id="ft-ai-model-btn" class="ft-ai-pill-btn ft-ai-model-chip" aria-expanded="false" aria-controls="ft-ai-model-panel" title="Choose AI Provider &amp; Model">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
+              <span id="ft-ai-model-pill-label">Model</span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+          </div>
 
           <!-- Extensible Visual Display Mode Picker Popover -->
           <div id="ft-ai-mode-popover" class="ft-ai-subpanel ft-ai-mode-popover" hidden>
@@ -216,7 +235,7 @@
             <div id="ft-ai-mode-grid" class="ft-ai-mode-grid" role="radiogroup" aria-label="AI Chat Display Mode"></div>
           </div>
 
-          <!-- Collapsible Shared FlaptapAiSelector Panel -->
+          <!-- Floating Shared FlaptapAiSelector Panel -->
           <div id="ft-ai-model-panel" class="ft-ai-model-panel" hidden>
             <div id="ft-ai-selector-mount"></div>
           </div>
@@ -236,7 +255,7 @@
             <div id="ft-ai-ctx-preview" class="ft-ai-ctx-preview"></div>
           </div>
 
-          <!-- Claude/ChatGPT-Level Controls Popover -->
+          <!-- AI Controls & Persona Popover -->
           <div id="ft-ai-settings-popover" class="ft-ai-subpanel ft-ai-settings-popover" hidden>
             <div class="ft-ai-ctrl-section">
               <div class="ft-ai-ctrl-label">AI Persona</div>
@@ -272,12 +291,12 @@
           <div id="ft-ai-scroll" class="ft-ai-body">
             <div id="ft-ai-empty" class="ft-ai-empty">
               <div class="ft-ai-empty-orb" aria-hidden="true">
-                <span class="ft-ai-empty-ring"></span>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2L14.4 9.6L22 12L14.4 14.4L12 22L9.6 14.4L2 12L9.6 9.6L12 2Z"></path></svg>
               </div>
               <h3 class="ft-ai-empty-title" id="ft-ai-empty-title">Ask anything with full context</h3>
               <p class="ft-ai-empty-sub" id="ft-ai-empty-sub">I know the active screen, transcript, or phrase you are studying — ask in English or Arabic by text, voice, or screenshot.</p>
               <div id="ft-ai-empty-cards" class="ft-ai-empty-cards"></div>
+              <div id="ft-ai-empty-hints" class="ft-ai-empty-hints">Type <kbd>/</kbd> for commands · Paste screenshot · <kbd>⌘J</kbd> to toggle</div>
             </div>
 
             <div id="ft-ai-messages" class="ft-ai-messages"></div>
@@ -287,22 +306,29 @@
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
           </button>
 
-          <!-- Composer Dock -->
+          <!-- Floating Glass Composer Dock -->
           <footer class="ft-ai-foot">
             <div id="ft-ai-quote-card" class="ft-ai-quote-card" hidden></div>
             <div id="ft-ai-images-bar" class="ft-ai-images-bar" hidden></div>
-            <div id="ft-ai-starters" class="ft-ai-starters"></div>
+            <div id="ft-ai-starters" class="ft-ai-starters" hidden></div>
+
+            <!-- Compact Quick Persona Popover -->
+            <div id="ft-ai-persona-popover" class="ft-ai-persona-popover" role="menu" hidden></div>
 
             <!-- Slash Command Popup -->
             <div id="ft-ai-slash-menu" class="ft-ai-slash-menu" role="listbox" hidden></div>
 
             <!-- Voice Listening Bar -->
             <div id="ft-ai-voice-bar" class="ft-ai-voice-bar" hidden>
-              <span class="ft-ai-voice-waves" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
-              <span id="ft-ai-voice-status" class="ft-ai-voice-status">Listening…</span>
+              <span class="ft-ai-voice-left">
+                <span class="ft-ai-voice-waves" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
+                <span id="ft-ai-voice-status" class="ft-ai-voice-status">Listening…</span>
+              </span>
+              <button type="button" id="ft-ai-voice-cancel-btn" class="ft-ai-voice-cancel">Cancel</button>
             </div>
 
             <div class="ft-ai-composer" id="ft-ai-composer">
+              <div class="ft-ai-drop-hint" aria-hidden="true">Drop image to attach</div>
               <div class="ft-ai-composer-top">
                 <textarea id="ft-ai-input" class="ft-ai-input" rows="1" placeholder="Ask anything or type / for commands…" aria-label="Message Flaptap AI"></textarea>
               </div>
@@ -310,19 +336,20 @@
                 <div class="ft-ai-composer-left">
                   <input type="file" id="ft-ai-image-file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden />
                   <button type="button" id="ft-ai-attach-btn" class="ft-ai-tool-btn" title="Attach image or screenshot (or paste Cmd+V)" aria-label="Attach image">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><path d="m21 15-5-5L5 21"></path></svg>
                   </button>
                   <button type="button" id="ft-ai-slash-btn" class="ft-ai-tool-btn" title="Slash commands (/)" aria-label="Insert slash command">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="15" y1="4" x2="9" y2="20"></line></svg>
                   </button>
-                  <button type="button" id="ft-ai-persona-chip" class="ft-ai-persona-chip" title="Switch AI Persona">
+                  <button type="button" id="ft-ai-persona-chip" class="ft-ai-persona-chip" aria-expanded="false" aria-controls="ft-ai-persona-popover" title="Switch AI Persona">
                     <span id="ft-ai-persona-chip-text">Mentor</span>
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
                   </button>
                 </div>
                 <div class="ft-ai-composer-right">
                   <button type="button" id="ft-ai-voice-lang" class="ft-ai-voice-lang" title="Switch voice dictation language (Auto / EN / AR)">Auto</button>
                   <button type="button" id="ft-ai-mic-btn" class="ft-ai-tool-btn ft-ai-mic-btn" aria-pressed="false" aria-label="Speak your question" title="Voice input">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" x2="12" y1="19" y2="22"></line></svg>
                   </button>
                   <button type="button" id="ft-ai-send-btn" class="ft-ai-send-btn" aria-label="Send message" title="Send (Enter)">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
@@ -378,6 +405,23 @@
     aiSelector.init();
   }
 
+  function syncComposerReadyState() {
+    const inp = el('ft-ai-input');
+    const sendBtn = el('ft-ai-send-btn');
+    if (!sendBtn) return;
+    const hasText = Boolean(String(inp?.value || '').trim());
+    const hasImgs = Boolean(Store().state.attachedImages?.length);
+    sendBtn.classList.toggle('is-ready', hasText || hasImgs);
+  }
+
+  function syncSpeakingButtons() {
+    const activeId = voiceCtrl?.isSpeaking?.() ? voiceCtrl.getSpeakingMessageId?.() || '' : '';
+    el('ft-ai-messages')?.querySelectorAll('[data-ai-speak-id]').forEach((btn) => {
+      const id = btn.getAttribute('data-ai-speak-id');
+      btn.classList.toggle('is-speaking', Boolean(activeId) && id === activeId);
+    });
+  }
+
   function ensureVoice() {
     if (voiceCtrl || !global.FlaptapAiChatVoice) return;
     voiceCtrl = global.FlaptapAiChatVoice.create({
@@ -396,10 +440,14 @@
         if (st && status) st.textContent = status;
         if (lang) lang.textContent = voiceCtrl.getLangBadge();
       },
+      onSpeakStateChange: () => {
+        syncSpeakingButtons();
+      },
       onTranscriptReady: (text) => {
         const inp = el('ft-ai-input');
         if (inp) inp.value = '';
         autoResizeTextarea(inp);
+        syncComposerReadyState();
         Store().sendMessage(text);
       },
       onError: (msg) => Store().showToast(msg),
@@ -411,9 +459,9 @@
   function autoResizeTextarea(inp) {
     if (!inp) return;
     inp.style.height = 'auto';
-    const nextH = Math.min(168, Math.max(40, inp.scrollHeight));
+    const nextH = Math.min(164, Math.max(36, inp.scrollHeight));
     inp.style.height = `${nextH}px`;
-    inp.style.overflowY = inp.scrollHeight > 168 ? 'auto' : 'hidden';
+    inp.style.overflowY = inp.scrollHeight > 164 ? 'auto' : 'hidden';
   }
 
   function resolveEffectiveModeDef() {
@@ -494,20 +542,55 @@
     if (modeBtnIcon && eff) modeBtnIcon.innerHTML = eff.iconSvg || '';
   }
 
+  function closeAllPopovers() {
+    const s = Store().state;
+    const hadAny =
+      s.modePopoverOpen ||
+      s.modelPanelOpen ||
+      s.settingsPanelOpen ||
+      s.contextPopoverOpen ||
+      personaPopoverOpen;
+    s.modePopoverOpen = false;
+    s.modelPanelOpen = false;
+    s.settingsPanelOpen = false;
+    s.contextPopoverOpen = false;
+    personaPopoverOpen = false;
+    if (hadAny) syncHeaderSubpanelAria();
+    return hadAny;
+  }
+
   function syncHeaderSubpanelAria() {
     const s = Store().state;
     const modePop = el('ft-ai-mode-popover');
     const modelPanel = el('ft-ai-model-panel');
     const settingsPop = el('ft-ai-settings-popover');
     const ctxPop = el('ft-ai-ctx-popover');
+    const personaPop = el('ft-ai-persona-popover');
     if (modePop) modePop.hidden = !s.modePopoverOpen;
     if (modelPanel) modelPanel.hidden = !s.modelPanelOpen;
     if (settingsPop) settingsPop.hidden = !s.settingsPanelOpen;
     if (ctxPop) ctxPop.hidden = !s.contextPopoverOpen;
-    el('ft-ai-mode-btn')?.setAttribute('aria-expanded', s.modePopoverOpen ? 'true' : 'false');
-    el('ft-ai-model-btn')?.setAttribute('aria-expanded', s.modelPanelOpen ? 'true' : 'false');
-    el('ft-ai-settings-btn')?.setAttribute('aria-expanded', s.settingsPanelOpen ? 'true' : 'false');
-    el('ft-ai-ctx-pill')?.setAttribute('aria-expanded', s.contextPopoverOpen ? 'true' : 'false');
+    if (personaPop) personaPop.hidden = !personaPopoverOpen;
+
+    const modeBtn = el('ft-ai-mode-btn');
+    const modelBtn = el('ft-ai-model-btn');
+    const settingsBtn = el('ft-ai-settings-btn');
+    const ctxPill = el('ft-ai-ctx-pill');
+    const personaChip = el('ft-ai-persona-chip');
+    const sidebarToggle = el('ft-ai-sidebar-toggle-btn');
+
+    modeBtn?.setAttribute('aria-expanded', s.modePopoverOpen ? 'true' : 'false');
+    modelBtn?.setAttribute('aria-expanded', s.modelPanelOpen ? 'true' : 'false');
+    settingsBtn?.setAttribute('aria-expanded', s.settingsPanelOpen ? 'true' : 'false');
+    ctxPill?.setAttribute('aria-expanded', s.contextPopoverOpen ? 'true' : 'false');
+    personaChip?.setAttribute('aria-expanded', personaPopoverOpen ? 'true' : 'false');
+
+    modeBtn?.classList.toggle('is-active', Boolean(s.modePopoverOpen));
+    modelBtn?.classList.toggle('is-active', Boolean(s.modelPanelOpen));
+    settingsBtn?.classList.toggle('is-active', Boolean(s.settingsPanelOpen));
+    ctxPill?.classList.toggle('is-active', Boolean(s.contextPopoverOpen));
+    personaChip?.classList.toggle('is-active', Boolean(personaPopoverOpen));
+    sidebarToggle?.classList.toggle('is-active', Boolean(s.sidebarOpen));
   }
 
   function syncDisplayHost() {
@@ -570,15 +653,21 @@
     }
 
     const sidebar = el('ft-ai-sidebar');
+    const showSidebar = isFull ? s.sidebarOpen !== false : Boolean(s.sidebarOpen);
     if (sidebar) {
-      const showSidebar = isFull ? s.sidebarOpen !== false : Boolean(s.sidebarOpen);
       drawer.classList.toggle('has-sidebar', showSidebar);
+    }
+    const scrim = el('ft-ai-sidebar-scrim');
+    if (scrim) {
+      scrim.hidden = !showSidebar || isFull || eff.id === 'expanded';
     }
 
     const modeBtn = el('ft-ai-mode-btn');
     if (modeBtn) modeBtn.hidden = false;
     const closeBtn = el('ft-ai-close-btn');
     if (closeBtn) closeBtn.hidden = isFull;
+    const exportBtn = el('ft-ai-export-btn');
+    if (exportBtn) exportBtn.classList.toggle('is-muted', !s.activeThreadId);
 
     renderModePicker();
     syncHeaderSubpanelAria();
@@ -607,6 +696,18 @@
     const fabCtx = el('ft-ai-fab-ctx');
     if (fabCtx) fabCtx.textContent = badge;
 
+    const emptyCopy = Ctx()?.getEmptyStateCopy?.(ctx, isAr);
+    const emptyTitle = el('ft-ai-empty-title');
+    const emptySub = el('ft-ai-empty-sub');
+    const emptyHints = el('ft-ai-empty-hints');
+    if (emptyTitle && emptyCopy?.title) emptyTitle.textContent = emptyCopy.title;
+    if (emptySub && emptyCopy?.subtitle) emptySub.textContent = emptyCopy.subtitle;
+    if (emptyHints) {
+      emptyHints.innerHTML = isAr
+        ? 'اكتب <kbd>/</kbd> للأوامر · الصق صورة · <kbd>⌘J</kbd> للإخفاء'
+        : 'Type <kbd>/</kbd> for commands · Paste screenshot · <kbd>⌘J</kbd> to toggle';
+    }
+
     const pill = el('ft-ai-ctx-pill');
     const pillText = el('ft-ai-ctx-pill-text');
     if (pill) {
@@ -614,7 +715,7 @@
     }
     if (pillText) {
       const label = ctx?.label && ctx.label !== badge ? `${badge} · ${ctx.label}` : badge;
-      pillText.textContent = s.usePageContext ? label.slice(0, 42) : 'Context Off';
+      pillText.textContent = s.usePageContext ? label.slice(0, 42) : (isAr ? 'السياق متوقف' : 'Context Off');
     }
 
     const ctxToggle = el('ft-ai-ctx-toggle');
@@ -630,19 +731,36 @@
     }
   }
 
+  function renderQuickPersonaPopover(personas, activePersona) {
+    const pop = el('ft-ai-persona-popover');
+    if (!pop) return;
+    const list = personas || (Store().state.config.personas?.length ? Store().state.config.personas : DEFAULT_PERSONAS);
+    const active = activePersona || Store().getActivePersona();
+    pop.innerHTML = `
+      <div class="ft-ai-persona-popover-head">Switch AI Persona</div>
+      ${list
+        .map(
+          (p) => `
+          <button type="button" class="ft-ai-persona-pop-item${p.id === active ? ' is-active' : ''}" data-ai-persona-quick="${escapeHtml(p.id)}" role="menuitemradio" aria-checked="${p.id === active ? 'true' : 'false'}">
+            <span class="ft-ai-persona-pop-copy">
+              <strong>${escapeHtml(p.label)}</strong>
+              <span>${escapeHtml(p.description || '')}</span>
+            </span>
+            ${
+              p.id === active
+                ? `<svg class="ft-ai-persona-pop-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>`
+                : ''
+            }
+          </button>`,
+        )
+        .join('')}
+    `;
+  }
+
   function renderPersonaAndControls() {
     const s = Store().state;
     const activePersona = Store().getActivePersona();
-    const personas = s.config.personas?.length
-      ? s.config.personas
-      : [
-          { id: 'smart_mentor', label: 'Native Mentor', shortLabel: 'Mentor', description: 'Context-aware spoken American coach' },
-          { id: 'accent_coach', label: 'Pronunciation & Prosody', shortLabel: 'Accent', description: 'Connected speech, IPA & mouth mechanics' },
-          { id: 'natural_rewrite', label: 'Natural Rewriter', shortLabel: 'Rewrite', description: 'Casual to sharp native upgrades' },
-          { id: 'grammar_nuance', label: 'Grammar & Nuance', shortLabel: 'Nuance', description: 'Modals, tenses & real usage' },
-          { id: 'roleplay', label: 'Roleplay Partner', shortLabel: 'Roleplay', description: 'Interactive spoken conversation' },
-          { id: 'general', label: 'General Assistant', shortLabel: 'General', description: 'Any topic, fast and versatile' },
-        ];
+    const personas = s.config.personas?.length ? s.config.personas : DEFAULT_PERSONAS;
 
     const grid = el('ft-ai-persona-grid');
     if (grid) {
@@ -656,6 +774,8 @@
         )
         .join('');
     }
+
+    renderQuickPersonaPopover(personas, activePersona);
 
     const activeMeta = personas.find((p) => p.id === activePersona) || personas[0];
     const chipText = el('ft-ai-persona-chip-text');
@@ -816,6 +936,7 @@
           .join('');
       }
     }
+    syncComposerReadyState();
   }
 
   function renderStarters() {
@@ -830,8 +951,11 @@
         .map(
           (c) => `
           <button type="button" class="ft-ai-empty-card" data-ai-starter="${escapeHtml(c.prompt)}">
-            <span class="ft-ai-empty-card-title">${escapeHtml(c.label)}</span>
-            <span class="ft-ai-empty-card-sub">${escapeHtml(c.prompt.slice(0, 74))}…</span>
+            <span class="ft-ai-empty-card-head">
+              <span class="ft-ai-empty-card-title" dir="auto">${escapeHtml(c.label)}</span>
+              <svg class="ft-ai-empty-card-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+            </span>
+            <span class="ft-ai-empty-card-sub" dir="auto">${escapeHtml(c.prompt)}</span>
           </button>`,
         )
         .join('');
@@ -839,7 +963,7 @@
 
     const starters = el('ft-ai-starters');
     if (starters) {
-      starters.hidden = s.messages.length > 0 && !s.attachedQuote?.text;
+      starters.hidden = !Boolean(s.attachedQuote?.text);
       starters.innerHTML = chips
         .slice(0, 4)
         .map(
@@ -989,6 +1113,7 @@
       .join('');
 
     renderStarters();
+    syncSpeakingButtons();
     if (scrollStickyLock) scrollToBottom();
   }
 
@@ -1074,7 +1199,23 @@
     if (!found || !inp) return;
     inp.value = found.text;
     autoResizeTextarea(inp);
+    syncComposerReadyState();
     inp.focus();
+  }
+
+  function markCopyFeedback(btn, labelText = '') {
+    if (!btn) return;
+    const prevHtml = btn.dataset.prevHtml || btn.innerHTML;
+    btn.dataset.prevHtml = prevHtml;
+    if (btn._copyTimer) clearTimeout(btn._copyTimer);
+    btn.classList.add('is-copied');
+    const checkSvg =
+      '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+    btn.innerHTML = labelText ? `${checkSvg}<span>${escapeHtml(labelText)}</span>` : checkSvg;
+    btn._copyTimer = setTimeout(() => {
+      btn.classList.remove('is-copied');
+      if (btn.dataset.prevHtml) btn.innerHTML = btn.dataset.prevHtml;
+    }, 1600);
   }
 
   async function handleFiles(files) {
@@ -1109,15 +1250,15 @@
 
     el('ft-ai-mode-btn')?.addEventListener('click', () => {
       const s = Store().state;
-      s.modePopoverOpen = !s.modePopoverOpen;
-      s.modelPanelOpen = false;
-      s.settingsPanelOpen = false;
-      s.contextPopoverOpen = false;
+      const next = !s.modePopoverOpen;
+      closeAllPopovers();
+      s.modePopoverOpen = next;
       if (s.modePopoverOpen) renderModePicker();
       syncHeaderSubpanelAria();
     });
 
     el('ft-ai-sidebar-toggle-btn')?.addEventListener('click', () => {
+      closeAllPopovers();
       Store().state.sidebarOpen = !Store().state.sidebarOpen;
       syncDisplayHost();
       if (Store().state.sidebarOpen) Store().refreshThreads();
@@ -1126,8 +1267,13 @@
       Store().state.sidebarOpen = false;
       syncDisplayHost();
     });
+    el('ft-ai-sidebar-scrim')?.addEventListener('click', () => {
+      Store().state.sidebarOpen = false;
+      syncDisplayHost();
+    });
 
     const newChatFn = () => {
+      closeAllPopovers();
       Store().startNewChat({ clearQuote: true });
       el('ft-ai-input')?.focus();
     };
@@ -1158,34 +1304,35 @@
 
     el('ft-ai-model-btn')?.addEventListener('click', () => {
       const s = Store().state;
-      s.modelPanelOpen = !s.modelPanelOpen;
-      s.modePopoverOpen = false;
-      s.settingsPanelOpen = false;
-      s.contextPopoverOpen = false;
+      const next = !s.modelPanelOpen;
+      closeAllPopovers();
+      s.modelPanelOpen = next;
       syncHeaderSubpanelAria();
       if (s.modelPanelOpen) ensureAiSelector();
     });
 
     el('ft-ai-settings-btn')?.addEventListener('click', () => {
       const s = Store().state;
-      s.settingsPanelOpen = !s.settingsPanelOpen;
-      s.modePopoverOpen = false;
-      s.modelPanelOpen = false;
-      s.contextPopoverOpen = false;
+      const next = !s.settingsPanelOpen;
+      closeAllPopovers();
+      s.settingsPanelOpen = next;
       syncHeaderSubpanelAria();
     });
 
     el('ft-ai-ctx-pill')?.addEventListener('click', () => {
       const s = Store().state;
-      s.contextPopoverOpen = !s.contextPopoverOpen;
-      s.modePopoverOpen = false;
-      s.modelPanelOpen = false;
-      s.settingsPanelOpen = false;
+      const next = !s.contextPopoverOpen;
+      closeAllPopovers();
+      s.contextPopoverOpen = next;
       syncHeaderSubpanelAria();
     });
 
     el('ft-ai-persona-chip')?.addEventListener('click', () => {
-      el('ft-ai-settings-btn')?.click();
+      const next = !personaPopoverOpen;
+      closeAllPopovers();
+      personaPopoverOpen = next;
+      if (personaPopoverOpen) renderQuickPersonaPopover();
+      syncHeaderSubpanelAria();
     });
 
     el('ft-ai-ctx-toggle')?.addEventListener('change', (e) => {
@@ -1370,13 +1517,18 @@
         return;
       }
 
-      const personaBtn = e.target.closest('[data-ai-persona]');
+      const personaBtn = e.target.closest('[data-ai-persona], [data-ai-persona-quick]');
       if (personaBtn) {
-        const p = personaBtn.getAttribute('data-ai-persona');
+        const isQuick = personaBtn.hasAttribute('data-ai-persona-quick');
+        const p = personaBtn.getAttribute(isQuick ? 'data-ai-persona-quick' : 'data-ai-persona');
         Store().state.personaOverride = p;
         Store().updatePreferences({ defaultPersona: p });
         if (Store().state.activeThreadId) {
           Store().updateThreadMeta(Store().state.activeThreadId, { persona: p });
+        }
+        if (isQuick) {
+          personaPopoverOpen = false;
+          syncHeaderSubpanelAria();
         }
         renderPersonaAndControls();
         return;
@@ -1457,7 +1609,10 @@
       const codeCopy = e.target.closest('[data-ai-copy-code]');
       if (codeCopy) {
         const code = codeCopy.closest('.ft-ai-code-block')?.querySelector('pre code')?.textContent || '';
-        navigator.clipboard?.writeText?.(code).then(() => Store().showToast('Code copied'));
+        navigator.clipboard?.writeText?.(code).then(() => {
+          markCopyFeedback(codeCopy, 'Copied');
+          Store().showToast('Code copied');
+        });
         return;
       }
 
@@ -1466,7 +1621,10 @@
         const id = copyId.getAttribute('data-ai-copy-id');
         const m = Store().state.messages.find((x) => x.id === id);
         if (m?.content) {
-          navigator.clipboard?.writeText?.(m.content).then(() => Store().showToast('Copied'));
+          navigator.clipboard?.writeText?.(m.content).then(() => {
+            markCopyFeedback(copyId);
+            Store().showToast('Copied');
+          });
         }
         return;
       }
@@ -1475,7 +1633,7 @@
       if (speakId) {
         const id = speakId.getAttribute('data-ai-speak-id');
         const m = Store().state.messages.find((x) => x.id === id);
-        if (m?.content) voiceCtrl?.speak(m.content);
+        if (m?.content) voiceCtrl?.speak(m.content, id);
         return;
       }
 
@@ -1514,10 +1672,54 @@
       }
     });
 
+    // Click-outside dismissal for open popovers and slash menu
+    document.addEventListener('pointerdown', (ev) => {
+      const target = ev.target;
+      const s = Store().state;
+      if (s.modePopoverOpen && !target.closest('#ft-ai-mode-popover, #ft-ai-mode-btn')) {
+        s.modePopoverOpen = false;
+        syncHeaderSubpanelAria();
+      }
+      if (s.modelPanelOpen && !target.closest('#ft-ai-model-panel, #ft-ai-model-btn')) {
+        s.modelPanelOpen = false;
+        syncHeaderSubpanelAria();
+      }
+      if (s.settingsPanelOpen && !target.closest('#ft-ai-settings-popover, #ft-ai-settings-btn')) {
+        s.settingsPanelOpen = false;
+        syncHeaderSubpanelAria();
+      }
+      if (s.contextPopoverOpen && !target.closest('#ft-ai-ctx-popover, #ft-ai-ctx-pill')) {
+        s.contextPopoverOpen = false;
+        syncHeaderSubpanelAria();
+      }
+      if (personaPopoverOpen && !target.closest('#ft-ai-persona-popover, #ft-ai-persona-chip')) {
+        personaPopoverOpen = false;
+        syncHeaderSubpanelAria();
+      }
+      if (s.slashMenuOpen && !target.closest('#ft-ai-slash-menu, #ft-ai-slash-btn, #ft-ai-input')) {
+        s.slashMenuOpen = false;
+        renderSlashMenu();
+      }
+    });
+
     // Composer input, slash commands, image paste & drag-drop
     const inp = el('ft-ai-input');
+    const sendCurrentInput = () => {
+      const raw = inp?.value || '';
+      const hasImgs = Boolean(Store().state.attachedImages?.length);
+      const clean = String(raw).trim();
+      if (!clean && !hasImgs) return;
+      if (inp) {
+        inp.value = '';
+        autoResizeTextarea(inp);
+      }
+      syncComposerReadyState();
+      Store().sendMessage(clean || 'Analyze this image in context.');
+    };
+
     inp?.addEventListener('input', () => {
       autoResizeTextarea(inp);
+      syncComposerReadyState();
       const val = inp.value || '';
       if (val.startsWith('/') && !val.includes(' ')) {
         Store().state.slashMenuOpen = true;
@@ -1564,12 +1766,10 @@
 
       if (e.key === 'Escape' && s.isOpen && s.displayMode !== 'fullpage') {
         e.preventDefault();
-        if (s.modePopoverOpen || s.modelPanelOpen || s.settingsPanelOpen || s.contextPopoverOpen) {
-          s.modePopoverOpen = false;
-          s.modelPanelOpen = false;
-          s.settingsPanelOpen = false;
-          s.contextPopoverOpen = false;
-          syncHeaderSubpanelAria();
+        if (closeAllPopovers()) return;
+        if (s.sidebarOpen) {
+          s.sidebarOpen = false;
+          syncDisplayHost();
           return;
         }
         global.FlaptapAiChat.close();
@@ -1578,11 +1778,7 @@
 
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        const text = inp.value;
-        if (!String(text || '').trim()) return;
-        inp.value = '';
-        autoResizeTextarea(inp);
-        Store().sendMessage(text);
+        sendCurrentInput();
       }
     });
 
@@ -1607,7 +1803,11 @@
       e.preventDefault();
       composer.classList.add('is-dragover');
     });
-    composer?.addEventListener('dragleave', () => composer.classList.remove('is-dragover'));
+    composer?.addEventListener('dragleave', (e) => {
+      if (!composer.contains(e.relatedTarget)) {
+        composer.classList.remove('is-dragover');
+      }
+    });
     composer?.addEventListener('drop', (e) => {
       e.preventDefault();
       composer.classList.remove('is-dragover');
@@ -1621,6 +1821,7 @@
     });
 
     el('ft-ai-slash-btn')?.addEventListener('click', () => {
+      closeAllPopovers();
       Store().state.slashMenuOpen = !Store().state.slashMenuOpen;
       Store().state.slashFilter = '/';
       Store().state.slashActiveIdx = 0;
@@ -1628,13 +1829,7 @@
       inp?.focus();
     });
 
-    el('ft-ai-send-btn')?.addEventListener('click', () => {
-      const text = inp?.value || '';
-      if (!String(text).trim()) return;
-      inp.value = '';
-      autoResizeTextarea(inp);
-      Store().sendMessage(text);
-    });
+    el('ft-ai-send-btn')?.addEventListener('click', sendCurrentInput);
 
     el('ft-ai-stop-btn')?.addEventListener('click', () => {
       Store().state.abortCtrl?.abort();
@@ -1648,9 +1843,14 @@
           if (inp) {
             inp.value = val;
             autoResizeTextarea(inp);
+            syncComposerReadyState();
           }
         },
       );
+    });
+
+    el('ft-ai-voice-cancel-btn')?.addEventListener('click', () => {
+      voiceCtrl?.stop({ autoSend: false });
     });
 
     el('ft-ai-voice-lang')?.addEventListener('click', () => {
@@ -1676,12 +1876,10 @@
           renderSlashMenu();
           return;
         }
-        if (s.modePopoverOpen || s.modelPanelOpen || s.settingsPanelOpen || s.contextPopoverOpen) {
-          s.modePopoverOpen = false;
-          s.modelPanelOpen = false;
-          s.settingsPanelOpen = false;
-          s.contextPopoverOpen = false;
-          syncHeaderSubpanelAria();
+        if (closeAllPopovers()) return;
+        if (s.sidebarOpen) {
+          s.sidebarOpen = false;
+          syncDisplayHost();
           return;
         }
         const focusedInside = drawer.contains(document.activeElement);
@@ -1761,6 +1959,7 @@
       if (inp) {
         inp.value = String(text || '');
         autoResizeTextarea(inp);
+        syncComposerReadyState();
       }
     },
   };

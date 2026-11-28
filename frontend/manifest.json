@@ -64,9 +64,9 @@
   ],
   "shortcuts": [
     {
-      "name": "Spoken English Lessons",
-      "short_name": "Lessons",
-      "description": "Open your video shadowing library and start a new lesson",
+      "name": "Media Hub",
+      "short_name": "Media Hub",
+      "description": "Open your universal Media Hub library and start a new interactive study session",
       "url": "/",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },

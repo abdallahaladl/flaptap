@@ -343,7 +343,7 @@ export class SharedSourcesRepository {
     return {
       id: String(row.id),
       title: String(row.title || 'Lesson'),
-      track: String(row.track || 'shadowing'),
+      track: String(row.track || 'media_hub'),
       videoId: row.video_id ? String(row.video_id) : undefined,
       sentencesCount: Number(row.sentences_count) || 0,
       isCompleted: totalItems > 0 ? doneItems >= totalItems : Boolean(row.is_completed),

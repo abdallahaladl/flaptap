@@ -10,14 +10,14 @@ import {
   normalizePacingMode,
   roundMs,
   segmentParagraphs,
-  ShadowingPacingMode,
+  MediaHubPacingMode,
   splitTimedWordsForShadowing,
 } from '../../../../core/linguistics/segmentation';
 import {
   TimedWordMs,
   TranscriptParagraph,
   TranscriptSentence,
-} from '../shadowing.types';
+} from '../media-hub.types';
 import {
   applyPlaybackBoundaryLaw,
   applySpeakerOverridesToReviewed,
@@ -260,7 +260,7 @@ export function restoreExactTranslations(
  */
 function splitCanonicalSentencesByPacing(
   canonicalSentences: TranscriptSentence[],
-  pacingMode: ShadowingPacingMode,
+  pacingMode: MediaHubPacingMode,
 ): TranscriptSentence[] {
   // Normalize flat canonical word intervals first so legacy cached lessons heal any historical overlaps
   const canonicalWordCounts = canonicalSentences.map((c) => (Array.isArray(c.words) ? c.words.length : 0));
@@ -413,7 +413,7 @@ function mapTranscriptParagraphsToChunks(paragraphs: TranscriptParagraph[]): Chu
 }
 
 /**
- * Deterministically re-segments any Shadowing lesson in-memory (< 15ms, ZERO AI calls,
+ * Deterministically re-segments any Media Hub lesson in-memory (< 15ms, ZERO AI calls,
  * ZERO media re-extraction) into the requested `pacingMode` (`short` | `normal`).
  *
  * Handles all 4 lesson states seamlessly:
@@ -422,9 +422,9 @@ function mapTranscriptParagraphsToChunks(paragraphs: TranscriptParagraph[]): Chu
  * 3. Raw lesson with `transcriptData.raw.words` (keeps `raw.words` untouched)
  * 4. Legacy lesson without `transcriptData`
  */
-export function regroupShadowingLessonByPacing(
+export function regroupMediaHubLessonByPacing(
   item: HistoryItem,
-  requestedPacingMode: ShadowingPacingMode,
+  requestedPacingMode: MediaHubPacingMode,
 ): HistoryItem {
   const mode = normalizePacingMode(requestedPacingMode);
   const oldSentences = Array.isArray(item.sentences) ? item.sentences : [];

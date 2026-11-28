@@ -4,7 +4,7 @@ import {
   roundMs,
   segmentWordStreamWithCanonical,
   SegWord,
-  ShadowingPacingMode,
+  MediaHubPacingMode,
   splitTimedWordsForShadowing,
 } from '../../../../core/linguistics/segmentation';
 import { TimedWord, TranscriptCue, TranscriptResult } from '../transcript.service';
@@ -18,7 +18,7 @@ import {
   TranscriptSentence,
   TranscriptSpeakerInfo,
   TranscriptSpeakerTurn,
-} from '../shadowing.types';
+} from '../media-hub.types';
 
 /**
  * Clean alphanumeric + apostrophe core for alignment & search.
@@ -310,7 +310,7 @@ function buildRawSentenceObjects(
 export function buildRawSentencesAndParagraphsFromWords(params: {
   rawWords: TimedWordMs[];
   creator?: string;
-  pacingMode?: ShadowingPacingMode;
+  pacingMode?: MediaHubPacingMode;
 }): {
   canonicalSentences: TranscriptSentence[];
   sentences: TranscriptSentence[];
@@ -561,7 +561,7 @@ export function buildRawTranscriptSnapshot(params: {
   fullText: string;
   cues?: TranscriptCue[];
   timedWords?: TimedWord[];
-  pacingMode?: ShadowingPacingMode;
+  pacingMode?: MediaHubPacingMode;
 }): RawTranscriptSnapshot {
   const pacingMode = normalizePacingMode(params.pacingMode);
   const { words, cues } = normalizeRawTimedWords(
@@ -1140,7 +1140,7 @@ export function assembleAlignedReviewedViews(params: {
   draftIdeas: DraftReviewedIdea[];
   defaultSpeaker: string;
   speakerOverrides?: Record<string, string>;
-  pacingMode?: ShadowingPacingMode;
+  pacingMode?: MediaHubPacingMode;
 }): {
   canonicalSentences: TranscriptSentence[];
   sentences: TranscriptSentence[];
@@ -1376,7 +1376,7 @@ export function assembleAlignedReviewedViews(params: {
 
 export function buildParagraphsFromSentences(
   sentences: TranscriptSentence[],
-  pacingMode: ShadowingPacingMode = 'short',
+  pacingMode: MediaHubPacingMode = 'short',
 ): TranscriptParagraph[] {
   if (sentences.length === 0) return [];
   const mode = normalizePacingMode(pacingMode);
@@ -1677,7 +1677,7 @@ export function formatMsClock(ms: number): string {
 export {
   captureCompletedCoverage,
   normalizeTranslationKey,
-  regroupShadowingLessonByPacing,
+  regroupMediaHubLessonByPacing,
   remapCompletedIndices,
   restoreExactTranslations,
   snapshotTranslationsByText,

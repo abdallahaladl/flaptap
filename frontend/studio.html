@@ -59,52 +59,13 @@
   <link rel="stylesheet" href="/celebration.css" />
   <link rel="stylesheet" href="/confirm-undo.css" />
   <link rel="stylesheet" href="/ai-chat.css" />
+  <link rel="stylesheet" href="/studio-extract.css" />
 </head>
 <body class="studio-body">
-  <!-- Full-Page Frameless Motion-Graphics Loader & Error Overlay -->
+  <!-- Minimal Zero-GPU Loading & Error Overlay -->
   <div id="loader-overlay" class="loader-overlay loader-overlay--canvas" role="alert" aria-live="polite">
-    <div class="loader-mesh" aria-hidden="true">
-      <span class="loader-mesh-blob loader-mesh-blob--1"></span>
-      <span class="loader-mesh-blob loader-mesh-blob--2"></span>
-      <span class="loader-mesh-blob loader-mesh-blob--3"></span>
-    </div>
-
-    <div class="loader-ribbons" aria-hidden="true">
-      <svg class="loader-ribbon loader-ribbon--1" viewBox="0 0 2880 260" preserveAspectRatio="none">
-        <path d="M0,130 C240,55 480,205 720,130 C960,55 1200,205 1440,130 C1680,55 1920,205 2160,130 C2400,55 2640,205 2880,130" fill="none" stroke="currentColor" stroke-width="2" />
-      </svg>
-      <svg class="loader-ribbon loader-ribbon--2" viewBox="0 0 2880 260" preserveAspectRatio="none">
-        <path d="M0,140 C240,210 480,70 720,140 C960,210 1200,70 1440,140 C1680,210 1920,70 2160,140 C2400,210 2640,70 2880,140" fill="none" stroke="currentColor" stroke-width="1.5" />
-      </svg>
-      <svg class="loader-ribbon loader-ribbon--3" viewBox="0 0 2880 260" preserveAspectRatio="none">
-        <path d="M0,125 C180,80 540,180 720,125 C900,80 1260,180 1440,125 C1620,80 1980,180 2160,125 C2340,80 2700,180 2880,125" fill="none" stroke="currentColor" stroke-width="1" />
-      </svg>
-    </div>
-
     <div class="loader-focal">
-      <div class="loader-rings" aria-hidden="true">
-        <span class="loader-ring loader-ring--1"></span>
-        <span class="loader-ring loader-ring--2"></span>
-        <span class="loader-ring loader-ring--3"></span>
-      </div>
-
-      <div class="loader-spectrum" aria-hidden="true">
-        <span class="loader-spec-bar" style="--bar-i: 0; --bar-h: 22px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 1; --bar-h: 34px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 2; --bar-h: 48px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 3; --bar-h: 64px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 4; --bar-h: 80px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 5; --bar-h: 96px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 6; --bar-h: 110px;"></span>
-        <span class="loader-spec-bar loader-spec-bar--center" style="--bar-i: 7; --bar-h: 122px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 8; --bar-h: 110px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 9; --bar-h: 96px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 10; --bar-h: 80px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 11; --bar-h: 64px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 12; --bar-h: 48px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 13; --bar-h: 34px;"></span>
-        <span class="loader-spec-bar" style="--bar-i: 14; --bar-h: 22px;"></span>
-      </div>
+      <div class="loader-spinner" aria-hidden="true"></div>
 
       <div class="loader-error-card">
         <div class="loader-error-badge" aria-hidden="true">
@@ -212,7 +173,7 @@
             id="studio-ask-ai-btn"
             aria-haspopup="dialog"
             aria-expanded="false"
-            aria-controls="studio-ask-drawer"
+            aria-controls="ft-ai-drawer"
             title="Ask AI about this transcript (I)"
             aria-label="Ask AI Companion"
           >
@@ -233,12 +194,6 @@
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path></svg>
             <span class="studio-review-dot" id="studio-review-dot" hidden></span>
-          </button>
-
-          <span class="topbar-cap-sep" aria-hidden="true"></span>
-
-          <button type="button" class="icon-action topbar-cap-btn" id="studio-extract-phrases-btn" title="Open or extract phrases in Phrase Miner (reuses this lesson's transcript)" aria-label="Open in Phrase Miner">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7V4h16v3"></path><path d="M9 20h6"></path><path d="M12 4v16"></path></svg>
           </button>
 
           <span class="topbar-cap-sep" aria-hidden="true"></span>
@@ -595,10 +550,10 @@
             <span data-i18n="modeListen">Listen</span>
           </button>
 
-          <button type="button" class="mode-tab-btn" data-mode="coach" role="tab" aria-selected="false" title="AI Coach Mode (4)">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
-            <span data-i18n="modeCoach">Coach</span>
-            <span class="mode-badge ltr-num" id="badge-coach-count" hidden>0</span>
+          <button type="button" class="mode-tab-btn" data-mode="insights" role="tab" aria-selected="false" title="Insights: Lexicon &amp; Prosody Coach (4)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 12 12 17 22 12"></polyline><polyline points="2 17 12 22 22 17"></polyline></svg>
+            <span data-i18n="modeInsights">Insights</span>
+            <span class="mode-badge ltr-num" id="badge-insights-count" hidden>0</span>
           </button>
 
           <button type="button" class="mode-tab-btn" data-mode="notes" role="tab" aria-selected="false" title="Study Notes Mode (5)">
@@ -743,7 +698,7 @@
             <div id="studio-shadow-progress-bar" class="subject-progress-bar studio-progress-strip" data-for-mode="shadow" hidden></div>
             <div id="studio-read-progress-bar" class="subject-progress-bar studio-progress-strip" data-for-mode="read" hidden></div>
             <div id="studio-listen-progress-bar" class="subject-progress-bar studio-progress-strip" data-for-mode="listen" hidden></div>
-            <div id="studio-coach-progress-bar" class="subject-progress-bar studio-progress-strip" data-for-mode="coach" hidden></div>
+            <div id="studio-coach-progress-bar" class="subject-progress-bar studio-progress-strip" data-for-mode="insights" hidden></div>
           </div>
           <div class="canvas-progress-actions">
             <div class="studio-comp-filter" role="group" aria-label="Filter items by completion">
@@ -841,8 +796,28 @@
         </div>
       </div>
 
-      <!-- MODE PANEL 4: COACH (Dynamic OpenCode Go AI Analysis) -->
-      <div id="mode-panel-coach" class="coach-view" style="display: none;">
+      <!-- MODE PANEL 4: INSIGHTS (Unified Lexicon A1-C2 Extractor + Prosody & Mouth Mechanics Coach) -->
+      <div id="mode-panel-insights" class="insights-view" style="display: none;">
+        <div class="insights-subbar-wrap">
+          <div class="insights-subbar" role="tablist" aria-label="Insights views">
+            <button type="button" class="insights-subtab active" data-insights-sub="lexicon" role="tab" aria-selected="true">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+              <span>Lexicon (A1–C2)</span>
+              <span class="mode-badge ltr-num" id="badge-extract-count" hidden>0</span>
+            </button>
+            <button type="button" class="insights-subtab" data-insights-sub="prosody" role="tab" aria-selected="false">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h2"></path><path d="M7 8v8"></path><path d="M11 5v14"></path><path d="M15 9v6"></path><path d="M19 11v2"></path></svg>
+              <span>Prosody &amp; Highlights</span>
+              <span class="mode-badge ltr-num" id="badge-coach-count" hidden>0</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- SUB-PANEL 4A: LEXICON (Deep Lexical Extractor Workbench) -->
+        <div id="mode-panel-extract" class="studio-extract-view"></div>
+
+        <!-- SUB-PANEL 4B: PROSODY & HIGHLIGHTS (Speaker Brief, Connected Speech & Highlights) -->
+        <div id="mode-panel-coach" class="coach-view" style="display: none;">
         <div id="coach-loading-box" class="empty-ledger">
           <div class="loader-spinner" style="margin-bottom: 12px;"></div>
           <h2 class="section-heading" style="font-size: 1.08rem;" data-i18n="coachAnalyzingTitle">Analyzing speaker prosody &amp; connected speech...</h2>
@@ -970,6 +945,7 @@
             <button type="button" class="btn-secondary studio-filter-reset-btn" data-studio-reset-filter data-i18n="showAllItemsBtn">Show All</button>
           </div>
         </div>
+        </div>
       </div>
 
       <!-- MODE PANEL 5: NOTES (SQLite-Persisted Study Notebook) -->
@@ -979,7 +955,11 @@
             <h2 class="section-heading" style="font-size: 1.18rem;" data-i18n="notebookHeading">Study Notebook</h2>
             <p style="font-size: 0.81rem; color: var(--ink-muted);" data-i18n="notebookSub">Saved automatically to your library and included in Markdown exports.</p>
           </div>
-          <span id="notes-save-indicator" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-muted);" data-i18n="savedStatus">Saved</span>
+          <div class="notes-tools">
+            <button type="button" class="notes-tool-btn" id="notes-insert-ts-btn" title="Insert current playback timestamp">+ Timestamp</button>
+            <button type="button" class="notes-tool-btn" id="notes-insert-line-btn" title="Insert active sentence quote &amp; timestamp">+ Active Line</button>
+            <span id="notes-save-indicator" style="font-family: var(--font-mono); font-size: 0.75rem; color: var(--ink-muted);" data-i18n="savedStatus">Saved</span>
+          </div>
         </div>
         <textarea
           id="study-notes-textarea"
@@ -1692,6 +1672,8 @@
   <script defer src="/studio-reader-flow.js"></script>
   <script defer src="/studio-reader-ai.js"></script>
   <script defer src="/studio-mode-controller.js"></script>
+  <script defer src="/studio-insights-engine.js"></script>
+  <script defer src="/studio-extract.js"></script>
   <script defer src="/studio.js"></script>
 </body>
 </html>

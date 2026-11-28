@@ -7,7 +7,7 @@
 (function () {
   'use strict';
 
-  const STUDIO_MODES = ['shadow', 'read', 'listen', 'coach', 'notes'];
+  const STUDIO_MODES = ['shadow', 'read', 'listen', 'insights', 'notes'];
   const EXACT_SPEED_PRESETS = new Set([0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
   const RTL_LANGUAGE_CODES = new Set(['ar', 'he', 'fa', 'ur']);
 
@@ -110,7 +110,9 @@
       modeShadow: 'Shadow',
       modeRead: 'Read',
       modeListen: 'Listen',
-      modeCoach: 'Coach',
+      modeInsights: 'Insights',
+      modeExtract: 'Lexicon',
+      modeCoach: 'Prosody',
       modeNotes: 'Notes',
       translationLangLabel: 'Language',
       transLangNone: 'None (Off)',
@@ -285,7 +287,9 @@
       modeShadow: 'الترديد',
       modeRead: 'القراءة',
       modeListen: 'الإملاء',
-      modeCoach: 'المدرب',
+      modeInsights: 'التحليل',
+      modeExtract: 'المعجم',
+      modeCoach: 'النطق',
       modeNotes: 'الملاحظات',
       translationLangLabel: 'اللغة',
       transLangNone: 'بدون ترجمة (إيقاف)',
@@ -386,7 +390,9 @@
       modeShadow: 'Sombra',
       modeRead: 'Lectura',
       modeListen: 'Dictado',
-      modeCoach: 'Coach',
+      modeInsights: 'Análisis',
+      modeExtract: 'Léxico',
+      modeCoach: 'Prosodia',
       modeNotes: 'Notas',
       translationLangLabel: 'Idioma',
       transLangNone: 'Ninguno (Desactivado)',
@@ -422,7 +428,9 @@
       modeShadow: 'Shadowing',
       modeRead: 'Lecture',
       modeListen: 'Dictée',
-      modeCoach: 'Coach',
+      modeInsights: 'Analyse',
+      modeExtract: 'Lexique',
+      modeCoach: 'Prosodie',
       modeNotes: 'Notes',
       translationLangLabel: 'Langue',
       transLangNone: 'Aucun (Désactivé)',
@@ -458,7 +466,9 @@
       modeShadow: 'Shadowing',
       modeRead: 'Lesen',
       modeListen: 'Diktat',
-      modeCoach: 'Coach',
+      modeInsights: 'Analyse',
+      modeExtract: 'Lexikon',
+      modeCoach: 'Prosodie',
       modeNotes: 'Notizen',
       translationLangLabel: 'Sprache',
       transLangNone: 'Keine (Aus)',
@@ -494,7 +504,9 @@
       modeShadow: 'Gölgeleme',
       modeRead: 'Okuma',
       modeListen: 'Dikte',
-      modeCoach: 'Koç',
+      modeInsights: 'Analiz',
+      modeExtract: 'Sözlük',
+      modeCoach: 'Prozodi',
       modeNotes: 'Notlar',
       translationLangLabel: 'Dil',
       transLangNone: 'Yok (Kapalı)',
@@ -528,7 +540,8 @@
   };
 
   const VALID_PACING_MODES = ['short', 'normal'];
-  const PACING_STORAGE_KEY = 'flaptap_shadowing_pacing';
+  const PACING_STORAGE_KEY = 'flaptap_media_hub_pacing';
+  const LEGACY_PACING_STORAGE_KEY = 'flaptap_shadowing_pacing';
 
   function normalizePacingMode(raw) {
     const val = String(raw || '').trim().toLowerCase();
@@ -538,7 +551,10 @@
 
   function getSavedPacingMode() {
     try {
-      return normalizePacingMode(localStorage.getItem(PACING_STORAGE_KEY));
+      const val =
+        localStorage.getItem(PACING_STORAGE_KEY) ||
+        localStorage.getItem(LEGACY_PACING_STORAGE_KEY);
+      return normalizePacingMode(val);
     } catch {
       return 'short';
     }
@@ -555,6 +571,7 @@
     item: null,
     mode: 'shadow',
     readView: 'paragraphs', // 'paragraphs' | 'ideas' | 'speakers' | 'raw'
+    insightsSubView: 'lexicon', // 'lexicon' | 'prosody'
     layout: 'theater',
     ytPlayer: null,
     ytReady: false,
@@ -689,6 +706,7 @@
     if (canvas) {
       canvas.dataset.activeMode = mode;
       canvas.dataset.readView = mode === 'read' ? readView : '';
+      canvas.dataset.insightsSub = mode === 'insights' ? (studioState.insightsSubView || 'lexicon') : '';
     }
 
     if (!MC) return null;
@@ -705,6 +723,7 @@
     const caps = MC.resolveCapabilities({
       mode,
       readView,
+      insightsSubView: studioState.insightsSubView || 'lexicon',
       item,
       hasVideo: hasLessonVideo(item),
       hasTimedMedia: hasTimedMedia(item),
@@ -1459,7 +1478,7 @@
       return;
     }
 
-    if (mode === 'coach') {
+    if (mode === 'insights' && studioState.insightsSubView === 'prosody') {
       const coachEmpty = document.getElementById('coach-filter-empty');
       let coachVisible = 0;
       let coachTotal = 0;
@@ -1613,7 +1632,7 @@
       modes.push({ mode: 'listen', label: `${t('modeListen')} (optional)`, done: listenDone, total: listenTotal });
     }
     if (coachTotal > 0) {
-      modes.push({ mode: 'coach', label: `${t('modeCoach')} (optional)`, done: coachDone, total: coachTotal });
+      modes.push({ mode: 'insights', sub: 'prosody', label: `${t('modeCoach')} (optional)`, done: coachDone, total: coachTotal });
     }
 
     return { doneItems, totalItems, percent, isCompleted, modes };
@@ -1949,9 +1968,63 @@
     }
   }
 
+  function switchInsightsSubView(subName, opts = {}) {
+    const nextSub = subName === 'prosody' ? 'prosody' : 'lexicon';
+    studioState.insightsSubView = nextSub;
+
+    document.querySelectorAll('.insights-subtab[data-insights-sub]').forEach((btn) => {
+      const act = btn.dataset.insightsSub === nextSub;
+      btn.classList.toggle('active', act);
+      btn.setAttribute('aria-selected', act ? 'true' : 'false');
+    });
+
+    const extractPanel = document.getElementById('mode-panel-extract');
+    const coachPanel = document.getElementById('mode-panel-coach');
+    if (extractPanel) extractPanel.style.display = nextSub === 'lexicon' ? '' : 'none';
+    if (coachPanel) coachPanel.style.display = nextSub === 'prosody' ? '' : 'none';
+
+    if (nextSub === 'lexicon') {
+      window.FlaptapStudioExtract?.onActivate?.();
+    } else if (studioState.item) {
+      if ((studioState.item.sentences || []).length === 0) {
+        const loadingBox = document.getElementById('coach-loading-box');
+        const errorBox = document.getElementById('coach-error-box');
+        const contentBox = document.getElementById('coach-content-box');
+        if (loadingBox) loadingBox.hidden = true;
+        if (contentBox) contentBox.hidden = true;
+        if (errorBox) {
+          errorBox.hidden = false;
+          const title = document.getElementById('coach-error-title');
+          const msg = document.getElementById('coach-error-msg');
+          if (title) title.textContent = 'Waiting for Transcript';
+          if (msg) msg.textContent = 'Fetch captions or paste a transcript in Shadow mode first to unlock Prosody & Highlights.';
+        }
+      } else {
+        const coachContent = document.getElementById('coach-content-box');
+        if (!coachContent || coachContent.hidden) {
+          triggerDynamicCoachAnalysis(false);
+        }
+      }
+    }
+
+    applyStudioModeChrome();
+    refreshAllStudioProgressBars();
+    syncSearchMatchesDom();
+
+    if (!opts.skipUrlSync && studioState.mode === 'insights') {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('mode', 'insights');
+        url.searchParams.set('sub', nextSub);
+        window.history.replaceState({}, '', url.toString());
+      } catch {}
+    }
+  }
+
   function switchStudioMode(modeName, opts = {}) {
     let target = modeName;
     let forcedReadView = opts.readView || null;
+    let forcedInsightsSub = opts.sub || opts.insightsSub || null;
     if (target === 'sentences' || target === 'transcript') target = 'shadow';
     if (target === 'chunks' || target === 'paragraphs') {
       target = 'read';
@@ -1960,6 +2033,14 @@
     if (target === 'ideas' || target === 'speakers' || target === 'raw') {
       forcedReadView = target;
       target = 'read';
+    }
+    if (target === 'extract') {
+      target = 'insights';
+      forcedInsightsSub = forcedInsightsSub || 'lexicon';
+    }
+    if (target === 'coach') {
+      target = 'insights';
+      forcedInsightsSub = forcedInsightsSub || 'prosody';
     }
     if (!STUDIO_MODES.includes(target)) target = 'shadow';
 
@@ -2029,26 +2110,10 @@
 
     if (target === 'listen') {
       renderDictationCard();
-    } else if (target === 'coach' && studioState.item) {
-      if ((studioState.item.sentences || []).length === 0) {
-        const loadingBox = document.getElementById('coach-loading-box');
-        const errorBox = document.getElementById('coach-error-box');
-        const contentBox = document.getElementById('coach-content-box');
-        if (loadingBox) loadingBox.hidden = true;
-        if (contentBox) contentBox.hidden = true;
-        if (errorBox) {
-          errorBox.hidden = false;
-          const title = document.getElementById('coach-error-title');
-          const msg = document.getElementById('coach-error-msg');
-          if (title) title.textContent = 'Waiting for Transcript';
-          if (msg) msg.textContent = 'Fetch captions or paste a transcript in Shadow mode first to unlock AI Prosody Coach.';
-        }
-      } else {
-        const coachContent = document.getElementById('coach-content-box');
-        if (!coachContent || coachContent.hidden) {
-          triggerDynamicCoachAnalysis(false);
-        }
-      }
+    } else if (target === 'insights') {
+      switchInsightsSubView(forcedInsightsSub || studioState.insightsSubView || 'lexicon', {
+        skipUrlSync: true,
+      });
     }
 
     applyStudioModeChrome();
@@ -2078,8 +2143,13 @@
         url.searchParams.set('mode', target);
         if (target === 'read') {
           url.searchParams.set('view', studioState.readView || 'paragraphs');
+          url.searchParams.delete('sub');
+        } else if (target === 'insights') {
+          url.searchParams.delete('view');
+          url.searchParams.set('sub', studioState.insightsSubView || 'lexicon');
         } else {
           url.searchParams.delete('view');
+          url.searchParams.delete('sub');
         }
         window.history.replaceState({}, '', url.toString());
       } catch {}
@@ -2190,7 +2260,7 @@
 
   async function fetchShadowingConfig() {
     try {
-      const cfg = await apiFetch('/api/tracks/shadowing/config', { method: 'GET' });
+      const cfg = await apiFetch('/api/tracks/media-hub/config', { method: 'GET' });
       if (cfg && typeof cfg === 'object') {
         studioState.shadowingConfig = {
           aiConfigured: cfg.aiConfigured !== false,
@@ -2255,14 +2325,14 @@
         trBadge.textContent = `${providerLabel} Cloud · 0% CPU`;
         trBadge.className = 'studio-enhance-badge is-cloud';
       } else {
-        trBadge.textContent = 'Uses Device CPU';
-        trBadge.className = 'studio-enhance-badge is-cpu';
+        trBadge.textContent = 'Cloud Key Needed';
+        trBadge.className = 'studio-enhance-badge';
       }
     }
     if (trSub) {
       trSub.textContent = cloudStt?.available
         ? `Fast speech-to-text via ${providerLabel} cloud API (zero laptop fan spin).`
-        : 'Runs local Whisper on this device only when you check this option.';
+        : 'Add a Groq or OpenAI key under AI Models for cloud speech-to-text.';
     }
     if (trCheck) trCheck.disabled = Boolean(studioState.enhancementsInFlight);
 
@@ -4068,6 +4138,27 @@
     }
     studioState.isPlaying = false;
     syncPlaybackButtonsDom();
+    notifyPlaybackTickListeners(
+      typeof studioState.ytPlayer?.getCurrentTime === 'function'
+        ? Number(studioState.ytPlayer.getCurrentTime() || 0)
+        : 0,
+    );
+  }
+
+  const playbackTickListeners = new Set();
+
+  function notifyPlaybackTickListeners(currentTime) {
+    if (!playbackTickListeners.size) return;
+    const payload = {
+      currentTime: Number(currentTime) || 0,
+      isPlaying: Boolean(studioState.isPlaying),
+      activeRange: studioState.activeRange || null,
+    };
+    playbackTickListeners.forEach((fn) => {
+      try {
+        fn(payload);
+      } catch {}
+    });
   }
 
   window.pauseCurrentPlayback = pauseCurrentPlayback;
@@ -4076,6 +4167,9 @@
     const player = studioState.ytPlayer;
     if (!player || player.__flaptapAwaitingReady || typeof player.seekTo !== 'function') return;
     cancelShadowPause();
+    if (opts.ensureVideo && studioState.videoHidden) {
+      toggleVideoVisibility(false, { persist: false });
+    }
     const s = Math.max(0, Number(startSec) || 0);
     const e = Math.max(s + 0.08, Number(endSec) || s + 0.4);
     const rangeKey = opts.rangeKey || `${s.toFixed(3)}-${e.toFixed(3)}`;
@@ -4085,6 +4179,7 @@
       rangeKey,
       label: opts.label || 'Clip',
       mode: opts.mode || 'range',
+      loop: Boolean(opts.loop),
       wordObj: opts.wordObj || null,
     };
     const sentences = studioState.item?.sentences || [];
@@ -4888,10 +4983,11 @@
       : studioState.endAction;
 
     // 1.5 Active Word or Section Range Boundary Enforcement (Paragraph, Idea, Speaker Turn, Raw Cue, Word Clip)
+    notifyPlaybackTickListeners(current);
     const activeRange = studioState.activeRange;
     if (activeRange) {
       if (current >= activeRange.endSec) {
-        if (activeRange.mode === 'word' && effectiveFlow === 'word') {
+        if ((activeRange.mode === 'word' && effectiveFlow === 'word') || activeRange.loop) {
           studioState.pendingSeek = {
             targetSec: activeRange.startSec,
             sentenceIndex: studioState.activeSentence?.index || 1,
@@ -4914,6 +5010,7 @@
         studioState.activeRange = null;
         studioState.isPlaying = false;
         syncPlaybackButtonsDom();
+        notifyPlaybackTickListeners(current);
       }
       return;
     }
@@ -5089,8 +5186,10 @@
       const elTopInCanvas = elRect.top - canvasRect.top + canvas.scrollTop;
       const elBottomInCanvas = elTopInCanvas + elRect.height;
 
+      const itemCard =
+        el.closest('.sentence-driller-card, .editorial-paragraph-block, .coach-item-card') || el;
       const hasPrev = Boolean(prevEl && canvas.contains(prevEl));
-      const anchorEl = hasPrev ? prevEl : el;
+      const anchorEl = hasPrev ? prevEl : itemCard;
       const anchorRect = anchorEl.getBoundingClientRect();
       const anchorTopInCanvas = anchorRect.top - canvasRect.top + canvas.scrollTop;
 
@@ -5196,13 +5295,20 @@
         ? document.querySelector(`.editorial-paragraph-block[data-paragraph-index="${firstParaIdx}"]`)
         : null;
     }
-    if (studioState.mode === 'coach') {
-      const firstUncheckedCoach = document.querySelector(
-        '#mode-panel-coach [data-studio-check-subject^="coach"]:not(.is-checked)',
-      );
+    if (studioState.mode === 'insights') {
+      if (studioState.insightsSubView === 'prosody') {
+        const firstUncheckedCoach = document.querySelector(
+          '#mode-panel-coach [data-studio-check-subject^="coach"]:not(.is-checked)',
+        );
+        return (
+          firstUncheckedCoach?.closest('.coach-item-card, section') ||
+          firstUncheckedCoach ||
+          null
+        );
+      }
       return (
-        firstUncheckedCoach?.closest('.coach-item-card, section') ||
-        firstUncheckedCoach ||
+        document.querySelector('#mode-panel-extract .stx-card.is-sync-active') ||
+        document.querySelector('#mode-panel-extract .stx-card') ||
         null
       );
     }
@@ -5730,7 +5836,7 @@
     syncTranslationUiState();
 
     try {
-      const res = await apiFetch('/api/tracks/shadowing/translate-sentences', {
+      const res = await apiFetch('/api/tracks/media-hub/translate-sentences', {
         method: 'POST',
         body: JSON.stringify({
           historyId: studioState.item.id,
@@ -5769,7 +5875,7 @@
     syncTranslationUiState();
 
     try {
-      const res = await apiFetch('/api/tracks/shadowing/translate-sentences', {
+      const res = await apiFetch('/api/tracks/media-hub/translate-sentences', {
         method: 'POST',
         body: JSON.stringify({
           historyId: studioState.item.id,
@@ -5945,7 +6051,7 @@
     if (refreshBtn) refreshBtn.disabled = true;
 
     try {
-      const res = await apiFetch('/api/tracks/shadowing/analyze', {
+      const res = await apiFetch('/api/tracks/media-hub/analyze', {
         method: 'POST',
         body: JSON.stringify({
           historyId: studioState.item.id,
@@ -6105,6 +6211,16 @@
           <div class="coach-item-actions">
             <div class="coach-action-group">
               ${renderCoachClipButtonHtml(idx)}
+              <button
+                type="button"
+                class="coach-loop-btn icon-action icon-action--sm"
+                data-coach-loop="${idx}"
+                data-coach-loop-key="${escapeHtml(`coach-${kind}-${idx}-${index}`)}"
+                data-coach-loop-label="${escapeHtml(phraseText)}"
+                aria-pressed="false"
+                aria-label="Loop sentence #${num}"
+                title="Loop sentence #${num} for shadowing"
+              >${LOOP_ICON_SVG}</button>
               ${renderStudioCopyBtnHtml(phraseText, 'coach-copy-btn icon-action icon-action--sm')}
               ${renderCoachSaveButtonHtml({ saveKind, index, isSaved })}
             </div>
@@ -6156,7 +6272,7 @@
 
     if (coachGlossInFlight?.stamp === stamp) return;
 
-    const promise = apiFetch('/api/tracks/shadowing/coach-glosses', {
+    const promise = apiFetch('/api/tracks/media-hub/coach-glosses', {
       method: 'POST',
       body: JSON.stringify({ historyId: studioState.item.id }),
     })
@@ -6176,7 +6292,18 @@
     return promise;
   }
 
-  function syncCoachBadgeFromAnalysis(analysis) {    const total =
+  function syncInsightsCombinedBadge() {
+    const extractCount = Number(document.getElementById('badge-extract-count')?.textContent || 0) || 0;
+    const coachCount = Number(document.getElementById('badge-coach-count')?.textContent || 0) || 0;
+    const combinedEl = document.getElementById('badge-insights-count');
+    if (!combinedEl) return;
+    const displayCount = extractCount > 0 ? extractCount : coachCount;
+    combinedEl.textContent = String(displayCount);
+    combinedEl.hidden = displayCount <= 0;
+  }
+
+  function syncCoachBadgeFromAnalysis(analysis) {
+    const total =
       (analysis?.connectedSpeech?.length || 0) +
       (analysis?.expressions?.length || 0) +
       (analysis?.vocabulary?.length || 0);
@@ -6185,6 +6312,7 @@
       badgeCoach.textContent = String(total);
       badgeCoach.hidden = total === 0;
     }
+    syncInsightsCombinedBadge();
   }
 
   function renderCoachAnalysis(analysis) {
@@ -6387,7 +6515,7 @@
       sourceEl: sourceSpan,
       contextSentence: contextSentence?.text || '',
       sentenceIndex: contextSentence?.index || resolvedSentenceIndex,
-      endpoint: '/api/tracks/shadowing/define-word',
+      endpoint: '/api/tracks/media-hub/define-word',
       payload: {
         historyId: studioState.item.id,
         word: term,
@@ -6819,7 +6947,7 @@
     studioState.reviewAiSelector = window.FlaptapAiSelector.create({
       container: mount,
       idPrefix: 'studio-rev-aisel',
-      persistenceKey: 'shadowing_review',
+      persistenceKey: 'media_hub_review',
       title: 'Review Model',
       compact: true,
       showRunButton: false,
@@ -6837,11 +6965,15 @@
       }
     }
     try {
-      const raw = sessionStorage.getItem('flaptap_shadowing_review_opts');
+      const raw =
+        sessionStorage.getItem('flaptap_media_hub_review_opts') ||
+        sessionStorage.getItem('flaptap_shadowing_review_opts');
       if (raw) return JSON.parse(raw);
     } catch {}
     try {
-      const rawLs = localStorage.getItem('flaptap_aisel_shadowing_review');
+      const rawLs =
+        localStorage.getItem('flaptap_aisel_media_hub_review') ||
+        localStorage.getItem('flaptap_aisel_shadowing_review');
       if (rawLs) {
         const p = JSON.parse(rawLs);
         return { keyId: p.keyId || undefined, model: p.model || undefined, variant: p.variant || undefined };
@@ -6959,7 +7091,7 @@
     if (!item?.id || studioState.transcriptActionInFlight) return null;
     studioState.transcriptActionInFlight = true;
     try {
-      const updated = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/captions/retry`, {
+      const updated = await apiFetch(`/api/tracks/media-hub/${encodeURIComponent(item.id)}/captions/retry`, {
         method: 'POST',
       });
       if (updated) {
@@ -6986,7 +7118,7 @@
     }
     studioState.transcriptActionInFlight = true;
     try {
-      const updated = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/transcript/import`, {
+      const updated = await apiFetch(`/api/tracks/media-hub/${encodeURIComponent(item.id)}/transcript/import`, {
         method: 'POST',
         body: JSON.stringify({ rawText: clean }),
       });
@@ -7061,9 +7193,9 @@
   function syncStudioPacingUi(item, modeOverride = null) {
     const group = document.getElementById('studio-pacing-group');
     if (!group) return;
-    const isShadowing = Boolean(item && item.track === 'shadowing');
-    group.hidden = !isShadowing;
-    if (!isShadowing) return;
+    const isMediaHub = Boolean(item && (item.track === 'media_hub' || item.track === 'shadowing'));
+    group.hidden = !isMediaHub;
+    if (!isMediaHub) return;
     const activeMode = normalizePacingMode(modeOverride || item.pacingMode || 'short');
     group.querySelectorAll('[data-pacing]').forEach((btn) => {
       const act = btn.dataset.pacing === activeMode;
@@ -7085,7 +7217,7 @@
   async function switchStudioPacing(nextMode) {
     const targetMode = normalizePacingMode(nextMode);
     const item = studioState.item;
-    if (!item?.id || item.track !== 'shadowing' || studioState.isSwitchingPacing) return;
+    if (!item?.id || (item.track !== 'media_hub' && item.track !== 'shadowing') || studioState.isSwitchingPacing) return;
 
     const prevMode = normalizePacingMode(item.pacingMode || 'short');
     if (prevMode === targetMode) return;
@@ -7117,7 +7249,7 @@
     syncStudioPacingUi(item, targetMode);
 
     try {
-      const data = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/pacing`, {
+      const data = await apiFetch(`/api/tracks/media-hub/${encodeURIComponent(item.id)}/pacing`, {
         method: 'PATCH',
         body: JSON.stringify({ pacingMode: targetMode }),
       });
@@ -7179,7 +7311,10 @@
 
       if (nextItem.aiAnalysis) {
         const coachContent = document.getElementById('coach-content-box');
-        if (studioState.mode === 'coach' || (coachContent && !coachContent.hidden)) {
+        if (
+          (studioState.mode === 'insights' && studioState.insightsSubView === 'prosody') ||
+          (coachContent && !coachContent.hidden)
+        ) {
           renderCoachAnalysis(nextItem.aiAnalysis);
         } else {
           syncCoachBadgeFromAnalysis(nextItem.aiAnalysis);
@@ -7337,7 +7472,7 @@
     const clearBtn = document.getElementById('studio-search-clear');
 
     const hits = [];
-    if (studioState.mode === 'coach') {
+    if (studioState.mode === 'insights' && studioState.insightsSubView === 'prosody') {
       const coachBox = document.getElementById('coach-content-box');
       const cards = coachBox ? Array.from(coachBox.querySelectorAll('.coach-item-card')) : [];
       for (const card of cards) {
@@ -7440,7 +7575,7 @@
       return;
     }
     try {
-      const res = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/title`, {
+      const res = await apiFetch(`/api/tracks/media-hub/${encodeURIComponent(item.id)}/title`, {
         method: 'PATCH',
         body: JSON.stringify({ title: nextTitle }),
       });
@@ -7467,7 +7602,7 @@
     });
     if (!Object.keys(map).length) return;
     try {
-      const res = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/speakers`, {
+      const res = await apiFetch(`/api/tracks/media-hub/${encodeURIComponent(item.id)}/speakers`, {
         method: 'PATCH',
         body: JSON.stringify({ speakers: map }),
       });
@@ -7496,7 +7631,7 @@
     const view = resolveExportViewKey();
     const ts = document.getElementById('studio-export-ts')?.checked ? '1' : '0';
     const spk = document.getElementById('studio-export-spk')?.checked ? '1' : '0';
-    const url = `/api/tracks/shadowing/${encodeURIComponent(item.id)}/export?view=${encodeURIComponent(view)}&format=${encodeURIComponent(format)}&timestamps=${ts}&speakers=${spk}`;
+    const url = `/api/tracks/media-hub/${encodeURIComponent(item.id)}/export?view=${encodeURIComponent(view)}&format=${encodeURIComponent(format)}&timestamps=${ts}&speakers=${spk}`;
     try {
       const res = await fetch(url, {
         method: 'GET',
@@ -7510,7 +7645,7 @@
       const text = await res.text();
       const disp = res.headers.get('Content-Disposition') || '';
       const fnMatch = disp.match(/filename="([^"]+)"/i);
-      const filename = fnMatch ? fnMatch[1] : `shadowing-${view}.${format}`;
+      const filename = fnMatch ? fnMatch[1] : `media-hub-${view}.${format}`;
       const mime = res.headers.get('Content-Type') || 'text/plain;charset=utf-8';
       U.downloadBlob(text, filename, mime);
       closeAllControlPopovers();
@@ -7633,27 +7768,9 @@
     syncDeckLiveSubtitle();
     requestAnimationFrame(syncStudioDeckStickyHeightVar);
 
-    if (studioState.mode === 'coach') {
-      if ((item.sentences || []).length === 0) {
-        const loadingBox = document.getElementById('coach-loading-box');
-        const errorBox = document.getElementById('coach-error-box');
-        const contentBox = document.getElementById('coach-content-box');
-        if (loadingBox) loadingBox.hidden = true;
-        if (contentBox) contentBox.hidden = true;
-        if (errorBox) {
-          errorBox.hidden = false;
-          const title = document.getElementById('coach-error-title');
-          const msg = document.getElementById('coach-error-msg');
-          if (title) title.textContent = 'Waiting for Transcript';
-          if (msg) msg.textContent = 'Fetch captions or paste a transcript in Shadow mode first to unlock AI Prosody Coach.';
-        }
-      } else if (item.aiAnalysis) {
-        renderCoachAnalysis(item.aiAnalysis);
-      } else {
-        triggerDynamicCoachAnalysis(false);
-      }
+    if (studioState.mode === 'insights') {
+      switchInsightsSubView(studioState.insightsSubView || 'lexicon', { skipUrlSync: true });
     } else if (item.aiAnalysis) {
-      // Show the Coach tab count without rendering the panel or fetching vocab.
       syncCoachBadgeFromAnalysis(item.aiAnalysis);
     }
 
@@ -7671,6 +7788,8 @@
       }
     }
 
+    window.FlaptapStudioExtract?.onLessonLoaded?.(item);
+
     if (initialTarget && (targetSentence || studioState.autoFollow)) {
       jumpToActiveItem({ index: initialTarget.index });
     }
@@ -7682,11 +7801,11 @@
    * preserves completion coverage and translations through the regroup.
    */
   async function healLegacyLessonPacing(item) {
-    if (!item || item.track !== 'shadowing' || !item.id) return item;
+    if (!item || (item.track !== 'media_hub' && item.track !== 'shadowing') || !item.id) return item;
     const stored = String(item.pacingMode || '').trim().toLowerCase();
     if (stored !== 'balanced' && stored !== 'full') return item;
     try {
-      const res = await apiFetch(`/api/tracks/shadowing/${encodeURIComponent(item.id)}/pacing`, {
+      const res = await apiFetch(`/api/tracks/media-hub/${encodeURIComponent(item.id)}/pacing`, {
         method: 'PATCH',
         body: JSON.stringify({ pacingMode: 'normal' }),
       });
@@ -7708,8 +7827,9 @@
     const wantsAutoReview = params.get('autoreview') === '1';
     const initialMode = params.get('mode') || 'shadow';
     const initialView = params.get('view') || null;
+    const initialSub = params.get('sub') || null;
 
-    switchStudioMode(initialMode, { readView: initialView, skipUrlSync: true });
+    switchStudioMode(initialMode, { readView: initialView, sub: initialSub, skipUrlSync: true });
 
     const maybeAutoReview = (loadedItem) => {
       if (!wantsAutoReview || !loadedItem) return;
@@ -7728,7 +7848,6 @@
         const [me, item] = await Promise.all([
           apiFetch('/api/auth/me', { method: 'GET' }),
           apiFetch(`/api/history/${encodeURIComponent(id)}`, { method: 'GET' }),
-          fetchShadowingConfig(),
         ]);
         if (!me?.authenticated || !me?.user) {
           redirectToSignInGate();
@@ -7738,6 +7857,7 @@
         renderStudioUserProfile(me);
         const healedItem = await healLegacyLessonPacing(item);
         hydrateStudioItem(healedItem);
+        void fetchShadowingConfig();
         maybeAutoReview(healedItem);
       } catch (error) {
         showFatalLoaderError(error);
@@ -7750,7 +7870,7 @@
         const pacingMode = normalizePacingMode(params.get('pacing') || getSavedPacingMode());
         const [me, item] = await Promise.all([
           apiFetch('/api/auth/me', { method: 'GET' }),
-          apiFetch('/api/tracks/shadowing/process', {
+          apiFetch('/api/tracks/media-hub/process', {
             method: 'POST',
             body: JSON.stringify({
               url: rawUrl,
@@ -7758,7 +7878,6 @@
               pacingMode,
             }),
           }),
-          fetchShadowingConfig(),
         ]);
         if (!me?.authenticated || !me?.user) {
           redirectToSignInGate();
@@ -7779,6 +7898,7 @@
         window.history.replaceState({}, '', nextUrl.toString());
 
         hydrateStudioItem(item);
+        void fetchShadowingConfig();
         maybeAutoReview(item);
       } catch (error) {
         showFatalLoaderError(error);
@@ -7802,12 +7922,10 @@
 
     if (id) {
       try {
-        const [item] = await Promise.all([
-          apiFetch(`/api/history/${encodeURIComponent(id)}`, { method: 'GET' }),
-          fetchShadowingConfig(),
-        ]);
+        const item = await apiFetch(`/api/history/${encodeURIComponent(id)}`, { method: 'GET' });
         const healedItem = await healLegacyLessonPacing(item);
         hydrateStudioItem(healedItem);
+        void fetchShadowingConfig();
         maybeAutoReview(healedItem);
       } catch (error) {
         showFatalLoaderError(error);
@@ -7818,17 +7936,14 @@
     if (rawUrl) {
       try {
         const pacingMode = normalizePacingMode(params.get('pacing') || getSavedPacingMode());
-        const [item] = await Promise.all([
-          apiFetch('/api/tracks/shadowing/process', {
-            method: 'POST',
-            body: JSON.stringify({
-              url: rawUrl,
-              force: forceExtract,
-              pacingMode,
-            }),
+        const item = await apiFetch('/api/tracks/media-hub/process', {
+          method: 'POST',
+          body: JSON.stringify({
+            url: rawUrl,
+            force: forceExtract,
+            pacingMode,
           }),
-          fetchShadowingConfig(),
-        ]);
+        });
         const nextUrl = new URL(window.location.href);
         nextUrl.searchParams.delete('url');
         nextUrl.searchParams.delete('force');
@@ -7842,6 +7957,7 @@
         window.history.replaceState({}, '', nextUrl.toString());
 
         hydrateStudioItem(item);
+        void fetchShadowingConfig();
         maybeAutoReview(item);
       } catch (error) {
         showFatalLoaderError(error);
@@ -7884,6 +8000,10 @@
 
     document.querySelectorAll('.mode-tab-btn[data-mode]').forEach((btn) => {
       btn.addEventListener('click', () => switchStudioMode(btn.dataset.mode));
+    });
+
+    document.querySelectorAll('.insights-subtab[data-insights-sub]').forEach((btn) => {
+      btn.addEventListener('click', () => switchInsightsSubView(btn.dataset.insightsSub));
     });
 
     document.querySelectorAll('[data-studio-comp-filter]').forEach((btn) => {
@@ -8739,10 +8859,34 @@
       const playClip = e.target.closest('[data-coach-play]');
       if (playClip) {
         const idx = Number(playClip.dataset.coachPlay) || 1;
-        if (studioState.isPlaying && studioState.activeSentence?.index === idx) {
+        if (studioState.isPlaying && studioState.activeSentence?.index === idx && !studioState.activeRange?.loop) {
           pauseCurrentPlayback();
         } else {
           playSentence(idx, { forceMode: 'once' });
+        }
+        return;
+      }
+
+      const loopClip = e.target.closest('[data-coach-loop]');
+      if (loopClip) {
+        const idx = Number(loopClip.dataset.coachLoop) || 1;
+        const loopKey = loopClip.dataset.coachLoopKey || `coach-loop-${idx}`;
+        const label = loopClip.dataset.coachLoopLabel || `Line #${idx}`;
+        const sent = (studioState.item?.sentences || []).find((s) => Number(s.index) === idx);
+        if (studioState.isPlaying && studioState.activeRange?.rangeKey === loopKey) {
+          pauseCurrentPlayback();
+          loopClip.classList.remove('active');
+          loopClip.setAttribute('aria-pressed', 'false');
+        } else if (sent && typeof sent.startSec === 'number' && typeof sent.endSec === 'number') {
+          document.querySelectorAll('#mode-panel-coach [data-coach-loop]').forEach((b) => {
+            b.classList.remove('active');
+            b.setAttribute('aria-pressed', 'false');
+          });
+          loopClip.classList.add('active');
+          loopClip.setAttribute('aria-pressed', 'true');
+          playRange(sent.startSec, sent.endSec, { loop: true, label, rangeKey: loopKey, sentIndex: idx });
+        } else {
+          playSentence(idx, { forceMode: 'loop' });
         }
         return;
       }
@@ -8952,6 +9096,35 @@
       });
     }
 
+    const insertIntoStudyNotes = (snippet) => {
+      const ta = document.getElementById('study-notes-textarea');
+      if (!ta || !snippet) return;
+      const start = typeof ta.selectionStart === 'number' ? ta.selectionStart : ta.value.length;
+      const end = typeof ta.selectionEnd === 'number' ? ta.selectionEnd : ta.value.length;
+      const prefix = start > 0 && !/\n$/.test(ta.value.slice(0, start)) ? '\n' : '';
+      ta.value = `${ta.value.slice(0, start)}${prefix}${snippet}${ta.value.slice(end)}`;
+      ta.focus();
+      const pos = start + prefix.length + snippet.length;
+      try { ta.setSelectionRange(pos, pos); } catch {}
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    };
+
+    document.getElementById('notes-insert-ts-btn')?.addEventListener('click', () => {
+      const sec = Math.max(0, Math.floor(readPlaybackTimeSec() || studioState.activeSentence?.startSec || 0));
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      insertIntoStudyNotes(`[${m}:${String(s).padStart(2, '0')}] `);
+    });
+
+    document.getElementById('notes-insert-line-btn')?.addEventListener('click', () => {
+      const sent = studioState.activeSentence || studioState.item?.sentences?.[0];
+      if (!sent) return;
+      const sec = Math.max(0, Math.floor(Number(sent.startSec) || 0));
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      insertIntoStudyNotes(`[${m}:${String(s).padStart(2, '0')}] "${sent.text}"\n`);
+    });
+
     // Study Notes Auto-Save (localStorage + SQLite)
     let notesDebounce = null;
     document.getElementById('study-notes-textarea')?.addEventListener('input', (e) => {
@@ -9140,29 +9313,10 @@
       btn.disabled = false;
     });
 
-    // Cross-Feature Sync: Jump to existing Anything to Phrases guide or pre-load this lesson on demand
-    document.getElementById('studio-extract-phrases-btn')?.addEventListener('click', async () => {
+    // Open in-Studio Deep Lexical Extract workbench
+    document.getElementById('studio-extract-phrases-btn')?.addEventListener('click', () => {
       if (!studioState.item?.id) return;
-      const btn = document.getElementById('studio-extract-phrases-btn');
-      if (btn) btn.disabled = true;
-      try {
-        const res = await apiFetch(
-          `/api/sources/resolve-links?lessonId=${encodeURIComponent(studioState.item.id)}${
-            studioState.item.sourceUrl ? `&url=${encodeURIComponent(studioState.item.sourceUrl)}` : ''
-          }`,
-          { method: 'GET' },
-        );
-        const existingGuide = Array.isArray(res?.extractorNotes) ? res.extractorNotes[0] : null;
-        if (existingGuide?.id) {
-          window.location.href = `/extractor/library/${encodeURIComponent(existingGuide.id)}`;
-          return;
-        }
-      } catch {
-        // Fall through to on-demand Extract pre-selection
-      } finally {
-        if (btn) btn.disabled = false;
-      }
-      window.location.href = `/extractor?lessonId=${encodeURIComponent(studioState.item.id)}`;
+      switchStudioMode('extract');
     });
 
     // Export Markdown Study Sheet
@@ -9601,7 +9755,7 @@
           Digit1: 'shadow',
           Digit2: 'read',
           Digit3: 'listen',
-          Digit4: 'coach',
+          Digit4: 'insights',
           Digit5: 'notes',
         };
         if (modeMap[code]) {
@@ -9613,6 +9767,60 @@
     }
 
     document.addEventListener('keydown', handleStudioKeydown);
+
+    window.FlaptapStudioBridge = {
+      getItem: () => studioState.item || null,
+      getPlaybackState: () => ({
+        currentTime:
+          typeof studioState.ytPlayer?.getCurrentTime === 'function'
+            ? Number(studioState.ytPlayer.getCurrentTime() || 0)
+            : 0,
+        isPlaying: Boolean(studioState.isPlaying),
+        activeRange: studioState.activeRange || null,
+        hasVideo: Boolean(studioState.item?.videoId || studioState.item?.media?.hasVideo),
+        hasMedia: Boolean(studioState.item?.videoId || studioState.item?.media?.streamUrl || studioState.item?.media?.hasAudio),
+      }),
+      playRange: (startSec, endSec, opts = {}) => playRange(startSec, endSec, opts),
+      playSentence: (sentenceIndex, opts = {}) => playSentence(sentenceIndex, opts),
+      pausePlayback: () => pauseCurrentPlayback(),
+      switchMode: (mode, opts = {}) => switchStudioMode(mode, opts),
+      switchInsightsSubView: (sub, opts = {}) => switchInsightsSubView(sub, opts),
+      getCoachAnalysis: () => studioState.item?.aiAnalysis || null,
+      triggerProsodyAnalysis: (force = false) => triggerDynamicCoachAnalysis(force),
+      jumpToShadowSentence: (sentenceIndex) => {
+        const targetIdx = Number(sentenceIndex) || 1;
+        switchStudioMode('shadow');
+        jumpToActiveItem({ index: targetIdx, ensureReadableMode: true, resetFilter: true });
+        playSentence(targetIdx, { forceMode: 'once' });
+      },
+      apiFetch: (url, options) => apiFetch(url, options),
+      apiHeaders: (extra) => apiHeaders(extra),
+      showToast: (msg) => showToast(msg),
+      openAskAi: (promptText, selection) => {
+        if (window.FlaptapStudioReaderAi?.open) {
+          window.FlaptapStudioReaderAi.open({ prefill: promptText || '', selection });
+        } else if (window.FlaptapAiChat?.open) {
+          window.FlaptapAiChat.open({ prefill: promptText || '' });
+        }
+      },
+      saveVocabulary: (entry) => saveWordToVault(entry),
+      isTermSaved: (term) => studioState.savedTerms.has(normalizeTermKey(term)),
+      loadSavedVocabularyTerms: () => loadSavedVocabularyTerms(),
+      onPlaybackTick: (fn) => {
+        if (typeof fn !== 'function') return () => {};
+        playbackTickListeners.add(fn);
+        return () => playbackTickListeners.delete(fn);
+      },
+      setExtractBadge: (count) => {
+        const el = document.getElementById('badge-extract-count');
+        if (el) {
+          const n = Number(count) || 0;
+          el.textContent = String(n);
+          el.hidden = n <= 0;
+        }
+        syncInsightsCombinedBadge();
+      },
+    };
 
     window.FlaptapStudioShortcuts = {
       isTextEntryElement,

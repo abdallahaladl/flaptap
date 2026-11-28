@@ -46,6 +46,7 @@
         { id: 'discourse_marker', label: 'Discourse markers', shortLabel: 'Discourse markers' },
         { id: 'pattern', label: 'Sentence patterns', shortLabel: 'Patterns' },
         { id: 'vocabulary', label: 'Vocabulary & hard words', shortLabel: 'Vocabulary' },
+        { id: 'key_sentence', label: 'Key sentences & takeaway lines', shortLabel: 'Key sentences' },
       ],
     },
     {
@@ -101,6 +102,7 @@
         { id: 'essentials', label: 'Essentials (5–8)', shortLabel: 'Top 5–8' },
         { id: 'focused', label: 'Focused (10–15)', shortLabel: '10–15 items' },
         { id: 'comprehensive', label: 'Comprehensive (Deep)', shortLabel: 'Deep sweep' },
+        { id: 'exhaustive', label: 'Exhaustive (All A1–C2)', shortLabel: 'Exhaustive' },
       ],
     },
     {
@@ -149,6 +151,7 @@
     { id: 'pronunciation_phonetics', label: 'Pronunciation & Phonetics', group: 'audio', audioDependent: true },
     { id: 'word_sentence_stress', label: 'Word Stress & Sentence Stress', group: 'audio', audioDependent: true },
     { id: 'linking_sound_changes', label: 'Linking & Sound Changes', group: 'audio', audioDependent: true },
+    { id: 'key_sentence', label: 'Key Sentences', group: 'core', audioDependent: false },
   ];
 
   const AUDIO_CATEGORY_SET = new Set(

@@ -60,7 +60,7 @@ import {
   normalizeWhitespace,
   splitSourceIntoChunks,
 } from './utils/source-text.util';
-import { anchorItemsToSegments } from './utils/timestamp-anchor.util';
+import { anchorItemsToSegments, anchorItemsToTimedSentences } from './utils/timestamp-anchor.util';
 
 const MAX_UPLOAD_MB = 50;
 const EXTRACTOR_PREFERRED_MODELS = ['gpt-6-luna', 'gpt-5.6-luna'];
@@ -418,7 +418,10 @@ export class AmericanExtractorService {
       order: order.id,
     });
 
-    const chunks = splitSourceIntoChunks(source.text);
+    const chunks =
+      depth.id === 'exhaustive'
+        ? splitSourceIntoChunks(source.text, { maxChunkChars: 6000, maxChunks: 12 })
+        : splitSourceIntoChunks(source.text);
     const wordCount = countWords(source.text);
 
     hooks.onStage?.({
@@ -613,11 +616,13 @@ export class AmericanExtractorService {
             order: order.id,
           });
 
-    // Anchor exact millisecond source timestamps onto every extracted item when segments exist
+    // Anchor exact millisecond source timestamps (word-level when timedSentences exist)
     const anchoredItems =
-      Array.isArray(source.segments) && source.segments.length > 0
-        ? anchorItemsToSegments(merged.items, source.segments, source.text)
-        : merged.items;
+      Array.isArray(source.timedSentences) && source.timedSentences.length > 0
+        ? anchorItemsToTimedSentences(merged.items, source.timedSentences, source.text)
+        : Array.isArray(source.segments) && source.segments.length > 0
+          ? anchorItemsToSegments(merged.items, source.segments, source.text)
+          : merged.items;
 
     const normalized = {
       ...merged,
@@ -810,6 +815,56 @@ export class AmericanExtractorService {
     return note;
   }
 
+  /**
+   * Resolves the latest Phrase Miner / Deep Lexical Extraction guide linked to a
+   * Media Hub lesson, dynamically upgrading word-level `[phraseStartSec, phraseEndSec]`
+   * and `sentenceIndex` anchors when the lesson has timed word arrays.
+   */
+  getLatestForLesson(userId: string, lessonId: string) {
+    const lesson = this.historyRepo.findById(lessonId, { userId });
+    if (!lesson) throw new NotFoundException(`Lesson "${lessonId}" not found.`);
+
+    const links = this.sharedSources.resolveLinks(userId, {
+      lessonId: lesson.id,
+      sourceId: lesson.sourceId || lesson.transcriptData?.sourceId,
+      url: lesson.sourceUrl || undefined,
+    });
+
+    const guides = links.extractorNotes || [];
+    let latest: ExtractionResult | null = null;
+
+    if (guides.length > 0) {
+      latest = this.repository.findById(userId, guides[0].id);
+      if (
+        latest &&
+        Array.isArray(lesson.sentences) &&
+        lesson.sentences.length > 0 &&
+        latest.items.some((it) => it.sentenceIndex == null || it.phraseStartSec == null)
+      ) {
+        const timedSentences = lesson.sentences.map((s) => ({
+          index: Number(s.index) || 1,
+          startSec: Number(s.startSec) || 0,
+          endSec: Number(s.endSec) || 0,
+          text: String(s.text || '').trim(),
+          words: Array.isArray(s.words)
+            ? s.words.map((w) => ({
+                word: String(w.word || ''),
+                clean: String(w.clean || ''),
+                startMs: Number(w.startMs) || 0,
+                endMs: Number(w.endMs) || 0,
+              }))
+            : undefined,
+        }));
+        latest = {
+          ...latest,
+          items: anchorItemsToTimedSentences(latest.items, timedSentences, latest.sourceText),
+        };
+      }
+    }
+
+    return { latest, guides };
+  }
+
   renameNote(userId: string, id: string, rawTitle: string) {
     const title = normalizeWhitespace(String(rawTitle || '')).slice(0, 140);
     if (!title) {
@@ -872,8 +927,8 @@ export class AmericanExtractorService {
         trackTitle: item.trackTitle,
         sourceUrl: item.sourceUrl,
         videoId: item.videoId || '',
-        hasAudio: Boolean(item.videoId),
-        hasVideo: Boolean(item.videoId),
+        hasAudio: Boolean(item.media?.hasAudio ?? item.videoId),
+        hasVideo: Boolean(item.media?.hasVideo ?? item.videoId),
         sentencesCount: item.sentencesCount || 0,
         createdAt: item.createdAt,
       }));

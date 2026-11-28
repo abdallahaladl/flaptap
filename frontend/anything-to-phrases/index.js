@@ -205,7 +205,7 @@
           await shellState.libraryPage?.onActivate?.();
         }
       }
-      if (detail.resetAll || f === 'lessons' || f === 'shadowing' || f === 'street_talk' || f === 'phonetics' || f === 'shared_sources') {
+      if (detail.resetAll || f === 'lessons' || f === 'media_hub' || f === 'media-hub' || f === 'shadowing' || f === 'street_talk' || f === 'phonetics' || f === 'shared_sources') {
         await loadLessonSources();
       }
       if (detail.resetAll || f === 'vocabulary') {

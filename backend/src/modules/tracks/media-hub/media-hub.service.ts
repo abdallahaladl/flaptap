@@ -19,7 +19,7 @@ import { escapeTranscriptHtml } from '../../../core/linguistics/highlights';
 import {
   formatTimestampMs,
   normalizePacingMode,
-  ShadowingPacingMode,
+  MediaHubPacingMode,
 } from '../../../core/linguistics/segmentation';
 import { classifyMediaUrl } from '../../../core/media/media-url';
 import { AiProvidersService } from '../../ai-providers/ai-providers.service';
@@ -34,29 +34,29 @@ import {
   SharedSourceType,
   SourceSegment,
 } from '../../shared-sources/shared-sources.types';
-import { ShadowingAnalysisService } from './shadowing.analysis.service';
-import { ShadowingCoachGlossService } from './shadowing.coach-gloss.service';
-import { ReviewLessonOptions, ShadowingReviewService } from './shadowing.review.service';
+import { MediaHubAnalysisService } from './media-hub.analysis.service';
+import { MediaHubCoachGlossService } from './media-hub.coach-gloss.service';
+import { ReviewLessonOptions, MediaHubReviewService } from './media-hub.review.service';
 import {
-  ShadowingTranslationService,
+  MediaHubTranslationService,
   TranslationResponse,
-} from './shadowing.translation.service';
+} from './media-hub.translation.service';
 import {
   ExportOptions,
   ExportResult,
   RawTranscriptSnapshot,
   ReadingBookmark,
-  ShadowingMediaPlayback,
+  MediaHubMediaPlayback,
   TranscriptAvailabilityStatus,
-} from './shadowing.types';
+} from './media-hub.types';
 import { TranscriptService } from './transcript.service';
 import {
-  exportShadowingLesson,
+  exportMediaHubLesson,
   SUPPORTED_EXPORT_FORMATS,
   SUPPORTED_VIEW_MODES,
 } from './utils/transcript-export.util';
 import { parseManualTranscriptInput } from './utils/manual-transcript.util';
-import { regroupShadowingLessonByPacing } from './utils/pacing-regroup.util';
+import { regroupMediaHubLessonByPacing } from './utils/pacing-regroup.util';
 import { buildRawTranscriptSnapshot } from './utils/word-alignment.util';
 
 const MEDIA_UPLOAD_EXT = /\.(mp3|m4a|wav|aac|flac|ogg|opus|mp4|mov|m4v|webm|mkv)$/i;
@@ -67,7 +67,7 @@ const deletedLessonWatermarks = new Map<string, number>();
  * Records deletion timestamps for a lesson's identifiers so concurrent in-flight
  * ingestion requests cannot resurrect a lesson deleted mid-flight.
  */
-export function markShadowingTargetDeleted(userId: string, keys: Array<string | undefined | null>): void {
+export function markMediaHubTargetDeleted(userId: string, keys: Array<string | undefined | null>): void {
   if (!userId) return;
   const now = Date.now();
   // Prune stale watermarks older than 10 minutes
@@ -82,7 +82,7 @@ export function markShadowingTargetDeleted(userId: string, keys: Array<string | 
   }
 }
 
-export function wasShadowingTargetDeletedAfter(
+export function wasMediaHubTargetDeletedAfter(
   userId: string | null | undefined,
   keys: Array<string | undefined | null>,
   startedAt: number,
@@ -134,17 +134,17 @@ function buildStreamUrl(mediaKind: SharedMediaKind, mediaId: string): string {
 }
 
 @Injectable()
-export class ShadowingService {
-  private readonly logger = new Logger(ShadowingService.name);
+export class MediaHubService {
+  private readonly logger = new Logger(MediaHubService.name);
   private readonly inFlight = new Map<string, Promise<HistoryItem>>();
 
   constructor(
     private readonly historyRepo: HistoryRepository,
     private readonly transcriptService: TranscriptService,
-    private readonly translationService: ShadowingTranslationService,
-    private readonly analysisService: ShadowingAnalysisService,
-    private readonly coachGlossService: ShadowingCoachGlossService,
-    private readonly reviewService: ShadowingReviewService,
+    private readonly translationService: MediaHubTranslationService,
+    private readonly analysisService: MediaHubAnalysisService,
+    private readonly coachGlossService: MediaHubCoachGlossService,
+    private readonly reviewService: MediaHubReviewService,
     private readonly sharedSources: SharedSourcesService,
     private readonly mediaTranscription: MediaTranscriptionService,
     private readonly aiProviders: AiProvidersService,
@@ -260,7 +260,7 @@ export class ShadowingService {
     url: string,
     force = false,
     scope?: RequestIdentityScope,
-    pacingMode?: ShadowingPacingMode,
+    pacingMode?: MediaHubPacingMode,
     options?: { allowInstantOpen?: boolean },
   ): Promise<HistoryItem> {
     const cleanUrl = String(url || '').trim();
@@ -328,7 +328,7 @@ export class ShadowingService {
     file: { buffer: Buffer; originalname: string; mimetype?: string },
     force = false,
     scope?: RequestIdentityScope,
-    pacingMode?: ShadowingPacingMode,
+    pacingMode?: MediaHubPacingMode,
   ): Promise<HistoryItem> {
     if (!file?.buffer || file.buffer.length < 512) {
       throw new BadRequestException('Please upload a valid audio or video file.');
@@ -363,11 +363,11 @@ export class ShadowingService {
       wordTimestamps: true,
       force,
       cloudStt,
-      allowLocalWhisper: true,
+      allowLocalWhisper: false,
     });
 
     if (
-      wasShadowingTargetDeletedAfter(
+      wasMediaHubTargetDeletedAfter(
         scope?.userId,
         [sourceKey, persisted.mediaId, existing?.id],
         opStartedAt,
@@ -396,7 +396,7 @@ export class ShadowingService {
 
     const sourceType: SharedSourceType = persisted.hasVideo ? 'video' : 'audio';
     const platform = persisted.hasVideo ? 'Uploaded Video' : 'Uploaded Audio';
-    const media: ShadowingMediaPlayback = {
+    const media: MediaHubMediaPlayback = {
       hasAudio: true,
       hasVideo: persisted.hasVideo,
       mediaKind: persisted.mediaKind,
@@ -406,7 +406,7 @@ export class ShadowingService {
       durationSeconds: mediaResult.durationSeconds || 0,
     };
 
-    const item = this.buildShadowingLessonItem({
+    const item = this.buildMediaHubLessonItem({
       title,
       creator: 'Uploaded Media',
       sourceUrl: '',
@@ -568,7 +568,7 @@ export class ShadowingService {
    */
   updateLessonPacing(
     historyId: string,
-    pacingMode: ShadowingPacingMode,
+    pacingMode: MediaHubPacingMode,
     scope?: RequestIdentityScope,
   ): HistoryItem {
     const mode = normalizePacingMode(pacingMode);
@@ -622,10 +622,10 @@ export class ShadowingService {
 
   private applyPacingAndPersist(
     item: HistoryItem,
-    mode: ShadowingPacingMode,
+    mode: MediaHubPacingMode,
     scope?: RequestIdentityScope,
   ): HistoryItem {
-    regroupShadowingLessonByPacing(item, mode);
+    regroupMediaHubLessonByPacing(item, mode);
 
     if (item.aiAnalysis) {
       this.analysisService.regroundExistingAnalysisForSentences(item);
@@ -649,7 +649,7 @@ export class ShadowingService {
     scope?: RequestIdentityScope,
   ): ExportResult {
     const lesson = this.assertOwnedLesson(historyId, scope);
-    return exportShadowingLesson(lesson, options);
+    return exportMediaHubLesson(lesson, options);
   }
 
   private async ingestUrlAndPersist(
@@ -659,7 +659,7 @@ export class ShadowingService {
     existing: HistoryItem | undefined,
     scope: RequestIdentityScope | undefined,
     force: boolean,
-    pacingMode: ShadowingPacingMode = 'short',
+    pacingMode: MediaHubPacingMode = 'short',
     allowInstantOpen = false,
   ): Promise<HistoryItem> {
     const startedAt = Date.now();
@@ -697,7 +697,7 @@ export class ShadowingService {
               ? 'youtube'
               : (shared.mediaKind as SharedMediaKind) || 'none';
             const mediaId = isYt ? ytId : shared.mediaId || '';
-            const media: ShadowingMediaPlayback = {
+            const media: MediaHubMediaPlayback = {
               hasAudio: true,
               hasVideo: isYt || Boolean(shared.hasVideo),
               mediaKind,
@@ -706,7 +706,7 @@ export class ShadowingService {
               mimeType: shared.mimeType || (isYt ? 'video/youtube' : ''),
               durationSeconds: shared.durationSeconds || 0,
             };
-            const item = this.buildShadowingLessonItem({
+            const item = this.buildMediaHubLessonItem({
               title: shared.title || 'Media Lesson',
               creator: shared.creator || mediaInfo.platform,
               sourceUrl: mediaInfo.canonicalUrl,
@@ -736,7 +736,7 @@ export class ShadowingService {
         try {
           const yt = await this.transcriptService.extract(mediaInfo.canonicalUrl, force);
           if (
-            wasShadowingTargetDeletedAfter(
+            wasMediaHubTargetDeletedAfter(
               scope?.userId,
               [sourceKey, ytId, existing?.id],
               startedAt,
@@ -762,7 +762,7 @@ export class ShadowingService {
           }
 
           const thumbnailUrl = `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`;
-          const media: ShadowingMediaPlayback = {
+          const media: MediaHubMediaPlayback = {
             hasAudio: true,
             hasVideo: true,
             mediaKind: 'youtube',
@@ -772,7 +772,7 @@ export class ShadowingService {
             durationSeconds: yt.duration_seconds || 0,
           };
 
-          const item = this.buildShadowingLessonItem({
+          const item = this.buildMediaHubLessonItem({
             title: yt.title || 'YouTube Video Lesson',
             creator: yt.creator || 'YouTube Creator',
             sourceUrl: mediaInfo.canonicalUrl,
@@ -873,13 +873,13 @@ export class ShadowingService {
     sourceKey: string;
     existing?: HistoryItem;
     scope?: RequestIdentityScope;
-    pacingMode: ShadowingPacingMode;
+    pacingMode: MediaHubPacingMode;
     status: TranscriptAvailabilityStatus;
     errorMessage: string;
   }): Promise<HistoryItem> {
     const meta = await this.fetchYoutubeOembedQuick(params.ytId);
     const thumbnailUrl = `https://img.youtube.com/vi/${params.ytId}/hqdefault.jpg`;
-    const media: ShadowingMediaPlayback = {
+    const media: MediaHubMediaPlayback = {
       hasAudio: true,
       hasVideo: true,
       mediaKind: 'youtube',
@@ -903,7 +903,7 @@ export class ShadowingService {
 
     const item: HistoryItem = {
       id: params.existing?.id || uuidv4(),
-      track: 'shadowing',
+      track: 'media_hub',
       trackTitle: 'Video Lesson',
       title: meta.title,
       creator: meta.creator,
@@ -995,7 +995,7 @@ export class ShadowingService {
       existing,
       rawSnapshot,
       {
-        title: yt.title && yt.title !== 'YouTube Shadowing Session' ? yt.title : existing.title,
+        title: yt.title && yt.title !== 'YouTube Shadowing Session' && yt.title !== 'YouTube Media Hub Session' ? yt.title : existing.title,
         creator: yt.creator && yt.creator !== 'YouTube Creator' ? yt.creator : existing.creator,
         durationSeconds: yt.duration_seconds || existing.durationSeconds || 0,
         providerEngine: rawSnapshot.provider,
@@ -1053,7 +1053,7 @@ export class ShadowingService {
 
   /**
    * Third-party speech-to-text (Whisper / Groq / OpenAI) is intentionally disabled
-   * for Shadowing so learners only receive original transcripts directly from the source provider.
+   * for Media Hub URL ingestion so learners only receive original transcripts directly from the source provider.
    */
   async transcribeLessonExplicit(
     _historyId: string,
@@ -1063,7 +1063,7 @@ export class ShadowingService {
     throw new BadRequestException({
       code: 'third_party_stt_disabled',
       message:
-        'Third-party transcription (Whisper / Groq / OpenAI) is disabled. Shadowing only uses original transcripts directly from the source provider.',
+        'Third-party transcription (Whisper / Groq / OpenAI) is disabled. Media Hub only uses original transcripts directly from the source provider.',
     });
   }
 
@@ -1080,7 +1080,7 @@ export class ShadowingService {
     scope?: RequestIdentityScope,
   ): HistoryItem {
     const mode = normalizePacingMode(existing.pacingMode);
-    const rebuilt = this.buildShadowingLessonItem({
+    const rebuilt = this.buildMediaHubLessonItem({
       title: updates.title || existing.title,
       creator: updates.creator || existing.creator,
       sourceUrl: existing.sourceUrl,
@@ -1139,7 +1139,7 @@ export class ShadowingService {
     existing: HistoryItem | undefined,
     scope: RequestIdentityScope | undefined,
     force: boolean,
-    pacingMode: ShadowingPacingMode = 'short',
+    pacingMode: MediaHubPacingMode = 'short',
     skipSubtitles = false,
     sttOptions?: {
       allowLocalWhisper?: boolean;
@@ -1159,7 +1159,7 @@ export class ShadowingService {
     });
 
     if (
-      wasShadowingTargetDeletedAfter(
+      wasMediaHubTargetDeletedAfter(
         scope?.userId,
         [sourceKey, ytId, mediaInfo.mediaId, existing?.id],
         opStartedAt,
@@ -1204,7 +1204,7 @@ export class ShadowingService {
       mediaResult.thumbnailUrl ||
       (isYouTubeFallback ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg` : '');
 
-    const media: ShadowingMediaPlayback = {
+    const media: MediaHubMediaPlayback = {
       hasAudio: true,
       hasVideo,
       mediaKind,
@@ -1214,7 +1214,7 @@ export class ShadowingService {
       durationSeconds: mediaResult.durationSeconds || 0,
     };
 
-    const item = this.buildShadowingLessonItem({
+    const item = this.buildMediaHubLessonItem({
       title,
       creator,
       sourceUrl: mediaInfo.canonicalUrl,
@@ -1252,7 +1252,7 @@ export class ShadowingService {
     return this.historyRepo.findById(saved.id, scope) || saved;
   }
 
-  private buildShadowingLessonItem(params: {
+  private buildMediaHubLessonItem(params: {
     title: string;
     creator: string;
     sourceUrl: string;
@@ -1263,10 +1263,10 @@ export class ShadowingService {
     durationSeconds: number;
     videoId: string;
     providerEngine: string;
-    media: ShadowingMediaPlayback;
+    media: MediaHubMediaPlayback;
     raw: RawTranscriptSnapshot;
     existing?: HistoryItem;
-    pacingMode?: ShadowingPacingMode;
+    pacingMode?: MediaHubPacingMode;
     preserveProgress?: boolean;
   }): HistoryItem {
     const pacingMode = normalizePacingMode(params.pacingMode);
@@ -1330,7 +1330,7 @@ export class ShadowingService {
 
     const item: HistoryItem = {
       id: params.existing?.id || uuidv4(),
-      track: 'shadowing',
+      track: 'media_hub',
       trackTitle: params.platform === 'YouTube' ? 'Video Lesson' : `${params.platform} Lesson`,
       title: params.title,
       creator: params.creator,
@@ -1408,7 +1408,7 @@ export class ShadowingService {
       sourceLabel: string;
       mimeType?: string;
       fileName?: string;
-      media: ShadowingMediaPlayback;
+      media: MediaHubMediaPlayback;
       raw: RawTranscriptSnapshot;
       sourceMeta: Record<string, unknown>;
     },

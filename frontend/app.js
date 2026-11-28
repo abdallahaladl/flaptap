@@ -12,11 +12,12 @@
 
   const I18N = {
     en: {
-      brandEdition: 'Spoken English Studio',
+      brandEdition: 'Flaptap Studio',
       navGroupStudio: 'Studio',
       navGroupLab: 'Lab',
       navGroupWorkspace: 'Workspace',
-      navLessons: 'Shadowing',
+      navMediaHub: 'Media Hub',
+      navLessons: 'Media Hub',
       navDialogue: 'Dialogues',
       navPronunciation: 'Phonetics',
       navThinkAloud: 'Think Aloud',
@@ -36,12 +37,12 @@
       authRequiredKicker: 'Account Required',
       authGateTitle: 'Sign in first to continue',
       authGateDesc: 'Your requested action is saved and will run automatically right after you sign in or create an account.',
-      heroKicker: 'Spoken English Studio',
-      heroHeadline: 'Turn any video into <span class="apple-hero-accent">your speaking studio.</span>',
-      heroSubcopy: 'Paste any video, podcast, or audio link — or upload a file — to shadow real speakers with millisecond word playback, AI verbatim review, multi-speaker views, coaching, and 7-format export.',
-      urlPlaceholder: 'Paste YouTube, TikTok, Instagram, X, Podcast RSS, Apple Podcasts, or MP3/MP4 link...',
+      heroKicker: 'Universal Media Learning Hub',
+      heroHeadline: 'Turn any media into <span class="apple-hero-accent">your interactive study studio.</span>',
+      heroSubcopy: 'Paste any video, podcast, social clip, or audio link — or upload a file — to shadow speakers, read multi-speaker transcripts, inspect A1–C2 vocabulary & prosody with playback jump, and export in 7 formats.',
+      urlPlaceholder: 'Paste any video, podcast, or audio link...',
       worksWithLabel: 'Works with',
-      startLessonBtn: 'Start Lesson',
+      startLessonBtn: 'Open Studio',
       lessonsPacingLabel: 'Lines',
       pacingShort: 'Short',
       pacingNormal: 'Normal',
@@ -50,15 +51,15 @@
       bypassCacheLabel: 'Re-extract fresh',
       manageHistoryCacheBtn: 'History & Cache',
       capFullSentences: 'Complete sentences',
-      capModes: 'Four studio modes',
+      capModes: 'Five studio modes',
       capLanguages: '170+ languages',
       statLessons: 'Lessons in Library',
       statDrills: 'Lessons Completed',
       statVocab: 'Saved Vocabulary',
       statMinutes: 'Practice Minutes',
-      libraryHeading: 'Lesson Library',
+      libraryHeading: 'Media Library',
       filterAll: 'All',
-      filterVideos: 'Videos',
+      filterVideos: 'Media',
       filterDialogues: 'Dialogues',
       filterPronunciation: 'Pronunciation',
       searchLessonsPlaceholder: 'Search lessons...',
@@ -86,7 +87,7 @@
       practiceFlashcardsBtn: 'Practice Flashcards',
       hideFlashcardsBtn: 'Hide Flashcards',
       emptyVocabTitle: 'No saved words yet',
-      emptyVocabDesc: 'Click any word in Shadowing, Phrase Miner, or Phrase Builder to save contextual definitions and unlock spaced flashcards.',
+      emptyVocabDesc: 'Click any word in Media Hub, Phrase Miner, or Phrase Builder to save contextual definitions and unlock spaced flashcards.',
       gateVocabTitle: 'Sign in to unlock your Vocabulary Vault & Spaced Flashcards',
       gateVocabDesc: 'Save contextual definitions, connected-speech expressions, and IPA pronunciations while studying—then review them with active-recall flashcards.',
       clickToReveal: 'Click to reveal meaning',
@@ -164,7 +165,7 @@
       drillsDoneUnit: 'drills',
       openInContext: 'Open in lesson',
       generating: 'Generating...',
-      trackVideo: 'Video',
+      trackVideo: 'Media',
       trackDialogue: 'Dialogue',
       trackPronunciation: 'Pronunciation',
       progressTotal: 'Total',
@@ -189,7 +190,8 @@
       navGroupStudio: 'الاستوديو',
       navGroupLab: 'المختبر',
       navGroupWorkspace: 'مساحة العمل',
-      navLessons: 'الترديد',
+      navMediaHub: 'مركز الوسائط',
+      navLessons: 'مركز الوسائط',
       navDialogue: 'الحوارات',
       navPronunciation: 'الصوتيات',
       navThinkAloud: 'فكّر بصوت عالٍ',
@@ -306,7 +308,8 @@
       navGroupStudio: 'Estudio',
       navGroupLab: 'Laboratorio',
       navGroupWorkspace: 'Espacio',
-      navLessons: 'Shadowing',
+      navMediaHub: 'Media Hub',
+      navLessons: 'Media Hub',
       navDialogue: 'Diálogos',
       navPronunciation: 'Fonética',
       navThinkAloud: 'Think Aloud',
@@ -338,7 +341,8 @@
       navGroupStudio: 'Studio',
       navGroupLab: 'Labo',
       navGroupWorkspace: 'Espace',
-      navLessons: 'Shadowing',
+      navMediaHub: 'Media Hub',
+      navLessons: 'Media Hub',
       navDialogue: 'Dialogues',
       navPronunciation: 'Phonétique',
       navThinkAloud: 'Think Aloud',
@@ -370,7 +374,8 @@
       navGroupStudio: 'Studio',
       navGroupLab: 'Labor',
       navGroupWorkspace: 'Arbeitsbereich',
-      navLessons: 'Shadowing',
+      navMediaHub: 'Media Hub',
+      navLessons: 'Media Hub',
       navDialogue: 'Dialoge',
       navPronunciation: 'Phonetik',
       navThinkAloud: 'Think Aloud',
@@ -402,7 +407,8 @@
       navGroupStudio: 'Stüdyo',
       navGroupLab: 'Laboratuvar',
       navGroupWorkspace: 'Çalışma Alanı',
-      navLessons: 'Gölgeleme',
+      navMediaHub: 'Medya Merkezi',
+      navLessons: 'Medya Merkezi',
       navDialogue: 'Diyaloglar',
       navPronunciation: 'Fonetik',
       navThinkAloud: 'Sesli Düşün',
@@ -442,7 +448,7 @@
     stats: null,
     usageOverview: null,
     activeSessions: [],
-    section: 'lessons',
+    section: 'media-hub',
     libraryFilter: 'all',
     libraryPlatformFilter: 'all',
     libraryStatusFilter: 'all',
@@ -541,7 +547,7 @@
     const idList = Array.isArray(ids) ? ids.map((x) => String(x || '').trim()).filter(Boolean) : [];
 
     try {
-      if (resetAll || includeAuth || cleanFeature === 'lessons' || cleanFeature === 'shadowing' || cleanFeature === 'street_talk' || cleanFeature === 'phonetics') {
+      if (resetAll || includeAuth || cleanFeature === 'lessons' || cleanFeature === 'media_hub' || cleanFeature === 'media-hub' || cleanFeature === 'shadowing' || cleanFeature === 'street_talk' || cleanFeature === 'phonetics') {
         if (idList.length > 0 && !resetAll && !includeAuth) {
           for (const id of idList) {
             localStorage.removeItem(`notes_${id}`);
@@ -564,6 +570,7 @@
           'flaptap:aex-library-scroll:v1',
           'flaptap:aex-detail-scroll:v1',
           'flaptap_ll_scroll_v1',
+          'flaptap_media_hub_review_opts',
           'flaptap_shadowing_review_opts',
         ].forEach((k) => {
           try {
@@ -574,6 +581,7 @@
 
       if (resetPreferences || includeAuth) {
         const prefKeys = [
+          'flaptap_media_hub_pacing',
           'flaptap_shadowing_pacing',
           'flaptap_seek_step',
           'flaptap_word_click_mode',
@@ -742,7 +750,7 @@
     }
 
     if (act.type === 'upload_lesson') {
-      switchSection('lessons');
+      switchSection('media-hub');
       setLessonsInputTab('upload');
       if (state.lessonsSelectedFile) {
         await handleLessonFileUpload();
@@ -819,8 +827,9 @@
 
   function activateSectionPanel(section, opts = {}) {
     if (section === 'library') section = 'learning-library';
+    if (section === 'lessons' || section === 'shadowing' || section === 'media') section = 'media-hub';
     const validSections = [
-      'lessons',
+      'media-hub',
       'dialogue',
       'pronunciation',
       'think-aloud',
@@ -831,12 +840,12 @@
       'learning-library',
     ];
     if (!validSections.includes(section)) {
-      section = 'lessons';
+      section = 'media-hub';
     }
     const changed = state.section !== section;
     state.section = section;
     document.body.dataset.activeSection = section;
-    document.body.classList.toggle('is-lessons-view', section === 'lessons');
+    document.body.classList.toggle('is-lessons-view', section === 'media-hub');
     document.body.classList.toggle('is-extractor-view', section === 'american-extractor');
     document.body.classList.toggle('is-library-view', section === 'learning-library');
     document.body.classList.toggle('is-think-aloud-view', section === 'think-aloud');
@@ -848,7 +857,7 @@
     if (changed && !opts.preserveScroll) {
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
-    if (section !== 'lessons') lessonsStickyDock?.disconnect?.();
+    if (section !== 'media-hub') lessonsStickyDock?.disconnect?.();
     if (section !== 'vocabulary') vocabStickyDock?.disconnect?.();
     if (section !== 'think-aloud') window.FlaptapThinkAloud?.onDeactivate?.();
     if (section !== 'ai-chat') window.FlaptapAiChat?.unmountFullPage?.();
@@ -856,9 +865,9 @@
   }
 
   async function applyRoute(routeState) {
-    const resolved = activateSectionPanel(routeState?.section || 'lessons');
+    const resolved = activateSectionPanel(routeState?.section || 'media-hub');
 
-    if (resolved === 'lessons' || resolved === 'dialogue' || resolved === 'pronunciation') {
+    if (resolved === 'media-hub' || resolved === 'dialogue' || resolved === 'pronunciation') {
       renderLibrary();
     } else if (resolved === 'vocabulary') {
       const qsFilter = routeState?.searchParams?.get('filter');
@@ -886,10 +895,11 @@
     } else if (resolved === 'history') {
       const qsTrack = routeState?.searchParams?.get('track');
       const qsCache = routeState?.searchParams?.get('cache');
-      if (qsTrack && ['all', 'shadowing', 'street_talk', 'phonetics'].includes(qsTrack)) {
-        state.ledgerTrackFilter = qsTrack;
+      if (qsTrack && ['all', 'media_hub', 'shadowing', 'street_talk', 'phonetics'].includes(qsTrack)) {
+        const normalizedTrack = qsTrack === 'shadowing' ? 'media_hub' : qsTrack;
+        state.ledgerTrackFilter = normalizedTrack;
         document.querySelectorAll('[data-ledger-track]').forEach((p) => {
-          const act = p.dataset.ledgerTrack === qsTrack;
+          const act = p.dataset.ledgerTrack === normalizedTrack;
           p.classList.toggle('active', act);
           p.setAttribute('aria-selected', act ? 'true' : 'false');
         });
@@ -1220,7 +1230,7 @@
     urlCheckTimer = setTimeout(async () => {
       try {
         await window.FlaptapConfirm?.flushPending?.({ keepalive: false });
-        const res = await apiFetch(`/api/tracks/shadowing/check-existing?url=${encodeURIComponent(rawUrl)}`, {
+        const res = await apiFetch(`/api/tracks/media-hub/check-existing?url=${encodeURIComponent(rawUrl)}`, {
           method: 'GET',
         });
         if (!res.exists) {
@@ -1332,14 +1342,13 @@
     try {
       const sel = state.lessonsAiSelector?.getSelection?.();
       if (sel && (sel.keyId || sel.model || sel.variant)) {
-        sessionStorage.setItem(
-          'flaptap_shadowing_review_opts',
-          JSON.stringify({
-            keyId: sel.keyId || undefined,
-            model: sel.model || undefined,
-            variant: sel.variant || undefined,
-          }),
-        );
+        const serialized = JSON.stringify({
+          keyId: sel.keyId || undefined,
+          model: sel.model || undefined,
+          variant: sel.variant || undefined,
+        });
+        sessionStorage.setItem('flaptap_media_hub_review_opts', serialized);
+        sessionStorage.setItem('flaptap_shadowing_review_opts', serialized);
       }
     } catch {}
   }
@@ -1393,7 +1402,8 @@
     el.textContent = `${file.name} (${sizeMb} MB)`;
   }
 
-  const PACING_STORAGE_KEY = 'flaptap_shadowing_pacing';
+  const PACING_STORAGE_KEY = 'flaptap_media_hub_pacing';
+  const LEGACY_PACING_STORAGE_KEY = 'flaptap_shadowing_pacing';
   const VALID_PACING_MODES = ['short', 'normal'];
 
   function normalizeShadowingPacing(raw) {
@@ -1404,7 +1414,10 @@
 
   function getSavedShadowingPacing() {
     try {
-      return normalizeShadowingPacing(localStorage.getItem(PACING_STORAGE_KEY));
+      const raw =
+        localStorage.getItem(PACING_STORAGE_KEY) ||
+        localStorage.getItem(LEGACY_PACING_STORAGE_KEY);
+      return normalizeShadowingPacing(raw);
     } catch {
       return 'short';
     }
@@ -1461,7 +1474,7 @@
       form.append('pacingMode', selectedPacing);
       const headers = apiHeaders();
       delete headers['Content-Type'];
-      const res = await fetch('/api/tracks/shadowing/upload', {
+      const res = await fetch('/api/tracks/media-hub/upload', {
         method: 'POST',
         headers,
         body: form,
@@ -1709,20 +1722,19 @@
   }
 
   function buildLessonCardHtml(item, opts = {}) {
-    const hasVideoThumb = item.track === 'shadowing' && (item.thumbnailUrl || item.videoId);
+    const isMediaHub = item.track === 'media_hub' || item.track === 'shadowing';
+    const hasVideoThumb = isMediaHub && (item.thumbnailUrl || item.videoId);
     const thumbSrc =
       item.thumbnailUrl ||
       (item.videoId ? `https://img.youtube.com/vi/${encodeURIComponent(item.videoId)}/hqdefault.jpg` : '');
 
-    const platformStamp =
-      item.track === 'shadowing'
-        ? platformDisplayLabel(item.platform) || (item.videoId ? 'YouTube' : trackLabel(item.track))
-        : trackLabel(item.track);
+    const platformStamp = isMediaHub
+      ? platformDisplayLabel(item.platform) || (item.videoId ? 'YouTube' : trackLabel(item.track))
+      : trackLabel(item.track);
 
-    const coverLabel =
-      item.track === 'shadowing'
-        ? platformStamp || 'Spoken Media'
-        : item.accentDialect || 'General American English';
+    const coverLabel = isMediaHub
+      ? platformStamp || 'Spoken Media'
+      : item.accentDialect || 'General American English';
 
     const mediaHtml = hasVideoThumb
       ? `<img src="${escapeHtml(thumbSrc)}" alt="${escapeHtml(item.title)}" loading="lazy" />`
@@ -1846,7 +1858,7 @@
         sentinelId: 'lessons-sticky-sentinel',
         dockId: 'lessons-sticky-dock',
         rootId: 'lessons-items-root',
-        isActive: () => state.section === 'lessons',
+        isActive: () => state.section === 'media-hub',
       })
     : null;
 
@@ -1959,7 +1971,7 @@
       })),
     });
 
-    if (state.section === 'lessons' && hasFilterOrLessons) {
+    if (state.section === 'media-hub' && hasFilterOrLessons) {
       lessonsStickyDock?.setup?.();
     } else {
       lessonsStickyDock?.disconnect?.();
@@ -2062,7 +2074,7 @@
     });
 
     set('usage-total-lessons-pill', `${Number(stats.lessonsCount) || 0} lessons`);
-    set('usage-track-videos', String(stats.byTrack?.shadowing ?? 0));
+    set('usage-track-videos', String(stats.byTrack?.media_hub ?? stats.byTrack?.shadowing ?? 0));
     set('usage-track-dialogues', String(stats.byTrack?.street_talk ?? 0));
     set('usage-track-pron', String(stats.byTrack?.phonetics ?? 0));
     set(
@@ -2093,11 +2105,11 @@
 
     const cards = [
       {
-        feature: 'shadowing',
-        title: 'Shadowing Lessons',
-        count: Number(c.shadowing) || 0,
-        meta: `${Number(c.shadowing) || 0} video/audio lesson(s) + transcript caches`,
-        btnLabel: 'Clear Shadowing',
+        feature: 'media_hub',
+        title: 'Media Hub Lessons',
+        count: Number(c.mediaHub ?? c.shadowing) || 0,
+        meta: `${Number(c.mediaHub ?? c.shadowing) || 0} video/audio lesson(s) + transcript caches`,
+        btnLabel: 'Clear Media Hub',
       },
       {
         feature: 'street_talk',
@@ -2337,7 +2349,7 @@
         const checked = state.selectedLedgerIds.has(item.id) ? 'checked' : '';
         const isDone = Boolean(item.isCompleted);
         const totalBytes = (Number(item.payloadBytes) || 0) + (Number(item.cacheInfo?.transcriptBytes) || 0);
-        const canReextract = item.track === 'shadowing' && (item.sourceUrl || item.videoId);
+        const canReextract = (item.track === 'media_hub' || item.track === 'shadowing') && (item.sourceUrl || item.videoId);
         const videoUrl = item.sourceUrl || (item.videoId ? `https://www.youtube.com/watch?v=${item.videoId}` : '');
 
         return `
@@ -2763,7 +2775,7 @@
       if (lessonPip) {
         const id = lessonPip.getAttribute('data-ft-jump-lesson');
         let card = id ? document.querySelector(`.history-card[data-lesson-id="${CSS.escape(id)}"]`) : null;
-        if (!card && id && state.section === 'lessons') {
+        if (!card && id && state.section === 'media-hub') {
           const idx = getFilteredLibraryLessons().findIndex((item) => item.id === id);
           if (idx >= 0) {
             state.libraryPage = Math.floor(idx / state.libraryPageSize) + 1;
@@ -2772,7 +2784,7 @@
           }
         }
         if (card) {
-          if (state.section === 'lessons' && lessonsStickyDock?.scrollCardIntoView) {
+          if (state.section === 'media-hub' && lessonsStickyDock?.scrollCardIntoView) {
             lessonsStickyDock.scrollCardIntoView(card);
           } else {
             card.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -3075,7 +3087,7 @@
             state.usageOverview.lessons = state.usageOverview.lessons.filter((l) => l.id !== id);
           }
           purgeClientData({
-            feature: target?.track || 'shadowing',
+            feature: target?.track || 'media_hub',
             scope: 'item',
             ids: [id],
           });
@@ -3098,12 +3110,13 @@
       if (!requireAuthBeforeAction(authTarget)) return;
       if (!window.FlaptapConfirm?.confirmAction) return;
 
-      const track = trackOverride || (authTarget?.section === 'lessons' ? state.libraryFilter || 'all' : 'all');
+      const track = trackOverride || (authTarget?.section === 'media-hub' ? state.libraryFilter || 'all' : 'all');
       const matchingLessons =
         track === 'all' ? state.lessons : state.lessons.filter((l) => l.track === track);
       const count = matchingLessons.length;
       const trackTitles = {
-        shadowing: 'Clear all Shadowing lessons?',
+        media_hub: 'Clear all Media Hub lessons?',
+        shadowing: 'Clear all Media Hub lessons?',
         street_talk: 'Clear all Dialogues?',
         phonetics: 'Clear all Pronunciation workouts?',
         all: 'Clear all lessons?',
@@ -3210,7 +3223,7 @@
     );
 
     document.getElementById('clear-library-btn')?.addEventListener('click', async () => {
-      await confirmClearAllLessons({ type: 'section', section: 'lessons' });
+      await confirmClearAllLessons({ type: 'section', section: 'media-hub' });
     });
 
     document.getElementById('clear-dialogues-btn')?.addEventListener('click', async () => {
@@ -3637,7 +3650,7 @@
             method: 'POST',
             body: JSON.stringify({ scope }),
           });
-          purgeClientData({ feature: 'shadowing', scope: 'cache' });
+          purgeClientData({ feature: 'media_hub', scope: 'cache' });
           await loadUsageAndHistory();
           showToast(`Cleared ${scope} cache (${res.clearedLessonsCount || 0} lessons updated)`);
         } catch (err) {
@@ -3837,7 +3850,7 @@
             method: 'POST',
             body: JSON.stringify({ scope: 'all' }),
           });
-          purgeClientData({ feature: target?.track || 'shadowing', scope: 'cache', ids: [id] });
+          purgeClientData({ feature: target?.track || 'media_hub', scope: 'cache', ids: [id] });
           await loadUsageAndHistory();
           showToast('Lesson caches cleared');
         } catch (err) {
@@ -4356,7 +4369,7 @@
     const params = new URLSearchParams(window.location.search);
     const initialRoute = window.FlaptapRouter
       ? window.FlaptapRouter.initShell({ translator: t })
-      : { section: 'lessons', searchParams: params };
+      : { section: 'media-hub', searchParams: params };
 
     // Immediately ensure the active route's panel & chrome match before async tasks
     activateSectionPanel(initialRoute.section, { preserveScroll: true });

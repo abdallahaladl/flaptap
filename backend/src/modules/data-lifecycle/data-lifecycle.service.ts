@@ -10,8 +10,8 @@ import {
   extractYouTubeVideoId,
   SharedSourcesService,
 } from '../shared-sources/shared-sources.service';
-import { markShadowingTargetDeleted } from '../tracks/shadowing/shadowing.service';
-import { TranscriptService } from '../tracks/shadowing/transcript.service';
+import { markMediaHubTargetDeleted } from '../tracks/media-hub/media-hub.service';
+import { TranscriptService } from '../tracks/media-hub/transcript.service';
 import { AuditLogRepository } from './audit-log.repository';
 import {
   AuditEventRecord,
@@ -34,7 +34,7 @@ function mergeCounts(target: PurgeCounts, delta: PurgeCounts): PurgeCounts {
 function trackToFeature(track: string): AuditFeature {
   if (track === 'street_talk') return 'street_talk';
   if (track === 'phonetics') return 'phonetics';
-  return 'shadowing';
+  return 'media_hub';
 }
 
 function extractFileDigestFromSourceKey(sourceKey?: string): string {
@@ -64,8 +64,8 @@ export class DataLifecycleService {
       return Number(row?.cnt) || 0;
     };
 
-    const shadowing = countQuery(
-      `SELECT COUNT(*) AS cnt FROM lessons WHERE user_id = ? AND track = 'shadowing'`,
+    const mediaHub = countQuery(
+      `SELECT COUNT(*) AS cnt FROM lessons WHERE user_id = ? AND track IN ('media_hub', 'shadowing')`,
       userId,
     );
     const street_talk = countQuery(
@@ -121,10 +121,10 @@ export class DataLifecycleService {
 
     return {
       counts: {
-        shadowing,
+        mediaHub,
         street_talk,
         phonetics,
-        lessonsTotal: shadowing + street_talk + phonetics,
+        lessonsTotal: mediaHub + street_talk + phonetics,
         thinkAloudSessions,
         thinkAloudCustomSpines,
         americanExtractorNotes,
@@ -184,7 +184,7 @@ export class DataLifecycleService {
       return { deleted: false, purged: {} };
     }
 
-    const track = String(row.track || 'shadowing');
+    const track = String(row.track || 'media_hub');
     const title = String(row.title || 'Lesson');
     const videoId = String(row.video_id || '').trim();
     const sourceUrl = String(row.source_url || '').trim();
@@ -201,7 +201,7 @@ export class DataLifecycleService {
       // Ignore malformed payload_json
     }
 
-    markShadowingTargetDeleted(userId, [lessonId, sourceKey, videoId, ytId, mediaId]);
+    markMediaHubTargetDeleted(userId, [lessonId, sourceKey, videoId, ytId, mediaId]);
 
     const purged: PurgeCounts = {};
 
@@ -323,7 +323,7 @@ export class DataLifecycleService {
     }
 
     const feature: AuditFeature =
-      tracks.size === 1 ? trackToFeature(Array.from(tracks)[0]) : 'shadowing';
+      tracks.size === 1 ? trackToFeature(Array.from(tracks)[0]) : 'media_hub';
     const auditEvent =
       affected > 0
         ? this.auditLog.record(userId, {
@@ -341,10 +341,11 @@ export class DataLifecycleService {
 
   purgeLessonsByTrack(
     userId: string,
-    track: 'shadowing' | 'street_talk' | 'phonetics' | 'all' = 'all',
+    track: 'media_hub' | 'shadowing' | 'street_talk' | 'phonetics' | 'all' = 'all',
     opts: { removeLinkedVocab?: boolean; cascadeLinkedNotes?: boolean; skipAudit?: boolean } = {},
   ): { removedCount: number; purged: PurgeCounts; auditEvent?: AuditEventRecord } {
-    const cleanTrack = String(track || 'all').trim();
+    const rawTrack = String(track || 'all').trim();
+    const cleanTrack = rawTrack === 'shadowing' ? 'media_hub' : rawTrack;
     const rows =
       cleanTrack !== 'all'
         ? (this.sqlite.db
@@ -370,7 +371,7 @@ export class DataLifecycleService {
     }
 
     const feature: AuditFeature =
-      cleanTrack === 'street_talk' || cleanTrack === 'phonetics' ? cleanTrack : 'shadowing';
+      cleanTrack === 'street_talk' || cleanTrack === 'phonetics' ? cleanTrack : 'media_hub';
     let auditEvent: AuditEventRecord | undefined;
     if (!opts.skipAudit && removedCount > 0) {
       auditEvent = this.auditLog.record(userId, {
@@ -457,7 +458,7 @@ export class DataLifecycleService {
       clearedLessonsCount > 0
         ? this.auditLog.record(userId, {
             action: 'clear_lesson_caches',
-            feature: 'shadowing',
+            feature: 'media_hub',
             scope: 'cache',
             targetLabel: `${clearedLessonsCount} lesson(s) · ${mappedScope}`,
             summary: `Cleared ${mappedScope} cache across ${clearedLessonsCount} lesson${clearedLessonsCount === 1 ? '' : 's'}`,
@@ -1239,11 +1240,17 @@ export class DataLifecycleService {
   ): { removedCount: number; purged: PurgeCounts; auditEvent?: AuditEventRecord } {
     const clean = String(feature || '').trim().toLowerCase();
     switch (clean) {
+      case 'media_hub':
       case 'shadowing':
       case 'street_talk':
       case 'phonetics':
       case 'lessons': {
-        const track = clean === 'lessons' ? 'all' : (clean as 'shadowing' | 'street_talk' | 'phonetics');
+        const track =
+          clean === 'lessons'
+            ? 'all'
+            : clean === 'shadowing'
+              ? 'media_hub'
+              : (clean as 'media_hub' | 'street_talk' | 'phonetics');
         return this.purgeLessonsByTrack(userId, track, {
           removeLinkedVocab: opts.removeLinkedVocab,
           cascadeLinkedNotes: opts.cascadeLinked,
@@ -1438,7 +1445,7 @@ export class DataLifecycleService {
       const vid = String(r.video_id || '').trim();
       const url = String(r.source_url || '').trim();
       const sk = String(r.source_key || '').trim();
-      markShadowingTargetDeleted(userId, [String(r.id), vid, sk]);
+      markMediaHubTargetDeleted(userId, [String(r.id), vid, sk]);
       if (vid) {
         mediaCandidates.push(vid);
         if (/^[a-zA-Z0-9_-]{11}$/.test(vid)) ytCandidates.add(vid);

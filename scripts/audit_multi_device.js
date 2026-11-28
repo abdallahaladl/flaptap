@@ -62,7 +62,7 @@ async function runDeviceAudit() {
 
     // Process fixture lesson in browser context
     const procRes = await page.evaluate(async (tok) => {
-      const res = await fetch('/api/tracks/shadowing/process', {
+      const res = await fetch('/api/tracks/media-hub/process', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

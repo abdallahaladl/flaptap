@@ -42,7 +42,8 @@ export const EXTRACTION_CATEGORIES_CATALOG: ExtractionCategoryMetadata[] = [
   { id: 'cultural_reference', label: 'American Cultural References', hint: 'US cultural, historical, sports, media, or lifestyle references.', group: 'core', audioDependent: false },
   { id: 'pragmatics_context', label: 'Pragmatics & Social Context', hint: 'Politeness strategies, indirect pushback, subtext, and tone shifts.', group: 'core', audioDependent: false },
   { id: 'native_response', label: 'Native-like Responses & Reactions', hint: 'Authentic American replies, agreements, pushbacks, and reactions.', group: 'core', audioDependent: false },
-  // Audio-Dependent Categories (17-20) — ONLY when real audio is available
+  { id: 'key_sentence', label: 'Key Sentences', hint: 'Memorable, high-impact spoken sentences worth shadowing intact.', group: 'core', audioDependent: false },
+  // Audio-Dependent Categories (18-21) — ONLY when real audio is available
   { id: 'connected_speech', label: 'Connected Speech', hint: 'Fast-speech blending and spoken connected forms heard in audio.', group: 'audio', audioDependent: true },
   { id: 'pronunciation_phonetics', label: 'Pronunciation & Phonetics', hint: 'Key General American vowel/consonant features (flap-T, dark L, schwa) in audio.', group: 'audio', audioDependent: true },
   { id: 'word_sentence_stress', label: 'Word Stress & Sentence Stress', hint: 'Syllable stress and contrastive sentence prominence in spoken audio.', group: 'audio', audioDependent: true },
@@ -202,6 +203,15 @@ export const EXTRACTION_TYPES: ExtractionFocusOption[] = [
     audioDependent: false,
     prompt:
       'STRICT CATEGORY: Extract ONLY authentic American conversational responses, agreements, pushbacks, empathy cues, and reactions present in the source. Every item MUST use "category": "native_response".',
+  },
+  {
+    id: 'key_sentence',
+    label: 'Key Sentences',
+    shortLabel: 'Key Sentences',
+    group: 'core',
+    audioDependent: false,
+    prompt:
+      'STRICT CATEGORY: Extract ONLY memorable, high-impact spoken sentences or complete clauses worth shadowing verbatim for rhythm, persuasive framing, or natural fluency. Every item MUST use "category": "key_sentence".',
   },
   // Audio-Dependent Categories (strictly when real source audio is available)
   {
@@ -452,6 +462,13 @@ export const EXTRACTION_DEPTHS: ExtractionFocusOption[] = [
     prompt:
       'Exhaustive sweep: Extract every distinct, source-grounded, study-worthy item matching the filters across the entire excerpt (up to 35 per chunk) without duplicating.',
   },
+  {
+    id: 'exhaustive',
+    label: 'Exhaustive · extract everything (A1–C2)',
+    shortLabel: 'Everything (A1–C2)',
+    prompt:
+      'EXHAUSTIVE FULL-SPECTRUM EXTRACTION: Extract EVERY genuinely learnable linguistic item across ALL CEFR levels (A1, A2, B1, B2, C1, C2) in this section — including foundational words and verbs (A1–A2), everyday phrasal verbs, collocations, structures, discourse markers (B1–B2), idioms, slang, nuanced vocabulary, connected speech, and high-impact key sentences (C1–C2) — up to 55 items per section. Skip ONLY pure function stopwords (the, a, is, of, and) and bare numbers. Tag EVERY item honestly by its exact contextual sense CEFR level (English Vocabulary Profile / Oxford 3000–5000 calibration) and "partOfSpeech" so learners can dynamically filter by their proficiency threshold.',
+  },
 ];
 
 export const EXTRACTION_GOALS: ExtractionFocusOption[] = [
@@ -676,6 +693,7 @@ export function buildExtractionPrompts(params: {
     term: 'canonical citation form (base verb, singular noun, "one\'s" for possessives)',
     surface: 'exact verbatim substring copied directly from SOURCE TEXT',
     category: categoryEnum,
+    partOfSpeech: 'verb|noun|adjective|adverb|phrasal_verb|idiom|collocation|expression|structure|sentence|phonetic',
     register: 'neutral|casual|professional|slang|formal|spoken',
     cefr: 'A1|A2|B1|B2|C1|C2',
     frequency: 'very common|common|niche',

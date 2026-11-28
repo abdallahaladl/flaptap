@@ -754,10 +754,13 @@
         localStorage.setItem(DISPLAY_MODE_KEY, clean);
       } catch {}
     }
+    const prevMode = state.displayMode;
     state.displayMode = clean;
     state.modePopoverOpen = false;
     if (clean === 'fullpage') {
       state.sidebarOpen = true;
+    } else if (prevMode === 'fullpage') {
+      state.sidebarOpen = false;
     }
     emit('display-mode');
   }

@@ -58,11 +58,12 @@ export class HistoryController {
 
   @Post('clear')
   clearHistory(
-    @Body() body: { track?: 'shadowing' | 'street_talk' | 'phonetics' | 'all' } | undefined,
+    @Body() body: { track?: 'media_hub' | 'shadowing' | 'street_talk' | 'phonetics' | 'all' } | undefined,
     @Req() req: Request,
   ) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    const track = body?.track || 'all';
+    const rawTrack = body?.track || 'all';
+    const track = rawTrack === 'shadowing' ? 'media_hub' : rawTrack;
     const res = this.dataLifecycle.purgeLessonsByTrack(identity.userId, track);
     return {
       success: true,
@@ -131,7 +132,7 @@ export class HistoryController {
     if (result.affectedCount > 0) {
       this.auditLog.record(identity.userId, {
         action: 'bulk_reset_lesson_progress',
-        feature: 'shadowing',
+        feature: 'media_hub',
         scope: 'bulk',
         targetLabel: `${result.affectedCount} lesson(s)`,
         summary: `Reset study progress for ${result.affectedCount} lesson(s)`,
@@ -290,7 +291,7 @@ export class HistoryController {
     if (!summary) throw new NotFoundException(`Lesson "${id}" not found`);
     this.auditLog.record(identity.userId, {
       action: 'reset_lesson_progress',
-      feature: summary.track === 'street_talk' ? 'street_talk' : summary.track === 'phonetics' ? 'phonetics' : 'shadowing',
+      feature: summary.track === 'street_talk' ? 'street_talk' : summary.track === 'phonetics' ? 'phonetics' : 'media_hub',
       scope: 'progress',
       targetId: id,
       targetLabel: summary.title,

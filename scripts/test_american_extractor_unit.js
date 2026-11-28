@@ -31,6 +31,7 @@ const {
 } = require(path.join(dist, 'utils/source-text.util.js'));
 const {
   anchorItemsToSegments,
+  anchorItemsToTimedSentences,
   parseSubtitleSegments,
 } = require(path.join(dist, 'utils/timestamp-anchor.util.js'));
 const {
@@ -892,13 +893,13 @@ try {
     'Library supports title sorting, pagination, and accurate stats',
   );
 
-  // 20-Category Catalog & Strict Audio-Dependent Gate
+  // 21-Category Catalog & Strict Audio-Dependent Gate
   check(
-    CORE_CATEGORIES.length === 16 &&
+    CORE_CATEGORIES.length === 17 &&
       AUDIO_DEPENDENT_CATEGORIES.length === 4 &&
-      ALL_CATEGORIES.length === 20 &&
-      EXTRACTION_CATEGORIES_CATALOG.length === 21,
-    'Category catalog exposes 16 core + 4 audio-dependent categories + All default',
+      ALL_CATEGORIES.length === 21 &&
+      EXTRACTION_CATEGORIES_CATALOG.length === 22,
+    'Category catalog exposes 17 core + 4 audio-dependent categories + All default',
   );
   check(
     normalizeCategory('sentence patterns') === 'pattern' &&
@@ -925,13 +926,13 @@ try {
     hasAudio: false,
   });
   check(
-    textAllCats.selectedCategories.length === 16 &&
+    textAllCats.selectedCategories.length === 17 &&
       textAllCats.selectedCategories.every((c) => !isAudioDependentCategory(c)),
     'All-mode on text sources strictly excludes all 4 audio-dependent categories',
   );
   check(
-    audioAllCats.selectedCategories.length === 20,
-    'All-mode on audio/video sources unlocks all 20 categories',
+    audioAllCats.selectedCategories.length === 21,
+    'All-mode on audio/video sources unlocks all 21 categories',
   );
   check(
     rejectedAudio.rejectedAudioOnly === true && rejectedAudio.selectedCategories.length === 0,
@@ -1278,6 +1279,76 @@ try {
       a2pStore.getNextUncompletedPage(makeNote(24, Array.from({ length: 16 }, (_, i) => i)), 20) === 1 &&
       a2pStore.getNextUncompletedPage(makeNote(24, Array.from({ length: 20 }, (_, i) => i)), 20) === 2,
     'getNextUncompletedPage handles out-of-order gaps, 100% completed guides (Page 1), and custom pageSize=20',
+  );
+  check(
+    ALL_CATEGORIES.includes('key_sentence') &&
+      normalizeCategory('key sentence') === 'key_sentence' &&
+      normalizeCategory('important sentence') === 'key_sentence',
+    'key_sentence category is registered and normalized properly',
+  );
+  check(
+    Array.isArray(EXTRACTION_DEPTHS) && EXTRACTION_DEPTHS.some((d) => d.id === 'exhaustive'),
+    'EXTRACTION_DEPTHS includes exhaustive full-spectrum extraction depth',
+  );
+
+  const anchoredSentenceItems = anchorItemsToTimedSentences(
+    [
+      {
+        index: 1,
+        term: 'figure it out',
+        surface: 'figure it out',
+        contextSentence: 'We will figure it out together soon.',
+      },
+      {
+        index: 2,
+        term: 'big picture',
+        surface: 'big picture',
+        contextSentence: 'Keep the big picture in mind.',
+      },
+    ],
+    [
+      {
+        index: 1,
+        text: 'We will figure it out together soon.',
+        startSec: 10.0,
+        endSec: 13.5,
+        words: [
+          { word: 'We', startMs: 10000, endMs: 10200 },
+          { word: 'will', startMs: 10200, endMs: 10400 },
+          { word: 'figure', startMs: 10450, endMs: 10850 },
+          { word: 'it', startMs: 10850, endMs: 11000 },
+          { word: 'out', startMs: 11000, endMs: 11300 },
+          { word: 'together', startMs: 11350, endMs: 12100 },
+          { word: 'soon.', startMs: 12150, endMs: 13400 },
+        ],
+      },
+      {
+        index: 2,
+        text: 'Keep the big picture in mind.',
+        startSec: 14.0,
+        endSec: 17.2,
+        words: [
+          { word: 'Keep', startMs: 14000, endMs: 14400 },
+          { word: 'the', startMs: 14400, endMs: 14600 },
+          { word: 'big', startMs: 14650, endMs: 15000 },
+          { word: 'picture', startMs: 15000, endMs: 15600 },
+          { word: 'in', startMs: 15650, endMs: 15900 },
+          { word: 'mind.', startMs: 15900, endMs: 17100 },
+        ],
+      },
+    ],
+  );
+  check(
+    anchoredSentenceItems[0].sentenceIndex === 1 &&
+      anchoredSentenceItems[0].startSec === 10 &&
+      anchoredSentenceItems[0].endSec === 13.5 &&
+      typeof anchoredSentenceItems[0].phraseStartSec === 'number' &&
+      Math.abs(anchoredSentenceItems[0].phraseStartSec - 10.39) < 0.01 &&
+      Math.abs(anchoredSentenceItems[0].phraseEndSec - 11.42) < 0.01 &&
+      anchoredSentenceItems[1].sentenceIndex === 2 &&
+      Math.abs(anchoredSentenceItems[1].phraseStartSec - 14.59) < 0.01 &&
+      Math.abs(anchoredSentenceItems[1].phraseEndSec - 15.72) < 0.01,
+    'anchorItemsToTimedSentences resolves sentenceIndex, sentence range, and tight word-level phraseStartSec/phraseEndSec',
   );
 } finally {
   sqlite.onModuleDestroy();

@@ -1,5 +1,5 @@
 import { SourceSegment } from '../../shared-sources/shared-sources.types';
-import { ExtractorItem } from '../american-extractor.types';
+import { ExtractorItem, TimedSentenceAnchor } from '../american-extractor.types';
 import { normalizeTermKey } from './source-text.util';
 
 const TIMESTAMP_LINE_RE =
@@ -227,6 +227,214 @@ export function anchorItemsToSegments(
       ...item,
       startSec,
       endSec,
+    };
+  });
+}
+
+function normalizeWordTokens(raw: string): string[] {
+  return normalizeTermKey(raw)
+    .split(/[^a-z0-9']+/)
+    .filter(Boolean);
+}
+
+/**
+ * Anchors extracted items to exact Media Hub Studio timed sentences AND exact
+ * word-level millisecond phrase spans (`phraseStartSec`, `phraseEndSec`, `sentenceIndex`).
+ */
+export function anchorItemsToTimedSentences(
+  items: ExtractorItem[],
+  sentences: TimedSentenceAnchor[],
+  sourceText = '',
+): ExtractorItem[] {
+  if (!Array.isArray(items) || items.length === 0) return items;
+  if (!Array.isArray(sentences) || sentences.length === 0) return items;
+
+  const prepared = sentences
+    .map((sent, idx) => {
+      const startSec = roundMs(Number(sent.startSec) || 0);
+      const endSec = roundMs(Math.max(startSec + 0.25, Number(sent.endSec) || startSec + 1));
+      const norm = normalizeTermKey(sent.text);
+      const words = Array.isArray(sent.words)
+        ? sent.words
+            .map((w) => ({
+              clean: normalizeWordTokens(w.clean || w.word)[0] || '',
+              startSec: roundMs((Number(w.startMs) || 0) / 1000),
+              endSec: roundMs((Number(w.endMs) || 0) / 1000),
+            }))
+            .filter((w) => w.clean.length > 0 && w.endSec >= w.startSec)
+        : [];
+      return {
+        idx,
+        sentenceIndex: Number(sent.index) || idx + 1,
+        startSec,
+        endSec,
+        norm,
+        tokens: new Set(tokenizeWords(sent.text)),
+        words,
+      };
+    })
+    .filter((s) => s.norm.length > 0);
+
+  if (prepared.length === 0) return items;
+
+  const normSource = normalizeTermKey(sourceText);
+  const totalSourceLen = Math.max(1, normSource.length);
+
+  return items.map((item) => {
+    const contextKey = normalizeTermKey(item.contextSentence || '');
+    const surfaceKey = normalizeTermKey(item.surface || '');
+    const termKey = normalizeTermKey(item.term || '');
+
+    let expectedRatio = -1;
+    if (normSource) {
+      const pos =
+        (contextKey && normSource.indexOf(contextKey.slice(0, 60))) ||
+        (surfaceKey && normSource.indexOf(surfaceKey)) ||
+        (termKey && normSource.indexOf(termKey));
+      if (typeof pos === 'number' && pos >= 0) {
+        expectedRatio = pos / totalSourceLen;
+      }
+    }
+
+    const pickByProximity = <T extends { idx: number }>(candidates: T[]): T => {
+      if (candidates.length === 1 || expectedRatio < 0) return candidates[0];
+      let best = candidates[0];
+      let bestDist = Infinity;
+      for (const cand of candidates) {
+        const ratio = cand.idx / Math.max(1, prepared.length - 1);
+        const dist = Math.abs(ratio - expectedRatio);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = cand;
+        }
+      }
+      return best;
+    };
+
+    let matched: (typeof prepared)[number] | null = null;
+    let fallbackWindow: { idx: number; sentenceIndex: number; startSec: number; endSec: number } | null = null;
+
+    const exactSingle = prepared.filter(
+      (seg) =>
+        (contextKey && contextKey.length >= 12 && (seg.norm.includes(contextKey) || contextKey.includes(seg.norm))) ||
+        (surfaceKey && surfaceKey.length >= 3 && seg.norm.includes(surfaceKey)),
+    );
+    if (exactSingle.length > 0) {
+      const bothMatch =
+        contextKey && surfaceKey
+          ? exactSingle.filter(
+              (seg) =>
+                seg.norm.includes(surfaceKey) &&
+                (contextKey.includes(seg.norm) || seg.norm.includes(contextKey.slice(0, 40))),
+            )
+          : [];
+      matched = pickByProximity(bothMatch.length > 0 ? bothMatch : exactSingle);
+    }
+
+    if (!matched && prepared.length > 1) {
+      const pairCandidates: Array<{
+        idx: number;
+        sentenceIndex: number;
+        startSec: number;
+        endSec: number;
+        primary: (typeof prepared)[number];
+      }> = [];
+      for (let i = 0; i < prepared.length - 1; i++) {
+        const combined = `${prepared[i].norm} ${prepared[i + 1].norm}`;
+        if (
+          (surfaceKey && surfaceKey.length >= 3 && combined.includes(surfaceKey)) ||
+          (termKey && termKey.length >= 3 && combined.includes(termKey))
+        ) {
+          pairCandidates.push({
+            idx: i,
+            sentenceIndex: prepared[i].sentenceIndex,
+            startSec: prepared[i].startSec,
+            endSec: prepared[i + 1].endSec,
+            primary: prepared[i],
+          });
+        }
+      }
+      if (pairCandidates.length > 0) {
+        const chosen = pickByProximity(pairCandidates);
+        matched = chosen.primary;
+        fallbackWindow = chosen;
+      }
+    }
+
+    if (!matched && termKey && termKey.length >= 3) {
+      const termMatches = prepared.filter((seg) => seg.norm.includes(termKey));
+      if (termMatches.length > 0) {
+        matched = pickByProximity(termMatches);
+      }
+    }
+
+    if (!matched) {
+      const needleTokens = tokenizeWords(item.contextSentence || item.surface || item.term);
+      if (needleTokens.length >= 2) {
+        let bestSeg: (typeof prepared)[number] | null = null;
+        let bestScore = 0.45;
+        for (const seg of prepared) {
+          const score = tokenOverlapScore(needleTokens, seg.tokens);
+          if (score > bestScore) {
+            bestScore = score;
+            bestSeg = seg;
+          }
+        }
+        matched = bestSeg;
+      }
+    }
+
+    if (!matched) {
+      return item;
+    }
+
+    const startSec = fallbackWindow ? fallbackWindow.startSec : matched.startSec;
+    const endSec = fallbackWindow ? fallbackWindow.endSec : matched.endSec;
+
+    // Locate tight word-level [phraseStartSec, phraseEndSec] inside the matched sentence
+    let phraseStartSec: number | undefined;
+    let phraseEndSec: number | undefined;
+    if (matched.words.length > 0) {
+      const needleVariants = [
+        normalizeWordTokens(item.surface || ''),
+        normalizeWordTokens(item.term || ''),
+      ].filter((tokens) => tokens.length > 0 && tokens.length <= matched.words.length);
+
+      for (const needle of needleVariants) {
+        for (let i = 0; i <= matched.words.length - needle.length; i++) {
+          let allMatch = true;
+          for (let j = 0; j < needle.length; j++) {
+            const wTok = matched.words[i + j].clean;
+            const nTok = needle[j];
+            if (wTok !== nTok && !wTok.startsWith(nTok) && !nTok.startsWith(wTok)) {
+              allMatch = false;
+              break;
+            }
+          }
+          if (allMatch) {
+            const firstW = matched.words[i];
+            const lastW = matched.words[i + needle.length - 1];
+            const rawPhraseStart = roundMs(Math.max(startSec, firstW.startSec - 0.06));
+            const rawPhraseEnd = roundMs(
+              Math.min(endSec, Math.max(rawPhraseStart + 0.16, lastW.endSec + 0.12)),
+            );
+            phraseStartSec = rawPhraseStart;
+            phraseEndSec = rawPhraseEnd;
+            break;
+          }
+        }
+        if (phraseStartSec !== undefined) break;
+      }
+    }
+
+    return {
+      ...item,
+      sentenceIndex: matched.sentenceIndex,
+      startSec,
+      endSec,
+      ...(phraseStartSec !== undefined && phraseEndSec !== undefined
+        ? { phraseStartSec, phraseEndSec }
+        : {}),
     };
   });
 }

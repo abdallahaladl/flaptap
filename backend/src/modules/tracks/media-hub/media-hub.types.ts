@@ -1,7 +1,7 @@
 import { SharedMediaKind, SharedSourceType } from '../../shared-sources/shared-sources.types';
-import type { ShadowingPacingMode } from '../../../core/linguistics/segmentation';
+import type { MediaHubPacingMode } from '../../../core/linguistics/segmentation';
 
-export type { ShadowingPacingMode };
+export type { MediaHubPacingMode };
 
 export type TranscriptViewMode = 'sentences' | 'paragraphs' | 'ideas' | 'speakers' | 'raw';
 
@@ -50,7 +50,7 @@ export interface ReadingBookmark {
   updatedAt: string;
 }
 
-export interface ShadowingAskMessage {
+export interface MediaHubAskMessage {
   id: string;
   role: 'user' | 'assistant';
   content: string;
@@ -171,7 +171,7 @@ export interface ReviewedTranscriptSnapshot {
   reviewedAt: string;
 }
 
-export interface ShadowingMediaPlayback {
+export interface MediaHubMediaPlayback {
   hasAudio: boolean;
   hasVideo: boolean;
   mediaKind: SharedMediaKind;
@@ -181,13 +181,13 @@ export interface ShadowingMediaPlayback {
   durationSeconds: number;
 }
 
-export interface ShadowingTranscriptData {
+export interface MediaHubTranscriptData {
   sourceId?: string;
   sourceKey?: string;
   sourceType: SharedSourceType;
   platform: string;
   providerEngine: string;
-  pacingMode?: ShadowingPacingMode;
+  pacingMode?: MediaHubPacingMode;
   raw: RawTranscriptSnapshot;
   reviewed: ReviewedTranscriptSnapshot | null;
   reviewStatus: TranscriptReviewStatus;
@@ -196,7 +196,7 @@ export interface ShadowingTranscriptData {
   transcriptError?: string;
   speakerOverrides: Record<string, string>;
   readingBookmark?: ReadingBookmark | null;
-  askHistory?: ShadowingAskMessage[];
+  askHistory?: MediaHubAskMessage[];
 }
 
 export interface ReviewProgressEvent {

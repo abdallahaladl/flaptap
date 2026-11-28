@@ -19,24 +19,24 @@ async function main() {
   const items = await response.json();
 
   const targets = items.filter((item) =>
-    item.track === 'shadowing' &&
+    (item.track === 'media_hub' || item.track === 'shadowing') &&
     item.videoId &&
     item.sourceUrl &&
     item.timingVersion !== 2,
   );
 
   if (targets.length === 0) {
-    console.log('✅ Every shadowing session already uses word-accurate timing.');
+    console.log('✅ Every Media Hub session already uses word-accurate timing.');
     return;
   }
 
-  console.log(`Refreshing ${targets.length} shadowing session(s)...`);
+  console.log(`Refreshing ${targets.length} Media Hub session(s)...`);
   const failed = [];
 
   for (const item of targets) {
     process.stdout.write(`→ ${item.title} ... `);
     try {
-      const res = await fetch(`${BASE_URL}/api/tracks/shadowing/process`, {
+      const res = await fetch(`${BASE_URL}/api/tracks/media-hub/process`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: item.sourceUrl, force: true }),

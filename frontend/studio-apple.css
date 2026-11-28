@@ -2421,7 +2421,7 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
    ========================================================================== */
 
 .studio-body .editorial-article-view {
-  padding: 28px 30px 40px;
+  padding: 20px 26px 84px;
 }
 
 .studio-body .editorial-paragraph-block {
@@ -2564,12 +2564,12 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
 }
 
 .studio-body .coach-brief-card {
-  border-radius: 20px;
+  border-radius: 16px;
   border: 1px solid var(--ap-border);
-  border-inline-start: 4px solid var(--ap-blue);
+  border-inline-start: 3.5px solid var(--ap-blue);
   background: var(--ap-surface-subtle);
-  padding: 22px 22px 18px;
-  box-shadow: var(--ap-shadow-card);
+  padding: 18px 20px 16px;
+  box-shadow: none;
 }
 
 .studio-body .coach-brief-kicker {
@@ -2697,27 +2697,34 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
 }
 
 .studio-body .coach-item-card {
-  border-radius: 16px;
-  border: 1px solid var(--ap-border);
-  background: var(--ap-surface-subtle);
-  padding: 15px 17px 14px;
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid var(--ap-border);
+  background: transparent;
+  padding: 16px 4px;
+}
+
+.studio-body .coach-item-card:last-child {
+  border-bottom: none;
 }
 
 .studio-body .coach-item-card:hover {
-  background: var(--ap-surface);
-  border-color: var(--ap-border-strong);
-  box-shadow: 0 4px 14px -6px rgba(0, 0, 0, 0.12);
+  background: color-mix(in srgb, var(--ap-fill-subtle) 55%, transparent);
+  border-color: var(--ap-border);
+  box-shadow: none;
 }
 
 .studio-body .coach-item-card.is-item-completed {
-  background: rgba(52, 199, 89, 0.055);
-  border-color: rgba(52, 199, 89, 0.24);
+  background: rgba(52, 199, 89, 0.045);
+  border-color: var(--ap-border);
+  padding-inline-start: 12px;
   box-shadow: inset 3px 0 0 rgba(52, 199, 89, 0.72);
 }
 
 :root[data-theme="dark"] .studio-body .coach-item-card.is-item-completed {
-  background: rgba(48, 209, 88, 0.065);
-  border-color: rgba(48, 209, 88, 0.22);
+  background: rgba(48, 209, 88, 0.055);
+  border-color: var(--ap-border);
+  padding-inline-start: 12px;
   box-shadow: inset 3px 0 0 rgba(48, 209, 88, 0.72);
 }
 
@@ -4203,7 +4210,7 @@ html[lang="ar"] .studio-body .trans-switch-input:checked + .trans-switch-track .
 
 /* Structured Read Views (Ideas, Speakers, Raw Original) */
 .studio-body .studio-structured-view {
-  padding: 16px 18px 34px;
+  padding: 16px 18px 84px;
   display: flex;
   flex-direction: column;
   gap: 12px;

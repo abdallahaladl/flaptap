@@ -482,6 +482,14 @@ export class SqliteService implements OnModuleDestroy {
       UPDATE auth_sessions
       SET session_id = SUBSTR(token_hash, 1, 16)
       WHERE session_id = '' OR session_id IS NULL;
+
+      UPDATE lessons
+      SET track = 'media_hub'
+      WHERE track = 'shadowing';
+
+      UPDATE ai_chat_threads
+      SET context_type = 'media_hub'
+      WHERE context_type = 'shadowing';
     `);
   }
 

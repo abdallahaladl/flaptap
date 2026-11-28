@@ -480,7 +480,7 @@ async function run() {
     /* 6. Saved lesson transcript                                         */
     /* ------------------------------------------------------------------ */
     console.log('\n--- Saved lesson transcript ---');
-    const processVideo = await api(baseUrl, '/api/tracks/shadowing/process', {
+    const processVideo = await api(baseUrl, '/api/tracks/media-hub/process', {
       token,
       method: 'POST',
       body: { url: 'https://www.youtube.com/watch?v=C89c0fsHYIQ' },

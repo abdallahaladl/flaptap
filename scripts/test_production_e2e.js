@@ -162,7 +162,7 @@ async function runProductionE2ETest() {
     ['GET', '/api/stats'],
     ['GET', '/api/vocabulary'],
     ['POST', '/api/vocabulary', { term: 'test', definition: 'test' }],
-    ['POST', '/api/tracks/shadowing/process', { url: 'https://www.youtube.com/watch?v=Ka0p5tUUmgg' }],
+    ['POST', '/api/tracks/media-hub/process', { url: 'https://www.youtube.com/watch?v=Ka0p5tUUmgg' }],
     ['POST', '/api/tracks/street-talk/start', { scenario: 'Coffee chat' }],
     ['POST', '/api/tracks/phonetics/drill', { topic: 'Flap T' }],
   ];
@@ -235,14 +235,14 @@ async function runProductionE2ETest() {
 
   try {
     // API Failure Taxonomy (Authenticated)
-    const invalidRes = await fetch(`${BASE_URL}/api/tracks/shadowing/process`, {
+    const invalidRes = await fetch(`${BASE_URL}/api/tracks/media-hub/process`, {
       method: 'POST',
       headers: authHeadersA,
       body: JSON.stringify({ url: 'not-a-youtube-url' }),
     });
     assert(invalidRes.status === 400, `Expected 400 for invalid URL, got ${invalidRes.status}`);
 
-    const removedRes = await fetch(`${BASE_URL}/api/tracks/shadowing/process`, {
+    const removedRes = await fetch(`${BASE_URL}/api/tracks/media-hub/process`, {
       method: 'POST',
       headers: authHeadersA,
       body: JSON.stringify({ url: 'https://www.youtube.com/shorts/NgI_xpTl5w4' }),
@@ -261,7 +261,7 @@ async function runProductionE2ETest() {
     console.log('\n--- 1c. Segmentation Invariants, Dynamic AI Generators, Isolation & Cache Controls ---');
 
     // Process Punctuated Video Fixture (`Ka0p5tUUmgg`) + Unpunctuated ASR Video Fixture (`0CmtDk-joT4`)
-    const primaryRes = await fetch(`${BASE_URL}/api/tracks/shadowing/process`, {
+    const primaryRes = await fetch(`${BASE_URL}/api/tracks/media-hub/process`, {
       method: 'POST',
       headers: authHeadersA,
       body: JSON.stringify({ url: 'https://www.youtube.com/watch?v=Ka0p5tUUmgg' }),
@@ -269,7 +269,7 @@ async function runProductionE2ETest() {
     assert(primaryRes.ok, `Primary video process failed: ${primaryRes.status}`);
     const fixture = await primaryRes.json();
 
-    const asrRes = await fetch(`${BASE_URL}/api/tracks/shadowing/process`, {
+    const asrRes = await fetch(`${BASE_URL}/api/tracks/media-hub/process`, {
       method: 'POST',
       headers: authHeadersA,
       body: JSON.stringify({ url: 'https://www.youtube.com/watch?v=0CmtDk-joT4' }),
@@ -404,7 +404,7 @@ async function runProductionE2ETest() {
     assert(srsData.masteryLevel === 1, `Expected masteryLevel 1, got ${srsData.masteryLevel}`);
 
     const checkHit = await fetch(
-      `${BASE_URL}/api/tracks/shadowing/check-existing?url=${encodeURIComponent('https://www.youtube.com/watch?v=Ka0p5tUUmgg')}`,
+      `${BASE_URL}/api/tracks/media-hub/check-existing?url=${encodeURIComponent('https://www.youtube.com/watch?v=Ka0p5tUUmgg')}`,
       { headers: authHeadersA },
     ).then((r) => r.json());
     assert(checkHit.exists === true && checkHit.id === fixture.id, 'check-existing cache hit failed.');
@@ -1177,7 +1177,8 @@ async function runProductionE2ETest() {
 
     // Coach Mode (Real Dynamic OpenCode Go AI Analysis + `+ Save` -> `✓ Saved` + Completion Check)
     console.log('\n--- 4. Dynamic OpenCode Go AI Coach, Word Lookup & Save Button States ---');
-    await page.click('.mode-tab-btn[data-mode="coach"]');
+    await page.click('.mode-tab-btn[data-mode="insights"]');
+    await page.click('.insights-subtab[data-insights-sub="prosody"]');
     await page.waitForFunction(() => !document.getElementById('coach-content-box')?.hidden, {
       timeout: 120000,
     });

@@ -242,7 +242,7 @@ export class ThinkAloudService {
       const result = await this.mediaTranscription.transcribeFile(tmpPath, {
         force: true,
         skipCache: true,
-        allowLocalWhisper: true,
+        allowLocalWhisper: false,
       });
       return {
         text: result.text,

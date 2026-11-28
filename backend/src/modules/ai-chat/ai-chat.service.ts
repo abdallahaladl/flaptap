@@ -283,7 +283,8 @@ export class AiChatService {
     context?: AiChatContextInput,
     quote?: AiChatQuoteAttachment,
   ): { contextType: AiChatContextType; contextLabel: string; sections: string[] } {
-    const type: AiChatContextType = context?.type || 'general';
+    const rawType = (context?.type || 'general') as string;
+    const type: AiChatContextType = (rawType === 'shadowing' ? 'media_hub' : rawType) as AiChatContextType;
     let label = String(context?.label || '').trim();
     const sections: string[] = [];
 
@@ -291,7 +292,7 @@ export class AiChatService {
       sections.push(`Subtitle / Scope: ${String(context.subtitle).trim()}`);
     }
 
-    if ((type === 'shadowing' || type === 'dialogue' || type === 'phonetics') && context?.id) {
+    if ((type === 'media_hub' || type === 'dialogue' || type === 'phonetics') && context?.id) {
       const lesson = this.historyRepo.findById(context.id, { userId });
       if (lesson) {
         label = label || lesson.title || 'Studio Lesson';
@@ -595,14 +596,14 @@ export class AiChatService {
     return out;
   }
 
-  private syncLegacyShadowingAsk(
+  private syncLegacyMediaHubAsk(
     userId: string,
     contextType: AiChatContextType,
     contextId: string,
     userMsg: AiChatMessage,
     asstMsg: AiChatMessage,
   ): void {
-    if (contextType !== 'shadowing' || !contextId) return;
+    if (contextType !== 'media_hub' || !contextId) return;
     try {
       const lesson = this.historyRepo.findById(contextId, { userId });
       if (!lesson || !lesson.transcriptData) return;
@@ -775,7 +776,7 @@ export class AiChatService {
     });
 
     const refreshedThread = this.repo.findThreadById(userId, thread.id)?.thread || thread;
-    this.syncLegacyShadowingAsk(
+    this.syncLegacyMediaHubAsk(
       userId,
       hydrated.contextType,
       effectiveContext.id || '',
@@ -1135,7 +1136,7 @@ export class AiChatService {
         skipCache: true,
         wordTimestamps: false,
         cloudStt,
-        allowLocalWhisper: true,
+        allowLocalWhisper: false,
       });
       return {
         text: String(result.text || '').trim(),

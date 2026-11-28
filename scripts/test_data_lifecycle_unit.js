@@ -39,10 +39,10 @@ const { SharedSourcesService } = require(
   path.join(distRoot, 'modules/shared-sources/shared-sources.service.js'),
 );
 const { TranscriptService } = require(
-  path.join(distRoot, 'modules/tracks/shadowing/transcript.service.js'),
+  path.join(distRoot, 'modules/tracks/media-hub/transcript.service.js'),
 );
-const { ShadowingService } = require(
-  path.join(distRoot, 'modules/tracks/shadowing/shadowing.service.js'),
+const { MediaHubService } = require(
+  path.join(distRoot, 'modules/tracks/media-hub/media-hub.service.js'),
 );
 const { MediaTranscriptionService } = require(
   path.join(distRoot, 'modules/american-extractor/sources/media-transcription.service.js'),
@@ -134,7 +134,7 @@ function buildHarness() {
     aiProvidersService,
     auditLog,
   );
-  const shadowingService = new ShadowingService(
+  const shadowingService = new MediaHubService(
     historyRepo,
     transcriptService,
     null,
@@ -206,8 +206,8 @@ function makeLessonInput(overrides = {}) {
     sourceUrl,
     sourceKey: overrides.sourceKey || `youtube:${ytId}`,
     sourceId: overrides.sourceId || '',
-    track: overrides.track || 'shadowing',
-    trackTitle: overrides.trackTitle || 'Shadowing',
+    track: overrides.track || 'media_hub',
+    trackTitle: overrides.trackTitle || 'Media Hub',
     duration: '00:05',
     sentencesCount: 2,
     completedCount: overrides.completedCount ?? 0,
@@ -843,7 +843,7 @@ test('5. Vocabulary reset/bulk/clear and feature-scoped purge isolate tracks and
     assert.strictEqual(vBulk.affectedCount, 1);
     assert.strictEqual(h.vocabService.list({ userId: 'user_a' }).length, 1);
 
-    h.historyRepo.create(makeLessonInput({ id: 'l_shadow_a', track: 'shadowing' }), { userId: 'user_a' });
+    h.historyRepo.create(makeLessonInput({ id: 'l_shadow_a', track: 'media_hub' }), { userId: 'user_a' });
     h.historyRepo.create(
       makeLessonInput({
         id: 'l_dialogue_a',
@@ -856,11 +856,11 @@ test('5. Vocabulary reset/bulk/clear and feature-scoped purge isolate tracks and
       { userId: 'user_a' },
     );
     h.historyRepo.create(
-      makeLessonInput({ id: 'l_shadow_b', track: 'shadowing' }),
+      makeLessonInput({ id: 'l_shadow_b', track: 'media_hub' }),
       { userId: 'user_b' },
     );
 
-    const featPurge = h.lifecycle.purgeFeature('user_a', 'shadowing');
+    const featPurge = h.lifecycle.purgeFeature('user_a', 'media_hub');
     assert.strictEqual(featPurge.removedCount, 1);
     assert.strictEqual(h.historyRepo.findById('l_shadow_a', { userId: 'user_a' }), undefined);
     assert.ok(h.historyRepo.findById('l_dialogue_a', { userId: 'user_a' }), 'street_talk must remain untouched');
@@ -885,8 +885,8 @@ test('6. Workspace Factory Reset & Account deletion external artifact cleanup ke
       .prepare(`INSERT INTO user_ai_keys (id, user_id, provider_id, label, key_fingerprint, key_mask, encrypted_key, is_default, created_at, updated_at) VALUES ('k_a', 'user_a', 'openai', 'Test Key', 'fp_a', 'sk-..ab', 'enc', 1, ?, ?)`)
       .run(now, now);
 
-    h.historyRepo.create(makeLessonInput({ id: 'ws_l1', track: 'shadowing' }), { userId: 'user_a' });
-    h.historyRepo.create(makeLessonInput({ id: 'ws_b1', track: 'shadowing' }), { userId: 'user_b' });
+    h.historyRepo.create(makeLessonInput({ id: 'ws_l1', track: 'media_hub' }), { userId: 'user_a' });
+    h.historyRepo.create(makeLessonInput({ id: 'ws_b1', track: 'media_hub' }), { userId: 'user_b' });
     h.vocabService.save({ term: 'resilient', definition: 'bouncing back' }, { userId: 'user_a' });
 
     assert.throws(

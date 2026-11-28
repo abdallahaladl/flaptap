@@ -8,13 +8,13 @@ import { AuthController } from './modules/auth/auth.controller';
 import { AuthService } from './modules/auth/auth.service';
 import { VocabularyController, VocabularyService } from './modules/vocabulary/vocabulary.service';
 
-import { ShadowingController } from './modules/tracks/shadowing/shadowing.controller';
-import { ShadowingService } from './modules/tracks/shadowing/shadowing.service';
-import { ShadowingTranslationService } from './modules/tracks/shadowing/shadowing.translation.service';
-import { ShadowingAnalysisService } from './modules/tracks/shadowing/shadowing.analysis.service';
-import { ShadowingCoachGlossService } from './modules/tracks/shadowing/shadowing.coach-gloss.service';
-import { ShadowingReviewService } from './modules/tracks/shadowing/shadowing.review.service';
-import { ShadowingAskService } from './modules/tracks/shadowing/shadowing.ask.service';
+import { MediaHubController } from './modules/tracks/media-hub/media-hub.controller';
+import { MediaHubService } from './modules/tracks/media-hub/media-hub.service';
+import { MediaHubTranslationService } from './modules/tracks/media-hub/media-hub.translation.service';
+import { MediaHubAnalysisService } from './modules/tracks/media-hub/media-hub.analysis.service';
+import { MediaHubCoachGlossService } from './modules/tracks/media-hub/media-hub.coach-gloss.service';
+import { MediaHubReviewService } from './modules/tracks/media-hub/media-hub.review.service';
+import { MediaHubAskService } from './modules/tracks/media-hub/media-hub.ask.service';
 import { StreetTalkController, StreetTalkService } from './modules/tracks/street-talk/street-talk.service';
 import { PhoneticsController, PhoneticsService } from './modules/tracks/phonetics/phonetics.service';
 import { HistoryController } from './modules/history/history.controller';
@@ -42,7 +42,7 @@ import { AiChatModule } from './modules/ai-chat/ai-chat.module';
     HealthController,
     AuthController,
     VocabularyController,
-    ShadowingController,
+    MediaHubController,
     StreetTalkController,
     PhoneticsController,
     HistoryController,
@@ -55,12 +55,12 @@ import { AiChatModule } from './modules/ai-chat/ai-chat.module';
     WordLookupService,
     AuthService,
     VocabularyService,
-    ShadowingTranslationService,
-    ShadowingAnalysisService,
-    ShadowingCoachGlossService,
-    ShadowingReviewService,
-    ShadowingAskService,
-    ShadowingService,
+    MediaHubTranslationService,
+    MediaHubAnalysisService,
+    MediaHubCoachGlossService,
+    MediaHubReviewService,
+    MediaHubAskService,
+    MediaHubService,
     StreetTalkService,
     PhoneticsService,
   ],

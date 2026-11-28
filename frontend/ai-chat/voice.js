@@ -10,6 +10,8 @@
   function createVoiceController(opts = {}) {
     const state = {
       active: false,
+      speaking: false,
+      speakingId: '',
       lang: localStorage.getItem('flaptap_ask_voice_lang') || 'auto',
       recognition: null,
       mediaRecorder: null,
@@ -17,6 +19,13 @@
       audioChunks: [],
       liveText: '',
     };
+
+    function notifySpeakState() {
+      opts.onSpeakStateChange?.({
+        speaking: state.speaking,
+        messageId: state.speakingId,
+      });
+    }
 
     function resolveLang() {
       if (state.lang === 'en-US' || state.lang === 'ar-EG') return state.lang;
@@ -194,35 +203,83 @@
       return finalText;
     }
 
-    function speak(text) {
+    function stopSpeaking() {
+      const wasSpeaking = state.speaking;
+      state.speaking = false;
+      state.speakingId = '';
+      if (typeof global.speechSynthesis !== 'undefined') {
+        try {
+          global.speechSynthesis.cancel();
+        } catch {}
+      }
+      if (wasSpeaking) notifySpeakState();
+    }
+
+    function speak(text, messageId = '') {
       const clean = String(text || '')
         .replace(/```[\s\S]*?```/g, ' ')
         .replace(/[*_#`~>]/g, '')
         .trim();
-      if (!clean) return;
-      if (global.FlaptapWordLookup?.speakText) {
-        global.FlaptapWordLookup.speakText(clean.slice(0, 1200));
-        return;
+      if (!clean) return false;
+
+      if (state.speaking && (!messageId || state.speakingId === messageId)) {
+        stopSpeaking();
+        return false;
       }
+
+      stopSpeaking();
+
+      if (global.FlaptapWordLookup?.speakText && typeof global.speechSynthesis === 'undefined') {
+        state.speaking = true;
+        state.speakingId = messageId;
+        notifySpeakState();
+        global.FlaptapWordLookup.speakText(clean.slice(0, 1200));
+        return true;
+      }
+
       if (typeof global.speechSynthesis !== 'undefined') {
         try {
           global.speechSynthesis.cancel();
           const u = new SpeechSynthesisUtterance(clean.slice(0, 1200));
           u.lang = /[\u0600-\u06FF]/.test(clean) ? 'ar-EG' : 'en-US';
           u.rate = 0.96;
+          state.speaking = true;
+          state.speakingId = messageId;
+          notifySpeakState();
+          const clear = () => {
+            if (state.speakingId === messageId) {
+              state.speaking = false;
+              state.speakingId = '';
+              notifySpeakState();
+            }
+          };
+          u.onend = clear;
+          u.onerror = clear;
           global.speechSynthesis.speak(u);
-        } catch {}
+          return true;
+        } catch {
+          state.speaking = false;
+          state.speakingId = '';
+          notifySpeakState();
+        }
+      } else if (global.FlaptapWordLookup?.speakText) {
+        global.FlaptapWordLookup.speakText(clean.slice(0, 1200));
+        return true;
       }
+      return false;
     }
 
     return {
       isActive: () => state.active,
+      isSpeaking: () => state.speaking,
+      getSpeakingMessageId: () => state.speakingId,
       getLang: () => state.lang,
       getLangBadge,
       cycleLang,
       start,
       stop,
       speak,
+      stopSpeaking,
     };
   }
 

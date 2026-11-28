@@ -247,7 +247,7 @@ export class TranscriptService {
     // transient throttle can leave it on the generic fallback. A single fast
     // retry from Node keeps the studio header accurate without delaying the
     // caption pipeline.
-    if (!data.title || data.title === 'YouTube Shadowing Session') {
+    if (!data.title || data.title === 'YouTube Shadowing Session' || data.title === 'YouTube Media Hub Session') {
       try {
         const oembed = await fetch(
           `https://www.youtube.com/oembed?url=${encodeURIComponent(`https://www.youtube.com/watch?v=${data.video_id}`)}&format=json`,

@@ -29,8 +29,8 @@ export interface TranslationResponse {
  * mangled into a forced equivalent.
  */
 @Injectable()
-export class ShadowingTranslationService {
-  private readonly logger = new Logger(ShadowingTranslationService.name);
+export class MediaHubTranslationService {
+  private readonly logger = new Logger(MediaHubTranslationService.name);
   private readonly inFlight = new Map<string, Promise<TranslationResponse>>();
 
   constructor(

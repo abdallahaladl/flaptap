@@ -1,5 +1,5 @@
 export type AuditFeature =
-  | 'shadowing'
+  | 'media_hub'
   | 'street_talk'
   | 'phonetics'
   | 'think_aloud'
@@ -52,7 +52,7 @@ export interface AuditEventRecord {
 
 export interface LifecycleSummary {
   counts: {
-    shadowing: number;
+    mediaHub: number;
     street_talk: number;
     phonetics: number;
     lessonsTotal: number;

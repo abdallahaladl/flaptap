@@ -11,7 +11,7 @@ import {
   TranscriptProviderGuard,
   TranscriptProviderKey,
 } from '../../../core/media/transcript-provider-guard.service';
-import { TimedWord, TranscriptCue } from '../../tracks/shadowing/transcript.service';
+import { TimedWord, TranscriptCue } from '../../tracks/media-hub/transcript.service';
 import { assertPublicHttpUrl } from '../utils/url-guard.util';
 
 const execFileAsync = promisify(execFile);
@@ -306,9 +306,8 @@ export class MediaTranscriptionService {
     if (options.skipSubtitles) {
       cliArgs.push('--skip-subtitles');
     }
-    if (options.allowLocalWhisper) {
-      cliArgs.push('--allow-local-whisper');
-    }
+    // Local device ML/Whisper CPU/GPU inference is strictly prohibited so the app
+    // never pegs the user's or host's hardware (Zero Local Device Compute Law).
     if (options.persistMediaDir) {
       cliArgs.push('--persist-media-dir', options.persistMediaDir);
       if (options.mediaId) {

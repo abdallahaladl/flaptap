@@ -26,32 +26,32 @@ const {
   applySpeakerOverridesToReviewed,
   buildRawTranscriptSnapshot,
   coalesceToCanonicalSentences,
-  regroupShadowingLessonByPacing,
-} = require(path.join(distRoot, 'modules/tracks/shadowing/utils/word-alignment.util.js'));
+  regroupMediaHubLessonByPacing,
+} = require(path.join(distRoot, 'modules/tracks/media-hub/utils/word-alignment.util.js'));
 
 const {
-  buildShadowingAskSystemPrompt,
-  buildShadowingAskContextBundle,
-} = require(path.join(distRoot, 'modules/tracks/shadowing/shadowing.ask.service.js'));
+  buildMediaHubAskSystemPrompt,
+  buildMediaHubAskContextBundle,
+} = require(path.join(distRoot, 'modules/tracks/media-hub/media-hub.ask.service.js'));
 
 const {
-  exportShadowingLesson,
+  exportMediaHubLesson,
   SUPPORTED_EXPORT_FORMATS,
   SUPPORTED_VIEW_MODES,
-} = require(path.join(distRoot, 'modules/tracks/shadowing/utils/transcript-export.util.js'));
+} = require(path.join(distRoot, 'modules/tracks/media-hub/utils/transcript-export.util.js'));
 
 const {
   buildReviewChunks,
   parseTranscriptReviewResponse,
-} = require(path.join(distRoot, 'modules/tracks/shadowing/shadowing-review.prompt.js'));
+} = require(path.join(distRoot, 'modules/tracks/media-hub/media-hub-review.prompt.js'));
 
 const { parseManualTranscriptInput } = require(path.join(
   distRoot,
-  'modules/tracks/shadowing/utils/manual-transcript.util.js',
+  'modules/tracks/media-hub/utils/manual-transcript.util.js',
 ));
-const { ShadowingService } = require(path.join(
+const { MediaHubService } = require(path.join(
   distRoot,
-  'modules/tracks/shadowing/shadowing.service.js',
+  'modules/tracks/media-hub/media-hub.service.js',
 ));
 const { ServiceUnavailableException } = require(path.join(
   distRoot,
@@ -239,7 +239,7 @@ test('assembleAlignedReviewedViews automatically splits long 20+ word rambling s
   assert.strictEqual(rejoined, tokens.join(' '));
 });
 
-test('regroupShadowingLessonByPacing dynamically switches short <-> normal with zero hard cuts, completion & translation preservation', () => {
+test('regroupMediaHubLessonByPacing dynamically switches short <-> normal with zero hard cuts, completion & translation preservation', () => {
   const s1Tokens =
     "But what I'm not going to do is repeat the past, where I envision myself living a completely different life and not creating a plan to take action on that.".split(
       /\s+/,
@@ -270,8 +270,8 @@ test('regroupShadowingLessonByPacing dynamically switches short <-> normal with 
 
   const lesson = {
     id: 'lesson_pacing_unit',
-    track: 'shadowing',
-    trackTitle: 'Shadowing',
+    track: 'media_hub',
+    trackTitle: 'Media Hub',
     title: 'Dynamic Pacing Test',
     creator: 'Miranda',
     pacingMode: 'short',
@@ -334,7 +334,7 @@ test('regroupShadowingLessonByPacing dynamically switches short <-> normal with 
     .map((s) => s.index);
 
   // Switch short -> normal
-  regroupShadowingLessonByPacing(lesson, 'normal');
+  regroupMediaHubLessonByPacing(lesson, 'normal');
   assert.strictEqual(lesson.pacingMode, 'normal');
   assert.ok(
     lesson.sentences.length >= 2 && lesson.sentences.length < shortCount,
@@ -358,7 +358,7 @@ test('regroupShadowingLessonByPacing dynamically switches short <-> normal with 
 
   // Switch normal -> short (round-trip)
   const normalTexts = lesson.sentences.map((s) => s.text);
-  regroupShadowingLessonByPacing(lesson, 'short');
+  regroupMediaHubLessonByPacing(lesson, 'short');
   assert.strictEqual(lesson.pacingMode, 'short');
   assert.strictEqual(lesson.sentences.length, shortCount, 'Round-trip back to short must match exact short count');
   assert.strictEqual(lesson.sentences[0].text, firstShortText);
@@ -373,7 +373,7 @@ test('regroupShadowingLessonByPacing dynamically switches short <-> normal with 
   }
 
   // Legacy "Medium" alias resolves to the same complete sentences as normal
-  regroupShadowingLessonByPacing(lesson, 'balanced');
+  regroupMediaHubLessonByPacing(lesson, 'balanced');
   assert.strictEqual(lesson.pacingMode, 'normal', 'Legacy balanced must persist as normal');
   assert.deepStrictEqual(lesson.sentences.map((s) => s.text), normalTexts, 'Legacy balanced must not re-introduce arbitrary middle splits');
   // Exact verbatim text check across entire transcript
@@ -381,7 +381,7 @@ test('regroupShadowingLessonByPacing dynamically switches short <-> normal with 
 });
 
 // 4. Universal 7-Format x 5-View Exporter
-test('exportShadowingLesson generates valid output across all 5 views and all 7 formats', () => {
+test('exportMediaHubLesson generates valid output across all 5 views and all 7 formats', () => {
   const raw = buildRawTranscriptSnapshot({
     provider: 'youtube_json3',
     title: 'Thinking in American English',
@@ -414,8 +414,8 @@ test('exportShadowingLesson generates valid output across all 5 views and all 7 
 
   const fakeLesson = {
     id: 'sh_test',
-    track: 'shadowing',
-    trackTitle: 'Shadowing',
+    track: 'media_hub',
+    trackTitle: 'Media Hub',
     title: 'Thinking in American English',
     creator: 'Host',
     sourceUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -445,7 +445,7 @@ test('exportShadowingLesson generates valid output across all 5 views and all 7 
 
   for (const view of SUPPORTED_VIEW_MODES) {
     for (const format of SUPPORTED_EXPORT_FORMATS) {
-      const out = exportShadowingLesson(fakeLesson, { view, format });
+      const out = exportMediaHubLesson(fakeLesson, { view, format });
       assert.ok(out.content.length > 10, `Empty export for ${view}.${format}`);
       assert.ok(out.filename.endsWith(`-${view}.${format}`), `Unexpected filename ${out.filename}`);
       if (format === 'json') {
@@ -522,8 +522,8 @@ test('HistoryRepository persists consolidated Shadowing metadata, enforces user 
     const repo = new HistoryRepository(sqlite);
     const saved = repo.create({
       id: 'lesson_unit_1',
-      track: 'shadowing',
-      trackTitle: 'Shadowing',
+      track: 'media_hub',
+      trackTitle: 'Media Hub',
       title: 'Initial Podcast Episode',
       creator: 'Host',
       sourceUrl: 'https://cdn.example.com/ep1.mp3',
@@ -610,7 +610,7 @@ test('HistoryRepository persists consolidated Shadowing metadata, enforces user 
 test('normalizeRawTimedWords & alignReviewedWordsToRawTiming eliminate same-onset and insertion word overlaps', () => {
   const {
     normalizeRawTimedWords,
-  } = require(path.join(distRoot, 'modules/tracks/shadowing/utils/word-alignment.util.js'));
+  } = require(path.join(distRoot, 'modules/tracks/media-hub/utils/word-alignment.util.js'));
 
   const sameOnsetRaw = [
     { word: 'You', clean: 'you', start_sec: 4.2, end_sec: 4.21 },
@@ -697,10 +697,10 @@ test('Short / Normal pacing modes produce distinct natural boundaries without fa
   }
 });
 
-test('coalesceToCanonicalSentences + regroupShadowingLessonByPacing recovers legacy synthetic periods from raw.words', () => {
+test('coalesceToCanonicalSentences + regroupMediaHubLessonByPacing recovers legacy synthetic periods from raw.words', () => {
   const {
     coalesceToCanonicalSentences,
-  } = require(path.join(distRoot, 'modules/tracks/shadowing/utils/word-alignment.util.js'));
+  } = require(path.join(distRoot, 'modules/tracks/media-hub/utils/word-alignment.util.js'));
 
   const rawWords = [
     { i: 0, word: 'If', clean: 'if', startMs: 0, endMs: 200, rawWord: 'If' },
@@ -830,7 +830,7 @@ function testAsync(name, fn) {
   asyncTests.push({ name, fn });
 }
 
-testAsync('ShadowingService strictly enforces original provider transcripts (blocks Whisper/Groq and stops on errors)', async () => {
+testAsync('MediaHubService strictly enforces original provider transcripts (blocks Whisper/Groq and stops on errors)', async () => {
   const savedItems = new Map();
   let whisperCalled = false;
   const fakeHistoryRepo = {
@@ -865,7 +865,7 @@ testAsync('ShadowingService strictly enforces original provider transcripts (blo
     hasAnyConfiguredKey: () => true,
     resolvePreferredCloudSttKey: () => ({ provider: 'groq', apiKey: 'gsk_test', baseUrl: 'https://api.groq.com', model: 'whisper-large-v3-turbo' }),
   };
-  const svc = new ShadowingService(
+  const svc = new MediaHubService(
     fakeHistoryRepo,
     fakeTranscript,
     {},
@@ -878,7 +878,7 @@ testAsync('ShadowingService strictly enforces original provider transcripts (blo
   );
 
   const cfg = svc.getConfig('u1');
-  assert.strictEqual(cfg.cloudStt.available, false, 'cloudStt must be disabled for Shadowing');
+  assert.strictEqual(cfg.cloudStt.available, false, 'cloudStt must be disabled for Media Hub');
   assert.strictEqual(cfg.strictProviderTranscriptsOnly, true);
 
   // 1. Even with allowInstantOpen: true, caption error MUST reject immediately and NEVER open/persist an empty fallback
@@ -958,8 +958,8 @@ test('parseTranscriptReviewResponse & assembleAlignedReviewedViews preserve isIn
 });
 
 // 14. Context-Aware AI Companion Prompt & Context Grounding
-test('buildShadowingAskSystemPrompt & buildShadowingAskContextBundle include excerpt, ±5 surrounding lines, ideas & history', () => {
-  const sys = buildShadowingAskSystemPrompt('ar');
+test('buildMediaHubAskSystemPrompt & buildMediaHubAskContextBundle include excerpt, ±5 surrounding lines, ideas & history', () => {
+  const sys = buildMediaHubAskSystemPrompt('ar');
   assert.ok(sys.includes('Native American English'), 'System prompt establishes native mentor persona');
   assert.ok(sys.includes('"ar"'), 'System prompt includes learner native language code');
 
@@ -987,7 +987,7 @@ test('buildShadowingAskSystemPrompt & buildShadowingAskContextBundle include exc
     },
   };
 
-  const bundle = buildShadowingAskContextBundle(fakeLesson, {
+  const bundle = buildMediaHubAskContextBundle(fakeLesson, {
     question: 'Why did he cut himself off here?',
     selectedText: 'Sentence number 6 with natural phrasing.',
     sentenceIndex: 6,
@@ -1008,7 +1008,7 @@ test('buildShadowingAskSystemPrompt & buildShadowingAskContextBundle include exc
 });
 
 // 15. Reading Bookmark Persistence Separate From Derived Completion Law
-test('ShadowingService.updateReadingBookmark persists & clears bookmark in SQLite without mutating isCompleted', () => {
+test('MediaHubService.updateReadingBookmark persists & clears bookmark in SQLite without mutating isCompleted', () => {
   const tmpDb = path.join(os.tmpdir(), `flaptap-bm-test-${Date.now()}.sqlite`);
   const sqlite = { db: new (require('node:sqlite').DatabaseSync)(tmpDb) };
   // Reuse full SqliteService schema initialization
@@ -1022,8 +1022,8 @@ test('ShadowingService.updateReadingBookmark persists & clears bookmark in SQLit
     const repo = new HistoryRepository(realSqlite);
     const created = repo.create({
       id: 'les_bm_1',
-      track: 'shadowing',
-      trackTitle: 'Shadowing',
+      track: 'media_hub',
+      trackTitle: 'Media Hub',
       title: 'Bookmark Test',
       creator: 'Host',
       sourceUrl: 'https://youtube.com/watch?v=abcdefghijk',
@@ -1044,9 +1044,9 @@ test('ShadowingService.updateReadingBookmark persists & clears bookmark in SQLit
       completedDrills: 0,
     }, { userId: 'u_bm' });
 
-    const { ShadowingReviewService } = require(path.join(distRoot, 'modules/tracks/shadowing/shadowing.review.service.js'));
-    const revSvc = new ShadowingReviewService(repo, {});
-    const svc = new ShadowingService(repo, {}, {}, {}, {}, revSvc, {}, {}, {});
+    const { MediaHubReviewService } = require(path.join(distRoot, 'modules/tracks/media-hub/media-hub.review.service.js'));
+    const revSvc = new MediaHubReviewService(repo, {});
+    const svc = new MediaHubService(repo, {}, {}, {}, {}, revSvc, {}, {}, {});
 
     const setRes = svc.updateReadingBookmark(created.id, {
       sentenceIndex: 2,
@@ -1314,6 +1314,47 @@ testAsync('TranscriptProviderGuard enforces dedup, spacing, rolling budget, pers
   }
 });
 
+test('MediaHubController exposes api/tracks/media-hub route and SqliteService migrates legacy shadowing rows idempotently', () => {
+  require(path.join(distRoot, '../node_modules/reflect-metadata'));
+  const { MediaHubController } = require(path.join(distRoot, 'modules/tracks/media-hub/media-hub.controller.js'));
+  const ctrlPath = Reflect.getMetadata('path', MediaHubController);
+  assert.strictEqual(ctrlPath, 'api/tracks/media-hub', `Expected api/tracks/media-hub, got ${ctrlPath}`);
+
+  const tmpDb = path.join(os.tmpdir(), `flaptap-mh-migrate-${Date.now()}.sqlite`);
+  const prevEnv = process.env.FLAPTAP_SQLITE_PATH;
+  process.env.FLAPTAP_SQLITE_PATH = tmpDb;
+  let sqlite1;
+  let sqlite2;
+  try {
+    sqlite1 = new SqliteService();
+    const nowIso = new Date().toISOString();
+    sqlite1.db.prepare(
+      `INSERT INTO users (id, email, name, password_hash, created_at) VALUES (?, ?, ?, ?, ?)`,
+    ).run('u_mig', 'mig@unit.test', 'Mig', 'hash', nowIso);
+    sqlite1.db.prepare(
+      `INSERT INTO lessons (id, user_id, track, source_url, title, creator, thumbnail_url, accent_dialect, payload_json, created_at, updated_at) VALUES (?, ?, 'shadowing', '', 'Legacy Lesson', 'Host', '', 'American', '{"track":"shadowing"}', ?, ?)`,
+    ).run('les_legacy_1', 'u_mig', nowIso, nowIso);
+    sqlite1.db.prepare(
+      `INSERT INTO ai_chat_threads (id, user_id, title, context_type, context_id, created_at, updated_at) VALUES (?, ?, 'Legacy Chat', 'shadowing', 'les_legacy_1', ?, ?)`,
+    ).run('cht_legacy_1', 'u_mig', nowIso, nowIso);
+    sqlite1.onModuleDestroy?.();
+
+    sqlite2 = new SqliteService();
+    const lessonRow = sqlite2.db.prepare(`SELECT track FROM lessons WHERE id = ?`).get('les_legacy_1');
+    const chatRow = sqlite2.db.prepare(`SELECT context_type FROM ai_chat_threads WHERE id = ?`).get('cht_legacy_1');
+    assert.strictEqual(lessonRow.track, 'media_hub', 'SqliteService migration must rewrite lessons.track shadowing -> media_hub');
+    assert.strictEqual(chatRow.context_type, 'media_hub', 'SqliteService migration must rewrite ai_chat_threads.context_type shadowing -> media_hub');
+  } finally {
+    try { sqlite1?.onModuleDestroy?.(); } catch {}
+    try { sqlite2?.onModuleDestroy?.(); } catch {}
+    if (prevEnv === undefined) delete process.env.FLAPTAP_SQLITE_PATH;
+    else process.env.FLAPTAP_SQLITE_PATH = prevEnv;
+    for (const sfx of ['', '-wal', '-shm']) {
+      try { fs.unlinkSync(`${tmpDb}${sfx}`); } catch {}
+    }
+  }
+});
+
 (async () => {
   for (const t of asyncTests) {
     try {
@@ -1326,5 +1367,5 @@ testAsync('TranscriptProviderGuard enforces dedup, spacing, rolling budget, pers
       process.exit(1);
     }
   }
-  console.log(`\n🎉 Consolidated Shadowing Unit Suite: ${passed} / ${passed} passed!\n`);
+  console.log(`\n🎉 Consolidated Media Hub Unit Suite: ${passed} / ${passed} passed!\n`);
 })();

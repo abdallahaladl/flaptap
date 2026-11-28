@@ -5,7 +5,7 @@ import {
   TranscriptExportFormat,
   TranscriptSentence,
   TranscriptViewMode,
-} from '../shadowing.types';
+} from '../media-hub.types';
 import { formatMsClock } from './word-alignment.util';
 
 const FORMAT_META: Record<TranscriptExportFormat, { mimeType: string; extension: string }> = {
@@ -37,12 +37,12 @@ export const SUPPORTED_VIEW_MODES: TranscriptViewMode[] = [
 ];
 
 function slugifyFilename(title: string): string {
-  const base = String(title || 'shadowing-lesson')
+  const base = String(title || 'media-hub-lesson')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 60);
-  return base || 'shadowing-lesson';
+  return base || 'media-hub-lesson';
 }
 
 function formatSrtTime(ms: number): string {
@@ -209,7 +209,7 @@ function resolveViewBlocks(lesson: HistoryItem, view: TranscriptViewMode): Expor
   }));
 }
 
-export function exportShadowingLesson(
+export function exportMediaHubLesson(
   lesson: HistoryItem,
   options: ExportOptions,
 ): ExportResult {

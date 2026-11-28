@@ -21,20 +21,21 @@ import { memoryStorage } from 'multer';
 import {
   isValidPacingMode,
   normalizePacingMode,
-  ShadowingPacingMode,
+  MediaHubPacingMode,
 } from '../../../core/linguistics/segmentation';
 import { requireAuthenticatedUser } from '../../auth/auth.request';
 import { AuthService } from '../../auth/auth.service';
-import { AskLessonDto, ShadowingAskService } from './shadowing.ask.service';
-import { ShadowingService } from './shadowing.service';
-import { ReadingBookmark, TranscriptExportFormat, TranscriptViewMode } from './shadowing.types';
+import { AmericanExtractorService } from '../../american-extractor/american-extractor.service';
+import { AskLessonDto, MediaHubAskService } from './media-hub.ask.service';
+import { MediaHubService } from './media-hub.service';
+import { ReadingBookmark, TranscriptExportFormat, TranscriptViewMode } from './media-hub.types';
 
 const MAX_MEDIA_UPLOAD_BYTES = 120 * 1024 * 1024;
 
 export class ProcessVideoDto {
   url: string;
   force?: boolean;
-  pacingMode?: ShadowingPacingMode;
+  pacingMode?: MediaHubPacingMode;
   allowInstantOpen?: boolean;
 }
 
@@ -65,11 +66,12 @@ interface ReviewLessonBody {
   force?: boolean;
 }
 
-@Controller('api/tracks/shadowing')
-export class ShadowingController {
+@Controller('api/tracks/media-hub')
+export class MediaHubController {
   constructor(
-    private readonly shadowingService: ShadowingService,
-    private readonly shadowingAskService: ShadowingAskService,
+    private readonly mediaHubService: MediaHubService,
+    private readonly mediaHubAskService: MediaHubAskService,
+    private readonly americanExtractor: AmericanExtractorService,
     private readonly authService: AuthService,
   ) {}
 
@@ -81,14 +83,14 @@ export class ShadowingController {
     } catch {
       userId = null;
     }
-    return { success: true, ...this.shadowingService.getConfig(userId) };
+    return { success: true, ...this.mediaHubService.getConfig(userId) };
   }
 
   @Get('check-existing')
   checkExisting(@Query('url') url: string, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
     if (!url) return { exists: false };
-    return this.shadowingService.checkExisting(url, identity);
+    return this.mediaHubService.checkExisting(url, identity);
   }
 
   @Post('process')
@@ -96,7 +98,7 @@ export class ShadowingController {
     const identity = requireAuthenticatedUser(req, this.authService);
     const pacingMode =
       dto?.pacingMode !== undefined ? normalizePacingMode(dto.pacingMode) : undefined;
-    return this.shadowingService.process(
+    return this.mediaHubService.process(
       dto?.url,
       Boolean(dto?.force),
       identity,
@@ -108,7 +110,7 @@ export class ShadowingController {
   @Post(':id/captions/retry')
   retryCaptions(@Param('id') id: string, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return this.shadowingService.retryYoutubeCaptions(id, identity);
+    return this.mediaHubService.retryYoutubeCaptions(id, identity);
   }
 
   @Post(':id/transcript/import')
@@ -118,7 +120,7 @@ export class ShadowingController {
     @Req() req: Request,
   ) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return this.shadowingService.importManualTranscript(id, rawText, identity);
+    return this.mediaHubService.importManualTranscript(id, rawText, identity);
   }
 
   @Post(':id/transcribe')
@@ -128,7 +130,7 @@ export class ShadowingController {
     @Req() req: Request,
   ) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return this.shadowingService.transcribeLessonExplicit(
+    return this.mediaHubService.transcribeLessonExplicit(
       id,
       { allowLocalWhisper: Boolean(allowLocalWhisper) },
       identity,
@@ -152,7 +154,7 @@ export class ShadowingController {
     if (!file) {
       throw new BadRequestException('Select an audio or video file to upload.');
     }
-    return this.shadowingService.processUpload(
+    return this.mediaHubService.processUpload(
       {
         buffer: file.buffer,
         originalname: file.originalname,
@@ -170,7 +172,7 @@ export class ShadowingController {
     const sentenceIndices = Array.isArray(dto?.sentenceIndices)
       ? dto.sentenceIndices.map((n) => Number(n)).filter((n) => Number.isFinite(n) && n > 0)
       : undefined;
-    return this.shadowingService.translateSentences(
+    return this.mediaHubService.translateSentences(
       dto?.historyId,
       dto?.language,
       Boolean(dto?.force),
@@ -182,19 +184,19 @@ export class ShadowingController {
   @Post('analyze')
   analyzeLesson(@Body() dto: AnalyzeLessonDto, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return this.shadowingService.analyzeLesson(dto?.historyId, Boolean(dto?.force), identity);
+    return this.mediaHubService.analyzeLesson(dto?.historyId, Boolean(dto?.force), identity);
   }
 
   @Post('coach-glosses')
   coachGlosses(@Body() dto: AnalyzeLessonDto, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return this.shadowingService.coachGlosses(dto?.historyId, Boolean(dto?.force), identity);
+    return this.mediaHubService.coachGlosses(dto?.historyId, Boolean(dto?.force), identity);
   }
 
   @Post('define-word')
   defineWord(@Body() dto: DefineWordDto, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return this.shadowingService.defineWord(
+    return this.mediaHubService.defineWord(
       dto?.historyId,
       dto?.word,
       dto?.sentenceIndex,
@@ -207,7 +209,7 @@ export class ShadowingController {
   @Post(':id/review')
   async reviewLesson(@Param('id') id: string, @Body() body: ReviewLessonBody, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    const data = await this.shadowingService.reviewLesson(
+    const data = await this.mediaHubService.reviewLesson(
       id,
       {
         keyId: body?.keyId,
@@ -263,7 +265,7 @@ export class ShadowingController {
     };
 
     try {
-      const lesson = await this.shadowingService.reviewLesson(
+      const lesson = await this.mediaHubService.reviewLesson(
         id,
         {
           keyId: body?.keyId,
@@ -294,7 +296,7 @@ export class ShadowingController {
     @Req() req: Request,
   ) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return { success: true, data: this.shadowingService.renameLesson(id, title, identity) };
+    return { success: true, data: this.mediaHubService.renameLesson(id, title, identity) };
   }
 
   @Patch(':id/speakers')
@@ -306,7 +308,7 @@ export class ShadowingController {
     const identity = requireAuthenticatedUser(req, this.authService);
     return {
       success: true,
-      data: this.shadowingService.renameSpeakers(id, speakers || {}, identity),
+      data: this.mediaHubService.renameSpeakers(id, speakers || {}, identity),
     };
   }
 
@@ -317,7 +319,7 @@ export class ShadowingController {
     @Req() req: Request,
   ) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    const data = this.shadowingService.updateReadingBookmark(id, bookmark ?? null, identity);
+    const data = this.mediaHubService.updateReadingBookmark(id, bookmark ?? null, identity);
     return { success: true, ...data };
   }
 
@@ -336,7 +338,7 @@ export class ShadowingController {
     if (!file) {
       throw new BadRequestException('No audio recording uploaded.');
     }
-    const result = await this.shadowingAskService.transcribeQuestionAudio(file, identity);
+    const result = await this.mediaHubAskService.transcribeQuestionAudio(file, identity);
     return { success: true, ...result };
   }
 
@@ -347,7 +349,7 @@ export class ShadowingController {
     @Req() req: Request,
   ) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    const data = await this.shadowingAskService.askLesson(id, body, identity);
+    const data = await this.mediaHubAskService.askLesson(id, body, identity);
     return { success: true, data };
   }
 
@@ -395,7 +397,7 @@ export class ShadowingController {
 
     try {
       emit('meta', { status: 'streaming' });
-      const data = await this.shadowingAskService.askLesson(id, body, identity, {
+      const data = await this.mediaHubAskService.askLesson(id, body, identity, {
         signal: ac.signal,
         onDelta: (delta, accumulated) => emit('delta', { delta, accumulated }),
       });
@@ -414,7 +416,7 @@ export class ShadowingController {
   @Delete(':id/ask/history')
   clearAskHistory(@Param('id') id: string, @Req() req: Request) {
     const identity = requireAuthenticatedUser(req, this.authService);
-    return this.shadowingAskService.clearHistory(id, identity);
+    return this.mediaHubAskService.clearHistory(id, identity);
   }
 
   @Patch(':id/pacing')
@@ -430,7 +432,7 @@ export class ShadowingController {
       );
     }
     const normalizedPacingMode = normalizePacingMode(pacingMode);
-    const updated = this.shadowingService.updateLessonPacing(
+    const updated = this.mediaHubService.updateLessonPacing(
       id,
       normalizedPacingMode,
       identity,
@@ -441,6 +443,122 @@ export class ShadowingController {
       sentenceCount: updated.sentences?.length ?? 0,
       item: updated,
     };
+  }
+
+  @Get(':id/extraction')
+  getLessonExtraction(@Param('id') id: string, @Req() req: Request) {
+    const identity = requireAuthenticatedUser(req, this.authService);
+    const result = this.americanExtractor.getLatestForLesson(identity.userId, id);
+    return { success: true, data: result.latest, guides: result.guides };
+  }
+
+  @Post(':id/extract/stream')
+  async extractLessonStream(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      language?: string;
+      extractionType?: string;
+      categories?: string[] | string;
+      style?: string;
+      level?: string;
+      focus?: string;
+      depth?: string;
+      studyGoal?: string;
+      order?: string;
+      keyId?: string;
+      model?: string;
+      variant?: string;
+      force?: boolean;
+    },
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    let identity: ReturnType<typeof requireAuthenticatedUser>;
+    try {
+      identity = requireAuthenticatedUser(req, this.authService);
+    } catch (authErr: any) {
+      const status =
+        authErr instanceof HttpException ? authErr.getStatus() : HttpStatus.UNAUTHORIZED;
+      const payload =
+        authErr instanceof HttpException
+          ? authErr.getResponse()
+          : { code: 'auth_required', message: 'Authentication required.' };
+      res.status(status).json(payload);
+      return;
+    }
+
+    res.status(HttpStatus.OK);
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders?.();
+
+    const ac = new AbortController();
+    let closed = false;
+    res.on('close', () => {
+      if (!res.writableEnded) {
+        closed = true;
+        ac.abort(new Error('Client closed stream connection.'));
+      }
+    });
+
+    const emit = (event: string, payload: unknown) => {
+      if (closed || res.writableEnded || res.destroyed) return;
+      res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    const categories = Array.isArray(body?.categories)
+      ? body.categories.map((c) => String(c || '').trim()).filter(Boolean)
+      : typeof body?.categories === 'string' && body.categories.trim()
+        ? body.categories.split(',').map((c) => c.trim()).filter(Boolean)
+        : undefined;
+
+    try {
+      const data = await this.americanExtractor.extract(
+        {
+          userId: identity.userId,
+          inputKind: 'lesson',
+          lessonId: id,
+          language: body?.language,
+          extractionType: body?.extractionType || 'all',
+          categories,
+          style: body?.style || 'auto',
+          level: body?.level || 'all',
+          focus: body?.focus || 'balanced',
+          depth: body?.depth || 'exhaustive',
+          studyGoal: body?.studyGoal || 'full',
+          order: body?.order || 'appearance',
+          keyId: body?.keyId,
+          model: body?.model,
+          variant: body?.variant,
+          force: Boolean(body?.force),
+        },
+        {
+          signal: ac.signal,
+          onStage: (stage) => emit('stage', stage),
+          onSourceReady: (source) => emit('source_ready', source),
+          onItemPreview: (preview) => emit('item_preview', preview),
+        },
+      );
+      emit('complete', { success: true, data, cached: Boolean(data.cached) });
+    } catch (err: any) {
+      if (!ac.signal.aborted && err?.name !== 'AbortError') {
+        const status = err instanceof HttpException ? err.getStatus() : HttpStatus.BAD_GATEWAY;
+        const message =
+          err instanceof HttpException
+            ? (err.getResponse() as any)?.message || err.message
+            : err?.message || 'Deep lexical extraction failed.';
+        emit('error', {
+          statusCode: status,
+          message,
+          retryable: status >= 500 || status === 429,
+        });
+      }
+    } finally {
+      if (!res.writableEnded) res.end();
+    }
   }
 
   @Get(':id/export')
@@ -468,7 +586,7 @@ export class ShadowingController {
     }
 
     try {
-      const result = this.shadowingService.exportLesson(
+      const result = this.mediaHubService.exportLesson(
         id,
         {
           view,

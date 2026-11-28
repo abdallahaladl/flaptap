@@ -11,8 +11,8 @@ import {
   SharedSourcesService,
 } from '../../shared-sources/shared-sources.service';
 import { SharedMediaKind, SourceSegment } from '../../shared-sources/shared-sources.types';
-import { TranscriptService } from '../../tracks/shadowing/transcript.service';
-import { ResolvedSource, UploadedFileInput } from '../american-extractor.types';
+import { TranscriptService } from '../../tracks/media-hub/transcript.service';
+import { ResolvedSource, TimedSentenceAnchor, UploadedFileInput } from '../american-extractor.types';
 import { isGenericOrFilenameTitle } from '../utils/extraction-normalize.util';
 import { cleanSourceText, countWords, truncateSource } from '../utils/source-text.util';
 import { parseSubtitleSegments } from '../utils/timestamp-anchor.util';
@@ -172,13 +172,28 @@ export class SourceResolverService {
       throw new NotFoundException('That saved lesson was not found in your library.');
     }
 
-    const segments: SourceSegment[] = (lesson.sentences || [])
+    const timedSentences: TimedSentenceAnchor[] = (lesson.sentences || [])
       .map((s) => ({
+        index: Number(s.index) || 1,
         startSec: Number(s.startSec) || 0,
         endSec: Number(s.endSec) || 0,
         text: String(s.text || '').trim(),
+        words: Array.isArray(s.words)
+          ? s.words.map((w) => ({
+              word: String(w.word || ''),
+              clean: String(w.clean || ''),
+              startMs: Number(w.startMs) || 0,
+              endMs: Number(w.endMs) || 0,
+            }))
+          : undefined,
       }))
       .filter((s) => s.text.length > 0 && s.endSec > s.startSec);
+
+    const segments: SourceSegment[] = timedSentences.map((s) => ({
+      startSec: s.startSec,
+      endSec: s.endSec,
+      text: s.text,
+    }));
 
     const sentenceText = (lesson.sentences || [])
       .map((sentence) => String(sentence.text || '').trim())
@@ -195,36 +210,51 @@ export class SourceResolverService {
 
     const vidId = String(lesson.videoId || extractYouTubeVideoId(lesson.sourceUrl || '') || '').trim();
     const isYouTubeId = /^[a-zA-Z0-9_-]{11}$/.test(vidId);
-    const hasAudio = Boolean(vidId);
-    const hasVideo = Boolean(vidId);
-    const mediaKind: SharedMediaKind = isYouTubeId ? 'youtube' : vidId ? 'video' : 'none';
+    const lessonMedia = lesson.media;
+    const mediaKind: SharedMediaKind =
+      lessonMedia?.mediaKind && lessonMedia.mediaKind !== 'none'
+        ? lessonMedia.mediaKind
+        : isYouTubeId
+          ? 'youtube'
+          : vidId
+            ? 'video'
+            : 'none';
+    const mediaId = String(lessonMedia?.mediaId || vidId || '').trim();
+    const hasAudio = Boolean(lessonMedia?.hasAudio ?? (mediaKind !== 'none'));
+    const hasVideo = Boolean(lessonMedia?.hasVideo ?? (mediaKind === 'youtube' || mediaKind === 'video'));
+    const resolvedSourceType =
+      lesson.transcriptData?.sourceType ||
+      (isYouTubeId ? 'youtube' : mediaKind === 'audio' ? 'audio' : mediaKind === 'video' ? 'video' : 'lesson');
 
-    const sourceKey = buildCanonicalSourceKey({
-      sourceType: isYouTubeId ? 'youtube' : 'lesson',
-      sourceUrl: lesson.sourceUrl || '',
-      videoId: isYouTubeId ? vidId : undefined,
-      lessonId: lesson.id,
-    });
+    const sourceKey =
+      lesson.sourceKey ||
+      buildCanonicalSourceKey({
+        sourceType: resolvedSourceType,
+        sourceUrl: lesson.sourceUrl || '',
+        videoId: isYouTubeId ? vidId : undefined,
+        lessonId: lesson.id,
+      });
 
     const shared = this.sharedSources.upsert(userId, {
       sourceKey,
-      sourceType: isYouTubeId ? 'youtube' : 'lesson',
+      sourceType: resolvedSourceType,
       title: lesson.title || 'Saved Lesson Transcript',
       creator: lesson.creator || 'Saved lesson',
       sourceUrl: lesson.sourceUrl || '',
-      sourceLabel: `${lesson.trackTitle || 'Saved lesson'} · transcript`,
+      sourceLabel: `${lesson.platform || lesson.trackTitle || 'Media Hub'} · transcript`,
       hasAudio,
       hasVideo,
       mediaKind,
-      mediaId: vidId,
-      durationSeconds: lesson.durationSeconds || 0,
+      mediaId,
+      durationSeconds: lesson.durationSeconds || lessonMedia?.durationSeconds || 0,
       transcriptText: text,
       segments,
       sourceMeta: {
         lessonId: lesson.id,
         lessonTrack: lesson.track,
         videoId: vidId || undefined,
-        durationSeconds: lesson.durationSeconds || 0,
+        mediaId: mediaId || undefined,
+        durationSeconds: lesson.durationSeconds || lessonMedia?.durationSeconds || 0,
         thumbnailUrl: lesson.thumbnailUrl || '',
       },
     });
@@ -235,22 +265,24 @@ export class SourceResolverService {
       sourceKey,
       title: lesson.title || 'Saved Lesson Transcript',
       creator: lesson.creator || 'Saved lesson',
-      sourceType: isYouTubeId ? 'youtube' : 'lesson',
+      sourceType: resolvedSourceType,
       sourceUrl: lesson.sourceUrl || '',
-      sourceLabel: `${lesson.trackTitle || 'Saved lesson'} · transcript`,
+      sourceLabel: `${lesson.platform || lesson.trackTitle || 'Media Hub'} · transcript`,
       text,
       hasAudio,
       hasVideo,
       mediaKind,
-      mediaId: vidId,
-      durationSeconds: lesson.durationSeconds || 0,
+      mediaId,
+      durationSeconds: lesson.durationSeconds || lessonMedia?.durationSeconds || 0,
       segments,
+      timedSentences,
       sourceMeta: {
         sourceId: shared.id,
         lessonId: lesson.id,
         lessonTrack: lesson.track,
         videoId: vidId || undefined,
-        durationSeconds: lesson.durationSeconds || 0,
+        mediaId: mediaId || undefined,
+        durationSeconds: lesson.durationSeconds || lessonMedia?.durationSeconds || 0,
         wordCount: countWords(text),
         reusedSharedSource: true,
       },
@@ -301,7 +333,7 @@ export class SourceResolverService {
         try {
           const media = await this.mediaTranscription.transcribeUrl(raw, {
             force: Boolean(options.force),
-            allowLocalWhisper: true,
+            allowLocalWhisper: false,
           });
           return this.fromMediaTranscript(media, raw, 'youtube', 'YouTube', { videoId: ytId }, options.userId, {
             hasAudio: true,
@@ -328,7 +360,7 @@ export class SourceResolverService {
         }
         const media = await this.mediaTranscription.transcribeUrl(raw, {
           force: Boolean(options.force),
-          allowLocalWhisper: true,
+          allowLocalWhisper: false,
         });
         return this.fromMediaTranscript(
           media,
@@ -343,7 +375,7 @@ export class SourceResolverService {
         try {
           const media = await this.mediaTranscription.transcribeUrl(raw, {
             force: Boolean(options.force),
-            allowLocalWhisper: true,
+            allowLocalWhisper: false,
           });
           return this.fromMediaTranscript(
             media,
@@ -365,7 +397,7 @@ export class SourceResolverService {
     try {
       const media = await this.mediaTranscription.transcribeUrl(raw, {
         force: Boolean(options.force),
-        allowLocalWhisper: true,
+        allowLocalWhisper: false,
       });
       return this.fromMediaTranscript(
         media,

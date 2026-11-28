@@ -362,6 +362,9 @@ function validateAndNormalizeItem(
       ? rawContextTranslation
       : '';
 
+  const rawPos = safeText(raw?.partOfSpeech ?? raw?.pos, 32)
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
   const rawRegister = safeText(raw?.register, 40).toLowerCase();
   const register = VALID_REGISTERS.has(rawRegister) ? rawRegister : registerForCategory(category);
   const cefrUpper = String(raw?.cefr || '').trim().toUpperCase();
@@ -386,6 +389,7 @@ function validateAndNormalizeItem(
     term,
     surface,
     category,
+    ...(rawPos ? { partOfSpeech: rawPos } : {}),
     register,
     ipa: normalizeIpa(safeText(raw?.ipa, 120)),
     ...(cefr ? { cefr } : {}),

@@ -1,8 +1,8 @@
 import { escapeTranscriptHtml } from './highlights';
-import { TimedWord, TranscriptResult } from '../../modules/tracks/shadowing/transcript.service';
+import { TimedWord, TranscriptResult } from '../../modules/tracks/media-hub/transcript.service';
 import { ChunkItem, SentenceItem } from '../database/history.repository';
 
-export type ShadowingPacingMode = 'short' | 'normal';
+export type MediaHubPacingMode = 'short' | 'normal';
 
 /**
  * Legacy pacing labels fold into the current two-mode model:
@@ -11,7 +11,7 @@ export type ShadowingPacingMode = 'short' | 'normal';
  * - `full` was the old complete-sentence mode; it allowed 45-word walls.
  * Both now resolve to `normal`, the smart complete-sentence mode.
  */
-const LEGACY_PACING_ALIASES: Record<string, ShadowingPacingMode> = {
+const LEGACY_PACING_ALIASES: Record<string, MediaHubPacingMode> = {
   balanced: 'normal',
   full: 'normal',
 };
@@ -22,7 +22,7 @@ export function isValidPacingMode(raw: unknown): boolean {
   return clean === 'short' || clean === 'normal' || Boolean(LEGACY_PACING_ALIASES[clean]);
 }
 
-export function normalizePacingMode(raw?: unknown): ShadowingPacingMode {
+export function normalizePacingMode(raw?: unknown): MediaHubPacingMode {
   if (typeof raw === 'string') {
     const clean = raw.trim().toLowerCase();
     if (clean === 'short') return 'short';
@@ -470,7 +470,7 @@ interface PacingProfile {
   chunkCost: (length: number) => number;
 }
 
-const PACING_PROFILES: Record<ShadowingPacingMode, PacingProfile> = {
+const PACING_PROFILES: Record<MediaHubPacingMode, PacingProfile> = {
   short: {
     // Never cut a complete short thought. Up to 11 words stays whole (or 4.5s
     // for slow speech); longer sentences break into 4–9 word drill units.
@@ -519,7 +519,7 @@ const PACING_PROFILES: Record<ShadowingPacingMode, PacingProfile> = {
  */
 function splitLongSentence(
   words: SegWord[],
-  pacingMode: ShadowingPacingMode = 'short',
+  pacingMode: MediaHubPacingMode = 'short',
 ): SegWord[][] {
   const n = words.length;
   if (n === 0) return [];
@@ -694,7 +694,7 @@ function splitLongSentence(
  */
 export function splitTimedWordsForShadowing<
   T extends { word: string; clean?: string; startMs: number; endMs: number },
->(words: T[], pacingMode: ShadowingPacingMode = 'short'): T[][] {
+>(words: T[], pacingMode: MediaHubPacingMode = 'short'): T[][] {
   if (!Array.isArray(words) || words.length === 0) return [];
   const segWords: SegWord[] = words.map((w) => ({
     text: w.word,
@@ -734,7 +734,7 @@ export function splitTimedWordsForShadowing<
  */
 export function segmentSentences(
   data: TranscriptResult,
-  pacingMode: ShadowingPacingMode = 'short',
+  pacingMode: MediaHubPacingMode = 'short',
 ): SentenceItem[] {
   const words = normalizeWords(data);
   if (words.length === 0) return [];
@@ -845,7 +845,7 @@ function formatCanonicalBoundaryWords(canonWords: SegWord[]): SegWord[] {
  */
 export function segmentWordStreamWithCanonical(
   words: SegWord[],
-  pacingMode: ShadowingPacingMode = 'short',
+  pacingMode: MediaHubPacingMode = 'short',
 ): SegmentedWordStreamResult {
   if (!Array.isArray(words) || words.length === 0) {
     return {

@@ -302,7 +302,7 @@
     const TT = global.FlaptapStudioTranscriptTools;
     const spkFilter = opts.speakerFilter || 'all';
     const hasReviewed = Boolean(item.transcriptData?.reviewed);
-    const hasTranscript = Boolean(item.track === 'shadowing' && item.transcriptData);
+    const hasTranscript = Boolean((item.track === 'media_hub' || item.track === 'shadowing') && item.transcriptData);
     const paragraphs = getParagraphs(item, { source: 'reviewed', speakerFilter: spkFilter });
 
     if (paragraphs.length === 0) {
@@ -537,7 +537,7 @@
       state.savingBookmark = true;
       try {
         const res = await state.apiFetch(
-          `/api/tracks/shadowing/${encodeURIComponent(state.lessonId)}/reading-progress`,
+          `/api/tracks/media-hub/${encodeURIComponent(state.lessonId)}/reading-progress`,
           {
             method: 'PATCH',
             body: JSON.stringify({ bookmark: next }),
