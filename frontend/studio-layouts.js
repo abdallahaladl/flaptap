@@ -1,7 +1,7 @@
 /* ==========================================================================
-   FLAPTAP STUDIO — MULTI-LAYOUT ENGINE & MOTION-GRAPHIC PICKER
-   Zero-Remount CSS Grid Orchestration · GPU FLIP Transitions
-   6 Desktop Layouts · 4 Mobile Layouts · Interactive Split Resizer
+   FLAPTAP STUDIO — MULTI-LAYOUT ENGINE & FLOATING VIDEO WINDOW
+   Zero-Remount CSS Grid Orchestration · GPU FLIP Transitions · Pro PiP Float
+   7 Desktop Layouts (incl. Transcript Only) · 4 Mobile Layouts · Split Resizer
    ========================================================================== */
 
 (function () {
@@ -11,6 +11,8 @@
   const STORAGE_MOBILE_KEY = 'flaptap_studio_layout_mobile';
   const STORAGE_SPLITS_KEY = 'flaptap_studio_split_widths';
   const STORAGE_COMPACT_KEY = 'flaptap_studio_compact_dock';
+  const STORAGE_FLOAT_VIDEO_KEY = 'flaptap_studio_float_video';
+  const STORAGE_FLOAT_RECT_KEY = 'flaptap_studio_float_rect';
 
   const LEGACY_LAYOUT_MAP = {
     side: 'transcript',
@@ -24,7 +26,26 @@
     transcript: 36,
   };
 
+  const FLOAT_SIZE_PRESETS = [
+    { id: 'S', width: 280 },
+    { id: 'M', width: 380 },
+    { id: 'L', width: 500 },
+  ];
+
   const DESKTOP_LAYOUTS = [
+    {
+      id: 'reader-only',
+      tag: '100% Canvas',
+      featured: true,
+      en: {
+        name: 'Transcript Only',
+        desc: 'Full-width reading & insights canvas · audio bar below · optional floating video (P)',
+      },
+      ar: {
+        name: 'تفريغ فقط',
+        desc: 'مساحة كاملة للتفريغ والتحليل مع شريط تحكم سفلي وفيديو عائم اختياري',
+      },
+    },
     {
       id: 'theater',
       tag: '62 / 38',
@@ -95,13 +116,17 @@
 
   const state = {
     desktopLayout: 'theater',
+    lastDockedDesktopLayout: 'theater',
     mobileLayout: 'docked',
     compactDock: false,
+    floatingVideo: false,
+    floatRect: loadSavedFloatRect(),
     splits: loadSavedSplits(),
     uiLang: 'en',
     lastViewportIsMobile: null,
     morphTimer: null,
     resizerBound: false,
+    floatBound: false,
     resizeObserver: null,
     onChangeCallback: null,
     onClosePopoverCallback: null,
@@ -139,8 +164,223 @@
     } catch {}
   }
 
+  function loadSavedFloatRect() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_FLOAT_RECT_KEY) || 'null');
+      if (parsed && typeof parsed === 'object') {
+        return {
+          x: Number.isFinite(Number(parsed.x)) ? Number(parsed.x) : null,
+          y: Number.isFinite(Number(parsed.y)) ? Number(parsed.y) : null,
+          width: Number.isFinite(Number(parsed.width)) ? Number(parsed.width) : null,
+          ghost: Boolean(parsed.ghost),
+        };
+      }
+    } catch {}
+    return { x: null, y: null, width: null, ghost: false };
+  }
+
+  function saveFloatRect() {
+    try {
+      localStorage.setItem(STORAGE_FLOAT_RECT_KEY, JSON.stringify(state.floatRect));
+    } catch {}
+  }
+
   function getWorkspace() {
     return document.getElementById('studio-main-content');
+  }
+
+  function hasVideoMedia() {
+    return Boolean(window.studioState?.item?.videoId || window.studioState?.item?.media?.hasVideo);
+  }
+
+  function isVideoPaneRemoved() {
+    const ws = getWorkspace();
+    const mobile = isMobileViewport();
+    const layoutRemoved = mobile ? state.mobileLayout === 'mini' : state.desktopLayout === 'reader-only';
+    const hiddenFlag = Boolean(window.studioState?.videoHidden) || ws?.getAttribute('data-video-hidden') === '1';
+    return layoutRemoved || hiddenFlag;
+  }
+
+  function isFloatingVideoActive() {
+    return Boolean(state.floatingVideo && isVideoPaneRemoved());
+  }
+
+  function resolveSizeLabel(width) {
+    if (width <= 325) return 'S';
+    if (width >= 445) return 'L';
+    return 'M';
+  }
+
+  function clampFloatRect(rawRect = state.floatRect) {
+    const vw = window.innerWidth || document.documentElement.clientWidth || 1280;
+    const vh = window.innerHeight || document.documentElement.clientHeight || 800;
+    const minW = Math.min(240, Math.max(200, vw - 24));
+    const maxW = Math.max(minW, Math.min(640, vw - 24));
+    const defaultW = vw <= 640 ? Math.min(270, maxW) : Math.min(380, maxW);
+    const width = Math.round(
+      Math.max(minW, Math.min(maxW, Number.isFinite(Number(rawRect?.width)) && Number(rawRect.width) > 0 ? Number(rawRect.width) : defaultW)),
+    );
+    const estHeight = Math.round((width * 9) / 16) + 34;
+
+    const minX = 12;
+    const maxX = Math.max(minX, vw - width - 12);
+    const minY = 56;
+    const maxY = Math.max(minY, vh - estHeight - 12);
+
+    const defaultX = Math.max(minX, vw - width - 20);
+    const defaultY = Math.max(minY, vh - estHeight - 120);
+
+    const x = Math.round(
+      Math.max(minX, Math.min(maxX, Number.isFinite(Number(rawRect?.x)) && rawRect.x !== null ? Number(rawRect.x) : defaultX)),
+    );
+    const y = Math.round(
+      Math.max(minY, Math.min(maxY, Number.isFinite(Number(rawRect?.y)) && rawRect.y !== null ? Number(rawRect.y) : defaultY)),
+    );
+
+    return {
+      x,
+      y,
+      width,
+      ghost: Boolean(rawRect?.ghost),
+    };
+  }
+
+  function applyFloatRectToDom(rect = state.floatRect) {
+    const card = document.querySelector('.player-frame-card');
+    if (!card) return;
+    const clamped = clampFloatRect(rect);
+    state.floatRect = clamped;
+    card.style.setProperty('--float-x', `${clamped.x}px`);
+    card.style.setProperty('--float-y', `${clamped.y}px`);
+    card.style.setProperty('--float-w', `${clamped.width}px`);
+    card.classList.toggle('is-float-ghost', Boolean(clamped.ghost));
+
+    const sizeBtn = document.getElementById('float-video-size-btn');
+    if (sizeBtn) sizeBtn.textContent = resolveSizeLabel(clamped.width);
+
+    const ghostBtn = document.getElementById('float-video-ghost-btn');
+    if (ghostBtn) {
+      ghostBtn.classList.toggle('is-active', Boolean(clamped.ghost));
+      ghostBtn.setAttribute('aria-pressed', clamped.ghost ? 'true' : 'false');
+    }
+  }
+
+  function syncFloatingVideoUi() {
+    const ws = getWorkspace();
+    const canFloat = hasVideoMedia() && isVideoPaneRemoved();
+    const active = Boolean(state.floatingVideo && canFloat);
+
+    if (ws) {
+      ws.setAttribute('data-video-float', active ? '1' : '0');
+    }
+
+    const audioStage = document.getElementById('studio-audio-stage');
+    if (audioStage) {
+      const videoHidden = Boolean(window.studioState?.videoHidden);
+      audioStage.hidden = active ? true : !videoHidden;
+    }
+
+    const zoomHud = document.getElementById('video-zoom-hud');
+    if (zoomHud && hasVideoMedia()) {
+      const videoHidden = Boolean(window.studioState?.videoHidden);
+      zoomHud.hidden = active ? false : videoHidden;
+    }
+
+    const floatBtn = document.getElementById('studio-float-video-btn');
+    if (floatBtn) {
+      floatBtn.hidden = !canFloat;
+      floatBtn.classList.toggle('active', active);
+      floatBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      floatBtn.textContent = active ? 'Floating' : 'Float Video';
+    }
+
+    const topFloatBtn = document.getElementById('studio-topbar-float-btn');
+    const topFloatLabel = document.getElementById('studio-topbar-float-label');
+    if (topFloatBtn) {
+      topFloatBtn.hidden = !canFloat;
+      topFloatBtn.classList.toggle('is-active', active);
+      topFloatBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    }
+    if (topFloatLabel) {
+      topFloatLabel.textContent = active ? 'Floating' : 'Float Video';
+    }
+
+    const videoToggleBtn = document.getElementById('studio-video-toggle-btn');
+    if (videoToggleBtn && hasVideoMedia()) {
+      const isReaderDesktop = !isMobileViewport() && state.desktopLayout === 'reader-only';
+      const isMiniMobile = isMobileViewport() && state.mobileLayout === 'mini';
+      videoToggleBtn.hidden = isReaderDesktop || isMiniMobile;
+    }
+
+    if (active) {
+      applyFloatRectToDom(state.floatRect);
+    }
+  }
+
+  function setFloatingVideo(enabled, { persist = true, animate = true } = {}) {
+    const ws = getWorkspace();
+    const next = Boolean(enabled);
+    if (next && !hasVideoMedia()) {
+      return false;
+    }
+
+    state.floatingVideo = next;
+    if (ws) {
+      ws.setAttribute('data-video-float', next ? '1' : '0');
+    }
+
+    const card = document.querySelector('.player-frame-card');
+    if (card && animate && next) {
+      card.classList.remove('is-float-entering');
+      void card.offsetWidth;
+      card.classList.add('is-float-entering');
+      setTimeout(() => card.classList.remove('is-float-entering'), 260);
+    }
+
+    if (next) {
+      applyFloatRectToDom(state.floatRect);
+    }
+
+    if (persist) {
+      try {
+        localStorage.setItem(STORAGE_FLOAT_VIDEO_KEY, next ? '1' : '0');
+      } catch {}
+    }
+
+    syncFloatingVideoUi();
+    return next;
+  }
+
+  function toggleFloatingVideo() {
+    if (!hasVideoMedia()) return false;
+    if (isVideoPaneRemoved()) {
+      return setFloatingVideo(!state.floatingVideo, { persist: true, animate: true });
+    }
+    // From any docked layout, switch into Transcript Only (or Mini on mobile) + Float Video in one step
+    if (isMobileViewport()) {
+      setLayout('mini', { scope: 'mobile', animate: false, persist: true });
+    } else {
+      setLayout('reader-only', { scope: 'desktop', animate: false, persist: true });
+    }
+    return setFloatingVideo(true, { persist: true, animate: true });
+  }
+
+  function dockFloatingVideoBack() {
+    setFloatingVideo(false, { persist: true, animate: false });
+    if (window.studioState?.videoHidden && typeof window.toggleStudioVideoVisibility === 'function') {
+      window.toggleStudioVideoVisibility(false, { persist: true });
+    }
+    if (isMobileViewport()) {
+      if (state.mobileLayout === 'mini') {
+        setLayout('docked', { scope: 'mobile', animate: true, persist: true });
+      }
+    } else if (state.desktopLayout === 'reader-only') {
+      const target =
+        state.lastDockedDesktopLayout && state.lastDockedDesktopLayout !== 'reader-only'
+          ? state.lastDockedDesktopLayout
+          : 'transcript';
+      setLayout(target, { scope: 'desktop', animate: true, persist: true });
+    }
   }
 
   function getTriggerIconSvg(id, isMobile) {
@@ -158,6 +398,8 @@
     }
 
     switch (id) {
+      case 'reader-only':
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><line x1="7" y1="9" x2="17" y2="9"/><line x1="7" y1="13" x2="17" y2="13"/><line x1="7" y1="17" x2="13" y2="17"/></svg>';
       case 'split-right':
         return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"/><line x1="10" y1="4" x2="10" y2="20"/></svg>';
       case 'transcript':
@@ -276,6 +518,14 @@
     }
 
     switch (id) {
+      case 'reader-only':
+        return `
+          <div class="slp-stage slp-stage--reader-only" aria-hidden="true">
+            ${buildLinesHtml('tokens')}
+            ${buildBarHtml()}
+            <div class="slp-m-pip">${buildVideoBoxHtml()}</div>
+          </div>
+        `;
       case 'split-right':
         return `
           <div class="slp-stage slp-stage--split-right" aria-hidden="true">
@@ -406,11 +656,19 @@
     const isAr = state.uiLang === 'ar';
 
     const titleText = mobile
-      ? (isAr ? 'تخطيط الهاتف' : 'Mobile Layout')
-      : (isAr ? 'تخطيط الاستوديو' : 'Studio Layout');
+      ? isAr
+        ? 'تخطيط الهاتف'
+        : 'Mobile Layout'
+      : isAr
+        ? 'تخطيط الاستوديو'
+        : 'Studio Layout';
     const subText = mobile
-      ? (isAr ? 'اختر أسلوب العرض والتمرير الأنسب لهاتفك' : 'Choose how video & controls fit your screen')
-      : (isAr ? 'تبديل فوري بدون إيقاف الفيديو أو إعادة التحميل' : 'Instant zero-reload switch — keeps playback alive');
+      ? isAr
+        ? 'اختر أسلوب العرض والتمرير الأنسب لهاتفك'
+        : 'Choose how video & controls fit your screen'
+      : isAr
+        ? 'تبديل فوري بدون إيقاف الفيديو أو إعادة التحميل'
+        : 'Instant zero-reload switch — keeps playback alive';
     const compactLabel = isAr ? 'شريط علوي مدمج' : 'Compact Header';
     const resetLabel = isAr ? 'إعادة ضبط التقسيم' : 'Reset Split';
 
@@ -418,10 +676,11 @@
       .map((item) => {
         const loc = isAr ? item.ar : item.en;
         const isActive = item.id === activeId;
+        const featuredCls = !mobile && item.featured ? ' slp-card--featured' : '';
         return `
           <button
             type="button"
-            class="slp-card${isActive ? ' is-active' : ''}"
+            class="slp-card${featuredCls}${isActive ? ' is-active' : ''}"
             data-studio-layout-option="${item.id}"
             data-layout-scope="${mobile ? 'mobile' : 'desktop'}"
             aria-pressed="${isActive ? 'true' : 'false'}"
@@ -553,7 +812,6 @@
       ws.querySelector('.studio-canvas'),
     ].filter(Boolean);
 
-    // Clear any in-flight transition first
     if (state.morphTimer) {
       clearTimeout(state.morphTimer);
       state.morphTimer = null;
@@ -639,6 +897,7 @@
     const splitSupported =
       w > 900 &&
       h >= 551 &&
+      !Boolean(window.studioState?.videoHidden) &&
       (state.desktopLayout === 'theater' ||
         state.desktopLayout === 'split-right' ||
         state.desktopLayout === 'transcript');
@@ -715,6 +974,9 @@
         }
       } else {
         const nextDesktop = normalizeDesktopLayout(rawId);
+        if (nextDesktop !== 'reader-only') {
+          state.lastDockedDesktopLayout = nextDesktop;
+        }
         state.desktopLayout = nextDesktop;
         ws.setAttribute('data-layout', nextDesktop);
         if (window.studioState) {
@@ -726,9 +988,20 @@
           } catch {}
         }
       }
+
+      // Sync floating video state across layout changes
+      if (!isVideoPaneRemoved()) {
+        state.floatingVideo = false;
+      } else if (hasVideoMedia()) {
+        try {
+          state.floatingVideo = localStorage.getItem(STORAGE_FLOAT_VIDEO_KEY) === '1';
+        } catch {}
+      }
+
       syncTriggerPill({ popAnimation: animate });
       syncActiveCardsInPopover();
       syncMiniVideoChip();
+      syncFloatingVideoUi();
       requestAnimationFrame(updateSplitResizerGeometry);
     };
 
@@ -773,6 +1046,161 @@
     state.uiLang = lang === 'ar' ? 'ar' : 'en';
     syncTriggerPill({ popAnimation: false });
     renderLayoutPopover();
+  }
+
+  function initFloatingVideoInteractions() {
+    if (state.floatBound) return;
+    state.floatBound = true;
+
+    const dragHandle = document.getElementById('float-video-drag-handle');
+    const resizeHandle = document.getElementById('float-video-resize-handle');
+    const card = document.querySelector('.player-frame-card');
+
+    const toggleFloatAction = () => toggleFloatingVideo();
+    document.getElementById('studio-float-video-btn')?.addEventListener('click', toggleFloatAction);
+    document.getElementById('studio-topbar-float-btn')?.addEventListener('click', toggleFloatAction);
+
+    document.getElementById('float-video-play-btn')?.addEventListener('click', () => {
+      document.getElementById('deck-play-active-btn')?.click();
+    });
+
+    document.getElementById('float-video-mouth-btn')?.addEventListener('click', () => {
+      document.getElementById('video-zoom-mouth-quick-btn')?.click();
+    });
+
+    document.getElementById('float-video-size-btn')?.addEventListener('click', () => {
+      const curW = state.floatRect.width || 380;
+      const curLabel = resolveSizeLabel(curW);
+      const nextIdx = (FLOAT_SIZE_PRESETS.findIndex((p) => p.id === curLabel) + 1) % FLOAT_SIZE_PRESETS.length;
+      state.floatRect.width = FLOAT_SIZE_PRESETS[nextIdx].width;
+      applyFloatRectToDom(state.floatRect);
+      saveFloatRect();
+    });
+
+    document.getElementById('float-video-ghost-btn')?.addEventListener('click', () => {
+      state.floatRect.ghost = !state.floatRect.ghost;
+      applyFloatRectToDom(state.floatRect);
+      saveFloatRect();
+    });
+
+    document.getElementById('float-video-dock-btn')?.addEventListener('click', () => {
+      dockFloatingVideoBack();
+    });
+
+    document.getElementById('float-video-close-btn')?.addEventListener('click', () => {
+      setFloatingVideo(false, { persist: true, animate: false });
+    });
+
+    if (dragHandle && card) {
+      let dragging = false;
+      let startClientX = 0;
+      let startClientY = 0;
+      let originX = 0;
+      let originY = 0;
+      let rafId = 0;
+      let pendingX = 0;
+      let pendingY = 0;
+
+      const commitDrag = () => {
+        rafId = 0;
+        const clamped = clampFloatRect({ ...state.floatRect, x: pendingX, y: pendingY });
+        state.floatRect = clamped;
+        card.style.setProperty('--float-x', `${clamped.x}px`);
+        card.style.setProperty('--float-y', `${clamped.y}px`);
+      };
+
+      const onMove = (e) => {
+        if (!dragging) return;
+        pendingX = originX + (e.clientX - startClientX);
+        pendingY = originY + (e.clientY - startClientY);
+        if (!rafId) rafId = requestAnimationFrame(commitDrag);
+      };
+
+      const endDrag = () => {
+        if (!dragging) return;
+        dragging = false;
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+          commitDrag();
+        }
+        document.body.classList.remove('is-float-video-dragging');
+        saveFloatRect();
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', endDrag);
+        window.removeEventListener('pointercancel', endDrag);
+      };
+
+      dragHandle.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 || !isFloatingVideoActive()) return;
+        if (e.target.closest('button')) return;
+        e.preventDefault();
+        const rect = card.getBoundingClientRect();
+        dragging = true;
+        startClientX = e.clientX;
+        startClientY = e.clientY;
+        originX = rect.left;
+        originY = rect.top;
+        document.body.classList.add('is-float-video-dragging');
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', endDrag);
+        window.addEventListener('pointercancel', endDrag);
+      });
+
+      dragHandle.addEventListener('dblclick', () => {
+        if (!isFloatingVideoActive()) return;
+        state.floatRect = { ...state.floatRect, x: null, y: null };
+        applyFloatRectToDom(state.floatRect);
+        saveFloatRect();
+      });
+    }
+
+    if (resizeHandle && card) {
+      let resizing = false;
+      let startX = 0;
+      let startW = 380;
+      let rafId = 0;
+      let pendingW = 380;
+
+      const commitResize = () => {
+        rafId = 0;
+        const clamped = clampFloatRect({ ...state.floatRect, width: pendingW });
+        state.floatRect = clamped;
+        applyFloatRectToDom(clamped);
+      };
+
+      const onMove = (e) => {
+        if (!resizing) return;
+        pendingW = startW + (e.clientX - startX);
+        if (!rafId) rafId = requestAnimationFrame(commitResize);
+      };
+
+      const endResize = () => {
+        if (!resizing) return;
+        resizing = false;
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+          commitResize();
+        }
+        document.body.classList.remove('is-float-video-dragging', 'is-float-video-resizing');
+        saveFloatRect();
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', endResize);
+        window.removeEventListener('pointercancel', endResize);
+      };
+
+      resizeHandle.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0 || !isFloatingVideoActive()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        resizing = true;
+        startX = e.clientX;
+        startW = card.getBoundingClientRect().width || state.floatRect.width || 380;
+        document.body.classList.add('is-float-video-dragging', 'is-float-video-resizing');
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', endResize);
+        window.addEventListener('pointercancel', endResize);
+      });
+    }
   }
 
   function initSplitResizer() {
@@ -871,6 +1299,7 @@
     const miniExpandBtn = document.getElementById('studio-mini-expand-video-btn');
     if (miniExpandBtn) {
       miniExpandBtn.addEventListener('click', () => {
+        setFloatingVideo(false, { persist: true, animate: false });
         setLayout('docked', { scope: 'mobile', animate: true, persist: true });
       });
     }
@@ -892,8 +1321,12 @@
 
     try {
       state.desktopLayout = normalizeDesktopLayout(localStorage.getItem(STORAGE_DESKTOP_KEY) || 'theater');
+      if (state.desktopLayout !== 'reader-only') {
+        state.lastDockedDesktopLayout = state.desktopLayout;
+      }
       state.mobileLayout = normalizeMobileLayout(localStorage.getItem(STORAGE_MOBILE_KEY) || 'docked');
       state.compactDock = localStorage.getItem(STORAGE_COMPACT_KEY) === '1';
+      state.floatingVideo = localStorage.getItem(STORAGE_FLOAT_VIDEO_KEY) === '1';
     } catch {}
 
     const ws = getWorkspace();
@@ -911,7 +1344,9 @@
     renderLayoutPopover();
     initSplitResizer();
     initMobileHelpers();
+    initFloatingVideoInteractions();
     syncMiniVideoChip();
+    syncFloatingVideoUi();
     requestAnimationFrame(updateSplitResizerGeometry);
 
     if (ws && typeof ResizeObserver === 'function' && !state.resizeObserver) {
@@ -932,6 +1367,10 @@
           onPopoverStateChange(!document.getElementById('studio-layout-popover')?.hidden);
         }
         syncMiniVideoChip();
+        syncFloatingVideoUi();
+        if (isFloatingVideoActive()) {
+          applyFloatRectToDom(state.floatRect);
+        }
         updateSplitResizerGeometry();
       },
       { passive: true },
@@ -946,6 +1385,11 @@
     cycleLayout,
     setCompactDock,
     resetSplitWidths,
+    setFloatingVideo,
+    toggleFloatingVideo,
+    dockFloatingVideoBack,
+    syncFloatingVideoUi,
+    isFloatingVideoActive,
     getActiveMeta,
     isMobileViewport,
     onPopoverStateChange,

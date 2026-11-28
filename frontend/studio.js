@@ -910,6 +910,19 @@
       masterPlayIcon.hidden = isPlaying;
       masterPauseIcon.hidden = !isPlaying;
     }
+    const floatPlayBtn = document.getElementById('float-video-play-btn');
+    if (floatPlayBtn) {
+      floatPlayBtn.classList.toggle('is-playing', isPlaying);
+      floatPlayBtn.setAttribute('aria-pressed', isPlaying ? 'true' : 'false');
+      const fPlay = floatPlayBtn.querySelector('.fvp-play-icon');
+      const fPause = floatPlayBtn.querySelector('.fvp-pause-icon');
+      if (fPlay) fPlay.hidden = isPlaying;
+      if (fPause) fPause.hidden = !isPlaying;
+    }
+    const floatDot = document.getElementById('float-video-live-dot');
+    if (floatDot) {
+      floatDot.classList.toggle('is-playing', isPlaying);
+    }
     if (masterPlayText) {
       const numStr = `#${String(activeIdx).padStart(2, '0')}`;
       masterPlayText.textContent = isPlaying ? `Pause ${numStr}` : `Play ${numStr}`;
@@ -3485,6 +3498,7 @@
       if (localStorage.getItem('flaptap_studio_video_hidden') === '1') {
         toggleVideoVisibility(true, { persist: false });
       }
+      window.FlaptapStudioLayouts?.syncFloatingVideoUi?.();
     } else if ((mediaKind === 'video' || mediaKind === 'audio') && streamUrl) {
       const isVideo = mediaKind === 'video' && media?.hasVideo !== false;
       playerCard?.classList.toggle('is-audio-only-media', !isVideo);
@@ -3508,6 +3522,7 @@
       if (isVideo && localStorage.getItem('flaptap_studio_video_hidden') === '1') {
         toggleVideoVisibility(true, { persist: false });
       }
+      window.FlaptapStudioLayouts?.syncFloatingVideoUi?.();
     } else {
       playerCard?.classList.remove('is-audio-only-media');
       if (zoomViewport) zoomViewport.hidden = true;
@@ -3516,6 +3531,8 @@
       if (audioStage) audioStage.hidden = true;
       if (videoToggleBtn) videoToggleBtn.hidden = true;
       if (timelineBar) timelineBar.hidden = true;
+      window.FlaptapStudioLayouts?.setFloatingVideo?.(false, { persist: false, animate: false });
+      window.FlaptapStudioLayouts?.syncFloatingVideoUi?.();
       if (ttsStage) {
         ttsStage.hidden = false;
         document.getElementById('tts-stage-tag').textContent = item.trackTitle || 'Spoken Audio Deck';
@@ -4167,7 +4184,7 @@
     const player = studioState.ytPlayer;
     if (!player || player.__flaptapAwaitingReady || typeof player.seekTo !== 'function') return;
     cancelShadowPause();
-    if (opts.ensureVideo && studioState.videoHidden) {
+    if (opts.forceShowVideo && studioState.videoHidden) {
       toggleVideoVisibility(false, { persist: false });
     }
     const s = Math.max(0, Number(startSec) || 0);
@@ -7410,8 +7427,13 @@
     studioState.videoHidden = nextHidden;
     if (ws) ws.setAttribute('data-video-hidden', nextHidden ? '1' : '0');
     card.classList.toggle('is-video-hidden', nextHidden);
-    if (audioStage) audioStage.hidden = !nextHidden;
-    if (zoomHud) zoomHud.hidden = nextHidden;
+
+    if (!nextHidden) {
+      window.FlaptapStudioLayouts?.setFloatingVideo?.(false, { persist: false, animate: false });
+    }
+    const isFloating = Boolean(window.FlaptapStudioLayouts?.isFloatingVideoActive?.());
+    if (audioStage) audioStage.hidden = isFloating ? true : !nextHidden;
+    if (zoomHud) zoomHud.hidden = isFloating ? false : nextHidden;
     if (btn) {
       btn.textContent = nextHidden ? 'Show Video' : 'Hide Video';
       btn.classList.toggle('active', nextHidden);
@@ -7421,11 +7443,13 @@
         localStorage.setItem('flaptap_studio_video_hidden', nextHidden ? '1' : '0');
       } catch {}
     }
+    window.FlaptapStudioLayouts?.syncFloatingVideoUi?.();
     requestAnimationFrame(() => {
       syncStudioDeckStickyHeightVar();
       window.FlaptapStudioLayouts?.updateSplitResizerGeometry();
     });
   }
+  window.toggleStudioVideoVisibility = toggleVideoVisibility;
 
   function hideInfoPopover(immediate = false) {
     clearTimeout(studioState.infoPopoverCloseTimer);
@@ -9731,13 +9755,24 @@
         return;
       }
 
-      // 9.5 Audio-Only Focus Toggle (H) & Ask AI Companion (I)
+      // 9.5 Audio-Only Focus Toggle (H), Floating PiP Video (P) & Ask AI Companion (I)
       if (code === 'KeyH' && !shift) {
         const videoToggle = document.getElementById('studio-video-toggle-btn');
         if (videoToggle && !videoToggle.hidden) {
           e.preventDefault();
           if (e.repeat) return;
           toggleVideoVisibility();
+        }
+        return;
+      }
+
+      if (code === 'KeyP' && !shift) {
+        const hasVid = Boolean(studioState.item?.videoId || studioState.item?.media?.hasVideo);
+        if (hasVid && window.FlaptapStudioLayouts?.toggleFloatingVideo) {
+          e.preventDefault();
+          if (e.repeat) return;
+          const active = window.FlaptapStudioLayouts.toggleFloatingVideo();
+          showToast(active ? 'Floating Video: On' : 'Floating Video: Off');
         }
         return;
       }
@@ -9855,6 +9890,7 @@
         uiLang: studioState.uiLang,
         onChange: (meta) => {
           studioState.layout = meta?.id || studioState.layout;
+          window.FlaptapStudioLayouts?.syncFloatingVideoUi?.();
           requestAnimationFrame(() => {
             syncStudioDeckStickyHeightVar();
             const layoutPop = document.getElementById('studio-layout-popover');

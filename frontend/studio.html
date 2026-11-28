@@ -166,6 +166,22 @@
           <svg class="studio-layout-trigger-chev" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
         </button>
 
+        <button
+          type="button"
+          class="studio-float-topbar-btn"
+          id="studio-topbar-float-btn"
+          hidden
+          aria-pressed="false"
+          title="Pop out floating video window (P)"
+          aria-label="Toggle Floating Video"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="2" y="4" width="20" height="16" rx="2.5"></rect>
+            <rect x="11" y="10" width="9" height="7" rx="1.5" fill="currentColor" fill-opacity="0.22"></rect>
+          </svg>
+          <span id="studio-topbar-float-label">Float Video</span>
+        </button>
+
         <div class="topbar-utility-capsule" role="group" aria-label="Workspace tools">
           <button
             type="button"
@@ -270,7 +286,7 @@
   </header>
 
   <!-- Theater Studio Grid -->
-  <main id="studio-main-content" class="studio-workspace" data-layout="theater" data-mobile-layout="docked" data-compact-dock="0">
+  <main id="studio-main-content" class="studio-workspace" data-layout="theater" data-mobile-layout="docked" data-compact-dock="0" data-video-float="0">
   <script>
     (function () {
       try {
@@ -282,6 +298,11 @@
           ws.setAttribute('data-layout', dl);
           ws.setAttribute('data-mobile-layout', boot.mobile || 'docked');
           ws.setAttribute('data-compact-dock', boot.compact || '0');
+          var videoHidden = localStorage.getItem('flaptap_studio_video_hidden') === '1';
+          var floatWanted = localStorage.getItem('flaptap_studio_float_video') === '1';
+          if (floatWanted && (dl === 'reader-only' || videoHidden || boot.mobile === 'mini')) {
+            ws.setAttribute('data-video-float', '1');
+          }
         }
       } catch (e) {}
     })();
@@ -289,6 +310,37 @@
     <!-- Media & Voice Deck -->
     <aside class="studio-deck" aria-label="Media and voice controls">
       <div class="player-frame-card">
+        <!-- Pro Floating Video Window Chrome (Active only when data-video-float="1") -->
+        <div class="float-video-chrome" id="float-video-chrome">
+          <div class="float-video-drag-handle" id="float-video-drag-handle" title="Drag to move · Double-click to reset corner">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <circle cx="9" cy="6" r="1.8"></circle><circle cx="15" cy="6" r="1.8"></circle>
+              <circle cx="9" cy="12" r="1.8"></circle><circle cx="15" cy="12" r="1.8"></circle>
+              <circle cx="9" cy="18" r="1.8"></circle><circle cx="15" cy="18" r="1.8"></circle>
+            </svg>
+            <span class="float-video-live-dot" id="float-video-live-dot" aria-hidden="true"></span>
+            <span class="float-video-title">Floating Video</span>
+          </div>
+          <div class="float-video-actions">
+            <button type="button" class="float-chrome-btn" id="float-video-play-btn" title="Play / Pause (Space)" aria-label="Play or Pause">
+              <svg class="fvp-play-icon" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
+              <svg class="fvp-pause-icon" width="11" height="11" viewBox="0 0 24 24" fill="currentColor" hidden aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"></rect><rect x="14" y="4" width="4" height="16" rx="1"></rect></svg>
+            </button>
+            <button type="button" class="float-chrome-btn" id="float-video-mouth-btn" title="Focus speaker mouth 3.2x (Z)" aria-label="Focus speaker mouth">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12c2.5-3 6-3 8-1 2-2 5.5-2 8 1-2.5 4-6 5-8 5s-5.5-1-8-5z"></path></svg>
+            </button>
+            <button type="button" class="float-chrome-btn float-chrome-btn--text ltr-num" id="float-video-size-btn" title="Cycle floating size (S / M / L)" aria-label="Cycle floating video size">M</button>
+            <button type="button" class="float-chrome-btn" id="float-video-ghost-btn" title="Toggle translucent ghost mode" aria-label="Toggle translucent ghost mode" aria-pressed="false">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="13" height="13" rx="2.5"></rect><rect x="8" y="8" width="13" height="13" rx="2.5" stroke-dasharray="3 2"></rect></svg>
+            </button>
+            <button type="button" class="float-chrome-btn" id="float-video-dock-btn" title="Dock video back into workspace" aria-label="Dock video back into workspace">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2.5"></rect><line x1="11" y1="4" x2="11" y2="20"></line></svg>
+            </button>
+            <button type="button" class="float-chrome-btn float-chrome-btn--close" id="float-video-close-btn" title="Hide floating video (keeps audio playing)" aria-label="Hide floating video">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+            </button>
+          </div>
+        </div>
         <div class="video-aspect-box" id="video-stage-container">
           <div class="video-zoom-viewport" id="video-zoom-viewport">
             <div class="video-zoom-stage" id="video-zoom-stage">
@@ -315,6 +367,7 @@
             <span class="tts-stage-hint" data-i18n="ttsHint">Powered by browser speech synthesis synced to your speed setting.</span>
           </div>
         </div>
+        <div class="float-video-resize-handle" id="float-video-resize-handle" title="Drag to resize floating video" aria-hidden="true"></div>
       </div>
 
       <!-- Unified Apple Media Console (Timeline + Controls + Active Line + Live Status) -->
@@ -334,6 +387,7 @@
             <div class="studio-timeline-right">
               <button type="button" class="studio-video-toggle-pill" id="studio-mini-expand-video-btn" hidden title="Show video stage">Show Video</button>
               <button type="button" class="studio-define-pill" id="studio-define-word-btn" hidden>Define</button>
+              <button type="button" class="studio-video-toggle-pill studio-float-toggle-pill" id="studio-float-video-btn" hidden aria-pressed="false" title="Pop out draggable floating video (P)">Float Video</button>
               <button type="button" class="studio-video-toggle-pill" id="studio-video-toggle-btn" hidden title="Hide or show video frame (keeps audio playing)">Hide Video</button>
             </div>
           </div>
@@ -1426,6 +1480,10 @@
         <div class="shortcut-row">
           <span class="shortcut-desc">Audio Only (Hide video)</span>
           <span class="shortcut-keys"><kbd class="kbd-chip">H</kbd></span>
+        </div>
+        <div class="shortcut-row">
+          <span class="shortcut-desc">Floating Video (PiP)</span>
+          <span class="shortcut-keys"><kbd class="kbd-chip">P</kbd></span>
         </div>
         <div class="shortcut-row">
           <span class="shortcut-desc">Ask AI Companion</span>

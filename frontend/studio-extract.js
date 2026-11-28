@@ -699,7 +699,6 @@
         rangeKey,
         sentIndex: sentIdx || undefined,
         loop,
-        ensureVideo: Boolean(currentPlayback?.hasVideo),
       });
       syncPlaybackDomState();
       return;
@@ -738,7 +737,6 @@
         rangeKey,
         sentIndex: para.sentenceIndices?.[0] || undefined,
         loop: false,
-        ensureVideo: Boolean(currentPlayback?.hasVideo),
       });
       syncPlaybackDomState();
       return;

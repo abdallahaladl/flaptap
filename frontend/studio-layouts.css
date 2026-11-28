@@ -1617,12 +1617,19 @@ body.is-studio-resizing .video-zoom-surface {
     display: none !important;
   }
 
-  /* MOBILE MODE 2: MINI AUDIO BAR (Maximizes transcript to ~72% of screen) */
-  .studio-body .studio-workspace[data-mobile-layout="mini"] .player-frame-card {
-    display: none !important;
+  /* MOBILE MODE 2: MINI AUDIO BAR (Maximizes transcript to ~72% of screen; keeps player mounted off-screen unless floating) */
+  .studio-body .studio-workspace[data-mobile-layout="mini"]:not([data-video-float="1"]) .player-frame-card {
+    position: fixed !important;
+    left: -9999px !important;
+    top: 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0.001 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
   }
 
-  .studio-body .studio-workspace[data-mobile-layout="mini"] .scb-pod--zoom,
+  .studio-body .studio-workspace[data-mobile-layout="mini"]:not([data-video-float="1"]) .scb-pod--zoom,
   .studio-body .studio-workspace[data-mobile-layout="mini"] #studio-video-toggle-btn {
     display: none !important;
   }
@@ -2160,7 +2167,7 @@ body.is-studio-resizing .video-zoom-surface {
 }
 
 /* ==========================================================================
-   AUDIO-ONLY READER FOCUS MODE ([data-video-hidden="1"])
+   AUDIO-ONLY READER FOCUS MODE ([data-video-hidden="1"]) & TRANSCRIPT ONLY ([data-layout="reader-only"])
    Keeps the YouTube / HTML5 media player alive & mounted off-screen (1x1px)
    while expanding the reading canvas into a calm centered editorial column.
    ========================================================================== */
@@ -2183,7 +2190,7 @@ body.is-studio-resizing .video-zoom-surface {
     display: contents !important;
   }
 
-  .studio-body .studio-workspace[data-video-hidden="1"] .player-frame-card {
+  .studio-body .studio-workspace[data-video-hidden="1"]:not([data-video-float="1"]) .player-frame-card {
     position: fixed !important;
     left: -9999px !important;
     top: 0 !important;
@@ -2229,7 +2236,7 @@ body.is-studio-resizing .video-zoom-surface {
 }
 
 @media (max-width: 900px) {
-  .studio-body .studio-workspace[data-video-hidden="1"] .player-frame-card {
+  .studio-body .studio-workspace[data-video-hidden="1"]:not([data-video-float="1"]) .player-frame-card {
     position: fixed !important;
     left: -9999px !important;
     top: 0 !important;
@@ -2238,5 +2245,375 @@ body.is-studio-resizing .video-zoom-surface {
     opacity: 0.001 !important;
     pointer-events: none !important;
     overflow: hidden !important;
+  }
+}
+
+/* ==========================================================================
+   TRANSCRIPT ONLY LAYOUT ([data-layout="reader-only"])
+   100% Canvas focus with floating bottom glass console & optional PiP Video
+   ========================================================================== */
+
+@media (min-width: 769px) and (min-height: 551px) {
+  .studio-body .studio-workspace[data-layout="reader-only"] {
+    max-width: min(1480px, 100%);
+    margin-inline: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 10px;
+    padding: 12px 24px 14px;
+  }
+
+  .studio-body .studio-workspace[data-layout="reader-only"] .studio-split-resizer {
+    display: none !important;
+  }
+
+  .studio-body .studio-workspace[data-layout="reader-only"] .studio-deck {
+    display: contents !important;
+  }
+
+  .studio-body .studio-workspace[data-layout="reader-only"]:not([data-video-float="1"]) .player-frame-card {
+    position: fixed !important;
+    left: -9999px !important;
+    top: 0 !important;
+    width: 1px !important;
+    height: 1px !important;
+    opacity: 0.001 !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+  }
+
+  .studio-body .studio-workspace[data-layout="reader-only"]:not([data-video-float="1"]) .scb-pod--zoom {
+    display: none !important;
+  }
+
+  .studio-body .studio-workspace[data-layout="reader-only"] .studio-canvas {
+    grid-column: 1;
+    grid-row: 1;
+    max-width: 1080px;
+    width: 100%;
+    margin-inline: auto;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .studio-body .studio-workspace[data-layout="reader-only"] .studio-media-console {
+    grid-column: 1;
+    grid-row: 2;
+    max-width: 960px;
+    width: 100%;
+    margin-inline: auto;
+    background: var(--ap-glass-popover);
+    backdrop-filter: saturate(180%) blur(24px);
+    -webkit-backdrop-filter: saturate(180%) blur(24px);
+    box-shadow: var(--ap-shadow-popover), var(--ap-specular);
+    border-radius: 18px;
+  }
+
+  .studio-body .studio-workspace[data-layout="reader-only"] .studio-timeline-bar {
+    padding: 8px 14px 6px;
+    gap: 5px;
+  }
+
+  .studio-body .studio-workspace[data-layout="reader-only"] .deck-live-subtitle {
+    display: none !important;
+  }
+
+  .studio-body:has(.studio-workspace[data-layout="reader-only"]) .floating-jump-pill {
+    bottom: 118px;
+  }
+}
+
+/* ==========================================================================
+   FEATURED LAYOUT PICKER CARD & STAGE FOR TRANSCRIPT ONLY
+   ========================================================================== */
+
+.studio-body .slp-card--featured {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 152px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+}
+
+.studio-body .slp-stage--reader-only {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto;
+  position: relative;
+}
+
+.studio-body .slp-m-pip {
+  position: absolute;
+  right: 8px;
+  bottom: 20px;
+  width: 44px;
+  height: 27px;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1.5px solid var(--slp-accent);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.32);
+  display: flex;
+  transition: transform 0.25s var(--ap-spring);
+}
+
+.studio-body .slp-card--featured:hover .slp-m-pip,
+.studio-body .slp-card--featured.is-active .slp-m-pip {
+  transform: translateY(-2px) scale(1.06);
+}
+
+/* ==========================================================================
+   TOPBAR & TIMELINE FLOAT TRIGGERS + PRO FLOATING PiP VIDEO WINDOW
+   ========================================================================== */
+
+.studio-body .studio-float-topbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 11px;
+  border-radius: 980px;
+  border: 1px solid var(--ap-border);
+  background: var(--ap-surface);
+  color: var(--ap-text-primary);
+  font-family: var(--ap-font-text);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: background-color 0.16s var(--ap-ease), border-color 0.16s var(--ap-ease), color 0.16s var(--ap-ease);
+}
+
+.studio-body .studio-float-topbar-btn[hidden],
+.studio-body .studio-float-toggle-pill[hidden] {
+  display: none !important;
+}
+
+.studio-body .studio-float-topbar-btn:hover {
+  background: var(--ap-fill-hover);
+  border-color: var(--ap-border-strong);
+}
+
+.studio-body .studio-float-topbar-btn.is-active,
+.studio-body .studio-float-toggle-pill.active {
+  background: var(--ap-blue-wash);
+  border-color: color-mix(in srgb, var(--ap-blue) 42%, transparent);
+  color: var(--ap-blue);
+}
+
+@media (max-width: 640px) {
+  .studio-body .studio-float-topbar-btn {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    padding: 0;
+    justify-content: center;
+  }
+  .studio-body #studio-topbar-float-label {
+    display: none;
+  }
+}
+
+.studio-body .float-video-chrome,
+.studio-body .float-video-resize-handle {
+  display: none;
+}
+
+.studio-body .studio-workspace[data-video-float="1"] .player-frame-card {
+  position: fixed !important;
+  left: var(--float-x, 20px) !important;
+  top: var(--float-y, 80px) !important;
+  width: var(--float-w, 380px) !important;
+  height: auto !important;
+  max-width: calc(100vw - 24px) !important;
+  z-index: 420 !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 16px !important;
+  overflow: hidden !important;
+  background: #0B0B0E !important;
+  border: 1px solid rgba(255, 255, 255, 0.16) !important;
+  box-shadow: 0 22px 56px -12px rgba(0, 0, 0, 0.56), 0 0 0 1px rgba(0, 0, 0, 0.28) !important;
+  transition: opacity 0.18s var(--ap-ease);
+}
+
+.studio-body .studio-workspace[data-video-float="1"] .player-frame-card.is-float-entering {
+  animation: studioFloatIn 0.22s var(--ap-spring);
+}
+
+@keyframes studioFloatIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.studio-body .studio-workspace[data-video-float="1"] .player-frame-card.is-float-ghost {
+  opacity: 0.78 !important;
+}
+
+.studio-body .studio-workspace[data-video-float="1"] .player-frame-card.is-float-ghost:hover {
+  opacity: 1 !important;
+}
+
+.studio-body .studio-workspace[data-video-float="1"] .video-aspect-box {
+  width: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  min-height: 0 !important;
+  height: auto !important;
+}
+
+.studio-body .studio-workspace[data-video-float="1"] #studio-audio-stage {
+  display: none !important;
+}
+
+.studio-body .studio-workspace[data-video-float="1"] .float-video-chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 34px;
+  padding: 0 8px 0 10px;
+  background: #151519;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #F5F5F7;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.studio-body .float-video-drag-handle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  cursor: grab;
+  color: rgba(245, 245, 247, 0.65);
+  touch-action: none;
+}
+
+.studio-body .float-video-drag-handle:active {
+  cursor: grabbing;
+}
+
+.studio-body .float-video-live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.32);
+  flex-shrink: 0;
+  transition: background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.studio-body .float-video-live-dot.is-playing {
+  background: #30D158;
+  box-shadow: 0 0 0 3px rgba(48, 209, 88, 0.25);
+}
+
+.studio-body .float-video-title {
+  font-family: var(--ap-font-text);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(245, 245, 247, 0.88);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.studio-body .float-video-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.studio-body .float-chrome-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 4px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(245, 245, 247, 0.78);
+  font-family: var(--ap-font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.13s ease, color 0.13s ease;
+}
+
+.studio-body .float-chrome-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
+}
+
+.studio-body .float-chrome-btn.is-active,
+.studio-body .float-chrome-btn.is-playing {
+  background: rgba(10, 132, 255, 0.28);
+  color: #64D2FF;
+}
+
+.studio-body .float-chrome-btn--close:hover {
+  background: rgba(255, 69, 58, 0.24);
+  color: #FF6961;
+}
+
+.studio-body .studio-workspace[data-video-float="1"] .float-video-resize-handle {
+  display: block;
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 20px;
+  height: 20px;
+  z-index: 25;
+  cursor: nwse-resize;
+  touch-action: none;
+  background: linear-gradient(
+    135deg,
+    transparent 45%,
+    rgba(255, 255, 255, 0.35) 46%,
+    rgba(255, 255, 255, 0.35) 54%,
+    transparent 55%,
+    transparent 70%,
+    rgba(255, 255, 255, 0.45) 71%,
+    rgba(255, 255, 255, 0.45) 79%,
+    transparent 80%
+  );
+}
+
+body.is-float-video-dragging {
+  user-select: none !important;
+  cursor: grabbing !important;
+}
+
+body.is-float-video-resizing {
+  cursor: nwse-resize !important;
+}
+
+body.is-float-video-dragging iframe,
+body.is-float-video-dragging .video-zoom-surface {
+  pointer-events: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .studio-body .studio-workspace[data-video-float="1"] .player-frame-card.is-float-entering {
+    animation: none;
   }
 }
